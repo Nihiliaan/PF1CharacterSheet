@@ -1837,14 +1837,18 @@ export default function App() {
 
   const handleAIExtract = async () => {
     if (!aiInputText.trim()) return;
-    if (!userApiKey.trim()) {
+    
+    // API key priority: 1. User entered in UI (localStorage) 2. Environment Variable
+    const apiKeyToUse = userApiKey.trim() || (import.meta.env.VITE_GEMINI_API_KEY as string) || "";
+    
+    if (!apiKeyToUse) {
       setToast({ message: "请先设置您的 Gemini API Key", type: 'error' });
       setShowApiKeyInput(true);
       return;
     }
     setIsAILoading(true);
     try {
-      const extracted = await extractCharacterFromText(aiInputText, userApiKey);
+      const extracted = await extractCharacterFromText(aiInputText, apiKeyToUse);
       
       // Merge with DEFAULT_DATA to ensure all required fields are present
       const mergedData = {

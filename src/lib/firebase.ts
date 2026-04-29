@@ -1,6 +1,7 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, GithubAuthProvider, OAuthProvider } from 'firebase/auth'; 
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 import firebaseAppletConfig from '../../firebase-applet-config.json';
 
 // Firebase Configuration - Prioritize Environment Variables for GitHub/External hosting
@@ -13,20 +14,29 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseAppletConfig.messagingSenderId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseAppletConfig.appId,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseAppletConfig.measurementId,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseAppletConfig.firestoreDatabaseId || '(default)',
 };
 
-const app = initializeApp(firebaseConfig);
+// Database ID defaults to '(default)' if not specified
+const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseAppletConfig.firestoreDatabaseId || '(default)';
+
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app, firestoreDatabaseId);
+
+// Initialize Analytics if supported
+export const analytics = isSupported().then(yes => yes ? getAnalytics(app) : null).catch(() => null);
 
 // Validate connection to Firestore
 async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    // Only try to connect if we have a project ID
+    if (firebaseConfig.projectId) {
+      await getDocFromServer(doc(db, 'test', 'connection'));
+    }
   } catch (error) {
+    console.warn("Firebase Connection Warning:", error);
     if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+      console.error("Firebase is offline. Please check your Project ID and network connection.");
     }
   }
 }
