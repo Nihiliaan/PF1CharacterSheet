@@ -9,17 +9,17 @@ service cloud.firestore {
 
     // --- Helpers ---
     function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
     // --- Character Rules ---
-    // Pillar 2: Validation Blueprint
     function isValidCharacter(data) {
       return data.keys().hasAll(['name', 'ownerId', 'data', 'createdAt', 'updatedAt'])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 200
-        && data.ownerId is string && data.ownerId == request.auth.uid // Pillar 2: Identity Integrity
+        && data.ownerId is string && data.ownerId.size() <= 128
         && data.data is map 
         && (data.get('isPublic', false) is bool)
         && data.createdAt is timestamp
@@ -28,36 +28,36 @@ service cloud.firestore {
     }
 
     match /characters/{characterId} {
-      // Allow Anyone to read if the character is marked public, otherwise only owner
       allow get: if isValidId(characterId) && (resource.data.get('isPublic', false) == true || isOwner(resource.data.ownerId));
-      
-      // List is restricted to owner only (Secure List Queries)
       allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
       
       allow create: if isValidId(characterId) 
+        && isVerified()
         && isValidCharacter(incoming())
+        && incoming().ownerId == request.auth.uid
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
 
       allow update: if isValidId(characterId)
+        && isVerified()
         && isOwner(existing().ownerId)
         && isValidCharacter(incoming())
         && incoming().createdAt == existing().createdAt
         && incoming().ownerId == existing().ownerId
-        && incoming().updatedAt == request.time
-        && (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'data', 'isPublic', 'updatedAt', 'folderId']));
+        && (incoming().updatedAt == request.time || !incoming().diff(existing()).affectedKeys().hasAny(['updatedAt']))
+        && (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'data', 'isPublic', 'updatedAt', 'folderId', 'ownerId']));
 
-      allow delete: if isValidId(characterId) && isOwner(existing().ownerId);
+      allow delete: if isValidId(characterId) && isVerified() && isOwner(existing().ownerId);
     }
 
     // --- Folder Rules ---
     function isValidFolder(data) {
       return data.keys().hasAll(['name', 'ownerId', 'createdAt'])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 100
-        && data.ownerId is string && data.ownerId == request.auth.uid
+        && data.ownerId is string && data.ownerId.size() <= 128
         && data.createdAt is timestamp
-        && (!('parentId' in data) || data.parentId == null || data.parentId is string)
-        && (!('updatedAt' in data) || data.updatedAt is timestamp);
+        && (data.get('parentId', null) == null || data.get('parentId', null) is string)
+        && (data.get('updatedAt', null) == null || data.get('updatedAt', null) is timestamp);
     }
 
     match /folders/{folderId} {
@@ -65,17 +65,20 @@ service cloud.firestore {
       allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
       
       allow create: if isValidId(folderId) 
+        && isVerified()
         && isValidFolder(incoming())
+        && incoming().ownerId == request.auth.uid
         && incoming().createdAt == request.time;
 
-      allow update: if isValidId(folderId) && isOwner(existing().ownerId)
+      allow update: if isValidId(folderId) 
+        && isVerified()
+        && isOwner(existing().ownerId)
         && isValidFolder(incoming())
         && incoming().createdAt == existing().createdAt
         && incoming().ownerId == existing().ownerId
-        && (incoming().updatedAt == request.time || incoming().updatedAt == existing().updatedAt)
-        && (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'parentId', 'updatedAt']));
+        && (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'parentId', 'updatedAt', 'ownerId']));
 
-      allow delete: if isValidId(folderId) && isOwner(existing().ownerId);
+      allow delete: if isValidId(folderId) && isVerified() && isOwner(existing().ownerId);
     }
 
     // --- User Rules ---

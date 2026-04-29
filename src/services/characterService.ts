@@ -51,11 +51,14 @@ export async function saveCharacter(characterData: any, id?: string, folderId?: 
   try {
     const payload: any = {
       name: (characterData.basic && characterData.basic.name) || '未命名人物',
-      ownerId: auth.currentUser.uid,
       data: characterData,
       isPublic: true, 
       updatedAt: serverTimestamp(),
     };
+
+    if (!id) {
+      payload.ownerId = auth.currentUser.uid;
+    }
 
     // If it's a new character, or if folderId is explicitly provided (even as null)
     if (!id) {
