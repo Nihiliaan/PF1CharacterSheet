@@ -1,0 +1,6 @@
+{
+  "name": "PF1CharacterSheet",
+  "description": "一个支持多人存储、分享与管理的TRPG人物卡管理系统，支持Google、Github、Discord多账户联动。",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
