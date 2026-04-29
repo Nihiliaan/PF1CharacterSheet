@@ -28,15 +28,26 @@ export const analytics = isSupported().then(yes => yes ? getAnalytics(app) : nul
 
 // Validate connection to Firestore
 async function testConnection() {
+  if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") {
+    console.warn("Firebase: Project ID is not configured. Please set your environment variables or firebase-applet-config.json.");
+    return;
+  }
+
   try {
-    // Only try to connect if we have a project ID
-    if (firebaseConfig.projectId) {
-      await getDocFromServer(doc(db, 'test', 'connection'));
+    // Attempt a lightweight read to verify connection
+    await getDocFromServer(doc(db, '_connection_test_', 'ping'));
+  } catch (error: any) {
+    // We ignore 'permission-denied' because it means we DID reach the server (which is good!)
+    // We only care about connection-level failures
+    if (error?.code === 'permission-denied' || error?.message?.includes('permission-denied')) {
+      console.log("Firebase: Connection verified (received expected permission denial).");
+      return;
     }
-  } catch (error) {
-    console.warn("Firebase Connection Warning:", error);
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Firebase is offline. Please check your Project ID and network connection.");
+
+    if (error?.message?.includes('the client is offline')) {
+      console.error("Firebase: SDK 报告离线。请检查：\n1. 是否已在 Firebase 控制台创建了 Firestore 数据库？\n2. 项目 ID (" + firebaseConfig.projectId + ") 是否正确？\n3. 您的网络是否允许连接到 firebase.googleapis.com");
+    } else {
+      console.warn("Firebase 连接信息:", error?.message || error);
     }
   }
 }

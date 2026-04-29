@@ -21,28 +21,30 @@ service cloud.firestore {
         && data.name is string && data.name.size() > 0 && data.name.size() <= 200
         && data.ownerId is string && data.ownerId == request.auth.uid // Pillar 2: Identity Integrity
         && data.data is map 
-        && (!('isPublic' in data) || data.isPublic is bool)
+        && (data.get('isPublic', false) is bool)
         && data.createdAt is timestamp
         && data.updatedAt is timestamp
-        && (!('folderId' in data) || data.folderId == null || data.folderId is string);
+        && (data.get('folderId', null) == null || data.get('folderId', null) is string);
     }
 
     match /characters/{characterId} {
-      allow get: if isValidId(characterId) && (existing().get('isPublic', false) == true || isOwner(existing().ownerId));
-      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid; // Pillar 8: Secure List Queries
+      // Allow Anyone to read if the character is marked public, otherwise only owner
+      allow get: if isValidId(characterId) && (resource.data.get('isPublic', false) == true || isOwner(resource.data.ownerId));
+      
+      // List is restricted to owner only (Secure List Queries)
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
       
       allow create: if isValidId(characterId) 
         && isValidCharacter(incoming())
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
 
-      // Pillar 4 & 6: Action-Based Update Pattern, Pillar 2: Validation Blueprint (wrapped)
       allow update: if isValidId(characterId)
         && isOwner(existing().ownerId)
         && isValidCharacter(incoming())
-        && incoming().createdAt == existing().createdAt // Pillar 9: Immortal Field
-        && incoming().ownerId == existing().ownerId // Pillar 9: Immortal Field
-        && incoming().updatedAt == request.time // Pillar 10: Temporal Integrity
+        && incoming().createdAt == existing().createdAt
+        && incoming().ownerId == existing().ownerId
+        && incoming().updatedAt == request.time
         && (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'data', 'isPublic', 'updatedAt', 'folderId']));
 
       allow delete: if isValidId(characterId) && isOwner(existing().ownerId);
