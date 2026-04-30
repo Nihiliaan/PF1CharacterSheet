@@ -21,12 +21,12 @@ export const DEFAULT_DATA: CharacterData = {
   },
   story: '',
   attributes: [
-    { name: '力量', final: '10', modifier: '+0', source: '10', status: '' },
-    { name: '敏捷', final: '10', modifier: '+0', source: '10', status: '' },
-    { name: '体质', final: '10', modifier: '+0', source: '10', status: '' },
-    { name: '智力', final: '10', modifier: '+0', source: '10', status: '' },
-    { name: '感知', final: '10', modifier: '+0', source: '10', status: '' },
-    { name: '魅力', final: '10', modifier: '+0', source: '10', status: '' }
+    { name: '力量', final: '10', modifier: '+0', source: '', status: '' },
+    { name: '敏捷', final: '10', modifier: '+0', source: '', status: '' },
+    { name: '体质', final: '10', modifier: '+0', source: '', status: '' },
+    { name: '智力', final: '10', modifier: '+0', source: '', status: '' },
+    { name: '感知', final: '10', modifier: '+0', source: '', status: '' },
+    { name: '魅力', final: '10', modifier: '+0', source: '', status: '' }
   ],
   babCmbCmd: '',
   babTable: [{ bab: '', cmb: '', cmd: '' }],

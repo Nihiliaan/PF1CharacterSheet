@@ -68,8 +68,8 @@ const DynamicCellInput = ({ value, originalValue, onChange, className = '', read
   );
 };
 
-export default function DynamicTable(props: DynamicTableProps) {
-  const { columns, data, originalData, onChange, newItemGenerator, fixedRows, readonlyColumns, footerRow, onFooterChange, footerReadonlyColumns, onColumnLabelChange, onRemoveColumn, onAddColumn, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart, onRowDragOver, onRowDrop, readOnly = false } = props;
+export default function DynamicTable(props: DynamicTableProps & { minWidth?: string }) {
+  const { columns, data, originalData, onChange, newItemGenerator, fixedRows, readonlyColumns, footerRow, onFooterChange, footerReadonlyColumns, onColumnLabelChange, onRemoveColumn, onAddColumn, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart, onRowDragOver, onRowDrop, readOnly = false, minWidth = '600px' } = props;
   const updateData = (index: number, key: string, value: string) => {
     if (readOnly) return;
     const newData = [...data];
@@ -95,7 +95,7 @@ export default function DynamicTable(props: DynamicTableProps) {
 
   return (
     <div className={`w-full overflow-x-auto rounded border transition-colors ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
-      <table className="w-full border-collapse text-sm table-auto min-w-[600px]">
+      <table className="w-full border-collapse text-sm table-auto" style={{ minWidth }}>
         <thead>
           <tr className="bg-stone-200 text-stone-700">
             {columns.map((c, index) => (

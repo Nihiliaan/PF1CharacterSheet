@@ -170,6 +170,7 @@ export default function CharacterEditor({
               </label>
               <div className="flex-1 min-h-[80px]">
                 <DynamicTable
+                  minWidth="0"
                   columns={[
                     { key: 'bab', label: 'BAB', width: '33.33%' },
                     { key: 'cmb', label: 'CMB', width: '33.33%' },
