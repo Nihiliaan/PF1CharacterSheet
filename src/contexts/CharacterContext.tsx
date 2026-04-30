@@ -860,7 +860,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setAiStatusMsg('正在启动神识扫描...');
     try {
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("AI 响应超时，请检查网络连接或 API Key 是否正确")), 45000)
+        setTimeout(() => reject(new Error("AI 响应超时，请检查网络连接或 API Key 是否正确。如果是初次使用，可能由于网络环境需要较长时间，或请确保您可以正常访问 Google 服务。")), 90000)
       );
       
       setAiStatusMsg('正在传输数据至 Gemini...');
