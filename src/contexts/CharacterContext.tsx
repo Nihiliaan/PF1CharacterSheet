@@ -86,6 +86,7 @@ interface CharacterContextType {
   setShowAIModal: (val: boolean) => void;
   handleAIExtract: (inputText?: string, apiKey?: string) => Promise<void>;
   isAILoading: boolean;
+  aiStatusMsg: string;
 
   // Persistence & Global
   // Drive & Vault State
@@ -834,6 +835,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setToast({ message: "BBCode 已复制到剪贴板！可以直接到跑团论坛粘贴。" });
   };
 
+  const showAIModalRef = useRef(showAIModal);
+  useEffect(() => {
+    showAIModalRef.current = showAIModal;
+  }, [showAIModal]);
+
+  const [aiStatusMsg, setAiStatusMsg] = useState('');
+
   const handleAIExtract = async (inputText?: string, apiKey?: string) => {
     const textToProcess = (typeof inputText === 'string' ? inputText : aiInputText) || '';
     const keyToUse = (typeof apiKey === 'string' ? apiKey : userApiKey) || '';
@@ -849,8 +857,27 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
 
     setIsAILoading(true);
+    setAiStatusMsg('正在启动神识扫描...');
     try {
-      const extracted = await extractCharacterFromText(textToProcess, keyToUse);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("AI 响应超时，请检查网络连接或 API Key 是否正确")), 45000)
+      );
+      
+      setAiStatusMsg('正在传输数据至 Gemini...');
+      const extractionPromise = (async () => {
+        const result = await extractCharacterFromText(textToProcess, keyToUse);
+        setAiStatusMsg('接收到神识反馈，正在解析结构...');
+        return result;
+      })();
+
+      const extracted = await Promise.race([
+        extractionPromise,
+        timeoutPromise
+      ]) as any;
+
+      if (!showAIModalRef.current) return;
+
+      setAiStatusMsg('正在同步至跑团卡系统...');
       const mergedData = {
         ...DEFAULT_DATA,
         ...extracted,
@@ -911,9 +938,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setAiInputText('');
     } catch (e: any) {
       console.error("AI Extraction Error:", e);
-      setToast({ message: "AI 识别失败: " + (e.message || "未知错误"), type: 'error' });
+      if (showAIModalRef.current) {
+        setToast({ message: "AI 识别失败: " + (e.message || "未能从回复中提取有效数据"), type: 'error' });
+      }
     } finally {
       setIsAILoading(false);
+      setAiStatusMsg('');
     }
   };
 
@@ -1171,7 +1201,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // AI configuration
     userApiKey, setUserApiKey, showApiKeyInput, setShowApiKeyInput, aiInputText, setAiInputText,
     // AI
-    showAIModal, setShowAIModal, isAILoading,
+    showAIModal, setShowAIModal, isAILoading, aiStatusMsg,
     // Auth & View
     user, handleLogin, handleLogout, handleLinkAccount, handleUnlinkProvider,
     view, setView, recentCharacters, addToRecent, removeFromRecent,

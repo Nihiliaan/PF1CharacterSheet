@@ -22,7 +22,8 @@ export default function AppOverlays() {
     showApiKeyInput, 
     setShowApiKeyInput,
     aiInputText, 
-    setAiInputText
+    setAiInputText,
+    aiStatusMsg
   } = useCharacter();
 
   return (
@@ -63,6 +64,7 @@ export default function AppOverlays() {
             showApiKeyInput={showApiKeyInput}
             setShowApiKeyInput={setShowApiKeyInput} 
             handleAIExtract={handleAIExtract}
+            aiStatusMsg={aiStatusMsg}
           />
         )}
       </AnimatePresence>

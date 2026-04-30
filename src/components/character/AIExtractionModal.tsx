@@ -13,6 +13,7 @@ interface AIExtractionModalProps {
   setShowApiKeyInput: (v: boolean) => void;
   aiInputText: string;
   setAiInputText: (v: string) => void;
+  aiStatusMsg: string;
 }
 
 const AIExtractionModal = ({ 
@@ -25,7 +26,8 @@ const AIExtractionModal = ({
   showApiKeyInput, 
   setShowApiKeyInput, 
   aiInputText, 
-  setAiInputText 
+  setAiInputText,
+  aiStatusMsg
 }: AIExtractionModalProps) => {
   return (
     <AnimatePresence>
@@ -49,7 +51,7 @@ const AIExtractionModal = ({
                 </div>
               </div>
               <button 
-                onClick={() => !isAILoading && setShowAIModal(false)} 
+                onClick={() => setShowAIModal(false)} 
                 className="p-2 hover:bg-white rounded-full transition-colors text-stone-400"
               >
                 <X size={20} />
@@ -118,20 +120,19 @@ const AIExtractionModal = ({
             <div className="p-6 bg-stone-50 border-t border-stone-100 flex items-center justify-end gap-3">
               <button 
                 onClick={() => setShowAIModal(false)}
-                disabled={isAILoading}
-                className="px-6 py-2.5 text-sm font-bold text-stone-500 hover:bg-stone-200 rounded-xl transition-all disabled:opacity-50"
+                className="px-6 py-2.5 text-sm font-bold text-stone-500 hover:bg-stone-200 rounded-xl transition-all"
               >
                 取消
               </button>
               <button 
                 onClick={handleAIExtract}
                 disabled={isAILoading || !aiInputText.trim()}
-                className="px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:scale-100"
+                className="px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:scale-100 min-w-[140px] justify-center"
               >
                 {isAILoading ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    神识扫射中...
+                    {aiStatusMsg || '正在识别...'}
                   </>
                 ) : (
                   <>
