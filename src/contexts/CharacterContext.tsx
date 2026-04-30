@@ -571,6 +571,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setData(char.data);
         setLastSavedData(JSON.parse(JSON.stringify(char.data)));
         setCurrentCharacterId(char.id);
+        setViewState('editor');
+        
+        const url = new URL(window.location.href);
+        url.searchParams.set('id', char.id);
+        window.history.replaceState({}, '', url.toString());
+        
         addToRecent(char);
         if (user && char.ownerId === user.uid) {
           setIsReadOnly(false);
