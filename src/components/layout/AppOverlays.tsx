@@ -24,14 +24,7 @@ export default function AppOverlays() {
     aiInputText, 
     setAiInputText
   } = useCharacter();
-  
-  const handleAIExtractWrapper = async () => {
-    await handleAIExtract(aiInputText, userApiKey);
-    if (!isAILoading) { // Close if successful/done
-       setShowAIModal(false);
-       setAiInputText('');
-    }
-  };
+
   return (
     <>
       {/* Syncing Overlay */}

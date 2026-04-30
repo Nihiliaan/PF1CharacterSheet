@@ -84,7 +84,7 @@ interface CharacterContextType {
   // AI State
   showAIModal: boolean;
   setShowAIModal: (val: boolean) => void;
-  handleAIExtract: (inputText: string, apiKey: string) => Promise<void>;
+  handleAIExtract: (inputText?: string, apiKey?: string) => Promise<void>;
   isAILoading: boolean;
 
   // Persistence & Global
@@ -834,11 +834,23 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setToast({ message: "BBCode 已复制到剪贴板！可以直接到跑团论坛粘贴。" });
   };
 
-  const handleAIExtract = async (inputText: string, apiKey: string) => {
-    if (!inputText.trim()) return;
-    setIsSaving(true); // Reusing isSaving or add a new isAILoading if preferred
+  const handleAIExtract = async (inputText?: string, apiKey?: string) => {
+    const textToProcess = (typeof inputText === 'string' ? inputText : aiInputText) || '';
+    const keyToUse = (typeof apiKey === 'string' ? apiKey : userApiKey) || '';
+
+    if (!textToProcess.trim()) {
+      setToast({ message: "请输入待处理的文本", type: 'info' });
+      return;
+    }
+    if (!keyToUse.trim()) {
+      setToast({ message: "请在设置中输入 Gemini API Key", type: 'error' });
+      setShowApiKeyInput(true);
+      return;
+    }
+
+    setIsAILoading(true);
     try {
-      const extracted = await extractCharacterFromText(inputText, apiKey);
+      const extracted = await extractCharacterFromText(textToProcess, keyToUse);
       const mergedData = {
         ...DEFAULT_DATA,
         ...extracted,
@@ -895,10 +907,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setToast({ message: "AI 识别并填写成功！" });
       setView('editor');
       setCurrentCharacterId(null);
-    } catch (e) {
-      setToast({ message: "AI 识别失败，请检查输入文本或网络", type: 'error' });
+      setShowAIModal(false);
+      setAiInputText('');
+    } catch (e: any) {
+      console.error("AI Extraction Error:", e);
+      setToast({ message: "AI 识别失败: " + (e.message || "未知错误"), type: 'error' });
     } finally {
-      setIsSaving(false);
+      setIsAILoading(false);
     }
   };
 
