@@ -162,16 +162,40 @@ export default function CharacterEditor({
               readonlyColumns={['name']}
             />
           </div>
-          <div className={`rounded p-1 transition-colors ${data.babCmbCmd !== lastSavedData.babCmbCmd ? 'bg-amber-50 border border-amber-300' : ''}`}>
-            <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex justify-between">
-              BAB / CMB / CMD
-              {data.babCmbCmd !== lastSavedData.babCmbCmd && <span className="text-amber-600 animate-pulse">●</span>}
-            </label>
-            <AutoResizeTextarea
-              value={data.babCmbCmd}
-              originalValue={lastSavedData.babCmbCmd}
-              onChange={v => setData({ ...data, babCmbCmd: v })}
-            />
+          <div className="flex flex-col md:flex-row gap-6 mt-4 items-stretch">
+            <div className="w-full md:w-1/2 flex flex-col">
+              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                战斗数值 (Combat Stats)
+                <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
+              </label>
+              <div className="flex-1 min-h-[80px]">
+                <DynamicTable
+                  columns={[
+                    { key: 'bab', label: 'BAB', width: '33.33%' },
+                    { key: 'cmb', label: 'CMB', width: '33.33%' },
+                    { key: 'cmd', label: 'CMD', width: '33.34%' }
+                  ]}
+                  data={data.babTable || [{ bab: '', cmb: '', cmd: '' }]}
+                  originalData={lastSavedData.babTable || [{ bab: '', cmb: '', cmd: '' }]}
+                  onChange={v => setData({ ...data, babTable: v })}
+                  fixedRows={true}
+                />
+              </div>
+            </div>
+            <div className="w-full md:w-1/2 flex flex-col">
+              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                战技备注 (Combat Maneuver Notes)
+                {(data.combatManeuverNotes !== lastSavedData.combatManeuverNotes) && <span className="text-amber-600 animate-pulse">●</span>}
+              </label>
+              <div className={`flex-1 rounded border transition-colors shadow-sm overflow-hidden flex ${data.combatManeuverNotes !== lastSavedData.combatManeuverNotes ? 'bg-amber-50 border-amber-300' : 'border-stone-300 bg-white'}`}>
+                <textarea
+                  value={data.combatManeuverNotes || ''}
+                  onChange={e => setData({ ...data, combatManeuverNotes: e.target.value })}
+                  className="w-full h-full min-h-[80px] bg-transparent outline-none px-4 py-3 text-sm resize-none placeholder:text-stone-300 leading-relaxed font-serif italic text-stone-700"
+                  placeholder="在此输入战技相关的特殊加值或备注..."
+                />
+              </div>
+            </div>
           </div>
         </Section>
 

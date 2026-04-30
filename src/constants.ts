@@ -29,6 +29,8 @@ export const DEFAULT_DATA: CharacterData = {
     { name: '魅力', final: '10', modifier: '+0', source: '10', status: '' }
   ],
   babCmbCmd: '',
+  babTable: [{ bab: '', cmb: '', cmd: '' }],
+  combatManeuverNotes: '',
   meleeAttacksOverview: '',
   meleeAttacks: [],
   rangedAttacksOverview: '',

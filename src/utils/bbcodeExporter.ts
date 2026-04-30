@@ -61,14 +61,24 @@ export function generateBBCode(data: any, template: string): string {
   replaceVar('attributesRows', attrRows);
 
   // BAB/CMB/CMD
-  const babStr = getS(data, 'babCmbCmd') || '';
-  const babMatch = babStr.match(/BAB\s*([+-]?\d+)/i);
-  const cmbMatch = babStr.match(/CMB\s*([+-]?\d+)/i);
-  const cmdMatch = babStr.match(/CMD\s*(\d+)/i);
+  const babTable = getS(data, 'babTable');
+  const cmNotes = getS(data, 'combatManeuverNotes');
   
-  replaceVar('bab', babMatch ? babMatch[1] : (babStr.split('/')[0] || ''));
-  replaceVar('cmb', cmbMatch ? cmbMatch[1] : '');
-  replaceVar('cmd', cmdMatch ? cmdMatch[1] : '');
+  if (babTable && Array.isArray(babTable) && babTable.length > 0) {
+    replaceVar('bab', babTable[0].bab);
+    replaceVar('cmb', babTable[0].cmb);
+    replaceVar('cmd', babTable[0].cmd);
+  } else {
+    const babStr = getS(data, 'babCmbCmd') || '';
+    const babMatch = babStr.match(/BAB\s*([+-]?\d+)/i);
+    const cmbMatch = babStr.match(/CMB\s*([+-]?\d+)/i);
+    const cmdMatch = babStr.match(/CMD\s*(\d+)/i);
+    
+    replaceVar('bab', babMatch ? babMatch[1] : (babStr.split('/')[0] || ''));
+    replaceVar('cmb', cmbMatch ? cmbMatch[1] : '');
+    replaceVar('cmd', cmdMatch ? cmdMatch[1] : '');
+  }
+  replaceVar('combatManeuverNotes', cmNotes);
 
   // Attack Rows
   const meleeRows = (data.meleeAttacks || []).map((m: any) =>

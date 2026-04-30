@@ -294,7 +294,7 @@ const VaultContent = ({
   const handleAction = async (action: string, item: any, isFolder: boolean) => {
     try {
       if (action === 'delete') {
-        const idsToDelete = selectedIds.includes(item.id) ? selectedIds : [item.id];
+        const idsToDelete = (item.id === 'multiple' || selectedIds.includes(item.id)) ? selectedIds : [item.id];
         setModal({
           type: 'confirm',
           title: `确定要删除这 ${idsToDelete.length} 个项目吗？`,

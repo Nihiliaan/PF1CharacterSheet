@@ -54,6 +54,8 @@ export interface CharacterData {
   story: string;
   attributes: { name: string; final: string; modifier: string; source: string; status: string }[];
   babCmbCmd: string;
+  babTable: { bab: string; cmb: string; cmd: string }[];
+  combatManeuverNotes: string;
   meleeAttacksOverview: string;
   meleeAttacks: any[];
   rangedAttacksOverview: string;

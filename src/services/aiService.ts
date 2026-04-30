@@ -65,6 +65,20 @@ export const characterSchema = {
         required: ["name", "final"]
       }
     },
+    babCmbCmd: { type: Type.STRING, description: "BAB/CMB/CMD 信息（旧版字段，请优先填写 babTable）" },
+    babTable: {
+      type: Type.ARRAY,
+      description: "BAB/CMB/CMD 表格，包含1个对象",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          bab: { type: Type.STRING, description: "基本攻击加值 (BAB)" },
+          cmb: { type: Type.STRING, description: "战技攻击加值 (CMB)" },
+          cmd: { type: Type.STRING, description: "战技防御等级 (CMD)" }
+        }
+      }
+    },
+    combatManeuverNotes: { type: Type.STRING, description: "战技相关的通用备注或特殊加值说明" },
     defenses: {
       type: Type.OBJECT,
       description: "防御信息",
