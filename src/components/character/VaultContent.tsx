@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Trash2, ChevronRight, User, Search, Download, HardDrive, Folder, Check, 
   CloudUpload, RotateCcw, FolderPlus, Grid, List as ListIcon, FilePlus, Sparkles, 
-  Copy, Move, Settings, Cloud
+  Copy, Move, Settings, Cloud, Link
 } from 'lucide-react';
+import { getCharacterById } from '../../services/characterService';
 import { FirebaseUser, FolderMetadata, CharacterMetadata } from '../../types';
 import Toast from '../common/Toast';
 import Dialog from '../common/Dialog';
@@ -303,7 +304,11 @@ const VaultContent = ({
           onConfirm: async () => {
             await Promise.all(idsToDelete.map(async id => {
               const isF = folders.some(f => f.id === id);
-              if (isF) await deleteFolder(id);
+              if (isF) {
+                const f = folders.find(folder => folder.id === id);
+                if (f?.name === '来自分享') return;
+                await deleteFolder(id);
+              }
               else await deleteCharacter(id);
             }));
             setToast({ message: "已删除所选项目" });
@@ -313,6 +318,10 @@ const VaultContent = ({
         });
         return; 
       } else if (action === 'rename' && isFolder) {
+          if (item.name === '来自分享') {
+            setToast({ message: "无法重命名来源文件夹", type: 'error' });
+            return;
+          }
           setModal({
             type: 'prompt',
             title: '重命名文件夹',
@@ -330,6 +339,15 @@ const VaultContent = ({
             }
           });
           return;
+      } else if (action === 'create_from_link') {
+        if (!item.targetId) return;
+        const targetChar = await getCharacterById(item.targetId);
+        if (targetChar) {
+          await saveCharacter(targetChar.data, null, currentFolderId);
+          setToast({ message: "已创建可编辑副本" });
+        } else {
+          setToast({ message: "原角色不存在或无法访问", type: 'error' });
+        }
       } else if (action === 'copy') {
         if (selectedIds.includes(item.id)) {
           await Promise.all(selectedIds.map(id => folders.some(f => f.id === id) ? null : copyCharacter(id)));
@@ -684,13 +702,18 @@ const VaultContent = ({
                     {isSelected && <Check size={14} strokeWidth={3} />}
                   </div>
 
-                  <div className={viewMode === 'grid' ? "aspect-square rounded-xl overflow-hidden mb-2 relative bg-stone-100 shadow-inner" : "w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-stone-100"}>
+                  <div className={viewMode === 'grid' ? "aspect-square rounded-xl overflow-hidden mb-2 relative bg-stone-100 shadow-inner" : "w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-stone-100 relative"}>
                       <img 
                         src={char.data.basic.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + char.name} 
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         referrerPolicy="no-referrer"
                         draggable={false}
                       />
+                      {char.isLink && (
+                        <div className="absolute top-1 right-1 bg-white/90 backdrop-blur text-blue-600 p-1 rounded border border-blue-100 shadow-sm" title="分享链接">
+                          <Link size={12} strokeWidth={2.5} />
+                        </div>
+                      )}
                   </div>
                   <div className={viewMode === 'grid' ? "text-center min-w-0" : "flex-1 min-w-0"}>
                       <p className={`text-xs font-bold line-clamp-1 ${isSelected ? 'text-primary' : 'text-stone-800'}`}>{char.name}</p>
@@ -725,7 +748,11 @@ const VaultContent = ({
                   } 
                 },
                 { label: '重命名', icon: Settings, onClick: () => handleAction('rename', contextMenu.item, contextMenu.isFolder) },
-                { label: '复制', icon: Copy, onClick: () => handleAction('copy', contextMenu.item, contextMenu.isFolder) },
+                ...(contextMenu.item.isLink && !contextMenu.isFolder ? [
+                   { label: '创建可编辑副本', icon: Copy, onClick: () => handleAction('create_from_link', contextMenu.item, false) }
+                ] : [
+                   { label: '复制', icon: Copy, onClick: () => handleAction('copy', contextMenu.item, contextMenu.isFolder) }
+                ]),
                 { label: '移动', icon: Move, onClick: () => handleAction('move', contextMenu.item, contextMenu.isFolder) },
                 { label: '删除', icon: Trash2, onClick: () => handleAction('delete', contextMenu.item, contextMenu.isFolder), danger: true },
               ]

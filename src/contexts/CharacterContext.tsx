@@ -5,7 +5,7 @@ import { loginWithProvider, logout as authLogout, linkAccount, unlinkProvider } 
 import { CharacterData, FolderMetadata, CharacterMetadata } from '../types';
 import { DEFAULT_DATA } from '../constants';
 import { getDriveAccessToken, ensureFolder as ensureFolderDrive, uploadOrUpdateFile, listDriveFiles, getFileContent, findPF1Root } from '../services/googleDriveService';
-import { getMyCharacters, getFolders, saveCharacter as saveCharacterService, getCharacterById, deleteCharacter as deleteCharacterService, deleteFolder as deleteFolderService, renameItem as renameItemService, moveCharacter as moveCharacterService, moveFolder as moveFolderService, createFolder as createFolderService, copyCharacter as copyCharacterService, ensureLocalFolder as ensureLocalFolderService } from '../services/characterService';
+import { getMyCharacters, getFolders, saveCharacter as saveCharacterService, getCharacterById, deleteCharacter as deleteCharacterService, deleteFolder as deleteFolderService, renameItem as renameItemService, moveCharacter as moveCharacterService, moveFolder as moveFolderService, createFolder as createFolderService, copyCharacter as copyCharacterService, ensureLocalFolder as ensureLocalFolderService, saveLink } from '../services/characterService';
 import { extractCharacterFromText } from '../services/aiService';
 import { generateBBCode } from '../utils/bbcodeExporter';
 import { DEFAULT_BBCODE_TEMPLATE } from '../components/BBCodeTemplateEditor';
@@ -480,6 +480,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const selectCharacter = async (idOrChar: string | any) => {
     const performSelect = async () => {
       if (typeof idOrChar === 'object' && idOrChar !== null && idOrChar.id) {
+        if (idOrChar.isLink && idOrChar.targetId) {
+          await loadSharedCharacter(idOrChar.targetId);
+          return;
+        }
         const char = idOrChar;
         setData(char.data);
         setLastSavedData(JSON.parse(JSON.stringify(char.data)));
@@ -499,6 +503,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try {
         const char = await getCharacterById(id);
         if (char) {
+          if (char.isLink && char.targetId) {
+            await loadSharedCharacter(char.targetId);
+            return;
+          }
           setData(char.data);
           setLastSavedData(JSON.parse(JSON.stringify(char.data)));
           setCurrentCharacterId(char.id);
@@ -540,6 +548,18 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addToRecent(char);
         if (user && char.ownerId === user.uid) {
           setIsReadOnly(false);
+        } else if (user) {
+          try {
+            const folderId = await ensureLocalFolderService('来自分享', null, user.uid);
+            const existingChars = await getMyCharacters();
+            const existingLink = existingChars?.find(c => c.isLink && c.targetId === char.id);
+            if (!existingLink) {
+              await saveLink(char, folderId);
+              await refreshCharacterList();
+            }
+          } catch (e) {
+            console.error("Failed to save shared link:", e);
+          }
         }
       }
     } catch (e) {
@@ -968,7 +988,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
         } else if (driveItem.name.endsWith('.json')) {
           const content = await getFileContent(token, driveItem.id);
-          if (content.basic && content.attributes) {
+          if (content._isLink && content._targetId) {
+             const fakeTargetChar = { id: content._targetId, data: content };
+             await saveLink(fakeTargetChar, targetId);
+             count++;
+          } else if (content.basic && content.attributes) {
             const finalData = { ...content, basic: { ...content.basic, name: content.basic.name || driveItem.name.replace('.json', '') } };
             await handleSaveInternal(finalData, undefined, targetId);
             count++;
@@ -1021,7 +1045,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const rawName = char.name || '未命名角色';
         const rawClasses = char.data?.basic?.classes || '人物卡';
         const fileName = `${rawName.replace(/[\\/:*?"<>|]/g, '_')}_${String(rawClasses).replace(/[\\/:*?"<>|]/g, '_').slice(0, 30)}_${char.id.slice(-6)}.json`;
-        await uploadOrUpdateFile(token, fileName, char.data, parentDriveId);
+        let dataToSave = char.data;
+        if (char.isLink) {
+          dataToSave = { ...char.data, _isLink: true, _targetId: char.targetId };
+        }
+        await uploadOrUpdateFile(token, fileName, dataToSave, parentDriveId);
       }));
 
       setToast({ message: "备份成功！所有数据已同步至 PF1CharacterSheet 文件夹" });
@@ -1061,7 +1089,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           } else if (item.name.endsWith('.json')) {
             try {
               const content = await getFileContent(token, item.id);
-              if (content.basic && content.attributes) {
+              if (content._isLink && content._targetId) {
+                const fakeTargetChar = { id: content._targetId, data: content };
+                await saveLink(fakeTargetChar, localParentId);
+                importCount++;
+              } else if (content.basic && content.attributes) {
                 const finalData = { ...content, basic: { ...content.basic, name: content.basic.name || item.name.split('_')[0].replace('.json', '') } };
                 await handleSaveInternal(finalData, undefined, localParentId);
                 importCount++;

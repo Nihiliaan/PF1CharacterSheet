@@ -83,6 +83,33 @@ export async function saveCharacter(characterData: any, id?: string, folderId?: 
   }
 }
 
+export async function saveLink(targetChar: any, folderId: string | null) {
+  if (!auth.currentUser) throw new Error("Must be logged in to save links");
+  const path = 'characters';
+  try {
+    const payload: any = {
+      name: (targetChar.data?.basic?.name) || '未命名人物(分享)',
+      data: {
+         basic: {
+            name: targetChar.data?.basic?.name || '未命名人物(分享)',
+            avatars: targetChar.data?.basic?.avatars || []
+         }
+      },
+      isPublic: false,
+      updatedAt: serverTimestamp(),
+      ownerId: auth.currentUser.uid,
+      folderId: folderId,
+      isLink: true,
+      targetId: targetChar.id,
+      createdAt: serverTimestamp()
+    };
+    const docRef = await addDoc(collection(db, path), payload);
+    return docRef.id;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
 export async function moveCharacter(id: string, folderId: string | null) {
   const path = `characters/${id}`;
   try {

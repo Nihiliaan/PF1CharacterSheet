@@ -91,6 +91,8 @@ export interface CharacterMetadata {
   data: CharacterData;
   folderId?: string | null;
   ownerId?: string;
+  isLink?: boolean;
+  targetId?: string;
 }
 
 export const ATTRIBUTE_NAMES = [

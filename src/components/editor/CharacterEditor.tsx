@@ -53,7 +53,7 @@ export default function CharacterEditor({
     addAdditionalBlock,
     updateAdditionalBlock,
     removeAdditionalBlock,
-    handleSave: saveCharacter // Mapping handleSave to saveCharacter name used in component
+    saveCharacter
   } = useCharacter();
   return (
     <motion.div
@@ -71,7 +71,7 @@ export default function CharacterEditor({
           {user && (
             <button
               onClick={async () => {
-                const id = await saveCharacter(data);
+                const id = await saveCharacter(data, null);
                 if (id) {
                   window.location.href = `?id=${id}`;
                 }
@@ -659,9 +659,9 @@ export default function CharacterEditor({
                       <div className="flex-1 relative flex flex-col justify-center min-h-[20px] mt-1 mb-1 w-full mx-2">
                         {/* Top labels */}
                         <div className="absolute -top-3.5 left-0 right-0 h-3">
-                          <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${lightPct}%` }}>{encumbrance.light}</span>
-                          <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${medPct}%` }}>{encumbrance.medium}</span>
-                          <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${heavyPct}%` }}>{encumbrance.heavy}</span>
+                          <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${lightPct}%` }}>{encumbrance.light} lbs</span>
+                          <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${medPct}%` }}>{encumbrance.medium} lbs</span>
+                          <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${heavyPct}%` }}>{encumbrance.heavy} lbs</span>
                         </div>
                         {/* Bar */}
                         <div className="h-2 w-full bg-stone-200 rounded-full relative overflow-hidden">
