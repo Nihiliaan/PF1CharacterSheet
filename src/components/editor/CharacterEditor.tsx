@@ -58,7 +58,7 @@ export default function CharacterEditor({
     handleSave: saveCharacter // Mapping handleSave to saveCharacter name used in component
   } = useCharacter();
   return (
-    <motion.div 
+    <motion.div
       key="editor"
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
@@ -71,7 +71,7 @@ export default function CharacterEditor({
           <ShieldCheck size={18} />
           <span>您正在查看的内容为只读版本。</span>
           {user && (
-            <button 
+            <button
               onClick={async () => {
                 const id = await saveCharacter(data);
                 if (id) {
@@ -123,9 +123,9 @@ export default function CharacterEditor({
               </div>
             </div>
             <div className="w-full md:w-64">
-              <AvatarGallery 
-                avatars={data.basic.avatars} 
-                onUpdate={(newAvatars) => updateBasic('avatars', newAvatars)} 
+              <AvatarGallery
+                avatars={data.basic.avatars}
+                onUpdate={(newAvatars) => updateBasic('avatars', newAvatars)}
               />
             </div>
           </div>
@@ -168,7 +168,7 @@ export default function CharacterEditor({
                 战斗数值 (Combat Stats)
                 <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
               </label>
-              <div className="flex-1 min-h-[80px]">
+              <div className="flex-1">
                 <DynamicTable
                   minWidth="0"
                   columns={[
@@ -188,11 +188,11 @@ export default function CharacterEditor({
                 战技备注 (Combat Maneuver Notes)
                 {(data.combatManeuverNotes !== lastSavedData.combatManeuverNotes) && <span className="text-amber-600 animate-pulse">●</span>}
               </label>
-              <div className={`flex-1 rounded border transition-colors shadow-sm overflow-hidden flex ${data.combatManeuverNotes !== lastSavedData.combatManeuverNotes ? 'bg-amber-50 border-amber-300' : 'border-stone-300 bg-white'}`}>
+              <div className={`flex-1 rounded border transition-colors overflow-hidden flex ${data.combatManeuverNotes !== lastSavedData.combatManeuverNotes ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
                 <textarea
                   value={data.combatManeuverNotes || ''}
                   onChange={e => setData({ ...data, combatManeuverNotes: e.target.value })}
-                  className="w-full h-full min-h-[80px] bg-transparent outline-none px-4 py-3 text-sm resize-none placeholder:text-stone-300 leading-relaxed font-serif italic text-stone-700"
+                  className="w-full h-full bg-transparent outline-none px-3 py-2 text-sm font-medium text-ink resize-none placeholder:text-stone-300 leading-relaxed"
                   placeholder="在此输入战技相关的特殊加值或备注..."
                 />
               </div>
@@ -402,50 +402,50 @@ export default function CharacterEditor({
         <Section id="spells" title="法术与类法术能力 (Spells & Sp)">
           <div className="flex flex-col gap-6 w-full">
             {data.magicBlocks.map(block => (
-              <div 
-                key={block.id} 
+              <div
+                key={block.id}
                 className="relative group/magic flex flex-col gap-1 -mx-2 px-2 py-1 rounded transition-colors hover:bg-stone-50"
                 draggable={dragEnabledFor === block.id}
                 onDragStart={(e) => handleDragStart(e, block.id)}
                 onDragOver={(e) => handleDragOver(e, block.id, 'magicBlocks')}
                 onDrop={(e) => handleDrop(e, block.id, 'magicBlocks')}
               >
-                 <div className="flex items-center gap-2 mb-1 group/title relative">
-                   <div onMouseEnter={() => setDragEnabledFor(block.id)} onMouseLeave={() => setDragEnabledFor(null)} className="cursor-move text-stone-300 hover:text-stone-500 transition-colors opacity-0 group-hover/magic:opacity-100 absolute -left-6">
-                     <GripVertical size={16} />
-                   </div>
-                   <input className="text-[10px] font-bold text-stone-500 uppercase tracking-wider bg-transparent border-b border-transparent focus:border-stone-400 outline-none transition-colors max-w-sm" value={block.title} onChange={e => updateMagicBlock(block.id, { title: e.target.value })} placeholder="小字标题" />
-                   <button onClick={() => removeMagicBlock(block.id)} className="text-stone-300 hover:text-red-500 opacity-0 group-hover/title:opacity-100 transition-opacity p-0.5 rounded">
-                     <Trash2 size={12} />
-                   </button>
-                 </div>
-                 {block.type === 'text' ? (
-                    <AutoResizeTextarea value={block.content || ''} onChange={v => updateMagicBlock(block.id, { content: v })} />
-                 ) : (
-                    <DynamicTable
-                       columns={block.columns || []}
-                       data={block.tableData || []}
-                       onChange={v => updateMagicBlock(block.id, { tableData: v })}
-                       newItemGenerator={() => {
-                          const obj: any = {};
-                          (block.columns || []).forEach((c: any) => obj[c.key] = '');
-                          return obj;
-                       }}
-                       onColumnLabelChange={(index, val) => {
-                         const newCols = [...(block.columns || [])];
-                         newCols[index] = { ...newCols[index], label: val };
-                         updateMagicBlock(block.id, { columns: newCols });
-                       }}
-                       onRemoveColumn={(index) => {
-                         const newCols = [...(block.columns || [])];
-                         newCols.splice(index, 1);
-                         updateMagicBlock(block.id, { columns: newCols });
-                       }}
-                       onAddColumn={() => {
-                          updateMagicBlock(block.id, { columns: [...(block.columns || []), { key: 'col' + Math.random(), label: '新列' }] });
-                       }}
-                    />
-                 )}
+                <div className="flex items-center gap-2 mb-1 group/title relative">
+                  <div onMouseEnter={() => setDragEnabledFor(block.id)} onMouseLeave={() => setDragEnabledFor(null)} className="cursor-move text-stone-300 hover:text-stone-500 transition-colors opacity-0 group-hover/magic:opacity-100 absolute -left-6">
+                    <GripVertical size={16} />
+                  </div>
+                  <input className="text-[10px] font-bold text-stone-500 uppercase tracking-wider bg-transparent border-b border-transparent focus:border-stone-400 outline-none transition-colors max-w-sm" value={block.title} onChange={e => updateMagicBlock(block.id, { title: e.target.value })} placeholder="小字标题" />
+                  <button onClick={() => removeMagicBlock(block.id)} className="text-stone-300 hover:text-red-500 opacity-0 group-hover/title:opacity-100 transition-opacity p-0.5 rounded">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+                {block.type === 'text' ? (
+                  <AutoResizeTextarea value={block.content || ''} onChange={v => updateMagicBlock(block.id, { content: v })} />
+                ) : (
+                  <DynamicTable
+                    columns={block.columns || []}
+                    data={block.tableData || []}
+                    onChange={v => updateMagicBlock(block.id, { tableData: v })}
+                    newItemGenerator={() => {
+                      const obj: any = {};
+                      (block.columns || []).forEach((c: any) => obj[c.key] = '');
+                      return obj;
+                    }}
+                    onColumnLabelChange={(index, val) => {
+                      const newCols = [...(block.columns || [])];
+                      newCols[index] = { ...newCols[index], label: val };
+                      updateMagicBlock(block.id, { columns: newCols });
+                    }}
+                    onRemoveColumn={(index) => {
+                      const newCols = [...(block.columns || [])];
+                      newCols.splice(index, 1);
+                      updateMagicBlock(block.id, { columns: newCols });
+                    }}
+                    onAddColumn={() => {
+                      updateMagicBlock(block.id, { columns: [...(block.columns || []), { key: 'col' + Math.random(), label: '新列' }] });
+                    }}
+                  />
+                )}
               </div>
             ))}
             <div className="flex flex-wrap items-center gap-3">
@@ -458,10 +458,10 @@ export default function CharacterEditor({
         <Section id="skills" title="技能加点 (Skills)">
           <DynamicTable
             columns={[
-               { key: 'name', label: '技能 (Skill)', width: '10%' },
-               { key: 'total', label: '总值 (Total)', width: '5%' },
-               { key: 'source', label: '来源 (Source)', width: '40%' },
-               { key: 'special', label: '特殊说明 (Special/Conditional)', width: '45%' }
+              { key: 'name', label: '技能 (Skill)', width: '10%' },
+              { key: 'total', label: '总值 (Total)', width: '5%' },
+              { key: 'source', label: '来源 (Source)', width: '40%' },
+              { key: 'special', label: '特殊说明 (Special/Conditional)', width: '45%' }
             ]}
             data={data.skills}
             originalData={lastSavedData.skills}
@@ -484,46 +484,46 @@ export default function CharacterEditor({
             {data.equipmentBags.map((bag, bagIndex) => (
               <div key={bag.id} className="border rounded p-4 bg-stone-50/50 border-stone-200" onDragOver={(e) => handleBagDragOver(e, bagIndex)} onDrop={(e) => handleBagDrop(e, bagIndex)}>
                 <div className="flex items-center justify-between gap-4 mb-3">
-                   <div className="flex items-center gap-4 flex-1">
-                     <div className="cursor-grab text-stone-300 hover:text-stone-600 active:cursor-grabbing p-1" draggable onDragStart={(e) => handleBagDragStart(e, bagIndex)}><GripVertical size={18} /></div>
-                     <input className="text-lg font-bold font-serif bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 max-w-sm w-full" value={bag.name} onChange={e => updateBagName(bag.id, e.target.value)} />
-                   </div>
-                   <button onClick={() => removeBag(bag.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1 transition-colors"><Trash2 size={14} /> 删除容器</button>
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="cursor-grab text-stone-300 hover:text-stone-600 active:cursor-grabbing p-1" draggable onDragStart={(e) => handleBagDragStart(e, bagIndex)}><GripVertical size={18} /></div>
+                    <input className="text-lg font-bold font-serif bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 max-w-sm w-full" value={bag.name} onChange={e => updateBagName(bag.id, e.target.value)} />
+                  </div>
+                  <button onClick={() => removeBag(bag.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1 transition-colors"><Trash2 size={14} /> 删除容器</button>
                 </div>
                 <DynamicTable
-                   columns={[
-                      { key: 'item', label: '物品 (Item)', width: '35%', hideRightBorder: true },
-                      { key: 'quantity', label: '', width: '5%', type: 'quantity' },
-                      { key: 'cost', label: '价格 (Cost)(gp)', width: '15%', type: 'float' },
-                      { key: 'weight', label: '重量 (Weight)(lbs)', width: '15%', type: 'float' },
-                      { key: 'notes', label: '备注 (Notes)', width: '30%' },
-                   ]}
-                   data={bag.items}
-                   originalData={lastSavedData.equipmentBags?.find((b: any) => b.id === bag.id)?.items || []}
-                   onChange={v => updateBagItems(bag.id, v)}
-                   newItemGenerator={() => ({ item: '', quantity: '1', cost: '', weight: '', notes: '' })}
-                   rowDraggable={true}
-                   rowActionMode={tableActionMode}
-                   onRowActionModeToggle={toggleTableActionMode}
-                   onRowDragStart={(idx, e) => handleItemDragStart(bag.id, idx, e)}
-                   onRowDragOver={(idx, e) => handleItemDragOver(bag.id, idx, e)}
-                   onRowDrop={(idx, e) => handleItemDrop(bag.id, idx, e)}
+                  columns={[
+                    { key: 'item', label: '物品 (Item)', width: '35%', hideRightBorder: true },
+                    { key: 'quantity', label: '', width: '5%', type: 'quantity' },
+                    { key: 'cost', label: '价格 (Cost)(gp)', width: '15%', type: 'float' },
+                    { key: 'weight', label: '重量 (Weight)(lbs)', width: '15%', type: 'float' },
+                    { key: 'notes', label: '备注 (Notes)', width: '30%' },
+                  ]}
+                  data={bag.items}
+                  originalData={lastSavedData.equipmentBags?.find((b: any) => b.id === bag.id)?.items || []}
+                  onChange={v => updateBagItems(bag.id, v)}
+                  newItemGenerator={() => ({ item: '', quantity: '1', cost: '', weight: '', notes: '' })}
+                  rowDraggable={true}
+                  rowActionMode={tableActionMode}
+                  onRowActionModeToggle={toggleTableActionMode}
+                  onRowDragStart={(idx, e) => handleItemDragStart(bag.id, idx, e)}
+                  onRowDragOver={(idx, e) => handleItemDragOver(bag.id, idx, e)}
+                  onRowDrop={(idx, e) => handleItemDrop(bag.id, idx, e)}
                 />
               </div>
             ))}
             <button onClick={addBag} className="flex items-center gap-1 text-sm text-stone-600 border border-dashed border-stone-300 rounded p-3 justify-center"><Plus size={16} /> 添加物品容器</button>
             <div className="flex flex-col md:flex-row gap-4 mt-6 items-stretch">
               <div className="flex flex-col gap-0.5 border border-stone-200 bg-stone-50 rounded p-2 min-w-[120px] justify-center">
-                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">总资产 (Total Cost)</label>
-                 <div className="text-sm font-medium text-ink px-1 py-1">{calculateTotalCost()} gp</div>
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">总资产 (Total Cost)</label>
+                <div className="text-sm font-medium text-ink px-1 py-1">{calculateTotalCost()} gp</div>
               </div>
               <div className="flex-1 flex flex-col border border-stone-200 bg-stone-50 rounded px-4 py-6 min-h-[80px] justify-center">
-                 <div className="flex items-center gap-6">
-                   <span className="text-xl font-bold font-serif text-ink">{calculateTotalWeightNum().toLocaleString()} <span className="text-sm font-normal text-stone-500">lbs</span></span>
-                   <div className="flex-1 h-3 bg-stone-200 rounded-full overflow-hidden relative">
-                     <div className={`h-full rounded-full transition-all bg-green-400`} style={{width: `${Math.min((calculateTotalWeightNum()/encumbrance.heavy)*100, 100)}%`}} />
-                   </div>
-                 </div>
+                <div className="flex items-center gap-6">
+                  <span className="text-xl font-bold font-serif text-ink">{calculateTotalWeightNum().toLocaleString()} <span className="text-sm font-normal text-stone-500">lbs</span></span>
+                  <div className="flex-1 h-3 bg-stone-200 rounded-full overflow-hidden relative">
+                    <div className={`h-full rounded-full transition-all bg-green-400`} style={{ width: `${Math.min((calculateTotalWeightNum() / encumbrance.heavy) * 100, 100)}%` }} />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -534,9 +534,9 @@ export default function CharacterEditor({
             {data.additionalData.map(block => (
               <div key={block.id} draggable={dragEnabledFor === block.id} onDragStart={(e) => handleDragStart(e, block.id)} onDragOver={(e) => handleDragOver(e, block.id, 'additionalData')} onDrop={(e) => handleDrop(e, block.id, 'additionalData')} className="border border-stone-200 rounded p-4 bg-stone-50/50">
                 <div className="flex items-center gap-4 mb-3">
-                   <div onMouseEnter={() => setDragEnabledFor(block.id)} onMouseLeave={() => setDragEnabledFor(null)} className="cursor-move text-stone-400 px-1"><GripVertical size={20} /></div>
-                   <input className="text-lg font-bold font-serif text-primary bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 flex-1" value={block.title} onChange={e => updateAdditionalBlock(block.id, { title: e.target.value })} placeholder="区块标题" />
-                   <button onClick={() => removeAdditionalBlock(block.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1"><Trash2 size={14} /> 删除</button>
+                  <div onMouseEnter={() => setDragEnabledFor(block.id)} onMouseLeave={() => setDragEnabledFor(null)} className="cursor-move text-stone-400 px-1"><GripVertical size={20} /></div>
+                  <input className="text-lg font-bold font-serif text-primary bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 flex-1" value={block.title} onChange={e => updateAdditionalBlock(block.id, { title: e.target.value })} placeholder="区块标题" />
+                  <button onClick={() => removeAdditionalBlock(block.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1"><Trash2 size={14} /> 删除</button>
                 </div>
                 {block.type === 'text' ? (
                   <AutoResizeTextarea value={block.content || ''} onChange={v => updateAdditionalBlock(block.id, { content: v })} />

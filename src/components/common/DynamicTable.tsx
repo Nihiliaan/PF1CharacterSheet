@@ -21,7 +21,7 @@ const DynamicCellInput = ({ value, originalValue, onChange, className = '', read
     }
     if (type === 'quantity') {
       if (val !== '' && !/^\d*$/.test(val)) return;
-      if (val === '0') return; 
+      if (val === '0') return;
     }
     onChange(val);
   };
@@ -56,7 +56,7 @@ const DynamicCellInput = ({ value, originalValue, onChange, className = '', read
             onChange={handleChange}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent transition-colors px-2 py-1 ${className} ${type === 'quantity' ? 'text-stone-500 font-medium' : ''} ${isChanged ? 'text-amber-800' : ''}`}
+            className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent transition-colors px-2 py-1 font-medium ${className} ${type === 'quantity' ? 'text-stone-500' : ''} ${isChanged ? 'text-amber-900' : ''}`}
             rows={1}
           />
         </>
@@ -110,7 +110,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                   c.label
                 )}
                 {onRemoveColumn && columns.length > 1 && (
-                  <button 
+                  <button
                     type="button"
                     onClick={() => onRemoveColumn(index)}
                     className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-stone-400 hover:text-red-500 rounded opacity-0 group-hover/th:opacity-100 transition-opacity bg-stone-200"
@@ -148,8 +148,8 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
         </thead>
         <tbody className="divide-y divide-stone-300">
           {data.map((row, i) => (
-            <tr 
-              key={i} 
+            <tr
+              key={i}
               className={`transition-colors group ${JSON.stringify(row) !== JSON.stringify(originalData?.[i]) ? 'bg-amber-100/30' : 'hover:bg-stone-50'}`}
               draggable={rowDraggable && rowActionMode === 'drag'}
               onDragStart={(e) => onRowDragStart?.(i, e)}
