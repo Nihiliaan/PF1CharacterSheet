@@ -28,14 +28,14 @@ interface CharacterContextType {
   toggleTableActionMode: () => void;
   dragEnabledFor: string | null;
   setDragEnabledFor: (id: string | null) => void;
-  
+
   // Vault State
   myCharacters: any[];
   folders: any[];
   currentFolderId: string | null;
   setCurrentFolderId: (id: string | null) => void;
   refreshCharacterList: () => Promise<void>;
-  
+
   // Actions
   updateBasic: (key: string, val: any) => void;
   updateDefenses: (key: string, val: string) => void;
@@ -44,15 +44,15 @@ interface CharacterContextType {
   updateBagName: (id: string, name: string) => void;
   toggleBagWeight: (id: string, ignoreWeight: boolean) => void;
   updateBagItems: (id: string, items: any[]) => void;
-  
+
   addMagicBlock: (type: 'text' | 'table') => void;
   updateMagicBlock: (id: string, updates: any) => void;
   removeMagicBlock: (id: string) => void;
-  
+
   addAdditionalBlock: (type: 'text' | 'table' | 'image') => void;
   updateAdditionalBlock: (id: string, updates: any) => void;
   removeAdditionalBlock: (id: string) => void;
-  
+
   // Auth State
   user: FirebaseUser | null;
   handleLogin: (provider: any) => Promise<void>;
@@ -66,7 +66,7 @@ interface CharacterContextType {
   recentCharacters: any[];
   addToRecent: (char: any) => void;
   removeFromRecent: (id: string) => void;
-  
+
   // Header UI State
   isHeaderPinned: boolean;
   setIsHeaderPinned: (pinned: boolean) => void;
@@ -80,19 +80,19 @@ interface CharacterContextType {
   setShowApiKeyInput: (show: boolean) => void;
   aiInputText: string;
   setAiInputText: (text: string) => void;
-  
+
   // AI State
   showAIModal: boolean;
   setShowAIModal: (val: boolean) => void;
   handleAIExtract: (inputText: string, apiKey: string) => Promise<void>;
   isAILoading: boolean;
-  
+
   // Persistence & Global
   // Drive & Vault State
-  driveModal: { isOpen: boolean, currentPath: {id: string, name: string}[], items: any[] } | null;
+  driveModal: { isOpen: boolean, currentPath: { id: string, name: string }[], items: any[] } | null;
   setDriveModal: (val: any) => void;
   isSyncingDrive: boolean;
-  
+
   // Handlers
   handleBrowseDrive: () => Promise<void>;
   navigateDrive: (folderId: string, folderName: string) => Promise<void>;
@@ -100,7 +100,7 @@ interface CharacterContextType {
   importFromDrive: (item: any) => Promise<void>;
   handleCloudBackup: () => Promise<void>;
   handleCloudRestore: () => Promise<void>;
-  
+
   moveCharacter: (id: string, targetId: string | null) => Promise<void>;
   moveFolder: (id: string, targetId: string | null) => Promise<void>;
   createFolder: (name: string, parentId: string | null) => Promise<void>;
@@ -118,7 +118,7 @@ interface CharacterContextType {
   handleExportBBCode: () => void;
   selectCharacter: (id: string) => Promise<void>;
   loadSharedCharacter: (id: string) => Promise<void>;
-  
+
   // Drag & Drop
   handleTableItemDragStart: (listKey: string, itemIndex: number, e: React.DragEvent) => void;
   handleTableItemDragOver: (listKey: string, targetItemIndex: number, e: React.DragEvent) => void;
@@ -132,7 +132,7 @@ interface CharacterContextType {
   handleDragStart: (e: React.DragEvent, id: string) => void;
   handleDragOver: (e: React.DragEvent, targetId: string, listName: 'additionalData' | 'magicBlocks') => void;
   handleDrop: (e: React.DragEvent, targetId: string, listName: 'additionalData' | 'magicBlocks') => void;
-  
+
   // Toast State
   toast: { message: string; type?: 'success' | 'error' | 'info' } | null;
   setToast: (val: any) => void;
@@ -155,11 +155,11 @@ export const useCharacter = () => {
 export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [view, setViewState] = useState<'editor' | 'vault' | 'settings' | 'bbcode-template'>('editor');
-  
+
   // Header UI State
   const [isHeaderPinned, setIsHeaderPinnedState] = useState(() => localStorage.getItem('header_pinned') === 'true');
   const [isHeaderVisible, setIsHeaderVisible] = useState(false);
-  
+
   // Recent Characters
   const [recentCharacters, setRecentCharacters] = useState<any[]>([]);
 
@@ -167,12 +167,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('user_gemini_api_key') || '');
   const [showApiKeyInput, setShowApiKeyInput] = useState(!localStorage.getItem('user_gemini_api_key'));
   const [aiInputText, setAiInputText] = useState('');
-  
+
   // Initial Sync Logic
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      
+
       try {
         // 1. Initial Character Load from URL
         const urlParams = new URL(window.location.search).searchParams;
@@ -262,7 +262,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     const saved = localStorage.getItem('recent_characters');
     if (saved) {
-      try { setRecentCharacters(JSON.parse(saved)); } 
+      try { setRecentCharacters(JSON.parse(saved)); }
       catch (e) { console.error("Recent chars load failed", e); }
     }
   }, []);
@@ -312,11 +312,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [confirmModal, setConfirmModal] = useState<{ title: string, onConfirm: () => void, onSecondaryConfirm?: () => void } | null>(null);
   const [tableActionMode, setTableActionMode] = useState<'drag' | 'delete'>('drag');
   const [dragEnabledFor, setDragEnabledFor] = useState<string | null>(null);
-  
+
   const [myCharacters, setMyCharacters] = useState<any[]>([]);
   const [folders, setFolders] = useState<any[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  
+
   const [isDirty, setIsDirty] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
@@ -412,13 +412,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (id === currentCharacterId || (!id && !currentCharacterId)) {
           setCurrentCharacterId(newId);
           setLastSavedData(JSON.parse(JSON.stringify(saveData)));
-          
+
           // Update URL
           const url = new URL(window.location.href);
           url.searchParams.set('id', newId);
           window.history.replaceState({}, '', url.toString());
         }
-        
+
         addToRecent({ id: newId, name: saveData.basic.name, data: saveData });
         await refreshCharacterList();
         setToast({ message: id ? "人物卡保存成功！" : "已创建并保存新人物卡" });
@@ -459,7 +459,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsReadOnly(char.ownerId !== user?.uid);
         setView('editor');
         addToRecent(char);
-        
+
         const url = new URL(window.location.href);
         url.searchParams.set('id', id);
         window.history.replaceState({}, '', url.toString());
@@ -479,7 +479,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setCurrentCharacterId(char.id);
         addToRecent(char);
         if (user && char.ownerId === user.uid) {
-           setIsReadOnly(false);
+          setIsReadOnly(false);
         }
       }
     } catch (e) {
@@ -505,7 +505,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           const newList = [...(p as any)[listKey]];
           const [item] = newList.splice(sourceItemIndex, 1);
           if (item !== undefined) {
-             newList.splice(targetItemIndex, 0, item);
+            newList.splice(targetItemIndex, 0, item);
           }
           return { ...p, [listKey]: newList };
         });
@@ -549,22 +549,22 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const currentDrag = draggedItem.current;
       const sourceBag = data.equipmentBags.find(b => b.id === currentDrag.bagId);
       if (sourceBag) {
-          const targetBag = data.equipmentBags[dropIndex];
-          if (sourceBag.id !== targetBag.id) {
-              const item = sourceBag.items[currentDrag.itemIndex];
-              if (item !== undefined) {
-                const newBags = data.equipmentBags.map(b => {
-                    if (b.id === sourceBag.id) {
-                        return {...b, items: b.items.filter((_, i) => i !== currentDrag.itemIndex)};
-                    }
-                    if (b.id === targetBag.id) {
-                        return {...b, items: [...b.items, item]};
-                    }
-                    return b;
-                });
-                setData(p => ({...p, equipmentBags: newBags}));
+        const targetBag = data.equipmentBags[dropIndex];
+        if (sourceBag.id !== targetBag.id) {
+          const item = sourceBag.items[currentDrag.itemIndex];
+          if (item !== undefined) {
+            const newBags = data.equipmentBags.map(b => {
+              if (b.id === sourceBag.id) {
+                return { ...b, items: b.items.filter((_, i) => i !== currentDrag.itemIndex) };
               }
+              if (b.id === targetBag.id) {
+                return { ...b, items: [...b.items, item] };
+              }
+              return b;
+            });
+            setData(p => ({ ...p, equipmentBags: newBags }));
           }
+        }
       }
     }
     draggedBagIndex.current = null;
@@ -620,7 +620,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       title: type === 'text' ? '自定文本' : type === 'table' ? '自定表格' : '附加图片',
       content: '',
       url: '',
-      columns: [{key: 'col0', label: '列1'}, {key: 'col1', label: '列2'}, {key: 'col2', label: '列3'}],
+      columns: [{ key: 'col0', label: '列1' }, { key: 'col1', label: '列2' }, { key: 'col2', label: '列3' }],
       tableData: []
     };
     setData(p => ({ ...p, additionalData: [...p.additionalData, newBlock] }));
@@ -643,7 +643,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       type,
       title: type === 'text' ? '自定文本' : '类别名(e.g已知法术)',
       content: '',
-      columns: [{key: 'col0', label: '列1'}, {key: 'col1', label: '列2'}, {key: 'col2', label: '列3'}],
+      columns: [{ key: 'col0', label: '列1' }, { key: 'col1', label: '列2' }, { key: 'col2', label: '列3' }],
       tableData: []
     };
     setData(p => ({ ...p, magicBlocks: [...(p.magicBlocks || []), newBlock] }));
@@ -694,9 +694,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let total = 0;
     data.equipmentBags.forEach(bag => {
       bag.items.forEach(item => {
-         const cost = parseFloat(item.cost) || 0;
-         const qty = parseInt(item.quantity) || 1;
-         total += cost * qty;
+        const cost = parseFloat(item.cost) || 0;
+        const qty = parseInt(item.quantity) || 1;
+        total += cost * qty;
       });
     });
     return total.toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -707,9 +707,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     data.equipmentBags.forEach(bag => {
       if (!bag.ignoreWeight) {
         bag.items.forEach(item => {
-           const weight = parseFloat(item.weight) || 0;
-           const qty = parseInt(item.quantity) || 1;
-           total += weight * qty;
+          const weight = parseFloat(item.weight) || 0;
+          const qty = parseInt(item.quantity) || 1;
+          total += weight * qty;
         });
       }
     });
@@ -783,16 +783,16 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         basic: { ...DEFAULT_DATA.basic, ...(extracted.basic || {}) },
         defenses: { ...DEFAULT_DATA.defenses, ...(extracted.defenses || {}) }
       };
-      
+
       if (extracted.attributes && Array.isArray(extracted.attributes)) {
-          const newAttributes = JSON.parse(JSON.stringify(DEFAULT_DATA.attributes));
-          extracted.attributes.forEach((extAttr: any) => {
-              const idx = newAttributes.findIndex((a: any) => a.name === extAttr.name || (extAttr.name && extAttr.name.includes(a.name)));
-              if (idx !== -1) {
-                  newAttributes[idx] = { ...newAttributes[idx], ...extAttr };
-              }
-          });
-          mergedData.attributes = newAttributes;
+        const newAttributes = JSON.parse(JSON.stringify(DEFAULT_DATA.attributes));
+        extracted.attributes.forEach((extAttr: any) => {
+          const idx = newAttributes.findIndex((a: any) => a.name === extAttr.name || (extAttr.name && extAttr.name.includes(a.name)));
+          if (idx !== -1) {
+            newAttributes[idx] = { ...newAttributes[idx], ...extAttr };
+          }
+        });
+        mergedData.attributes = newAttributes;
       }
 
       const listFields = ['meleeAttacks', 'rangedAttacks', 'skills', 'feats', 'classFeatures', 'racialTraits', 'backgroundTraits'];
@@ -840,7 +840,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  const [driveModal, setDriveModal] = useState<{ isOpen: boolean, currentPath: {id: string, name: string}[], items: any[] } | null>(null);
+  const [driveModal, setDriveModal] = useState<{ isOpen: boolean, currentPath: { id: string, name: string }[], items: any[] } | null>(null);
   const [isSyncingDrive, setIsSyncingDrive] = useState(false);
 
   const handleBrowseDrive = async () => {
@@ -860,10 +860,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return;
       }
       const items = await listDriveFiles(token, pf1RootId);
-      setDriveModal({ 
-        isOpen: true, 
-        currentPath: [{ id: pf1RootId, name: 'PF1CharacterSheet' }], 
-        items 
+      setDriveModal({
+        isOpen: true,
+        currentPath: [{ id: pf1RootId, name: 'PF1CharacterSheet' }],
+        items
       });
     } catch (e: any) {
       setToast({ message: "连接失败: " + e.message, type: 'error' });
