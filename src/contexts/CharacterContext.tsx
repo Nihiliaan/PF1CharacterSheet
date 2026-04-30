@@ -193,12 +193,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         // 2. Initial List Refresh (if logged in)
         if (u) {
-          const [list, folderList] = await Promise.all([
-            getMyCharacters(),
-            getFolders()
-          ]);
-          setMyCharacters(list || []);
-          setFolders(folderList || []);
+          refreshCharacterList();
         }
       } catch (error) {
         console.error("Initial sync/load failed:", error);
@@ -209,6 +204,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      refreshCharacterList();
+    }
+  }, [user]);
 
   const handleLogin = async (provider: any) => {
     try {
@@ -409,7 +410,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       const newId = await saveCharacterService(saveData, id || undefined, folderId);
       if (newId) {
-        if (id === currentCharacterId || (!id && !currentCharacterId)) {
+        // If we are saving the current character OR creating a new one (id is null/undefined)
+        if (!id || id === currentCharacterId) {
           setCurrentCharacterId(newId);
           setLastSavedData(JSON.parse(JSON.stringify(saveData)));
 

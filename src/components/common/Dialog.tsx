@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Save } from 'lucide-react';
 
-const Dialog = ({ type, title, defaultValue = '', onConfirm, onCancel, onSecondaryConfirm, secondaryLabel }: { 
+const Dialog = ({ type, title, defaultValue = '', onConfirm, onCancel, onSecondaryConfirm, secondaryLabel, confirmLabel, confirmClassName }: { 
   type: 'prompt' | 'confirm', 
   title: string, 
   defaultValue?: string,
   onConfirm: (val: string) => void, 
   onCancel: () => void,
   onSecondaryConfirm?: () => void,
-  secondaryLabel?: string
+  secondaryLabel?: string,
+  confirmLabel?: string,
+  confirmClassName?: string
 }) => {
   const [val, setVal] = useState(defaultValue);
   return (
@@ -39,8 +41,8 @@ const Dialog = ({ type, title, defaultValue = '', onConfirm, onCancel, onSeconda
         <div className="flex flex-col border-t border-stone-100 bg-stone-50/50">
           <div className="flex">
             <button onClick={onCancel} className="flex-1 px-6 py-4 text-stone-500 hover:bg-stone-100 transition-colors font-medium border-r border-stone-100 text-sm">取消</button>
-            <button onClick={() => onConfirm(val)} className={`flex-1 px-6 py-4 text-rose-600 hover:bg-stone-100 transition-colors font-bold text-sm ${onSecondaryConfirm ? '' : 'text-primary'}`}>
-              {type === 'confirm' ? '丢弃更改' : '确定'}
+            <button onClick={() => onConfirm(val)} className={`flex-1 px-6 py-4 transition-colors font-bold text-sm ${confirmClassName || (onSecondaryConfirm ? 'text-rose-600' : 'text-primary')} hover:bg-stone-100`}>
+              {confirmLabel || (type === 'confirm' ? '丢弃更改' : '确定')}
             </button>
           </div>
           {onSecondaryConfirm && (

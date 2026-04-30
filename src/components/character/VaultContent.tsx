@@ -206,7 +206,9 @@ const VaultContent = ({
     type: 'prompt' | 'confirm', 
     title: string, 
     defaultValue?: string,
-    onConfirm: (val: string) => void 
+    onConfirm: (val: string) => void,
+    confirmLabel?: string,
+    confirmClassName?: string
   } | null>(null);
 
   const handleImportLocal = async (files: FileList | null) => {
@@ -296,6 +298,8 @@ const VaultContent = ({
         setModal({
           type: 'confirm',
           title: `确定要删除这 ${idsToDelete.length} 个项目吗？`,
+          confirmLabel: '确认删除',
+          confirmClassName: 'text-rose-600',
           onConfirm: async () => {
             await Promise.all(idsToDelete.map(async id => {
               const isF = folders.some(f => f.id === id);
@@ -393,6 +397,8 @@ const VaultContent = ({
           type={modal.type} 
           title={modal.title} 
           defaultValue={modal.defaultValue}
+          confirmLabel={modal.confirmLabel}
+          confirmClassName={modal.confirmClassName}
           onConfirm={(val) => { modal.onConfirm(val); setModal(null); }} 
           onCancel={() => setModal(null)} 
         />
