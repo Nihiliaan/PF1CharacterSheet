@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { ShieldCheck, GripVertical, Trash2, Plus } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
-import { CharacterData } from '../../types';
+import { CharacterData, ATTRIBUTE_NAMES } from '../../types';
 import Section from '../common/Section';
 import InlineInput from '../common/InlineInput';
 import AutoResizeTextarea from '../common/AutoResizeTextarea';
@@ -155,9 +155,12 @@ export default function CharacterEditor({
                 { key: 'source', label: '来源 (Source)', width: '40%' },
                 { key: 'status', label: '状态 (Status)', width: '30%' }
               ]}
-              data={data.attributes}
-              originalData={lastSavedData.attributes}
-              onChange={v => setData({ ...data, attributes: v })}
+              data={data.attributes.map((a, i) => ({ ...a, name: ATTRIBUTE_NAMES[i] }))}
+              originalData={lastSavedData.attributes.map((a, i) => ({ ...a, name: ATTRIBUTE_NAMES[i] }))}
+              onChange={newAttrs => setData({ 
+                ...data, 
+                attributes: newAttrs.map(({ name, ...rest }: any) => rest) 
+              })}
               fixedRows={true}
               readonlyColumns={['name']}
             />
@@ -521,10 +524,12 @@ export default function CharacterEditor({
                 label: '属性 (Ability)',
                 width: '10%',
                 type: 'select',
-                options: ['', 'STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'],
+                options: ['', ...ATTRIBUTE_NAMES],
                 displayFormatter: (val) => {
                   if (!val) return '';
-                  const attr = data.attributes.find(a => a.name.toLocaleUpperCase().includes(val.toLocaleUpperCase()));
+                  const idx = ATTRIBUTE_NAMES.indexOf(val);
+                  if (idx === -1) return val;
+                  const attr = data.attributes[idx];
                   if (!attr) return val;
                   const mod = parseInt(attr.modifier);
                   if (isNaN(mod)) return attr.modifier || '0';

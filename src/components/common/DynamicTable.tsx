@@ -67,24 +67,31 @@ const DynamicCellInput = ({
   return (
     <div className={`grid h-full w-full relative group transition-colors ${isChanged ? 'bg-amber-100/40' : ''}`}>
       {type === 'select' && options ? (
-        <select
-          value={value}
-          onChange={handleChange as any}
-          className={`w-full h-full outline-none bg-transparent transition-colors px-2 py-1 cursor-pointer ${className} ${isChanged ? 'text-amber-700 font-bold' : ''}`}
-        >
-          {options.map(opt => (
-            <option key={opt} value={opt}>{opt || '—'}</option>
-          ))}
-        </select>
+        <div className="relative w-full h-full">
+          <select
+            value={value}
+            onChange={handleChange as any}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 ${className}`}
+          >
+            {options.map(opt => (
+              <option key={opt} value={opt}>{opt || '—'}</option>
+            ))}
+          </select>
+          <div className={`w-full h-full flex items-center px-2 py-1 font-medium transition-colors ${isChanged ? 'text-amber-700' : 'text-ink'}`}>
+            {displayValue() || <span className="text-stone-300">—</span>}
+          </div>
+        </div>
       ) : type === 'checkbox' ? (
         <div 
           onClick={toggleCheckbox}
-          className={`w-full h-full flex items-center justify-center cursor-pointer group/cb ${className}`}
+          className={`w-full h-full flex items-center justify-center cursor-pointer group/cb transition-all ${value === 'true' ? 'bg-primary/5' : 'hover:bg-stone-50'} ${className}`}
         >
-          <div className={`transition-all ${value === 'true' ? 'text-primary font-bold' : 'text-stone-300 opacity-0 group-hover/cb:opacity-100'}`}>
+          <div className={`transition-all transform ${value === 'true' ? 'text-primary font-bold scale-110 text-base' : 'text-stone-300 opacity-20 group-hover/cb:opacity-100 scale-90'}`}>
             {value === 'true' ? '+3' : (
-              <div className="w-4 h-4 border border-stone-300 rounded flex items-center justify-center bg-white">
-                <div className="w-2.5 h-2.5 bg-primary rounded-sm opacity-0 group-active:opacity-50" />
+              <div className="w-5 h-5 border-2 border-stone-300 rounded flex items-center justify-center bg-white shadow-sm">
+                <div className="w-3 h-3 bg-primary rounded-sm opacity-0 group-active:opacity-50" />
               </div>
             )}
           </div>

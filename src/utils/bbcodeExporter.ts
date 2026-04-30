@@ -1,3 +1,5 @@
+import { ATTRIBUTE_NAMES } from '../types';
+
 export function generateBBCode(data: any, template: string): string {
   let bbcode = template;
 
@@ -55,8 +57,8 @@ export function generateBBCode(data: any, template: string): string {
   replaceVar('avatarUrl', getS(data, 'basic.avatars.0.url') || 'http://此处填写人物头像图片地址');
 
   // Attributes Table Rows
-  const attrRows = (data.attributes || []).map((a: any) => 
-    `[tr][td]${a.name || '-'}[/td][td]${a.final || '-'}[/td][td]${a.modifier || '-'}[/td][td]${a.source || ''}${a.status ? ' ' + a.status : ''}[/td][/tr]`
+  const attrRows = (data.attributes || []).map((a: any, i: number) => 
+    `[tr][td]${ATTRIBUTE_NAMES[i] || '-'}[/td][td]${a.final || '-'}[/td][td]${a.modifier || '-'}[/td][td]${a.source || ''}${a.status ? ' ' + a.status : ''}[/td][/tr]`
   ).join('\n');
   replaceVar('attributesRows', attrRows);
 

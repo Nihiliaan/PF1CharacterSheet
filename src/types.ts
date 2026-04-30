@@ -53,7 +53,7 @@ export interface CharacterData {
     avatars: { url: string; note: string }[];
   };
   story: string;
-  attributes: { name: string; final: string; modifier: string; source: string; status: string }[];
+  attributes: { final: string; modifier: string; source: string; status: string }[];
   babCmbCmd: string;
   babTable: { bab: string; cmb: string; cmd: string }[];
   combatManeuverNotes: string;
@@ -94,6 +94,15 @@ export interface CharacterMetadata {
   folderId?: string | null;
   ownerId?: string;
 }
+
+export const ATTRIBUTE_NAMES = [
+  '力量 (STR)',
+  '敏捷 (DEX)',
+  '体质 (CON)',
+  '智力 (INT)',
+  '感知 (WIS)',
+  '魅力 (CHA)'
+];
 
 export interface FolderMetadata {
   id: string;
