@@ -465,8 +465,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const handleNew = async () => {
     if (isDirty) {
       setConfirmModal({
-        title: "确定要新建角色吗？当前未保存的修改将会丢失。",
+        title: "确定要新建角色吗？是否保存当前修改？",
         onConfirm: () => performCreateNew(),
+        onSecondaryConfirm: async () => {
+          await handleSave();
+          await performCreateNew();
+        }
       });
     } else {
       await performCreateNew();
@@ -474,26 +478,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const selectCharacter = async (idOrChar: string | any) => {
-    if (typeof idOrChar === 'object' && idOrChar !== null && idOrChar.id) {
-      const char = idOrChar;
-      setData(char.data);
-      setLastSavedData(JSON.parse(JSON.stringify(char.data)));
-      setCurrentCharacterId(char.id);
-      setIsReadOnly(char.ownerId !== user?.uid);
-      setViewState('editor');
-      addToRecent(char);
-      
-      const url = new URL(window.location.href);
-      url.searchParams.set('id', char.id);
-      window.history.replaceState({}, '', url.toString());
-      return;
-    }
-
-    const id = idOrChar as string;
-    setToast({ message: "正在加载人物资料..." });
-    try {
-      const char = await getCharacterById(id);
-      if (char) {
+    const performSelect = async () => {
+      if (typeof idOrChar === 'object' && idOrChar !== null && idOrChar.id) {
+        const char = idOrChar;
         setData(char.data);
         setLastSavedData(JSON.parse(JSON.stringify(char.data)));
         setCurrentCharacterId(char.id);
@@ -502,11 +489,43 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addToRecent(char);
         
         const url = new URL(window.location.href);
-        url.searchParams.set('id', id);
+        url.searchParams.set('id', char.id);
         window.history.replaceState({}, '', url.toString());
+        return;
       }
-    } catch (e) {
-      setToast({ message: "加载失败", type: 'error' });
+
+      const id = idOrChar as string;
+      setToast({ message: "正在加载人物资料..." });
+      try {
+        const char = await getCharacterById(id);
+        if (char) {
+          setData(char.data);
+          setLastSavedData(JSON.parse(JSON.stringify(char.data)));
+          setCurrentCharacterId(char.id);
+          setIsReadOnly(char.ownerId !== user?.uid);
+          setViewState('editor');
+          addToRecent(char);
+          
+          const url = new URL(window.location.href);
+          url.searchParams.set('id', id);
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch (e) {
+        setToast({ message: "加载失败", type: 'error' });
+      }
+    };
+
+    if (isDirty) {
+      setConfirmModal({
+        title: "是否保存当前修改后再打开新角色？",
+        onConfirm: () => performSelect(),
+        onSecondaryConfirm: async () => {
+          await handleSave();
+          await performSelect();
+        }
+      });
+    } else {
+      await performSelect();
     }
   };
 
