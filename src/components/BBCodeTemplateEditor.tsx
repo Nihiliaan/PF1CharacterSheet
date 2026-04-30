@@ -66,7 +66,10 @@ export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 [/table]
 `;
 
-export default function BBCodeTemplateEditor({ setToast }: { setToast: (t: any) => void }) {
+import { useCharacter } from '../contexts/CharacterContext';
+
+export default function BBCodeTemplateEditor() {
+  const { setToast } = useCharacter();
   const [template, setTemplate] = useState<string>(DEFAULT_BBCODE_TEMPLATE);
 
   useEffect(() => {
