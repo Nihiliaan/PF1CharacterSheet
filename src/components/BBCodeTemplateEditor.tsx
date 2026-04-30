@@ -7,7 +7,7 @@ export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 {alignment} {deity}
 {size} {gender} {race}
 {height} {weight} {age} {speed}
-先攻{initiative} 察觉{perception}
+先攻 {initiative} 察觉 {perception}
 语言：{languages}
 [/td]
 [td][img width=200 height=200]{avatarUrl}[/img][/td]
@@ -17,31 +17,29 @@ export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 [spoiler]
 [b]属性[/b]
 {attributesTable}
-
-[table][tr][td]BAB{bab}[/td]
-[td]CMB{cmb}[/td]
-[td]CMD{cmd}[/td]
-[/tr]
-[/table]
+[table][tr][td]BAB{bab}[/td][td]CMB{cmb}[/td][td]CMD{cmd}[/td][/tr][/table]
 [hr]
 [b]攻击[/b]
 {meleeAttackTable}
 {rangedAttackTable}
+特殊攻击
 {specialAttacks}
 [hr]
 [b]防御[/b]
-AC {ac} ({acNotes})，措手不及{acFlatFooted}，接触{acTouch}
+AC {ac}，措手不及{acFlatFooted}，接触{acTouch}
+{acNotes}
 HP {hp} ({hd})
-强韧{saveFort}，反射{saveRef}，意志{saveWill} ({savesNotes})
-防御能力 {defensiveAbilities}
+强韧{saveFort}，反射{saveRef}，意志{saveWill}
+{savesNotes}
+防御能力
+{defensiveAbilities}
 [hr]
 [b]种族特性和背景特性[/b]
 {racialTraits}
-[i]背景特性[/i]
 {backgroundTraits}
 [hr]
 [b]职业特性[/b]
-天赋职业奖励：{favoredClass} ({favoredClassBonus})
+天赋职业：{favoredClass} ({favoredClassBonus})
 {classFeatures}
 {magicBlocks}
 [hr]
