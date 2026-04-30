@@ -65,7 +65,7 @@ const DynamicCellInput = ({
   }
 
   return (
-    <div className={`grid h-full w-full relative group transition-colors ${isChanged ? 'bg-amber-100/40' : ''}`}>
+    <div className={`grid h-full w-full relative group transition-colors min-h-[32px] ${isChanged ? 'bg-amber-100/40' : ''}`}>
       {type === 'select' && options ? (
         <div className="relative w-full h-full">
           <select
@@ -208,11 +208,11 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                     value={row[c.key] || ''}
                     originalValue={originalData?.[i]?.[c.key]}
                     onChange={(val) => updateData(i, c.key, val)}
-                    readOnly={readonlyColumns?.includes(c.key)}
+                    readOnly={readOnly || readonlyColumns?.includes(c.key)}
                     type={c.type as any}
                     options={c.options}
                     displayFormatter={c.displayFormatter}
-                    className={readonlyColumns?.includes(c.key) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"}
+                    className={(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"}
                   />
                 </td>
               ))}
@@ -256,8 +256,8 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                   <DynamicCellInput
                     value={footerRow[c.key] || ''}
                     onChange={(val) => onFooterChange({ ...footerRow, [c.key]: val })}
-                    readOnly={footerReadonlyColumns?.includes(c.key)}
-                    className={footerReadonlyColumns?.includes(c.key) ? "font-bold bg-stone-200/50 text-stone-800" : "font-bold hover:bg-stone-50 focus:bg-white"}
+                    readOnly={readOnly || footerReadonlyColumns?.includes(c.key)}
+                    className={(readOnly || footerReadonlyColumns?.includes(c.key)) ? "font-bold bg-stone-200/50 text-stone-800" : "font-bold hover:bg-stone-50 focus:bg-white"}
                   />
                 </td>
               ))}
