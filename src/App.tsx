@@ -34,7 +34,8 @@ function AppContent() {
     setIsHeaderPinned,
     isHeaderVisible,
     setIsHeaderVisible,
-    handleLogin
+    handleLogin,
+    handleNew
   } = useCharacter();
 
   return (
@@ -63,7 +64,7 @@ function AppContent() {
           {view === 'vault' && (
             <motion.div key="vault" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full overflow-hidden">
               {user ? (
-                <VaultContent user={user} onAdd={() => setView('editor')} />
+                <VaultContent user={user} onAdd={handleNew} />
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-stone-50">
                   <User size={64} className="text-stone-300 mb-6" />

@@ -435,20 +435,61 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return await handleSaveInternal(data, currentCharacterId, currentFolderId);
   };
 
-  const handleNew = (confirmNavigation: (cb: () => void) => void) => {
-    confirmNavigation(() => {
-      setData(DEFAULT_DATA);
-      setLastSavedData(JSON.parse(JSON.stringify(DEFAULT_DATA)));
+  const performCreateNew = async () => {
+    const newData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    
+    if (user) {
+      setToast({ message: "正在创建新角色..." });
+      try {
+        // handleSaveInternal handles state updates and list refresh
+        const newId = await handleSaveInternal(newData, null, currentFolderId);
+        if (newId) {
+          setViewState('editor');
+        }
+      } catch (e: any) {
+        setToast({ message: "创建新角色失败", type: 'error' });
+      }
+    } else {
+      setData(newData);
+      setLastSavedData(JSON.parse(JSON.stringify(newData)));
       setCurrentCharacterId(null);
       setIsReadOnly(false);
+      
       const url = new URL(window.location.href);
       url.searchParams.delete('id');
       window.history.replaceState({}, '', url.toString());
-      setView('editor');
-    });
+      setViewState('editor');
+    }
   };
 
-  const selectCharacter = async (id: string) => {
+  const handleNew = async () => {
+    if (isDirty) {
+      setConfirmModal({
+        title: "确定要新建角色吗？当前未保存的修改将会丢失。",
+        onConfirm: () => performCreateNew(),
+      });
+    } else {
+      await performCreateNew();
+    }
+  };
+
+  const selectCharacter = async (idOrChar: string | any) => {
+    if (typeof idOrChar === 'object' && idOrChar !== null && idOrChar.id) {
+      const char = idOrChar;
+      setData(char.data);
+      setLastSavedData(JSON.parse(JSON.stringify(char.data)));
+      setCurrentCharacterId(char.id);
+      setIsReadOnly(char.ownerId !== user?.uid);
+      setViewState('editor');
+      addToRecent(char);
+      
+      const url = new URL(window.location.href);
+      url.searchParams.set('id', char.id);
+      window.history.replaceState({}, '', url.toString());
+      return;
+    }
+
+    const id = idOrChar as string;
     setToast({ message: "正在加载人物资料..." });
     try {
       const char = await getCharacterById(id);
@@ -457,9 +498,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setLastSavedData(JSON.parse(JSON.stringify(char.data)));
         setCurrentCharacterId(char.id);
         setIsReadOnly(char.ownerId !== user?.uid);
-        setView('editor');
+        setViewState('editor');
         addToRecent(char);
-
+        
         const url = new URL(window.location.href);
         url.searchParams.set('id', id);
         window.history.replaceState({}, '', url.toString());
