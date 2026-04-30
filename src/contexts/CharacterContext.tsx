@@ -139,9 +139,6 @@ interface CharacterContextType {
   setToast: (val: any) => void;
 
   // Helpers
-  calculateTotalCost: () => string;
-  calculateTotalWeightNum: () => number;
-  encumbrance: { light: number, medium: number, heavy: number };
   isDirty: boolean;
 }
 
@@ -753,60 +750,6 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   // Helpers
-  const calculateTotalCost = () => {
-    let total = 0;
-    data.equipmentBags.forEach(bag => {
-      bag.items.forEach(item => {
-        const cost = parseFloat(item.cost) || 0;
-        const qty = parseInt(item.quantity) || 1;
-        total += cost * qty;
-      });
-    });
-    return total.toLocaleString('en-US', { maximumFractionDigits: 2 });
-  };
-
-  const calculateTotalWeightNum = () => {
-    let total = 0;
-    data.equipmentBags.forEach(bag => {
-      if (!bag.ignoreWeight) {
-        bag.items.forEach(item => {
-          const weight = parseFloat(item.weight) || 0;
-          const qty = parseInt(item.quantity) || 1;
-          total += weight * qty;
-        });
-      }
-    });
-    return total;
-  };
-
-  const getComputedEncumbrance = () => {
-    const strAttr = data.attributes.find(a => a.name === '力量');
-    const strValue = strAttr ? parseInt(strAttr.final) || 10 : 10;
-    const mult = parseFloat(data.encumbranceMultiplier) > 0 ? parseFloat(data.encumbranceMultiplier) : 1;
-    let heavy = 0;
-    if (strValue <= 10) {
-      heavy = strValue * 10;
-    } else {
-      const seq = [115, 130, 150, 175, 200, 230, 260, 300, 350];
-      if (strValue >= 11 && strValue <= 19) {
-        heavy = seq[strValue - 11];
-      } else {
-        const eff = (strValue % 10) + 10;
-        const baseHeavy = eff === 10 ? 100 : seq[eff - 11];
-        const power = Math.floor((strValue - eff) / 10);
-        heavy = baseHeavy * Math.pow(4, power);
-      }
-    }
-    const light = Math.floor(heavy / 3);
-    const medium = Math.floor(heavy * 2 / 3);
-    return {
-      light: Math.floor(light * mult),
-      medium: Math.floor(medium * mult),
-      heavy: Math.floor(heavy * mult)
-    };
-  };
-
-  const encumbrance = getComputedEncumbrance();
 
   const handleShare = () => {
     if (!currentCharacterId) {
@@ -1195,7 +1138,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     handleBagDragStart, handleBagDragOver, handleBagDrop,
     handleItemDragStart, handleItemDragOver, handleItemDrop,
     handleDragStart, handleDragOver, handleDrop,
-    calculateTotalCost, calculateTotalWeightNum, encumbrance, isDirty,
+    isDirty,
     // Toast
     toast, setToast,
     // AI configuration

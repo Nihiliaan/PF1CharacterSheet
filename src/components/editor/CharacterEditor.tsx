@@ -11,6 +11,7 @@ import TableOfContents from '../character/TableOfContents';
 import AvatarGallery from '../character/AvatarGallery';
 
 import { useCharacter } from '../../contexts/CharacterContext';
+import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../../utils/calculations';
 
 interface CharacterEditorProps {
   user: FirebaseUser | null;
@@ -41,9 +42,6 @@ export default function CharacterEditor({
     handleItemDragStart,
     handleItemDragOver,
     handleItemDrop,
-    calculateTotalCost,
-    calculateTotalWeightNum,
-    encumbrance,
     dragEnabledFor,
     setDragEnabledFor,
     handleDragStart,
@@ -589,19 +587,94 @@ export default function CharacterEditor({
                 />
               </div>
             ))}
-            <button onClick={addBag} className="flex items-center gap-1 text-sm text-stone-600 border border-dashed border-stone-300 rounded p-3 justify-center"><Plus size={16} /> 添加物品容器</button>
+            <button onClick={addBag} className="flex items-center gap-1 text-sm text-stone-600 border border-dashed border-stone-300 hover:border-stone-500 hover:text-stone-900 rounded p-3 justify-center transition-colors">
+              <Plus size={16} /> 添加物品容器 (Add Container/Bag)
+            </button>
+
             <div className="flex flex-col md:flex-row gap-4 mt-6 items-stretch">
               <div className="flex flex-col gap-0.5 border border-stone-200 bg-stone-50 rounded p-2 min-w-[120px] justify-center">
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">总资产 (Total Cost)</label>
-                <div className="text-sm font-medium px-1 py-1">{calculateTotalCost()} gp</div>
+                <div className="text-sm font-medium text-ink px-1 py-1">{calculateTotalCost(data)} gp</div>
               </div>
-              <div className="flex-1 flex flex-col border border-stone-200 bg-stone-50 rounded px-4 py-6 min-h-[80px] justify-center">
-                <div className="flex items-center gap-6">
-                  <span className="text-xl font-bold font-serif text-ink">{calculateTotalWeightNum().toLocaleString()} <span className="text-sm font-normal text-stone-500">lbs</span></span>
-                  <div className="flex-1 h-3 bg-stone-200 rounded-full overflow-hidden relative">
-                    <div className={`h-full rounded-full transition-all bg-green-400`} style={{ width: `${Math.min((calculateTotalWeightNum() / encumbrance.heavy) * 100, 100)}%` }} />
-                  </div>
-                </div>
+              <div className={`flex flex-col gap-0.5 border rounded p-2 focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-colors min-w-[120px] justify-center ${data.encumbranceMultiplier !== lastSavedData.encumbranceMultiplier ? 'bg-amber-50 border-amber-300' : 'bg-stone-50 border-stone-200'}`}>
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex justify-between">
+                  负重倍率 (Multiplier)
+                  {data.encumbranceMultiplier !== lastSavedData.encumbranceMultiplier && <span className="text-amber-600 animate-pulse">●</span>}
+                </label>
+                <input className="text-sm font-medium text-ink bg-transparent outline-none px-1 py-1 w-full"
+                  value={data.encumbranceMultiplier} onChange={e => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                      setData(p => ({ ...p, encumbranceMultiplier: val }));
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="flex-1 flex flex-col border border-stone-200 bg-stone-50 rounded px-4 py-6 min-h-[80px] justify-center overflow-visible">
+                {(() => {
+                  const encumbrance = getComputedEncumbrance(data);
+                  const maxWeight = encumbrance.heavy;
+                  const currentWeight = calculateTotalWeightNum(data);
+                  const MathMax = Math.max;
+                  const percentage = Math.min((currentWeight / MathMax(maxWeight, 1)) * 100, 100);
+                  const isOverloaded = currentWeight > maxWeight;
+                  const isHeavy = currentWeight > encumbrance.medium && currentWeight <= maxWeight;
+                  const isMedium = currentWeight > encumbrance.light && currentWeight <= encumbrance.medium;
+                  const isLight = currentWeight <= encumbrance.light;
+                  
+                  let barColor = 'bg-stone-300';
+                  if (isOverloaded) barColor = 'bg-red-500';
+                  else if (isHeavy) barColor = 'bg-orange-500';
+                  else if (isMedium) barColor = 'bg-yellow-400';
+                  else if (isLight) barColor = 'bg-green-400';
+                  
+                  const lightPct = (encumbrance.light / MathMax(maxWeight, 1)) * 100;
+                  const medPct = (encumbrance.medium / MathMax(maxWeight, 1)) * 100;
+                  const heavyPct = 100;
+                  
+                  return (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-4 w-full">
+                      <div className="flex flex-col sm:items-center shrink-0 w-24">
+                        <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">总负重</span>
+                        <span className="text-xl font-bold font-serif text-ink">{currentWeight.toLocaleString('en-US', {maximumFractionDigits: 2})} <span className="text-sm font-normal text-stone-500">lbs</span></span>
+                      </div>
+
+                      <div className="flex-1 relative flex flex-col justify-center min-h-[32px] mt-2 mb-2 w-full mx-2 sm:mx-4">
+                        {/* Top labels */}
+                        <div className="absolute -top-5 left-0 right-0 h-4">
+                          <span className="absolute text-[10px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap" style={{left: `${lightPct}%`}}>{encumbrance.light} lbs</span>
+                          <span className="absolute text-[10px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap" style={{left: `${medPct}%`}}>{encumbrance.medium} lbs</span>
+                          <span className="absolute text-[10px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap" style={{left: `${heavyPct}%`}}>{encumbrance.heavy} lbs</span>
+                        </div>
+                        {/* Bar */}
+                        <div className="h-3 w-full bg-stone-200 rounded-full relative overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-300 ${barColor}`} style={{width: `${percentage}%`}} />
+                          {/* Markers */}
+                          <div className="absolute top-0 bottom-0 w-0.5 bg-stone-400/50 z-10" style={{left: `${lightPct}%`}} />
+                          <div className="absolute top-0 bottom-0 w-0.5 bg-stone-400/50 z-10" style={{left: `${medPct}%`}} />
+                        </div>
+                        {/* Bottom labels with arrows */}
+                        <div className="absolute -bottom-6 left-0 right-0 h-4">
+                          <span className="absolute text-[10px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max" style={{left: `${lightPct/2}%`}}>
+                            <span className="leading-none mt-0.5">轻载</span>
+                          </span>
+                          <span className="absolute text-[10px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max" style={{left: `${(lightPct + medPct)/2}%`}}>
+                            <span className="leading-none mt-0.5">中载</span>
+                          </span>
+                          <span className="absolute text-[10px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max" style={{left: `${(medPct + heavyPct)/2}%`}}>
+                            <span className="leading-none mt-0.5">重载</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Overload label */}
+                      <div className="shrink-0 w-16 flex items-center justify-center">
+                        {isOverloaded && <span className="text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded shadow-inner rotate-[-5deg]">超载</span>}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { CharacterData } from '../types';
 
-export const calculateTotalCost = (data: CharacterData): number => {
+export const calculateTotalCost = (data: CharacterData): string => {
   let total = 0;
   data.equipmentBags.forEach(bag => {
     bag.items.forEach(item => {
@@ -9,10 +9,10 @@ export const calculateTotalCost = (data: CharacterData): number => {
       total += cost * qty;
     });
   });
-  return total;
+  return total.toLocaleString('en-US', { maximumFractionDigits: 2 });
 };
 
-export const calculateTotalWeight = (data: CharacterData): number => {
+export const calculateTotalWeightNum = (data: CharacterData): number => {
   let total = 0;
   data.equipmentBags.forEach(bag => {
     if (!bag.ignoreWeight) {
@@ -33,8 +33,8 @@ export interface EncumbranceThresholds {
 }
 
 export const getComputedEncumbrance = (data: CharacterData): EncumbranceThresholds => {
-  // Strength is the first attribute (index 0)
-  const strValue = parseInt(data.attributes[0]?.final) || 10;
+  const strAttr = data.attributes[0];
+  const strValue = strAttr ? parseInt(strAttr.final) || 10 : 10;
   const mult = parseFloat(data.encumbranceMultiplier) > 0 ? parseFloat(data.encumbranceMultiplier) : 1;
 
   let heavy = 0;
