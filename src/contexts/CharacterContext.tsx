@@ -38,7 +38,7 @@ interface CharacterContextType {
 
   // Actions
   updateBasic: (key: string, val: any) => void;
-  updateDefenses: (key: string, val: string) => void;
+  updateDefenses: (key: string, val: any) => void;
   addBag: () => void;
   removeBag: (id: string) => void;
   updateBagName: (id: string, name: string) => void;
@@ -364,7 +364,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setData(p => ({ ...p, basic: { ...p.basic, [key]: val } }));
   }, [isReadOnly]);
 
-  const updateDefenses = useCallback((key: string, val: string) => {
+  const updateDefenses = useCallback((key: string, val: any) => {
     if (isReadOnly) return;
     setData(p => ({ ...p, defenses: { ...p.defenses, [key]: val } }));
   }, [isReadOnly]);

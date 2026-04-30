@@ -83,9 +83,35 @@ export const characterSchema = {
       type: Type.OBJECT,
       description: "防御信息",
       properties: {
-        ac: { type: Type.STRING, description: "AC（护甲等级）信息" },
         hp: { type: Type.STRING, description: "HP（生命值）信息" },
-        saves: { type: Type.STRING, description: "豁免（强韧、反射、意志）信息" },
+        acTable: {
+          type: Type.ARRAY,
+          description: "AC 详情表格，包含1个对象",
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              ac: { type: Type.STRING, description: "综合 AC" },
+              flatFooted: { type: Type.STRING, description: "措手不及 AC" },
+              touch: { type: Type.STRING, description: "接触 AC" }
+            }
+          }
+        },
+        acNotes: { type: Type.STRING, description: "防护等级相关的备注（如护甲、盾牌、敏捷等来源）" },
+        savesTable: {
+          type: Type.ARRAY,
+          description: "豁免表格，包含1个对象",
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              fort: { type: Type.STRING, description: "强韧豁免" },
+              ref: { type: Type.STRING, description: "反射豁免" },
+              will: { type: Type.STRING, description: "意志豁免" }
+            }
+          }
+        },
+        savesNotes: { type: Type.STRING, description: "豁免相关的备注（如抗力加值等）" },
+        ac: { type: Type.STRING, description: "AC 信息（旧版字段，请优先填写 acTable）" },
+        saves: { type: Type.STRING, description: "豁免信息（旧版字段，请优先填写 savesTable）" },
       }
     },
     meleeAttacks: {

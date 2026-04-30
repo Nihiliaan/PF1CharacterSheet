@@ -61,7 +61,15 @@ export interface CharacterData {
   rangedAttacksOverview: string;
   rangedAttacks: any[];
   specialAttacks: string;
-  defenses: { ac: string; hp: string; saves: string };
+  defenses: {
+    hp: string;
+    acTable: { ac: string; flatFooted: string; touch: string }[];
+    acNotes: string;
+    savesTable: { fort: string; ref: string; will: string }[];
+    savesNotes: string;
+    ac: string; // fallback
+    saves: string; // fallback
+  };
   racialTraits: any[];
   backgroundTraits: any[];
   favoredClass: string;

@@ -36,7 +36,15 @@ export const DEFAULT_DATA: CharacterData = {
   rangedAttacksOverview: '',
   rangedAttacks: [],
   specialAttacks: '',
-  defenses: { ac: '', hp: '', saves: '' },
+  defenses: {
+    hp: '',
+    acTable: [{ ac: '', flatFooted: '', touch: '' }],
+    acNotes: '',
+    savesTable: [{ fort: '', ref: '', will: '' }],
+    savesNotes: '',
+    ac: '',
+    saves: ''
+  },
   racialTraits: [],
   backgroundTraits: [],
   favoredClass: '',

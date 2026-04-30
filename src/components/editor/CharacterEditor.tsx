@@ -273,39 +273,95 @@ export default function CharacterEditor({
         </Section>
 
         <Section id="defenses" title="防御 (Defenses)">
-          <div className="flex flex-col gap-4">
-            <div className={`rounded p-1 transition-colors ${data.defenses.ac !== lastSavedData.defenses.ac ? 'bg-amber-50 border border-amber-300' : ''}`}>
-              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex justify-between">
-                防护等级 (AC & AC Details)
-                {data.defenses.ac !== lastSavedData.defenses.ac && <span className="text-amber-600 animate-pulse">●</span>}
-              </label>
-              <AutoResizeTextarea
-                value={data.defenses.ac}
-                originalValue={lastSavedData.defenses.ac}
-                onChange={v => updateDefenses('ac', v)}
-              />
-            </div>
-            <div className={`rounded p-1 transition-colors ${data.defenses.hp !== lastSavedData.defenses.hp ? 'bg-amber-50 border border-amber-300' : ''}`}>
-              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex justify-between">
+          <div className="flex flex-col gap-6">
+            {/* HP Field */}
+            <div className={`rounded p-1 transition-colors border ${data.defenses.hp !== lastSavedData.defenses.hp ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-200 bg-white/50 hover:border-stone-300'}`}>
+              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1 flex justify-between">
                 生命值 (HP)
-                {data.defenses.hp !== lastSavedData.defenses.hp && <span className="text-amber-600 animate-pulse">●</span>}
+                {data.defenses.hp !== lastSavedData.defenses.hp && <span className="text-amber-600 font-black animate-pulse">●</span>}
               </label>
-              <AutoResizeTextarea
+              <input
                 value={data.defenses.hp}
-                originalValue={lastSavedData.defenses.hp}
-                onChange={v => updateDefenses('hp', v)}
+                onChange={(e) => updateDefenses('hp', e.target.value)}
+                className="w-full bg-transparent outline-none px-2 py-1 text-sm font-medium text-ink transition-colors"
+                placeholder="例如：20 (3d8+3)"
               />
             </div>
-            <div className={`rounded p-1 transition-colors ${data.defenses.saves !== lastSavedData.defenses.saves ? 'bg-amber-50 border border-amber-300' : ''}`}>
-              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex justify-between">
-                豁免 (Saving Throws)
-                {data.defenses.saves !== lastSavedData.defenses.saves && <span className="text-amber-600 animate-pulse">●</span>}
-              </label>
-              <AutoResizeTextarea
-                value={data.defenses.saves}
-                originalValue={lastSavedData.defenses.saves}
-                onChange={v => updateDefenses('saves', v)}
-              />
+
+            {/* AC Row */}
+            <div className="flex flex-col md:flex-row gap-6 items-stretch">
+              <div className="w-full md:w-1/2 flex flex-col">
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                  防护等级 (AC Details)
+                  <span className="text-stone-400 font-normal">AC / 措手不及 / 接触</span>
+                </label>
+                <div className="flex-1">
+                  <DynamicTable
+                    minWidth="0"
+                    columns={[
+                      { key: 'ac', label: 'AC', width: '33.33%' },
+                      { key: 'flatFooted', label: '措手不及', width: '33.33%' },
+                      { key: 'touch', label: '接触', width: '33.34%' }
+                    ]}
+                    data={data.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
+                    originalData={lastSavedData.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
+                    onChange={v => updateDefenses('acTable', v)}
+                    fixedRows={true}
+                  />
+                </div>
+              </div>
+              <div className="w-full md:w-1/2 flex flex-col">
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                  防护备注 (AC Notes)
+                  {(data.defenses.acNotes !== lastSavedData.defenses.acNotes) && <span className="text-amber-600 animate-pulse">●</span>}
+                </label>
+                <div className={`flex-1 rounded border transition-colors overflow-hidden flex ${data.defenses.acNotes !== lastSavedData.defenses.acNotes ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
+                  <textarea
+                    value={data.defenses.acNotes || ''}
+                    onChange={e => updateDefenses('acNotes', e.target.value)}
+                    className="w-full h-full bg-transparent outline-none px-3 py-2 text-sm font-medium text-ink resize-none placeholder:text-stone-300 leading-relaxed"
+                    placeholder="护甲加值来源、闪避、天生护甲等..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Saves Row */}
+            <div className="flex flex-col md:flex-row gap-6 items-stretch">
+              <div className="w-full md:w-1/2 flex flex-col">
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                  豁免 (Saving Throws)
+                  <span className="text-stone-400 font-normal">强韧 / 反射 / 意志</span>
+                </label>
+                <div className="flex-1">
+                  <DynamicTable
+                    minWidth="0"
+                    columns={[
+                      { key: 'fort', label: '强韧', width: '33.33%' },
+                      { key: 'ref', label: '反射', width: '33.33%' },
+                      { key: 'will', label: '意志', width: '33.34%' }
+                    ]}
+                    data={data.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
+                    originalData={lastSavedData.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
+                    onChange={v => updateDefenses('savesTable', v)}
+                    fixedRows={true}
+                  />
+                </div>
+              </div>
+              <div className="w-full md:w-1/2 flex flex-col">
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                  豁免备注 (Saves Notes)
+                  {(data.defenses.savesNotes !== lastSavedData.defenses.savesNotes) && <span className="text-amber-600 animate-pulse">●</span>}
+                </label>
+                <div className={`flex-1 rounded border transition-colors overflow-hidden flex ${data.defenses.savesNotes !== lastSavedData.defenses.savesNotes ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
+                  <textarea
+                    value={data.defenses.savesNotes || ''}
+                    onChange={e => updateDefenses('savesNotes', e.target.value)}
+                    className="w-full h-full bg-transparent outline-none px-3 py-2 text-sm font-medium text-ink resize-none placeholder:text-stone-300 leading-relaxed"
+                    placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </Section>
