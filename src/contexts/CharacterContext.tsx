@@ -173,7 +173,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       try {
         // 1. Initial Character Load from URL
-        const urlParams = new URL(window.location.search).searchParams;
+        const urlParams = new URLSearchParams(window.location.search);
         const charId = urlParams.get('id');
 
         if (charId) {

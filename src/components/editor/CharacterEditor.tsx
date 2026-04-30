@@ -270,15 +270,15 @@ export default function CharacterEditor({
               <div className="w-full md:w-1/2 flex flex-col">
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
                   防护等级 (AC Details)
-                  <span className="text-stone-400 font-normal">AC / 措手不及 / 接触</span>
+                  <span className="text-stone-400 font-normal">AC / 措手不及 AC / 接触 AC</span>
                 </label>
                 <div className="flex-1">
                   <DynamicTable
                     minWidth="0"
                     columns={[
                       { key: 'ac', label: 'AC', width: '33.33%' },
-                      { key: 'flatFooted', label: '措手不及', width: '33.33%' },
-                      { key: 'touch', label: '接触', width: '33.34%' }
+                      { key: 'flatFooted', label: '措手不及 AC', width: '33.33%' },
+                      { key: 'touch', label: '接触 AC', width: '33.34%' }
                     ]}
                     data={data.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
                     originalData={lastSavedData.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
@@ -540,12 +540,6 @@ export default function CharacterEditor({
             originalData={lastSavedData.skills}
             onChange={v => setData({ ...data, skills: v })}
             newItemGenerator={() => ({ name: '', total: '', source: '', special: '' })}
-            footerRow={{ name: '总计', ...data.skillsTotal }}
-            onFooterChange={v => {
-              const { name, ...rest } = v;
-              setData({ ...data, skillsTotal: rest });
-            }}
-            footerReadonlyColumns={['name']}
             rowDraggable={true}
             rowActionMode={tableActionMode}
             onRowActionModeToggle={toggleTableActionMode}
@@ -553,6 +547,28 @@ export default function CharacterEditor({
             onRowDragOver={(idx, e) => handleTableItemDragOver('skills', idx, e)}
             onRowDrop={(idx, e) => handleTableItemDrop('skills', idx, e)}
           />
+          <div className="flex flex-col md:flex-row gap-6 mt-4 items-stretch">
+            <div className="w-full md:w-1/6">
+              <InlineInput
+                label="总技能点"
+                value={data.skillsTotal || ''}
+                originalValue={lastSavedData.skillsTotal || ''}
+                onChange={v => {
+                  if (v === '' || /^\d+$/.test(v)) setData({ ...data, skillsTotal: v });
+                }}
+                placeholder="0"
+              />
+            </div>
+            <div className="w-full md:w-5/6">
+              <InlineInput
+                label="备注 (Notes)"
+                value={data.skillsNotes || ''}
+                originalValue={lastSavedData.skillsNotes || ''}
+                onChange={v => setData({ ...data, skillsNotes: v })}
+                placeholder="技能特殊说明，例如未列出技能的加成、护甲减值的影响等..."
+              />
+            </div>
+          </div>
         </Section>
 
         <Section id="equipment" title="装备与物品 (Equipment)">

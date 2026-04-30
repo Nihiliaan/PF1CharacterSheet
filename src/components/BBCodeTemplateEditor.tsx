@@ -48,15 +48,13 @@ HP {hp} ({hd})
 [hr]
 [b]技能加点[/b]
 {skillTable}
+总计：{skillsTotal}
+备注：{skillsNotes}
 [hr]
 [/spoiler]
 [b]装备[/b]
 {equipmentTable}
-[table]
-[tr][td]负重[/td]
-[td]{loadStatus}[/td]
-[td]{loadLimits}[/td]
-[/tr]
+[table][tr][td]负重[/td][td]{loadStatus}[/td][td]{loadLimits}[/td][/tr]
 [/table]
 [hr]
 `;
@@ -224,7 +222,8 @@ export default function BBCodeTemplateEditor() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
                 <span>{'{featTable}'} - 完整专长表格</span>
                 <span>{'{skillTable}'} - 完整技能表格</span>
-                <span className="col-span-full">{'{skillsTotal.total}'} - 技能总点数</span>
+                <span className="col-span-full">{'{skillsTotal}'} - 技能总点数</span>
+                <span className="col-span-full">{'{skillsNotes}'} - 技能备注</span>
                 <span className="col-span-full">{'{magicBlocks}'} - 法术与类法术模块</span>
               </div>
             </section>

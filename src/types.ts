@@ -75,7 +75,8 @@ export interface CharacterData {
   feats: any[];
   magicBlocks: any[];
   skills: any[];
-  skillsTotal: { total: string; source: string; special: string };
+  skillsTotal: string;
+  skillsNotes: string;
   equipmentBags: any[];
   encumbranceMultiplier: string;
   equipmentNotes: string;
