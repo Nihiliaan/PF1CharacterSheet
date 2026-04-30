@@ -57,13 +57,12 @@ const DynamicCellInput = ({
     onChange(value === 'true' ? '' : 'true');
   };
 
-  const baseClasses = `px-2 py-1 min-h-[32px] font-medium transition-colors ${className}`;
-  const isSelected = type === 'select' && options;
-  const isCheckbox = type === 'checkbox';
+  // Base classes used by EVERY cell to ensure pixel-perfect consistency
+  const BASE_CLASSES = `px-2 py-1 min-h-[32px] font-medium transition-colors ${className}`;
 
   if (readOnly) {
     return (
-      <div className={`${baseClasses} whitespace-pre-wrap break-words flex items-center h-full`}>
+      <div className={`${BASE_CLASSES} whitespace-pre-wrap break-words flex items-center h-full`}>
         {displayValue()}
       </div>
     );
@@ -71,38 +70,44 @@ const DynamicCellInput = ({
 
   return (
     <div className={`grid h-full w-full relative group transition-colors min-h-[32px] ${isChanged ? 'bg-amber-100/40' : ''}`}>
-      {/* 1. Underlying display layer - ensures consistent styling for all types */}
-      <div className={`col-start-1 row-start-1 ${baseClasses} whitespace-pre-wrap break-words flex items-center pointer-events-none ${isChanged ? 'text-amber-900' : 'text-ink'}`}>
-        {displayValue() || (isSelected && !isFocused ? <span className="text-stone-300">—</span> : '')}
-      </div>
-
-      {/* 2. Interaction layer */}
-      {isSelected ? (
-        <select
-          value={value}
-          onChange={handleChange as any}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className="col-start-1 row-start-1 w-full h-full opacity-0 cursor-pointer z-10"
-        >
-          {options.map(opt => (
-            <option key={opt} value={opt}>{opt || '—'}</option>
-          ))}
-        </select>
-      ) : isCheckbox ? (
+      {type === 'select' && options ? (
+        <div className="relative w-full h-full">
+          <select
+            value={value}
+            onChange={handleChange as any}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+          >
+            {options.map(opt => (
+              <option key={opt} value={opt}>{opt || '—'}</option>
+            ))}
+          </select>
+          <div className={`${BASE_CLASSES} w-full h-full flex items-center ${isChanged ? 'text-amber-700' : 'text-ink'}`}>
+            {displayValue() || <span className="text-stone-300">—</span>}
+          </div>
+        </div>
+      ) : type === 'checkbox' ? (
         <div 
           onClick={toggleCheckbox}
-          className="col-start-1 row-start-1 w-full h-full cursor-pointer z-10 hover:bg-stone-100/50"
-        />
+          className={`${BASE_CLASSES} w-full h-full flex items-center cursor-pointer hover:bg-stone-100/50 ${isChanged ? 'text-amber-900' : 'text-ink'}`}
+        >
+          {displayValue()}
+        </div>
       ) : (
-        <textarea
-          value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt') ? value : displayValue()}
-          onChange={handleChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent px-2 py-1 font-medium ${className} ${type === 'quantity' ? 'text-stone-500' : ''} ${isChanged ? 'text-amber-900' : ''}`}
-          rows={1}
-        />
+        <>
+          <div className={`col-start-1 row-start-1 invisible whitespace-pre-wrap break-words ${BASE_CLASSES} pointer-events-none`}>
+            {displayValue() + '\n'}
+          </div>
+          <textarea
+            value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt') ? value : displayValue()}
+            onChange={handleChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent ${BASE_CLASSES} ${type === 'quantity' ? 'text-stone-500' : ''} ${isChanged ? 'text-amber-900' : ''}`}
+            rows={1}
+          />
+        </>
       )}
       {isChanged && (
         <div className="absolute right-0.5 top-0.5 w-1 h-1 bg-amber-500 rounded-full animate-pulse shadow-sm" />
