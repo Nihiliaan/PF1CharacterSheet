@@ -517,7 +517,7 @@ export default function CharacterEditor({
               { key: 'name', label: '技能 (Skill)', width: '15%' },
               { key: 'total', label: '总加值 (Total)', width: '5%', type: 'bonus' },
               { key: 'rank', label: '等级 (Rank)', width: '5%', type: 'posInt' },
-              { key: 'cs', label: '本职 (CS)', width: '5%' },
+              { key: 'cs', label: '本职 (CS)', width: '5%', type: 'checkbox' },
               {
                 key: 'ability',
                 label: '属性 (Ability)',
