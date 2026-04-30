@@ -157,9 +157,9 @@ export default function CharacterEditor({
               ]}
               data={data.attributes.map((a, i) => ({ ...a, name: ATTRIBUTE_NAMES[i] }))}
               originalData={lastSavedData.attributes.map((a, i) => ({ ...a, name: ATTRIBUTE_NAMES[i] }))}
-              onChange={newAttrs => setData({ 
-                ...data, 
-                attributes: newAttrs.map(({ name, ...rest }: any) => rest) 
+              onChange={newAttrs => setData({
+                ...data,
+                attributes: newAttrs.map(({ name, ...rest }: any) => rest)
               })}
               fixedRows={true}
               readonlyColumns={['name']}
@@ -516,13 +516,13 @@ export default function CharacterEditor({
           <DynamicTable
             columns={[
               { key: 'name', label: '技能 (Skill)', width: '15%' },
-              { key: 'total', label: '总加值 (Total)', width: '8%', type: 'bonus' },
-              { key: 'rank', label: '等级 (Rank)', width: '8%', type: 'posInt' },
-              { key: 'cs', label: '本职 (CS)', width: '8%', type: 'checkbox' },
+              { key: 'total', label: '总加值 (Total)', width: '5%', type: 'bonus' },
+              { key: 'rank', label: '等级 (Rank)', width: '5%', type: 'posInt' },
+              { key: 'cs', label: '本职 (CS)', width: '5%', type: 'checkbox' },
               {
                 key: 'ability',
                 label: '属性 (Ability)',
-                width: '10%',
+                width: '5%',
                 type: 'select',
                 options: ['', ...ATTRIBUTE_NAMES],
                 displayFormatter: (val) => {
@@ -536,8 +536,8 @@ export default function CharacterEditor({
                   return mod >= 0 ? `+${mod}` : mod.toString();
                 }
               },
-              { key: 'others', label: '其它 (Others)', width: '10%' },
-              { key: 'special', label: '特殊说明 (Special/Conditional)', width: '31%' }
+              { key: 'others', label: '其它 (Others)', width: '20%' },
+              { key: 'special', label: '特殊说明 (Special/Conditional)', width: '35%' }
             ]}
             data={data.skills}
             originalData={lastSavedData.skills}
