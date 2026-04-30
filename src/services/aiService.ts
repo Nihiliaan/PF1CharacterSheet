@@ -247,54 +247,76 @@ export const characterSchema = {
 };
 
 export async function extractCharacterFromText(text: string, apiKey: string) {
-  try {
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: "models/gemini-flash-lite-latest",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `你是一个专业的 Pathfinder 1E (PF1) 跑团玩家，擅长从复杂的论坛帖子和 BBCode 文本中提取人物卡信息。
-              
-              待处理文本（可能包含 BBCode 标签和表格结构）：
-              ---
-              ${text}
-              ---
-              
-              你的任务是将上述文本中的信息完整、准确地提取到 JSON 中。
-              
-              关键要求：
-              1. **区分特性类型**：
-                 - 种族赋予的特性（如：黑暗视觉、敏捷性等）放入 racialTraits。
-                 - 职业赋予的特性（如：偷袭、破邪斩、回避动作等）放入 classFeatures。
-                 - 背景奖励（如：反制者、寻宝者等）放入 backgroundTraits。
-              2. **提取完整性**：
-                 - 务必为专长（feats）和特性（traits/features）寻找并填写等级（level）信息及描述（desc/special）。
-                 - 提取所有提及的攻击（melee/ranged）、技能、装备。
-              3. **处理法术和复杂结构**：
-                 - 对于法术、类法术能力（SLA）或其他需要专门呈现的内容，请创建 magicBlocks。
-                 - 如果法术在原帖中是以表格形式列出的，请在 magicBlocks 中创建一个类型为 "table" 的块，并定义相应的列和数据。
-                 - 如果是零散的描述，使用 "text" 类型的块。
-              4. **理解格式**：原文本可能包含 [table]、[tr]、[td] 等 BBCode 标签，请理解这些结构以正确关联数据。
-              
-              请严格按照 JSON 格式返回。`
-            }
-          ]
+  const models = [
+    "models/gemini-flash-lite-latest",
+    "models/gemini-2.5-flash",
+    "models/gemini-2.5-flash-lite"
+  ];
+
+  let lastError = null;
+
+  for (const modelName of models) {
+    try {
+      console.log(`Attempting AI extraction with model: ${modelName}`);
+      const ai = new GoogleGenAI({ apiKey });
+      const model = ai.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: characterSchema,
+          temperature: 0,
         }
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: characterSchema,
-        temperature: 0,
-      }
-    });
+      });
 
-    return JSON.parse(response.text || "{}");
+      const response = await model.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `你是一个专业的 Pathfinder 1E (PF1) 跑团玩家，擅长从复杂的论坛帖子和 BBCode 文本中提取人物卡信息。
+                
+                待处理文本（可能包含 BBCode 标签和表格结构）：
+                ---
+                ${text}
+                ---
+                
+                你的任务是将上述文本中的信息完整、准确地提取到 JSON 中。
+                
+                关键要求：
+                1. **区分特性类型**：
+                   - 种族赋予的特性（如：黑暗视觉、敏捷性等）放入 racialTraits。
+                   - 职业赋予的特性（如：偷袭、破邪斩、回避动作等）放入 classFeatures。
+                   - 背景奖励（如：反制者、寻宝者等）放入 backgroundTraits。
+                2. **提取完整性**：
+                   - 务必为专长（feats）和特性（traits/features）寻找并填写等级（level）信息及描述（desc/special）。
+                   - 提取所有提及的攻击（melee/ranged）、技能、装备。
+                3. **处理法术和复杂结构**：
+                   - 对于法术、类法术能力（SLA）或其他需要专门呈现的内容，请创建 magicBlocks。
+                   - 如果法术在原帖中是以表格形式列出的，请在 magicBlocks 中创建一个类型为 "table" 的块，并定义相应的列和数据。
+                   - 如果是零散的描述，使用 "text" 类型的块。
+                4. **理解格式**：原文本可能包含 [table]、[tr]、[td] 等 BBCode 标签，请理解这些结构以正确关联数据。
+                
+                请严格按照 JSON 格式返回。`
+              }
+            ]
+          }
+        ]
+      });
 
-  } catch (error) {
-    console.error("AI Extraction failed:", error);
-    throw error;
+      const responseText = response.response.text();
+      return JSON.parse(responseText || "{}");
+
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`Extraction failed with model ${modelName}:`, error.message || error);
+
+      // If error is 404 (not found) or 503 (high demand), try the next model
+      // Otherwise, if it's a 400 (bad request/API key), we might want to stop early, 
+      // but to be safe we'll try the next one anyway until the list is exhausted.
+      continue;
+    }
   }
+
+  throw lastError || new Error("所有可用模型均无法处理该请求，请稍后重试。");
 }
