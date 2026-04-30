@@ -250,7 +250,7 @@ export async function extractCharacterFromText(text: string, apiKey: string) {
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-flash-lite-latest",
+      model: "models/gemini-flash-lite-latest",
       contents: [
         {
           role: "user",
