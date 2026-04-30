@@ -2,14 +2,37 @@ import React, { useState } from 'react';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { DynamicTableProps } from '../../types';
 
-const DynamicCellInput = ({ value, originalValue, onChange, className = '', readOnly = false, type = 'text', options }: { value: string; originalValue?: string; onChange: (v: string) => void; className?: string; readOnly?: boolean; type?: 'text' | 'float' | 'quantity' | 'select'; options?: string[] }) => {
+const DynamicCellInput = ({
+  value,
+  originalValue,
+  onChange,
+  className = '',
+  readOnly = false,
+  type = 'text',
+  options,
+  displayFormatter
+}: {
+  value: string;
+  originalValue?: string;
+  onChange: (v: string) => void;
+  className?: string;
+  readOnly?: boolean;
+  type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus';
+  options?: string[];
+  displayFormatter?: (v: string) => string;
+}) => {
   const [isFocused, setIsFocused] = useState(false);
   const isChanged = !readOnly && originalValue !== undefined && value !== originalValue;
 
   const displayValue = () => {
+    if (displayFormatter) return displayFormatter(value);
     if (type === 'quantity' && !isFocused) {
       if (!value || value === '1') return '';
       return `×${value}`;
+    }
+    if ((type === 'bonus' || type === 'int' || type === 'posInt') && !isFocused && value !== '') {
+      const num = parseInt(value);
+      if (!isNaN(num) && num >= 0) return `+${num}`;
     }
     return value;
   };
@@ -19,11 +42,18 @@ const DynamicCellInput = ({ value, originalValue, onChange, className = '', read
     if (type === 'float') {
       if (val !== '' && !/^-?\d*\.?\d{0,2}$/.test(val)) return;
     }
-    if (type === 'quantity') {
+    if (type === 'int') {
+      if (val !== '' && !/^-?\d*$/.test(val)) return;
+    }
+    if (type === 'posInt') {
       if (val !== '' && !/^\d*$/.test(val)) return;
-      if (val === '0') return;
     }
     onChange(val);
+  };
+
+  const toggleCheckbox = () => {
+    if (readOnly) return;
+    onChange(value === 'true' ? '' : 'true');
   };
 
   if (readOnly) {
@@ -46,13 +76,26 @@ const DynamicCellInput = ({ value, originalValue, onChange, className = '', read
             <option key={opt} value={opt}>{opt || '—'}</option>
           ))}
         </select>
+      ) : type === 'checkbox' ? (
+        <div 
+          onClick={toggleCheckbox}
+          className={`w-full h-full flex items-center justify-center cursor-pointer group/cb ${className}`}
+        >
+          <div className={`transition-all ${value === 'true' ? 'text-primary font-bold' : 'text-stone-300 opacity-0 group-hover/cb:opacity-100'}`}>
+            {value === 'true' ? '+3' : (
+              <div className="w-4 h-4 border border-stone-300 rounded flex items-center justify-center bg-white">
+                <div className="w-2.5 h-2.5 bg-primary rounded-sm opacity-0 group-active:opacity-50" />
+              </div>
+            )}
+          </div>
+        </div>
       ) : (
         <>
           <div className="col-start-1 row-start-1 invisible whitespace-pre-wrap break-words px-2 py-1 min-w-[60px] min-h-[32px] font-medium pointer-events-none">
             {displayValue() + '\n'}
           </div>
           <textarea
-            value={isFocused && type === 'quantity' ? value : displayValue()}
+            value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt') ? value : displayValue()}
             onChange={handleChange}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
@@ -163,8 +206,9 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                     originalValue={originalData?.[i]?.[c.key]}
                     onChange={(val) => updateData(i, c.key, val)}
                     readOnly={readonlyColumns?.includes(c.key)}
-                    type={c.type}
+                    type={c.type as any}
                     options={c.options}
+                    displayFormatter={c.displayFormatter}
                     className={readonlyColumns?.includes(c.key) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"}
                   />
                 </td>

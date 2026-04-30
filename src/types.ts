@@ -5,8 +5,9 @@ export type Column = {
   label: string;
   width?: string;
   hideRightBorder?: boolean;
-  type?: 'text' | 'float' | 'quantity' | 'select';
+  type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus';
   options?: string[];
+  displayFormatter?: (v: string) => string;
 };
 
 export interface DynamicTableProps {

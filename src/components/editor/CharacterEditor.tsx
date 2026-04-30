@@ -150,8 +150,8 @@ export default function CharacterEditor({
             <DynamicTable
               columns={[
                 { key: 'name', label: '属性 (Attr)', width: '10%' },
-                { key: 'final', label: '最终值 (Final)', width: '10%' },
-                { key: 'modifier', label: '调整值 (Mod)', width: '10%' },
+                { key: 'final', label: '最终值 (Final)', width: '10%', type: 'posInt' },
+                { key: 'modifier', label: '调整值 (Mod)', width: '10%', type: 'bonus' },
                 { key: 'source', label: '来源 (Source)', width: '40%' },
                 { key: 'status', label: '状态 (Status)', width: '30%' }
               ]}
@@ -435,8 +435,8 @@ export default function CharacterEditor({
           <DynamicTable
             columns={[
               { key: 'level', label: '等级 (Level)', width: '5%' },
+              { key: 'type', label: '类型 (Type)', width: '5%' },
               { key: 'name', label: '专长名称 (Feat Name)', width: '20%' },
-              { key: 'type', label: '类型 (Type)', width: '5%', type: 'select', options: ['', 'Sp', 'Su', 'Ex'] },
               { key: 'source', label: '来源 (Source)', width: '15%' },
               { key: 'desc', label: '说明 (Description)', width: '55%' }
             ]}
@@ -512,10 +512,27 @@ export default function CharacterEditor({
         <Section id="skills" title="技能加点 (Skills)">
           <DynamicTable
             columns={[
-              { key: 'name', label: '技能 (Skill)', width: '10%' },
-              { key: 'total', label: '总值 (Total)', width: '5%' },
-              { key: 'source', label: '来源 (Source)', width: '40%' },
-              { key: 'special', label: '特殊说明 (Special/Conditional)', width: '45%' }
+              { key: 'name', label: '技能 (Skill)', width: '15%' },
+              { key: 'total', label: '总加值 (Total)', width: '8%', type: 'bonus' },
+              { key: 'rank', label: '等级 (Rank)', width: '8%', type: 'posInt' },
+              { key: 'cs', label: '本职 (CS)', width: '8%', type: 'checkbox' },
+              {
+                key: 'ability',
+                label: '属性 (Ability)',
+                width: '10%',
+                type: 'select',
+                options: ['', 'STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'],
+                displayFormatter: (val) => {
+                  if (!val) return '';
+                  const attr = data.attributes.find(a => a.name.toLocaleUpperCase().includes(val.toLocaleUpperCase()));
+                  if (!attr) return val;
+                  const mod = parseInt(attr.modifier);
+                  if (isNaN(mod)) return attr.modifier || '0';
+                  return mod >= 0 ? `+${mod}` : mod.toString();
+                }
+              },
+              { key: 'others', label: '其它 (Others)', width: '10%' },
+              { key: 'special', label: '特殊说明 (Special/Conditional)', width: '31%' }
             ]}
             data={data.skills}
             originalData={lastSavedData.skills}
