@@ -3,18 +3,19 @@ import { ATTRIBUTE_NAMES } from '../types';
 export function generateBBCode(data: any, template: string): string {
   let bbcode = template;
 
-  const replaceVar = (key: string, value: string) => {
-    bbcode = bbcode.replaceAll(`{${key}}`, value || '');
-  };
-
   const getS = (obj: any, path: string) => {
     const parts = path.split('.');
     let curr = obj;
     for (const p of parts) {
-      if (curr === undefined || curr === null) return '';
-      curr = curr[p];
+      if (curr === undefined || curr === null) return undefined;
+      // Handle array access like avatars.0.url
+      if (Array.isArray(curr) && /^\d+$/.test(p)) {
+        curr = curr[parseInt(p)];
+      } else {
+        curr = curr[p];
+      }
     }
-    return curr === undefined ? '' : curr;
+    return curr;
   };
 
   const formatDynamicBlock = (blocks: any[]) => {
@@ -39,106 +40,102 @@ export function generateBBCode(data: any, template: string): string {
     }).join('\n[hr]\n');
   };
 
-  // Basic Info
-  replaceVar('name', getS(data, 'basic.name'));
-  replaceVar('classes', getS(data, 'basic.classes'));
-  replaceVar('alignment', getS(data, 'basic.alignment'));
-  replaceVar('deity', getS(data, 'basic.deity'));
-  replaceVar('size', getS(data, 'basic.size'));
-  replaceVar('gender', getS(data, 'basic.gender'));
-  replaceVar('race', getS(data, 'basic.race'));
-  replaceVar('age', getS(data, 'basic.age'));
-  replaceVar('height', getS(data, 'basic.height'));
-  replaceVar('weight', getS(data, 'basic.weight'));
-  replaceVar('speed', getS(data, 'basic.speed'));
-  replaceVar('initiative', getS(data, 'basic.initiative'));
-  replaceVar('perception', getS(data, 'basic.perception'));
-  replaceVar('languages', getS(data, 'basic.languages'));
-  replaceVar('avatarUrl', getS(data, 'basic.avatars.0.url') || 'http://此处填写人物头像图片地址');
+  // Prepare special/computed variables
+  const vars: Record<string, string> = {};
 
-  // Attributes Table Rows
-  const attrRows = (data.attributes || []).map((a: any, i: number) => 
-    `[tr][td]${ATTRIBUTE_NAMES[i] || '-'}[/td][td]${a.final || '-'}[/td][td]${a.modifier || '-'}[/td][td]${a.source || ''}${a.status ? ' ' + a.status : ''}[/td][/tr]`
-  ).join('\n');
-  replaceVar('attributesRows', attrRows);
+  // Basic shortcuts for convenience (legacy)
+  const basicFields = ['name', 'classes', 'alignment', 'deity', 'size', 'gender', 'race', 'age', 'height', 'weight', 'speed', 'senses', 'initiative', 'perception', 'languages'];
+  basicFields.forEach(f => {
+    vars[f] = String(getS(data, `basic.${f}`) || '');
+  });
+  
+  vars['avatarUrl'] = getS(data, 'basic.avatars.0.url') || 'http://此处填写人物头像图片地址';
+
+  // Attributes Table
+  vars['attributesTable'] = '[table]\n[tr][td][b]属性[/b][/td][td][b]数值[/b][/td][td][b]调整值[/b][/td][td][b]说明[/b][/td][/tr]\n' + 
+    (data.attributes || []).map((a: any, i: number) => 
+      `[tr][td]${ATTRIBUTE_NAMES[i] || '-'}[/td][td]${a.final || '-'}[/td][td]${a.modifier || '-'}[/td][td]${a.source || ''}${a.status ? ' ' + a.status : ''}[/td][/tr]`
+    ).join('\n') + '\n[/table]';
 
   // BAB/CMB/CMD
   const babTable = getS(data, 'babTable');
   const cmNotes = getS(data, 'combatManeuverNotes');
   
+  let bab = '', cmb = '', cmd = '';
   if (babTable && Array.isArray(babTable) && babTable.length > 0) {
-    replaceVar('bab', babTable[0].bab);
-    replaceVar('cmb', babTable[0].cmb);
-    replaceVar('cmd', babTable[0].cmd);
-  } else {
-    const babStr = getS(data, 'babCmbCmd') || '';
-    const babMatch = babStr.match(/BAB\s*([+-]?\d+)/i);
-    const cmbMatch = babStr.match(/CMB\s*([+-]?\d+)/i);
-    const cmdMatch = babStr.match(/CMD\s*(\d+)/i);
-    
-    replaceVar('bab', babMatch ? babMatch[1] : (babStr.split('/')[0] || ''));
-    replaceVar('cmb', cmbMatch ? cmbMatch[1] : '');
-    replaceVar('cmd', cmdMatch ? cmdMatch[1] : '');
+    bab = babTable[0].bab;
+    cmb = babTable[0].cmb;
+    cmd = babTable[0].cmd;
   }
-  replaceVar('combatManeuverNotes', cmNotes);
+  vars['bab'] = bab;
+  vars['cmb'] = cmb;
+  vars['cmd'] = cmd;
+  vars['combatManeuverNotes'] = cmNotes || '';
 
-  // Attack Rows
-  const meleeRows = (data.meleeAttacks || []).map((m: any) =>
+  // Attack Tables
+  const attackHeader = '[tr][td][b]名称[/b][/td][td][b]命中[/b][/td][td][b]伤害/重击/类型[/b][/td][td][b]射程/特性[/b][/td][/tr]';
+  
+  vars['meleeAttackTable'] = '[table]\n' + attackHeader + '\n' + (data.meleeAttacks || []).map((m: any) =>
     `[tr][td]${m.weapon || '-'}[/td][td]${m.hit || '-'}[/td][td]${m.damage || '-'}/${m.crit || '-'}/${m.type || '-'}[/td][td]${m.range || '-'}/${m.special || '-'}[/td][/tr]`
-  );
-  const rangedRows = (data.rangedAttacks || []).map((m: any) =>
+  ).join('\n') + '\n[/table]';
+  
+  vars['rangedAttackTable'] = '[table]\n' + attackHeader + '\n' + (data.rangedAttacks || []).map((m: any) =>
     `[tr][td]${m.weapon || '-'}[/td][td]${m.hit || '-'}[/td][td]${m.damage || '-'}/${m.crit || '-'}/${m.type || '-'}[/td][td]${m.range || '-'}/${m.special || '-'}[/td][/tr]`
-  );
-  replaceVar('attackRows', [...meleeRows, ...rangedRows].join('\n'));
+  ).join('\n') + '\n[/table]';
 
   // Defenses
   const defenses = data.defenses || {};
   const acData = defenses.acTable?.[0] || {};
-  const acLine = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]措手不及[/b] ${acData.flatFooted || '-'}, [b]接触[/b] ${acData.touch || '-'}${defenses.acNotes ? ` (${defenses.acNotes})` : ''}` : defenses.ac;
-  replaceVar('acLine', acLine);
+  vars['ac'] = acData.ac || '';
+  vars['acFlatFooted'] = acData.flatFooted || '';
+  vars['acTouch'] = acData.touch || '';
+  vars['acNotes'] = defenses.acNotes || '';
+  vars['acLine'] = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]措手不及[/b] ${acData.flatFooted || '-'}, [b]接触[/b] ${acData.touch || '-'}${defenses.acNotes ? ` (${defenses.acNotes})` : ''}` : '';
   
-  replaceVar('hpLine', `[b]HP[/b] ${defenses.hp}${defenses.hd ? ` (${defenses.hd})` : ''}`);
+  vars['hp'] = defenses.hp || '';
+  vars['hd'] = defenses.hd || '';
+  vars['hpLine'] = `[b]HP[/b] ${defenses.hp}${defenses.hd ? ` (${defenses.hd})` : ''}`;
   
   const saveData = defenses.savesTable?.[0] || {};
-  const saveLine = saveData.fort ? `[b]强韧[/b] ${saveData.fort}, [b]反射[/b] ${saveData.ref}, [b]意志[/b] ${saveData.will}${defenses.savesNotes ? ` (${defenses.savesNotes})` : ''}` : (defenses.saves || '');
-  replaceVar('saveLine', saveLine);
-  replaceVar('defensiveAbilities', getS(data, 'defenses.defensiveAbilities') || '无');
+  vars['saveFort'] = saveData.fort || '';
+  vars['saveRef'] = saveData.ref || '';
+  vars['saveWill'] = saveData.will || '';
+  vars['savesNotes'] = defenses.savesNotes || '';
+  vars['saveLine'] = saveData.fort ? `[b]强韧[/b] ${saveData.fort}, [b]反射[/b] ${saveData.ref}, [b]意志[/b] ${saveData.will}${defenses.savesNotes ? ` (${defenses.savesNotes})` : ''}` : '';
+  vars['defensiveAbilities'] = getS(data, 'defenses.defensiveAbilities') || '无';
 
   // Traits
-  const racialStr = (data.racialTraits || []).map((r: any) => `[b]${r.name}[/b]: ${r.desc}`).join('\n');
-  replaceVar('racialTraits', racialStr || '无');
-  const backgroundStr = (data.backgroundTraits || []).map((r: any) => `[b]${r.name}[/b] (${r.type}): ${r.desc}`).join('\n');
-  replaceVar('backgroundTraits', backgroundStr || '无');
+  vars['racialTraits'] = (data.racialTraits || []).map((r: any) => `[b]${r.name}[/b]: ${r.desc}`).join('\n') || '无';
+  vars['backgroundTraits'] = (data.backgroundTraits || []).map((r: any) => `[b]${r.name}[/b] (${r.type}): ${r.desc}`).join('\n') || '无';
 
   // Class Features
-  replaceVar('favoredClass', getS(data, 'favoredClass'));
-  replaceVar('favoredClassBonus', getS(data, 'favoredClassBonus'));
-  const classFeaturesStr = (data.classFeatures || []).map((f: any) => `[b]${f.name}[/b]: ${f.desc}`).join('\n');
-  replaceVar('classFeatures', classFeaturesStr || '无');
+  vars['favoredClass'] = getS(data, 'favoredClass') || '';
+  vars['favoredClassBonus'] = getS(data, 'favoredClassBonus') || '';
+  vars['classFeatures'] = (data.classFeatures || []).map((f: any) => `[b]${f.name}[/b]: ${f.desc}`).join('\n') || '无';
 
-  // Feats Rows
-  const featRows = (data.feats || []).map((f: any) => 
-    `[tr][td]${f.level || '-'}[/td][td]${f.name || '-'}[/td][td]${f.desc || '-'}[/td][/tr]`
-  ).join('\n');
-  replaceVar('featRows', featRows);
+  // Feats Table
+  vars['featTable'] = '[table]\n[tr][td][b]等级[/b][/td][td][b]名称[/b][/td][td][b]描述[/b][/td][/tr]\n' + 
+    (data.feats || []).map((f: any) => 
+      `[tr][td]${f.level || '-'}[/td][td]${f.name || '-'}[/td][td]${f.desc || '-'}[/td][/tr]`
+    ).join('\n') + '\n[/table]';
 
-  // Skills Rows
-  const skillRows = (data.skills || []).map((s: any) => 
-    `[tr][td]${s.name || '-'}[/td][td]${s.total || '-'}[/td][td]${s.source || '-'}[/td][/tr]`
-  ).join('\n');
-  replaceVar('skillRows', skillRows);
+  // Skills Table
+  vars['skillTable'] = '[table]\n[tr][td][b]名称[/b][/td][td][b]总计[/b][/td][td][b]计算[/b][/td][/tr]\n' + 
+    (data.skills || []).map((s: any) => 
+      `[tr][td]${s.name || '-'}[/td][td]${s.total || '-'}[/td][td]${s.source || '-'}[/td][/tr]`
+    ).join('\n') + '\n[/table]';
 
-  // Equipment Rows
-  const eqRows = (data.equipmentBags || []).flatMap((bag: any) => 
-    (bag.items || []).map((i: any) => 
-      `[tr][td]${i.item || '-'}[/td][td]${i.cost || '-'}[/td][td]${i.weight || '-'}[/td][td]${i.notes || '-'}[/td][/tr]`
-    )
-  ).join('\n');
-  replaceVar('equipmentRows', eqRows);
+  // Equipment Table
+  vars['equipmentTable'] = '[table]\n[tr][td][b]名称[/b][/td][td][b]价格[/b][/td][td][b]重量[/b][/td][td][b]说明[/b][/td][/tr]\n' + 
+    (data.equipmentBags || []).flatMap((bag: any) => 
+      (bag.items || []).map((i: any) => 
+        `[tr][td]${i.item || '-'}[/td][td]${i.cost || '-'}[/td][td]${i.weight || '-'}[/td][td]${i.notes || '-'}[/td][/tr]`
+      )
+    ).join('\n') + '\n[/table]';
 
   // Magic & Additional Blocks
-  replaceVar('magicBlocks', formatDynamicBlock(data.magicBlocks));
-  replaceVar('additionalData', formatDynamicBlock(data.additionalData));
+  vars['magicBlocks'] = formatDynamicBlock(data.magicBlocks);
+  vars['additionalData'] = formatDynamicBlock(data.additionalData);
 
   // Weight Calculation
   let totalWeight = 0;
@@ -152,7 +149,7 @@ export function generateBBCode(data: any, template: string): string {
     }
   });
 
-  const strAttr = (data.attributes || []).find((a: any) => a.name === '力量');
+  const strAttr = (data.attributes || []).find((a: any) => a.name?.includes('力量') || a.final !== undefined); // Simplified check
   const strValue = strAttr ? parseInt(strAttr.final) || 10 : 10;
   const mult = parseFloat(data.encumbranceMultiplier) || 1;
 
@@ -178,8 +175,21 @@ export function generateBBCode(data: any, template: string): string {
   if (totalWeight > mediumLimit) status = '重载';
   else if (totalWeight > lightLimit) status = '中载';
 
-  replaceVar('loadStatus', `${status} (${totalWeight.toFixed(1)} lbs)`);
-  replaceVar('loadLimits', `${lightLimit} / ${mediumLimit} / ${heavyLimit}`);
+  vars['loadStatus'] = `${status} (${totalWeight.toFixed(1)} lbs)`;
+  vars['loadLimits'] = `${lightLimit} / ${mediumLimit} / ${heavyLimit}`;
+
+  // Final replacement pass
+  const regex = /\{([a-zA-Z0-9._]+)\}/g;
+  bbcode = bbcode.replace(regex, (match, path) => {
+    // 1. Check special/computed vars
+    if (vars[path] !== undefined) return vars[path];
+    
+    // 2. Check path in data
+    const pathVal = getS(data, path);
+    if (typeof pathVal === 'string' || typeof pathVal === 'number') return String(pathVal);
+    
+    return match; // Keep the placeholder if no match found
+  });
 
   return bbcode;
 }

@@ -54,7 +54,6 @@ export interface CharacterData {
   };
   story: string;
   attributes: { final: string; modifier: string; source: string; status: string }[];
-  babCmbCmd: string;
   babTable: { bab: string; cmb: string; cmd: string }[];
   combatManeuverNotes: string;
   meleeAttacks: any[];
@@ -67,8 +66,6 @@ export interface CharacterData {
     acNotes: string;
     savesTable: { fort: string; ref: string; will: string }[];
     savesNotes: string;
-    ac: string; // fallback
-    saves: string; // fallback
   };
   racialTraits: any[];
   backgroundTraits: any[];
@@ -78,7 +75,7 @@ export interface CharacterData {
   feats: any[];
   magicBlocks: any[];
   skills: any[];
-  skillsTotal: { name: string; total: string; source: string; special: string };
+  skillsTotal: { total: string; source: string; special: string };
   equipmentBags: any[];
   encumbranceMultiplier: string;
   equipmentNotes: string;

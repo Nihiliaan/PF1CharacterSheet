@@ -3,67 +3,64 @@ import { Save, RotateCcw } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
-[b]姓名[/b]: {name}  [b]职业[/b]: {classes}
-[b]阵营[/b]: {alignment}  [b]信仰[/b]: {deity}
-[b]体型[/b]: {size}  [b]性别[/b]: {gender}  [b]种族[/b]: {race}
-[b]身高[/b]: {height}  [b]体重[/b]: {weight}  [b]年龄[/b]: {age}  [b]速度[/b]: {speed}
-[b]先攻[/b]: {initiative}  [b]察觉[/b]: {perception}
-[b]语言[/b]: {languages}
+{name} {classes}
+{alignment} {deity}
+{size} {gender} {race}
+{height} {weight} {age} {speed}
+先攻{initiative} 察觉{perception}
+语言：{languages}
 [/td]
-[td]      [img width=200 height=200]{avatarUrl}[/img][/td]
+[td][img width=200 height=200]{avatarUrl}[/img][/td]
 [/tr]
 [/table]
 [hr]
 [spoiler]
-[table]
-[tr][td][b]属性[/b][/td][td][b]数值[/b][/td][td][b]调整值[/b][/td][td][b]说明[/b][/td][/tr]
-{attributesRows}
-[/table]
+[b]属性[/b]
+{attributesTable}
 
-[table]
-[tr][td][b]BAB[/b] {bab}[/td][td][b]CMB[/b] {cmb}[/td][td][b]CMD[/b] {cmd}[/td][/tr]
+[table][tr][td]BAB{bab}[/td]
+[td]CMB{cmb}[/td]
+[td]CMD{cmd}[/td]
+[/tr]
 [/table]
 [hr]
 [b]攻击[/b]
-[table]
-[tr][td][b]攻击方式[/b][/td][td][b]攻击加值[/b][/td][td][b]伤害/重击/类型[/td][td][b]射程/特性[/b][/td][/tr]
-{attackRows}
-[/table]
+{meleeAttackTable}
+{rangedAttackTable}
+{specialAttacks}
 [hr]
 [b]防御[/b]
-{acLine}
-{hpLine}
-{saveLine}
-[b]防御能力[/b]: {defensiveAbilities}
+AC {ac} ({acNotes})，措手不及{acFlatFooted}，接触{acTouch}
+HP {hp} ({hd})
+强韧{saveFort}，反射{saveRef}，意志{saveWill} ({savesNotes})
+防御能力 {defensiveAbilities}
 [hr]
 [b]种族特性和背景特性[/b]
 {racialTraits}
-[i]背景特性[/i]: {backgroundTraits}
+[i]背景特性[/i]
+{backgroundTraits}
 [hr]
 [b]职业特性[/b]
-[b]天赋职业[/b]: {favoredClass} ({favoredClassBonus})
+天赋职业奖励：{favoredClass} ({favoredClassBonus})
 {classFeatures}
 {magicBlocks}
 [hr]
 [b]专长[/b]
-[table]
-[tr][td][b]等级[/b][/td][td][b]名称[/b][/td][td][b]描述[/b][/td][/tr]
-{featRows}
-[/table]
+{featTable}
 [hr]
 [b]技能加点[/b]
-[table]
-[tr][td][b]名称[/b][/td][td][b]总计[/b][/td][td][b]计算[/b][/td][/tr]
-{skillRows}
-[/table]
+{skillTable}
 [hr]
 [/spoiler]
 [b]装备[/b]
+{equipmentTable}
 [table]
-[tr][td][b]名称[/b][/td][td][b]价格[/b][/td][td][b]重量[/b][/td][td][b]说明[/b][/td][/tr]
-{equipmentRows}
-[tr][td][b]负重[/b][/td][td]{loadStatus}[/td][td]{loadLimits}[/td][td][/td][/tr]
+[tr][td]负重[/td]
+[td]{loadStatus}[/td]
+[td]{loadLimits}[/td]
+[/tr]
 [/table]
+[hr]
 `;
 
 import { useCharacter } from '../contexts/CharacterContext';
@@ -95,7 +92,7 @@ export default function BBCodeTemplateEditor() {
   return (
     <div className="flex flex-col h-full bg-stone-50 overflow-hidden relative">
       <div className="max-w-4xl w-full mx-auto p-4 sm:p-8 flex-1 overflow-y-auto custom-scrollbar flex flex-col pt-24 pb-20">
-        
+
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold font-serif text-stone-800">BBCode 导出模板设置</h2>
@@ -129,28 +126,129 @@ export default function BBCodeTemplateEditor() {
           />
         </div>
 
-        <div className="mt-8 bg-stone-100 rounded-xl p-6 border border-stone-200">
-          <h3 className="font-bold text-stone-800 mb-4 text-sm">可用变量参考</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-2 gap-x-4 text-xs font-mono text-stone-600">
-            {'{name}'} - 姓名<br/>
-            {'{classes}'} - 职业等级<br/>
-            {'{avatarUrl}'} - 头像URL<br/>
-            {'{languages}'} - 语言<br/>
-            {'{attributesRows}'} - 属性表格行<br/>
-            {'{bab}'} / {'{cmb}'} / {'{cmd}'} - 战斗数值<br/>
-            {'{attackRows}'} - 攻击列表行<br/>
-            {'{acLine}'} - AC汇总行<br/>
-            {'{hpLine}'} - HP汇总行<br/>
-            {'{saveLine}'} - 豁免汇总行<br/>
-            {'{racialTraits}'} - 种族特性列表<br/>
-            {'{backgroundTraits}'} - 背景特性列表<br/>
-            {'{featRows}'} - 专长表格行<br/>
-            {'{skillRows}'} - 技能表格行<br/>
-            {'{equipmentRows}'} - 装备表格行<br/>
-            {'{magicBlocks}'} - 法术与类法术能力模块<br/>
-            {'{additionalData}'} - 附加数据模块<br/>
-            {'{loadLimits}'} - 负重限额<br/>
-            {'{loadStatus}'} - 当前负重状态<br/>
+        <div className="mt-8 bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
+          <h3 className="font-bold text-stone-800 mb-6 text-base border-b pb-2">可用变量参考 (按 CharacterData 顺序排序)</h3>
+          <div className="space-y-8">
+            {/* 1. Basic Info */}
+            <section>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">1. 基础信息 (Basic Info)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
+                <span>{'{name}'} - 姓名</span>
+                <span>{'{classes}'} - 职业等级</span>
+                <span>{'{alignment}'} - 阵营</span>
+                <span>{'{deity}'} - 信仰</span>
+                <span>{'{size}'} - 体型</span>
+                <span>{'{gender}'} - 性别</span>
+                <span>{'{race}'} - 种族</span>
+                <span>{'{age}'} - 年龄</span>
+                <span>{'{height}'} - 身高</span>
+                <span>{'{weight}'} - 体重</span>
+                <span>{'{speed}'} - 速度</span>
+                <span>{'{senses}'} - 感官</span>
+                <span>{'{initiative}'} - 先攻</span>
+                <span>{'{perception}'} - 察觉</span>
+                <span>{'{languages}'} - 语言</span>
+                <span>{'{avatarUrl}'} - 1号头像URL</span>
+              </div>
+            </section>
+
+            {/* 2. Story */}
+            <section>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">2. 背景故事 (Story)</h4>
+              <div className="grid grid-cols-1 gap-y-2 text-[11px] font-mono text-stone-600">
+                <span>{'{story}'} - 背景故事全文本</span>
+              </div>
+            </section>
+
+            {/* 3. Attributes */}
+            <section>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">3. 属性 (Attributes)</h4>
+              <div className="grid grid-cols-1 gap-y-2 text-[11px] font-mono text-stone-600">
+                <span>{'{attributesTable}'} - 完整属性表格 (含 [table] 和表头)</span>
+              </div>
+            </section>
+
+            {/* 4. Combat Stats */}
+            <section>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">4. 战斗数值 (Combat Stats)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
+                <span>{'{bab}'} - 基础攻击加值</span>
+                <span>{'{cmb}'} - 战技加值</span>
+                <span>{'{cmd}'} - 战技防御</span>
+                <span className="col-span-full">{'{combatManeuverNotes}'} - 战技备注</span>
+              </div>
+            </section>
+
+            {/* 5. Attacks */}
+            <section>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">5. 攻击 (Attacks)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
+                <span>{'{meleeAttackTable}'} - 完整近战攻击表</span>
+                <span>{'{rangedAttackTable}'} - 完整远程攻击表</span>
+                <span className="col-span-full">{'{specialAttacks}'} - 特殊攻击全文本</span>
+              </div>
+            </section>
+
+            {/* 6. Defenses */}
+            <section>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">6. 防御 (Defenses)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
+                <span>{'{hp}'} - 生命值</span>
+                <span>{'{hd}'} - 生命骰</span>
+                <span>{'{ac}'} - 防御等级</span>
+                <span>{'{acFlatFooted}'} - 措手不及</span>
+                <span>{'{acTouch}'} - 接触</span>
+                <span className="col-span-2">{'{acNotes}'} - 防护备注</span>
+                <span>{'{saveFort}'} - 强韧豁免</span>
+                <span>{'{saveRef}'} - 反射豁免</span>
+                <span>{'{saveWill}'} - 意志豁免</span>
+                <span className="col-span-2">{'{savesNotes}'} - 豁免备注</span>
+                <span className="col-span-full">{'{defensiveAbilities}'} - 防御能力段落</span>
+                <span className="col-span-full italic text-stone-400 font-serif border-t pt-1 mt-1">快捷整合: {'{hpLine}'} / {'{acLine}'} / {'{saveLine}'}</span>
+              </div>
+            </section>
+
+            {/* 7. Traits */}
+            <section>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">7. 特性与加成 (Traits & Bonus)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
+                <span className="col-span-full">{'{racialTraits}'} - 种族特性列表</span>
+                <span className="col-span-full">{'{backgroundTraits}'} - 背景特性列表</span>
+                <span>{'{favoredClass}'} - 天赋职业</span>
+                <span>{'{favoredClassBonus}'} - 天赋职业奖励</span>
+                <span className="col-span-full">{'{classFeatures}'} - 职业特性列表</span>
+              </div>
+            </section>
+
+            {/* 8. Feats & Skills */}
+            <section>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">8. 专长与技能 (Feats & Skills)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
+                <span>{'{featTable}'} - 完整专长表格</span>
+                <span>{'{skillTable}'} - 完整技能表格</span>
+                <span className="col-span-full">{'{skillsTotal.total}'} - 技能总点数</span>
+                <span className="col-span-full">{'{magicBlocks}'} - 法术与类法术模块</span>
+              </div>
+            </section>
+
+            {/* 9. Equipment */}
+            <section>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">9. 装备与物品 (Equipment)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
+                <span className="col-span-full">{'{equipmentTable}'} - 完整装备表格</span>
+                <span className="col-span-2">{'{equipmentNotes}'} - 装备备注</span>
+                <span>{'{loadStatus}'} - 负重状态</span>
+                <span>{'{loadLimits}'} - 负重限额</span>
+              </div>
+            </section>
+
+            {/* 10. Additional */}
+            <section>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">10. 附加数据 (Additional)</h4>
+              <div className="grid grid-cols-1 gap-y-2 text-[11px] font-mono text-stone-600">
+                <span>{'{additionalData}'} - 附加数据自定义区块</span>
+              </div>
+            </section>
           </div>
         </div>
 

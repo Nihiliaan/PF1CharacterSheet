@@ -542,8 +542,11 @@ export default function CharacterEditor({
             originalData={lastSavedData.skills}
             onChange={v => setData({ ...data, skills: v })}
             newItemGenerator={() => ({ name: '', total: '', source: '', special: '' })}
-            footerRow={(data as any).skillsTotal}
-            onFooterChange={v => setData({ ...data, skillsTotal: v } as any)}
+            footerRow={{ name: '总计', ...data.skillsTotal }}
+            onFooterChange={v => {
+              const { name, ...rest } = v;
+              setData({ ...data, skillsTotal: rest });
+            }}
             footerReadonlyColumns={['name']}
             rowDraggable={true}
             rowActionMode={tableActionMode}

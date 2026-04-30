@@ -28,7 +28,6 @@ export const DEFAULT_DATA: CharacterData = {
     { final: '10', modifier: '0', source: '', status: '' },
     { final: '10', modifier: '0', source: '', status: '' }
   ],
-  babCmbCmd: '',
   babTable: [{ bab: '', cmb: '', cmd: '' }],
   combatManeuverNotes: '',
   meleeAttacks: [],
@@ -40,9 +39,7 @@ export const DEFAULT_DATA: CharacterData = {
     acTable: [{ ac: '', flatFooted: '', touch: '' }],
     acNotes: '',
     savesTable: [{ fort: '', ref: '', will: '' }],
-    savesNotes: '',
-    ac: '',
-    saves: ''
+    savesNotes: ''
   },
   racialTraits: [],
   backgroundTraits: [],
@@ -52,7 +49,7 @@ export const DEFAULT_DATA: CharacterData = {
   feats: [],
   magicBlocks: [] as any[],
   skills: [],
-  skillsTotal: { name: '总计', total: '0', source: '', special: '' },
+  skillsTotal: { total: '0', source: '', special: '' },
   equipmentBags: [],
   encumbranceMultiplier: '1',
   equipmentNotes: '',
