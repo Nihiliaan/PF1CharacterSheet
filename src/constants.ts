@@ -31,9 +31,7 @@ export const DEFAULT_DATA: CharacterData = {
   babCmbCmd: '',
   babTable: [{ bab: '', cmb: '', cmd: '' }],
   combatManeuverNotes: '',
-  meleeAttacksOverview: '',
   meleeAttacks: [],
-  rangedAttacksOverview: '',
   rangedAttacks: [],
   specialAttacks: '',
   defenses: {

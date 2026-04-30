@@ -56,9 +56,7 @@ export interface CharacterData {
   babCmbCmd: string;
   babTable: { bab: string; cmb: string; cmd: string }[];
   combatManeuverNotes: string;
-  meleeAttacksOverview: string;
   meleeAttacks: any[];
-  rangedAttacksOverview: string;
   rangedAttacks: any[];
   specialAttacks: string;
   defenses: {

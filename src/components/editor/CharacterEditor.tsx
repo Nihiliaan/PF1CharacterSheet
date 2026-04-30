@@ -201,64 +201,54 @@ export default function CharacterEditor({
         </Section>
 
         <Section id="attacks" title="攻击 (Attacks)">
-          <div className="mb-4">
-            <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">近战攻击加值 (Melee Attack Bonuses)</label>
-            <input
-              className="w-full bg-stone-50 border border-stone-200 rounded px-3 py-2 text-sm outline-none focus:border-stone-400"
-              value={data.meleeAttacksOverview || ''}
-              onChange={e => setData({ ...data, meleeAttacksOverview: e.target.value })}
+          <div className="flex flex-col gap-0 border border-stone-300 rounded overflow-hidden shadow-sm">
+            <div className="border-b border-stone-200">
+              <DynamicTable
+                minWidth="0"
+                columns={[
+                  { key: 'weapon', label: '近战武器', width: '25%' },
+                  { key: 'hit', label: '命中 (Hit)', width: '15%' },
+                  { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
+                  { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
+                  { key: 'range', label: '触及 (Touch)', width: '5%' },
+                  { key: 'type', label: '类型 (Type)', width: '5%' },
+                  { key: 'special', label: '特性 (Special)', width: '25%' }
+                ]}
+                data={data.meleeAttacks || []}
+                originalData={lastSavedData.meleeAttacks || []}
+                onChange={v => setData({ ...data, meleeAttacks: v })}
+                newItemGenerator={() => ({ weapon: '', hit: '', damage: '', crit: '', range: '', type: '', special: '' })}
+                rowDraggable={true}
+                rowActionMode={tableActionMode}
+                onRowActionModeToggle={toggleTableActionMode}
+                onRowDragStart={(idx, e) => handleTableItemDragStart('meleeAttacks', idx, e)}
+                onRowDragOver={(idx, e) => handleTableItemDragOver('meleeAttacks', idx, e)}
+                onRowDrop={(idx, e) => handleTableItemDrop('meleeAttacks', idx, e)}
+              />
+            </div>
+            <DynamicTable
+              minWidth="0"
+              columns={[
+                { key: 'weapon', label: '远程武器', width: '25%' },
+                { key: 'hit', label: '命中 (Hit)', width: '15%' },
+                { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
+                { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
+                { key: 'range', label: '射程 (Range)', width: '5%' },
+                { key: 'type', label: '类型 (Type)', width: '5%' },
+                { key: 'special', label: '特性 (Special)', width: '25%' }
+              ]}
+              data={data.rangedAttacks || []}
+              originalData={lastSavedData.rangedAttacks || []}
+              onChange={v => setData({ ...data, rangedAttacks: v })}
+              newItemGenerator={() => ({ weapon: '', hit: '', damage: '', crit: '', range: '', type: '', special: '' })}
+              rowDraggable={true}
+              rowActionMode={tableActionMode}
+              onRowActionModeToggle={toggleTableActionMode}
+              onRowDragStart={(idx, e) => handleTableItemDragStart('rangedAttacks', idx, e)}
+              onRowDragOver={(idx, e) => handleTableItemDragOver('rangedAttacks', idx, e)}
+              onRowDrop={(idx, e) => handleTableItemDrop('rangedAttacks', idx, e)}
             />
           </div>
-          <DynamicTable
-            columns={[
-              { key: 'weapon', label: '武器 (Weapon)', width: '25%' },
-              { key: 'hit', label: '命中 (Hit)', width: '15%' },
-              { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
-              { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
-              { key: 'range', label: '触及 (Range)', width: '5%' },
-              { key: 'type', label: '类型 (Type)', width: '5%' },
-              { key: 'special', label: '特性 (Special)', width: '25%' }
-            ]}
-            data={data.meleeAttacks || []}
-            originalData={lastSavedData.meleeAttacks || []}
-            onChange={v => setData({ ...data, meleeAttacks: v })}
-            newItemGenerator={() => ({ weapon: '', hit: '', damage: '', crit: '', range: '', type: '', special: '' })}
-            rowDraggable={true}
-            rowActionMode={tableActionMode}
-            onRowActionModeToggle={toggleTableActionMode}
-            onRowDragStart={(idx, e) => handleTableItemDragStart('meleeAttacks', idx, e)}
-            onRowDragOver={(idx, e) => handleTableItemDragOver('meleeAttacks', idx, e)}
-            onRowDrop={(idx, e) => handleTableItemDrop('meleeAttacks', idx, e)}
-          />
-          <div className="mb-4 mt-8">
-            <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">远程攻击加值 (Range Attack Bonuses)</label>
-            <input
-              className="w-full bg-stone-50 border border-stone-200 rounded px-3 py-2 text-sm outline-none focus:border-stone-400"
-              value={data.rangedAttacksOverview || ''}
-              onChange={e => setData({ ...data, rangedAttacksOverview: e.target.value })}
-            />
-          </div>
-          <DynamicTable
-            columns={[
-              { key: 'weapon', label: '武器 (Weapon)', width: '25%' },
-              { key: 'hit', label: '命中 (Hit)', width: '15%' },
-              { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
-              { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
-              { key: 'range', label: '射程 (Range)', width: '5%' },
-              { key: 'type', label: '类型 (Type)', width: '5%' },
-              { key: 'special', label: '特性 (Special)', width: '25%' }
-            ]}
-            data={data.rangedAttacks || []}
-            originalData={lastSavedData.rangedAttacks || []}
-            onChange={v => setData({ ...data, rangedAttacks: v })}
-            newItemGenerator={() => ({ weapon: '', hit: '', damage: '', crit: '', range: '', type: '', special: '' })}
-            rowDraggable={true}
-            rowActionMode={tableActionMode}
-            onRowActionModeToggle={toggleTableActionMode}
-            onRowDragStart={(idx, e) => handleTableItemDragStart('rangedAttacks', idx, e)}
-            onRowDragOver={(idx, e) => handleTableItemDragOver('rangedAttacks', idx, e)}
-            onRowDrop={(idx, e) => handleTableItemDrop('rangedAttacks', idx, e)}
-          />
           <div className="mt-8">
             <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex justify-between">
               特殊攻击 (Special Attacks)
