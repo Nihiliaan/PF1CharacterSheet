@@ -83,7 +83,8 @@ export const characterSchema = {
       type: Type.OBJECT,
       description: "防御信息",
       properties: {
-        hp: { type: Type.STRING, description: "HP（生命值）信息" },
+        hp: { type: Type.STRING, description: "HP（总生命值）" },
+        hd: { type: Type.STRING, description: "HD（生命骰，如 3d8+3）" },
         acTable: {
           type: Type.ARRAY,
           description: "AC 详情表格，包含1个对象",

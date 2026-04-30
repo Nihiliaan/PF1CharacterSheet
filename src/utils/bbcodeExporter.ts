@@ -95,7 +95,7 @@ export function generateBBCode(data: any, template: string): string {
   const acLine = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]措手不及[/b] ${acData.flatFooted || '-'}, [b]接触[/b] ${acData.touch || '-'}${defenses.acNotes ? ` (${defenses.acNotes})` : ''}` : defenses.ac;
   replaceVar('acLine', acLine);
   
-  replaceVar('hpLine', `[b]HP[/b] ${defenses.hp}`);
+  replaceVar('hpLine', `[b]HP[/b] ${defenses.hp}${defenses.hd ? ` (${defenses.hd})` : ''}`);
   
   const saveData = defenses.savesTable?.[0] || {};
   const saveLine = saveData.fort ? `[b]强韧[/b] ${saveData.fort}, [b]反射[/b] ${saveData.ref}, [b]意志[/b] ${saveData.will}${defenses.savesNotes ? ` (${defenses.savesNotes})` : ''}` : (defenses.saves || '');

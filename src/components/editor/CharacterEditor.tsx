@@ -274,20 +274,6 @@ export default function CharacterEditor({
 
         <Section id="defenses" title="防御 (Defenses)">
           <div className="flex flex-col gap-6">
-            {/* HP Field */}
-            <div className={`rounded p-1 transition-colors border ${data.defenses.hp !== lastSavedData.defenses.hp ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-200 bg-white/50 hover:border-stone-300'}`}>
-              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1 flex justify-between">
-                生命值 (HP)
-                {data.defenses.hp !== lastSavedData.defenses.hp && <span className="text-amber-600 font-black animate-pulse">●</span>}
-              </label>
-              <input
-                value={data.defenses.hp}
-                onChange={(e) => updateDefenses('hp', e.target.value)}
-                className="w-full bg-transparent outline-none px-2 py-1 text-sm font-medium text-ink transition-colors"
-                placeholder="例如：20 (3d8+3)"
-              />
-            </div>
-
             {/* AC Row */}
             <div className="flex flex-col md:flex-row gap-6 items-stretch">
               <div className="w-full md:w-1/2 flex flex-col">
@@ -323,6 +309,28 @@ export default function CharacterEditor({
                     placeholder="护甲加值来源、闪避、天生护甲等..."
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* HP & HD Row */}
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-full md:w-1/2">
+                <InlineInput
+                  label="生命值 (HP)"
+                  value={data.defenses.hp}
+                  originalValue={lastSavedData.defenses.hp}
+                  onChange={v => updateDefenses('hp', v)}
+                  placeholder="例如：20"
+                />
+              </div>
+              <div className="w-full md:w-1/2">
+                <InlineInput
+                  label="生命骰 (Hit Die)"
+                  value={data.defenses.hd || ''}
+                  originalValue={lastSavedData.defenses.hd}
+                  onChange={v => updateDefenses('hd', v)}
+                  placeholder="例如：3d8+3"
+                />
               </div>
             </div>
 

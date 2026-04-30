@@ -38,6 +38,7 @@ export const DEFAULT_DATA: CharacterData = {
   specialAttacks: '',
   defenses: {
     hp: '',
+    hd: '',
     acTable: [{ ac: '', flatFooted: '', touch: '' }],
     acNotes: '',
     savesTable: [{ fort: '', ref: '', will: '' }],

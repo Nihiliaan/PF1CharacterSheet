@@ -63,6 +63,7 @@ export interface CharacterData {
   specialAttacks: string;
   defenses: {
     hp: string;
+    hd: string;
     acTable: { ac: string; flatFooted: string; touch: string }[];
     acNotes: string;
     savesTable: { fort: string; ref: string; will: string }[];
