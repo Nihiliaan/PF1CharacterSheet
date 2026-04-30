@@ -370,14 +370,13 @@ export default function CharacterEditor({
         <Section id="racial-traits" title="种族特性 (Racial Traits)">
           <DynamicTable
             columns={[
-              { key: 'name', label: '特性 (Trait)', width: '25%' },
-              { key: 'type', label: '类型 (Type)', width: '5%', type: 'select', options: ['', 'Sp', 'Su', 'Ex'] },
+              { key: 'name', label: '特性 (Trait)', width: '30%' },
               { key: 'desc', label: '描述 (Description)', width: '70%' }
             ]}
             data={data.racialTraits}
             originalData={lastSavedData.racialTraits}
             onChange={v => setData({ ...data, racialTraits: v })}
-            newItemGenerator={() => ({ name: '', type: '', desc: '' })}
+            newItemGenerator={() => ({ name: '', desc: '' })}
             rowDraggable={true}
             rowActionMode={tableActionMode}
             onRowActionModeToggle={toggleTableActionMode}
@@ -392,7 +391,7 @@ export default function CharacterEditor({
             <DynamicTable
               columns={[
                 { key: 'name', label: '特性名称 (Trait Name)', width: '25%' },
-                { key: 'type', label: '类型 (Type)', width: '5%' },
+                { key: 'type', label: '分类 (Category)', width: '5%' },
                 { key: 'desc', label: '说明 (Description)', width: '70%' }
               ]}
               data={data.backgroundTraits}
