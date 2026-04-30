@@ -258,15 +258,8 @@ export async function extractCharacterFromText(text: string, apiKey: string) {
   for (const modelName of models) {
     try {
       console.log(`Attempting AI extraction with model: ${modelName}`);
-      const ai = new GoogleGenAI({ apiKey });
-      const model = ai.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: characterSchema,
-          temperature: 0,
-        }
-      });
+      const genAI = new GoogleGenAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: modelName });
 
       const response = await model.generateContent({
         contents: [
@@ -301,7 +294,12 @@ export async function extractCharacterFromText(text: string, apiKey: string) {
               }
             ]
           }
-        ]
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: characterSchema,
+          temperature: 0,
+        }
       });
 
       const responseText = response.response.text();
