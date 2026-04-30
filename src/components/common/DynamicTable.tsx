@@ -86,14 +86,10 @@ const DynamicCellInput = ({
       ) : type === 'checkbox' ? (
         <div 
           onClick={toggleCheckbox}
-          className={`w-full h-full flex items-center justify-center cursor-pointer group/cb transition-all ${value === 'true' ? 'bg-primary/5' : 'hover:bg-stone-50'} ${className}`}
+          className={`w-full h-full flex items-center justify-center cursor-pointer transition-all ${value === 'true' ? 'bg-primary/5' : 'hover:bg-stone-50'} ${className}`}
         >
-          <div className={`transition-all ${value === 'true' ? 'text-ink font-medium text-sm' : 'text-stone-300 opacity-20 group-hover/cb:opacity-100'}`}>
-            {value === 'true' ? '+3' : (
-              <div className="w-5 h-5 border-2 border-stone-300 rounded flex items-center justify-center bg-white shadow-sm">
-                <div className="w-3 h-3 bg-primary rounded-sm opacity-0 group-active:opacity-50" />
-              </div>
-            )}
+          <div className={`transition-all ${value === 'true' ? 'text-ink font-medium text-sm' : ''}`}>
+            {value === 'true' ? '+3' : ''}
           </div>
         </div>
       ) : (
