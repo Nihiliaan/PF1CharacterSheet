@@ -179,18 +179,44 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (charId) {
           const char = await getCharacterById(charId);
           if (char) {
-            setData(char.data);
-            setLastSavedData(JSON.parse(JSON.stringify(char.data)));
-            setCurrentCharacterId(char.id);
-            // Use 'u' directly to determine read-only status correctly on first load
-            setIsReadOnly(char.ownerId !== u?.uid);
-            setViewState('editor');
-            addToRecent(char);
+            if (char.isLink && char.targetId) {
+              const targetChar = await getCharacterById(char.targetId);
+              if (targetChar) {
+                setData(targetChar.data);
+                setLastSavedData(JSON.parse(JSON.stringify(targetChar.data)));
+                setCurrentCharacterId(targetChar.id);
+                setIsReadOnly(targetChar.ownerId !== u?.uid);
+                setViewState('editor');
+                addToRecent(targetChar);
+              }
+            } else {
+              setData(char.data);
+              setLastSavedData(JSON.parse(JSON.stringify(char.data)));
+              setCurrentCharacterId(char.id);
+              setIsReadOnly(char.ownerId !== u?.uid);
+              setViewState('editor');
+              addToRecent(char);
+
+              // Auto-save link if it's someone else's character and we are logged in
+              if (u && char.ownerId !== u.uid) {
+                try {
+                  const folderId = await ensureLocalFolderService('来自分享', null, u.uid);
+                  const existingChars = await getMyCharacters();
+                  const existingLink = existingChars?.find(c => c.isLink && c.targetId === char.id);
+                  if (!existingLink) {
+                    await saveLink(char, folderId);
+                  }
+                } catch (e) {
+                  console.error("Failed to save shared link on initial load:", e);
+                }
+              }
+            }
           }
         }
 
         // 2. Initial List Refresh (if logged in)
         if (u) {
+          await ensureLocalFolderService('来自分享', null, u.uid);
           refreshCharacterList();
         }
       } catch (error) {
