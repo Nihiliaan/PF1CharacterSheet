@@ -26,6 +26,7 @@ const DynamicCellInput = ({
 
   const displayValue = () => {
     if (displayFormatter) return displayFormatter(value);
+    if (type === 'checkbox') return value === 'true' ? '+3' : '';
     if (type === 'quantity' && !isFocused) {
       if (!value || value === '1') return '';
       return `×${value}`;
@@ -56,9 +57,13 @@ const DynamicCellInput = ({
     onChange(value === 'true' ? '' : 'true');
   };
 
+  const baseClasses = `px-2 py-1 min-h-[32px] font-medium transition-colors ${className}`;
+  const isSelected = type === 'select' && options;
+  const isCheckbox = type === 'checkbox';
+
   if (readOnly) {
     return (
-      <div className={`px-2 py-1 min-h-[32px] whitespace-pre-wrap break-words flex items-center h-full ${className}`}>
+      <div className={`${baseClasses} whitespace-pre-wrap break-words flex items-center h-full`}>
         {displayValue()}
       </div>
     );
@@ -66,46 +71,38 @@ const DynamicCellInput = ({
 
   return (
     <div className={`grid h-full w-full relative group transition-colors min-h-[32px] ${isChanged ? 'bg-amber-100/40' : ''}`}>
-      {type === 'select' && options ? (
-        <div className="relative w-full h-full">
-          <select
-            value={value}
-            onChange={handleChange as any}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 ${className}`}
-          >
-            {options.map(opt => (
-              <option key={opt} value={opt}>{opt || '—'}</option>
-            ))}
-          </select>
-          <div className={`w-full h-full flex items-center px-2 py-1 font-medium transition-colors ${isChanged ? 'text-amber-700' : 'text-ink'}`}>
-            {displayValue() || <span className="text-stone-300">—</span>}
-          </div>
-        </div>
-      ) : type === 'checkbox' ? (
+      {/* 1. Underlying display layer - ensures consistent styling for all types */}
+      <div className={`col-start-1 row-start-1 ${baseClasses} whitespace-pre-wrap break-words flex items-center pointer-events-none ${isChanged ? 'text-amber-900' : 'text-ink'}`}>
+        {displayValue() || (isSelected && !isFocused ? <span className="text-stone-300">—</span> : '')}
+      </div>
+
+      {/* 2. Interaction layer */}
+      {isSelected ? (
+        <select
+          value={value}
+          onChange={handleChange as any}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className="col-start-1 row-start-1 w-full h-full opacity-0 cursor-pointer z-10"
+        >
+          {options.map(opt => (
+            <option key={opt} value={opt}>{opt || '—'}</option>
+          ))}
+        </select>
+      ) : isCheckbox ? (
         <div 
           onClick={toggleCheckbox}
-          className={`w-full h-full flex items-center justify-center cursor-pointer transition-all ${value === 'true' ? 'bg-primary/5' : 'hover:bg-stone-50'} ${className}`}
-        >
-          <div className={`transition-all ${value === 'true' ? 'text-ink font-medium text-sm' : ''}`}>
-            {value === 'true' ? '+3' : ''}
-          </div>
-        </div>
+          className="col-start-1 row-start-1 w-full h-full cursor-pointer z-10 hover:bg-stone-100/50"
+        />
       ) : (
-        <>
-          <div className="col-start-1 row-start-1 invisible whitespace-pre-wrap break-words px-2 py-1 min-w-[60px] min-h-[32px] font-medium pointer-events-none">
-            {displayValue() + '\n'}
-          </div>
-          <textarea
-            value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt') ? value : displayValue()}
-            onChange={handleChange}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent transition-colors px-2 py-1 font-medium ${className} ${type === 'quantity' ? 'text-stone-500' : ''} ${isChanged ? 'text-amber-900' : ''}`}
-            rows={1}
-          />
-        </>
+        <textarea
+          value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt') ? value : displayValue()}
+          onChange={handleChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent px-2 py-1 font-medium ${className} ${type === 'quantity' ? 'text-stone-500' : ''} ${isChanged ? 'text-amber-900' : ''}`}
+          rows={1}
+        />
       )}
       {isChanged && (
         <div className="absolute right-0.5 top-0.5 w-1 h-1 bg-amber-500 rounded-full animate-pulse shadow-sm" />
