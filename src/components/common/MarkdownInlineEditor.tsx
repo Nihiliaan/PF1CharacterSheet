@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, WidgetType } from '@codemirror/view';
 import { EditorState, RangeSetBuilder } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { languages } from '@codemirror/language';
 
 interface MarkdownInlineEditorProps {
   value: string;
@@ -139,7 +138,7 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
       doc: value || '',
 // ... (rest of the extensions)
       extensions: [
-        markdown({ base: markdownLanguage, codeLanguages: languages }),
+        markdown({ base: markdownLanguage }),
         markdownConcealPlugin,
         externalLinkHandler,
         EditorView.lineWrapping,
