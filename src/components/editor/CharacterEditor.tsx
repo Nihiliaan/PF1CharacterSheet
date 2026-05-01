@@ -258,7 +258,6 @@ export default function CharacterEditor({
               <div className="w-full md:w-1/2 flex flex-col">
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
                   {t('editor.defenses.ac_details')}
-                  <span className="text-stone-400 font-normal">AC / {t('editor.defenses.touch') / { t('editor.defenses.flat_footed') }}</span>
                   <span className="text-stone-400 font-normal">AC / {t('editor.defenses.touch')} / {t('editor.defenses.flat_footed')}</span>
                 </label>
                 <div className="flex-1">
