@@ -637,8 +637,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setData(char.data);
           setLastSavedData(JSON.parse(JSON.stringify(char.data)));
           setCurrentDocumentId(char.id);
+          setViewState('editor');
         }
-        setCurrentDocumentId(char.id);
         
         const url = new URL(window.location.href);
         url.searchParams.set('id', char.id);

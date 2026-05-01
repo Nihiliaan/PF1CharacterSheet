@@ -93,7 +93,9 @@ export async function saveLink(targetChar: any, folderId: string | null) {
       data: {
          basic: {
             name: targetChar.data?.basic?.name || '未命名人物(分享)',
-            avatars: targetChar.data?.basic?.avatars || []
+            avatars: targetChar.data?.basic?.avatars || [],
+            race: targetChar.data?.basic?.race || '',
+            classes: targetChar.data?.basic?.classes || ''
          }
       },
       isPublic: false,

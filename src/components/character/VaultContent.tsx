@@ -733,7 +733,7 @@ const VaultContent = ({
                   <div className={viewMode === 'grid' ? "text-center min-w-0" : "flex-1 min-w-0"}>
                       <p className={`text-xs font-bold line-clamp-1 ${isSelected ? 'text-primary' : 'text-stone-800'}`}>{char.name}</p>
                       <p className="text-[9px] text-stone-400 font-medium truncate mt-0.5">
-                        {char.isTemplate ? 'BBCode 导出模板' : (char.data?.basic?.race + ' · ' + char.data?.basic?.classes)}
+                        {char.isTemplate ? 'BBCode 导出模板' : `${char.data?.basic?.race || '未知种族'} · ${char.data?.basic?.classes || '未知职业'}`}
                       </p>
                   </div>
                 </div>
