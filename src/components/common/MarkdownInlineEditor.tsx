@@ -64,6 +64,8 @@ const markdownConcealPlugin = ViewPlugin.fromClass(class {
       const isCursorInside = (selection.from >= start && selection.from <= end) || 
                              (selection.to >= start && selection.to <= end);
 
+      console.log(`[MarkdownEditor] Link match found: "${label}" at [${start}, ${end}]. isCursorInside: ${isCursorInside}`);
+
       if (!isCursorInside) {
         // 1. Hide [ (MUST BE FIRST)
         builder.add(start, start + 1, Decoration.replace({}));
@@ -130,9 +132,11 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
 
   useEffect(() => {
     if (!editorRef.current) return;
+    console.log('[MarkdownEditor] Mounting component. Initial value:', value);
 
     const state = EditorState.create({
       doc: value || '',
+// ... (rest of the extensions)
       extensions: [
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         markdownConcealPlugin,
@@ -169,7 +173,9 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
         }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            onChange(update.state.doc.toString());
+            const newVal = update.state.doc.toString();
+            console.log('[MarkdownEditor] Value changed:', newVal);
+            onChange(newVal);
           }
         }),
         placeholder ? EditorView.placeholder(placeholder) : [],
@@ -184,6 +190,7 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
     viewRef.current = view;
 
     return () => {
+      console.log('[MarkdownEditor] Unmounting component');
       view.destroy();
     };
   }, [readOnly, placeholder, height, minHeight]); 
