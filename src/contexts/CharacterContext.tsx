@@ -159,6 +159,20 @@ export const useCharacter = () => {
   return context;
 };
 
+// Securely merge loaded data with defaults to handle schema updates
+const mergeWithDefault = (data: any, defaults: any): any => {
+  if (typeof data !== 'object' || data === null) return JSON.parse(JSON.stringify(defaults));
+  const result = { ...data };
+  for (const key in defaults) {
+    if (typeof defaults[key] === 'object' && defaults[key] !== null && !Array.isArray(defaults[key])) {
+      result[key] = mergeWithDefault(data[key], defaults[key]);
+    } else if (result[key] === undefined) {
+      result[key] = JSON.parse(JSON.stringify(defaults[key]));
+    }
+  }
+  return result;
+};
+
 export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [view, setViewState] = useState<'editor' | 'vault' | 'settings' | 'bbcode-template'>('editor');
@@ -212,11 +226,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               const targetChar = await getCharacterById(char.targetId);
               if (!targetChar || !targetChar.data) throw new Error("Linked target character not found or data is missing");
               
-              // Validate by attempting a clone
-              JSON.parse(JSON.stringify(targetChar.data));
+              // Validate and merge with defaults
+              const merged = mergeWithDefault(targetChar.data, DEFAULT_DATA);
               
-              setData(targetChar.data);
-              setLastSavedData(JSON.parse(JSON.stringify(targetChar.data)));
+              setData(merged);
+              setLastSavedData(JSON.parse(JSON.stringify(merged)));
               setCurrentDocumentId(targetChar.id);
               setIsReadOnly(targetChar.ownerId !== u?.uid);
               setViewState('editor');
@@ -233,11 +247,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setIsReadOnly(char.ownerId !== u?.uid);
               addToRecent(char);
             } else {
-              // Validate by attempting a clone
-              JSON.parse(JSON.stringify(char.data));
+              // Validate and merge with defaults
+              const merged = mergeWithDefault(char.data, DEFAULT_DATA);
 
-              setData(char.data);
-              setLastSavedData(JSON.parse(JSON.stringify(char.data)));
+              setData(merged);
+              setLastSavedData(JSON.parse(JSON.stringify(merged)));
               setCurrentDocumentId(char.id);
               setIsReadOnly(char.ownerId !== u?.uid);
               setViewState('editor');
@@ -575,12 +589,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             return;
           }
 
-          if (!char.data) throw new Error("Character data is missing");
-          // Smoke test to catch corruption
-          JSON.parse(JSON.stringify(char.data));
+          // Merge with defaults to ensure all fields exist
+          const merged = mergeWithDefault(char.data, DEFAULT_DATA);
 
-          setData(char.data);
-          setLastSavedData(JSON.parse(JSON.stringify(char.data)));
+          setData(merged);
+          setLastSavedData(JSON.parse(JSON.stringify(merged)));
           setCurrentDocumentId(char.id);
           setIsReadOnly(char.ownerId !== user?.uid);
           
@@ -612,11 +625,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return;
         }
 
-        // Smoke test to catch corruption
-        JSON.parse(JSON.stringify(char.data));
+        // Merge with defaults to ensure all fields exist
+        const merged = mergeWithDefault(char.data, DEFAULT_DATA);
 
-        setData(char.data);
-        setLastSavedData(JSON.parse(JSON.stringify(char.data)));
+        setData(merged);
+        setLastSavedData(JSON.parse(JSON.stringify(merged)));
         setCurrentDocumentId(char.id);
         setIsReadOnly(char.ownerId !== user?.uid);
         
@@ -655,8 +668,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setBbcodeTemplate(char.data.content);
           setViewState('bbcode-template');
         } else {
-          setData(char.data);
-          setLastSavedData(JSON.parse(JSON.stringify(char.data)));
+          const merged = mergeWithDefault(char.data, DEFAULT_DATA);
+          setData(merged);
+          setLastSavedData(JSON.parse(JSON.stringify(merged)));
           setCurrentDocumentId(char.id);
           setViewState('editor');
         }
