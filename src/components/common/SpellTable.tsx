@@ -54,6 +54,12 @@ export default function SpellTable({
     return JSON.stringify(data) !== JSON.stringify(originalData);
   }, [data, originalData]);
 
+  const isDescriptionCol = (key?: string) => {
+    if (!key) return false;
+    const k = key.toLowerCase();
+    return ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => k.includes(word));
+  };
+
   const canAdd = data.length + baseLevel <= 9;
 
   return (
@@ -120,6 +126,7 @@ export default function SpellTable({
                         type={c.type as any}
                         options={c.options}
                         displayFormatter={c.displayFormatter}
+                        align={c.align || (isDescriptionCol(c.key) ? 'left' : 'center')}
                         className={readOnly ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"}
                       />
                     )}

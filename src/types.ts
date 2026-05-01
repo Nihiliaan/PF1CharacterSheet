@@ -11,6 +11,7 @@ export interface Column {
   displayFormatter?: (v: string, isFocused: boolean) => string;
   hideRightBorder?: boolean;
   className?: string;
+  align?: 'left' | 'center' | 'right';
 };
 
 export interface DynamicTableProps {

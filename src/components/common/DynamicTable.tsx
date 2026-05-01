@@ -33,6 +33,12 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     return JSON.stringify(data) !== JSON.stringify(originalData);
   }, [data, originalData]);
 
+  const isDescriptionCol = (key?: string) => {
+    if (!key) return false;
+    const k = key.toLowerCase();
+    return ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => k.includes(word));
+  };
+
   return (
     <div className={`w-full overflow-x-auto rounded border transition-colors ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
       <table className="w-full border-collapse text-sm table-auto" style={{ minWidth }}>
@@ -107,6 +113,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                     type={c.type as any}
                     options={c.options}
                     displayFormatter={c.displayFormatter}
+                    align={c.align || (isDescriptionCol(c.key) ? 'left' : 'center')}
                     className={`${(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}
                   />
                 </td>

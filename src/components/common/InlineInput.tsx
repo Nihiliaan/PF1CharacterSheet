@@ -49,6 +49,7 @@ const InlineInput = ({
           singleLine={true}
           transactionFilter={resolvedFilter}
           displayFormatter={displayFormatter}
+          align="center"
           height="24px"
           minHeight="24px"
           hideIndicator={true}

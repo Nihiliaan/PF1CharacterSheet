@@ -56,6 +56,7 @@ const MultilineInput = ({
           readOnly={readOnly}
           placeholder={placeholder}
           singleLine={false}
+          align="left"
           height={isAutoHeight ? 'auto' : height}
           minHeight="24px"
           hideIndicator={true}
