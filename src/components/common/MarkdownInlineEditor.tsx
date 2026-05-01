@@ -1,7 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, placeholder as cmPlaceholder } from '@codemirror/view';
-import { EditorState, RangeSetBuilder } from '@codemirror/state';
+import { EditorState, RangeSetBuilder, Annotation } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
+
+// Custom annotation to distinguish programmatic updates from user input
+const programmaticUpdate = Annotation.define<boolean>();
 
 interface MarkdownInlineEditorProps {
   value: string;
@@ -108,6 +111,9 @@ const MarkdownInlineEditor = ({
         // Transaction filtering using Ref to avoid re-creating extensions
         EditorState.transactionFilter.of(tr => {
             if (tr.docChanged) {
+                // Bypass validation for programmatic updates (e.g., displayFormatter results)
+                if (tr.annotation(programmaticUpdate)) return tr;
+
                 // If singleLine is enabled, prevent any change that adds a newline
                 if (singleLine && tr.newDoc.toString().includes('\n')) {
                     return [];
@@ -160,7 +166,8 @@ const MarkdownInlineEditor = ({
     const view = viewRef.current;
     if (view && value !== view.state.doc.toString()) {
       view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: value || '' }
+        changes: { from: 0, to: view.state.doc.length, insert: value || '' },
+        annotations: [programmaticUpdate.of(true)]
       });
     }
   }, [value]);

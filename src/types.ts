@@ -1,13 +1,15 @@
 export type { User as FirebaseUser } from 'firebase/auth';
 
-export type Column = {
+export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus';
+
+export interface Column {
   key: string;
   label: string;
   width?: string;
-  hideRightBorder?: boolean;
-  type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus';
+  type?: InputType;
   options?: string[];
   displayFormatter?: (v: string, isFocused: boolean) => string;
+  hideRightBorder?: boolean;
   className?: string;
 };
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
+import { InputType } from '../types';
 
 interface InlineInputProps {
   label: string;
@@ -9,9 +10,12 @@ interface InlineInputProps {
   placeholder?: string;
   className?: string;
   readOnly?: boolean;
+  type?: InputType;
   transactionFilter?: (tr: any) => boolean;
   displayFormatter?: (v: string, isFocused: boolean) => string;
 }
+
+import { getTransactionFilter } from '../utils/validation';
 
 const InlineInput = ({
   label,
@@ -21,29 +25,33 @@ const InlineInput = ({
   placeholder = '',
   className = '',
   readOnly = false,
+  type = 'text',
   transactionFilter,
   displayFormatter
 }: InlineInputProps) => {
   const [isFocused, setIsFocused] = useState(false);
   const isChanged = originalValue !== undefined && value !== originalValue;
 
+  // Resolve transaction filter based on type
+  const resolvedFilter = transactionFilter || (type !== 'text' ? getTransactionFilter(type) : undefined);
+
   return (
-    <div className={`flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 transition-all group/input ${isChanged ? 'bg-amber-50/50 border-amber-300 shadow-sm' : 'hover:border-stone-400 focus-within:border-stone-600 focus-within:bg-white focus-within:shadow-sm'} ${className}`}>
+    <div 
+      className={`flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 transition-all group/input ${isChanged ? 'bg-amber-50/50 border-amber-300 shadow-sm' : 'hover:border-stone-400 focus-within:border-stone-600 focus-within:bg-white focus-within:shadow-sm'} ${className}`}
+      onFocusCapture={() => setIsFocused(true)}
+      onBlurCapture={() => setIsFocused(false)}
+    >
       <label className={`text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none mb-1 transition-colors ${isChanged ? 'text-amber-700' : 'group-focus-within/input:text-stone-900'}`}>
         {label}
       </label>
-      <div 
-        className="h-6 relative"
-        onFocusCapture={() => setIsFocused(true)}
-        onBlurCapture={() => setIsFocused(false)}
-      >
+      <div className="h-6 relative">
         <MarkdownInlineEditor
           value={displayFormatter ? displayFormatter(value, isFocused) : value}
           onChange={onChange}
           readOnly={readOnly}
           placeholder={placeholder}
           singleLine={true}
-          transactionFilter={transactionFilter}
+          transactionFilter={resolvedFilter}
           height="24px"
           minHeight="24px"
           className="font-medium text-ink"

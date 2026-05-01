@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { DynamicTableProps } from '../../types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
+import { validateInput } from '../utils/validation';
 
 const DynamicCellInput = ({
   value,
@@ -40,17 +41,10 @@ const DynamicCellInput = ({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
-    let val = e.target.value;
-    if (type === 'float') {
-      if (val !== '' && !/^-?\d*\.?\d{0,2}$/.test(val)) return;
+    const val = e.target.value;
+    if (validateInput(val, type || 'text')) {
+      onChange(val);
     }
-    if (type === 'int') {
-      if (val !== '' && !/^-?\d*$/.test(val)) return;
-    }
-    if (type === 'posInt' || type === 'quantity') {
-      if (val !== '' && !/^\d*$/.test(val)) return;
-    }
-    onChange(val);
   };
 
   const toggleCheckbox = () => {
