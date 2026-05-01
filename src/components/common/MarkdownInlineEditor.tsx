@@ -75,11 +75,14 @@ const externalLinkHandler = EditorView.domEventHandlers({
 const MarkdownInlineEditor = ({ value, onChange, readOnly = false, className = '', placeholder = '', height = 'auto', minHeight = '32px' }: MarkdownInlineEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  
+  // CRITICAL: Use ref for onChange to prevent stale closure "Reset Bug"
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
   useEffect(() => {
     if (!editorRef.current) return;
     
-    // Safety check to avoid double layers
     if (editorRef.current.querySelector('.cm-editor')) {
         editorRef.current.innerHTML = '';
     }
@@ -103,7 +106,8 @@ const MarkdownInlineEditor = ({ value, onChange, readOnly = false, className = '
         }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            onChange(update.state.doc.toString());
+            // Call the REF version to ensure we always have the latest parent state
+            onChangeRef.current(update.state.doc.toString());
           }
         }),
         placeholder ? cmPlaceholder(placeholder) : [],
@@ -115,7 +119,6 @@ const MarkdownInlineEditor = ({ value, onChange, readOnly = false, className = '
     return () => { view.destroy(); };
   }, [readOnly, placeholder, height, minHeight]); 
 
-  // Controlled component sync: ONLY sync if external value differs significantly
   useEffect(() => {
     const view = viewRef.current;
     if (view && value !== view.state.doc.toString()) {
@@ -125,7 +128,20 @@ const MarkdownInlineEditor = ({ value, onChange, readOnly = false, className = '
     }
   }, [value]);
 
-  return <div ref={editorRef} className={`w-full h-full ${className}`} />;
+  // Handle click on container to ensure focus
+  const handleContainerClick = () => {
+    if (viewRef.current && !viewRef.current.hasFocus) {
+        viewRef.current.focus();
+    }
+  };
+
+  return (
+    <div 
+        ref={editorRef} 
+        className={`w-full h-full cursor-text ${className}`} 
+        onClick={handleContainerClick}
+    />
+  );
 };
 
 export default MarkdownInlineEditor;
