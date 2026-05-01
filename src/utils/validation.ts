@@ -20,6 +20,8 @@ export const validateInput = (value: string, type: string): boolean => {
       return REGEX_PATTERNS.int.test(value);
     case 'float':
       return REGEX_PATTERNS.float.test(value);
+    case 'attributeIndex':
+      return /^[0-6]$/.test(value);
     default:
       return true;
   }
@@ -40,6 +42,16 @@ export const normalizeValue = (value: string, type: string): string => {
     return parsed.toString();
   }
   
+  if (type === 'attributeIndex') {
+    if (value === '') return '0';
+    if (/^[0-6]$/.test(value)) return value;
+    // Map existing strings, fallback to '0'
+    const attrNames = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+    const idx = attrNames.indexOf(value);
+    if (idx !== -1) return (idx + 1).toString();
+    return '0';
+  }
+
   if (type === 'float') {
     // Avoid stripping trailing decimal points while typing (e.g., "1.")
     if (value.endsWith('.')) return value;

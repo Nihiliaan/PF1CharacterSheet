@@ -396,7 +396,7 @@ export default function CharacterEditor({
             columns={[
               { key: 'level', label: t('editor.lists.level'), width: '8%', type: 'level' },
               { key: 'name', label: t('editor.sections.class_features'), width: '22%' },
-              { key: 'type', label: t('editor.attacks.damage_type'), width: '5%', type: 'select', options: ['', 'Sp', 'Su', 'Ex'] },
+              { key: 'type', label: t('editor.lists.ability_type'), width: '5%', type: 'select', options: ['', 'Sp', 'Su', 'Ex'] },
               { key: 'desc', label: t('editor.lists.description'), width: '65%' }
             ]}
             data={data.classFeatures}
@@ -418,7 +418,7 @@ export default function CharacterEditor({
               { key: 'level', label: t('editor.lists.level'), width: '8%', type: 'level' },
               { key: 'source', label: t('editor.lists.source'), width: '12%' },
               { key: 'name', label: t('editor.lists.feat_name'), width: '20%' },
-              { key: 'type', label: t('editor.attacks.damage_type'), width: '5%' },
+              { key: 'type', label: t('editor.lists.feat_type'), width: '5%' },
               { key: 'desc', label: t('editor.lists.description'), width: '55%' }
             ]}
             data={data.feats}
@@ -518,19 +518,17 @@ export default function CharacterEditor({
                 key: 'ability',
                 label: t('editor.skills.headers.ability'),
                 width: '10%',
-                type: 'select',
-                options: ['', ...ATTRIBUTE_NAMES.map(attr => t('editor.attributes.' + attr))],
+                type: 'attributeIndex',
                 displayFormatter: (val) => {
-                  if (!val) return '';
-                  const localizedNames = ATTRIBUTE_NAMES.map(attr => t('editor.attributes.' + attr));
-                  const idx = localizedNames.indexOf(val);
-                  if (idx === -1) return val;
-                  const attrKey = ATTRIBUTE_NAMES[idx];
+                  if (!val || val === '0') return '—';
+                  const idx = parseInt(val, 10) - 1;
+                  if (isNaN(idx) || idx < 0 || idx >= ATTRIBUTE_NAMES.length) return val;
                   const attrData = data.attributes[idx];
                   if (!attrData) return val;
+                  const localizedName = t('editor.attributes.' + ATTRIBUTE_NAMES[idx]);
                   const mod = parseInt(attrData.modifier);
                   const sign = isNaN(mod) ? '' : (mod >= 0 ? '+' : '');
-                  return `${val} ${sign}${attrData.modifier}`;
+                  return `${localizedName} ${sign}${attrData.modifier}`;
                 }
               },
               { key: 'others', label: t('editor.skills.headers.others'), width: '20%' },

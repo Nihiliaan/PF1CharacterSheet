@@ -1,6 +1,6 @@
 export type { User as FirebaseUser } from 'firebase/auth';
 
-export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance';
+export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex';
 
 export interface Column {
   key: string;

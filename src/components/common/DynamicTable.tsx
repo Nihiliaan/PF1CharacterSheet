@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { DynamicTableProps } from '../../types';
+import { DynamicTableProps, ATTRIBUTE_NAMES } from '../../types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
 import { validateInput, normalizeValue } from '../../utils/validation';
 import { useNumericStepper } from '../../hooks/useNumericStepper';
@@ -23,12 +23,12 @@ const DynamicCellInput = ({
   className?: string;
   readOnly?: boolean;
   columnKey?: string;
-  type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance';
+  type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex';
   options?: string[];
   displayFormatter?: (v: string, isFocused: boolean) => string;
 }) => {
   const { t } = useTranslation();
-  const [isFocused, setIsFocused] = useState(false);
+  const [isFocused, setIsFocused] = React.useState(false);
   const isChanged = !readOnly && originalValue !== undefined && value !== originalValue;
 
   const containerRef = useNumericStepper({
@@ -99,16 +99,23 @@ const DynamicCellInput = ({
       ref={containerRef}
       className={`grid h-full w-full relative group transition-colors min-h-[32px] ${isChanged ? 'bg-amber-100/40' : ''}`}
     >
-      {type === 'select' && options ? (
+      {(type === 'select' && options) || type === 'attributeIndex' ? (
         <div className="relative w-full h-full">
           <select
-            value={value}
+            value={value || (type === 'attributeIndex' ? '0' : '')}
             onChange={handleChange as any}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
-            {options.map(opt => (
+            {type === 'attributeIndex' ? (
+              <>
+                <option value="0">—</option>
+                {ATTRIBUTE_NAMES.map((attr, idx) => (
+                  <option key={attr} value={String(idx + 1)}>{t('editor.attributes.' + attr)}</option>
+                ))}
+              </>
+            ) : options?.map(opt => (
               <option key={opt} value={opt}>{opt || '—'}</option>
             ))}
           </select>
