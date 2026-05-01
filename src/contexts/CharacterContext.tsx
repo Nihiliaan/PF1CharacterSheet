@@ -140,6 +140,11 @@ interface CharacterContextType {
 
   // Helpers
   isDirty: boolean;
+
+  // BBCode Templates
+  bbcodeTemplate: string;
+  setBbcodeTemplate: (template: string) => void;
+  saveAsTemplate: (name: string, content: string) => Promise<void>;
 }
 
 const CharacterContext = createContext<CharacterContextType | undefined>(undefined);
@@ -166,6 +171,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [showApiKeyInput, setShowApiKeyInput] = useState(!localStorage.getItem('user_gemini_api_key'));
   const [aiInputText, setAiInputText] = useState('');
 
+  // BBCode Templates
+  const [bbcodeTemplate, setBbcodeTemplate] = useState(() => localStorage.getItem('bbcode_template') || '');
+
   // Initial Sync Logic
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
@@ -174,7 +182,22 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try {
         // 1. Initial Character Load from URL
         const urlParams = new URLSearchParams(window.location.search);
-        const charId = urlParams.get('id');
+        let charId = urlParams.get('id');
+        
+        // If no ID in URL, try to get the most recent one from local storage
+        if (!charId) {
+          const saved = localStorage.getItem('recent_characters');
+          if (saved) {
+            try {
+              const recent = JSON.parse(saved);
+              if (Array.isArray(recent) && recent.length > 0) {
+                charId = recent[0].id;
+              }
+            } catch (e) {
+              console.error("Failed to parse recent characters", e);
+            }
+          }
+        }
 
         if (charId) {
           const char = await getCharacterById(charId);
@@ -188,6 +211,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 setIsReadOnly(targetChar.ownerId !== u?.uid);
                 setViewState('editor');
                 addToRecent(targetChar);
+
+                // Update URL to match loaded character
+                const url = new URL(window.location.href);
+                url.searchParams.set('id', targetChar.id);
+                window.history.replaceState({}, '', url.toString());
               }
             } else {
               setData(char.data);
@@ -196,6 +224,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setIsReadOnly(char.ownerId !== u?.uid);
               setViewState('editor');
               addToRecent(char);
+
+              // Update URL to match loaded character
+              const url = new URL(window.location.href);
+              url.searchParams.set('id', char.id);
+              window.history.replaceState({}, '', url.toString());
 
               // Auto-save link if it's someone else's character and we are logged in
               if (u && char.ownerId !== u.uid) {
@@ -516,6 +549,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setLastSavedData(JSON.parse(JSON.stringify(char.data)));
         setCurrentCharacterId(char.id);
         setIsReadOnly(char.ownerId !== user?.uid);
+        
+        if (char.isTemplate) {
+          setBbcodeTemplate(char.data.content);
+          setViewState('bbcode-template');
+          return;
+        }
+
         setViewState('editor');
         addToRecent(char);
         
@@ -538,6 +578,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setLastSavedData(JSON.parse(JSON.stringify(char.data)));
           setCurrentCharacterId(char.id);
           setIsReadOnly(char.ownerId !== user?.uid);
+          
+          if (char.isTemplate) {
+            setBbcodeTemplate(char.data.content);
+            setViewState('bbcode-template');
+            return;
+          }
+
           setViewState('editor');
           addToRecent(char);
           
@@ -800,6 +847,21 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const handleDrop = (e: React.DragEvent, targetId: string, listName: 'additionalData' | 'magicBlocks') => {
     e.preventDefault();
     draggedBlockId.current = null;
+  };
+
+  const saveAsTemplate = async (name: string, content: string) => {
+    if (!user) {
+      setToast({ message: "请先登录", type: 'error' });
+      return;
+    }
+    try {
+      const templateFolderId = await ensureLocalFolderService('模板', null, user.uid);
+      await saveCharacterService({ content }, undefined, templateFolderId, true);
+      await refreshCharacterList();
+      setToast({ message: "模板已保存在档案库的「模板」文件夹中", type: 'success' });
+    } catch (e) {
+      setToast({ message: "保存模板失败", type: 'error' });
+    }
   };
 
   // Helpers
@@ -1213,6 +1275,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Auth & View
     user, handleLogin, handleLogout, handleLinkAccount, handleUnlinkProvider,
     view, setView, recentCharacters, addToRecent, removeFromRecent,
+    bbcodeTemplate, setBbcodeTemplate, saveAsTemplate,
     isHeaderPinned, setIsHeaderPinned, isHeaderVisible, setIsHeaderVisible,
     // Drive & Vault
     driveModal, setDriveModal, isSyncingDrive, handleBrowseDrive, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore,

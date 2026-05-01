@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, RotateCcw } from 'lucide-react';
+import { Save, RotateCcw, FilePlus } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
@@ -62,24 +62,23 @@ HP {hp} ({hd})
 import { useCharacter } from '../contexts/CharacterContext';
 
 export default function BBCodeTemplateEditor() {
-  const { setToast } = useCharacter();
-  const [template, setTemplate] = useState<string>(DEFAULT_BBCODE_TEMPLATE);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('bbcode_template');
-    if (saved) {
-      setTemplate(saved);
-    }
-  }, []);
+  const { setToast, bbcodeTemplate, setBbcodeTemplate, saveAsTemplate } = useCharacter();
 
   const handleSave = () => {
-    localStorage.setItem('bbcode_template', template);
+    localStorage.setItem('bbcode_template', bbcodeTemplate);
     setToast({ message: "BBCode 模板保存成功", type: 'success' });
+  };
+
+  const handleSaveAsNew = () => {
+    const name = window.prompt("请输入模板名称", "新 BBCode 模板");
+    if (name) {
+      saveAsTemplate(name, bbcodeTemplate);
+    }
   };
 
   const handleReset = () => {
     if (window.confirm("确定要恢复默认模板吗？这将覆盖您当前的修改。")) {
-      setTemplate(DEFAULT_BBCODE_TEMPLATE);
+      setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
       localStorage.removeItem('bbcode_template');
       setToast({ message: "已恢复默认模板", type: 'success' });
     }
@@ -102,6 +101,12 @@ export default function BBCodeTemplateEditor() {
               <RotateCcw size={16} /> 恢复默认
             </button>
             <button
+               onClick={handleSaveAsNew}
+               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 transition-colors rounded-lg font-medium text-sm shadow-md"
+            >
+               <FilePlus size={16} /> 另存为新模板
+            </button>
+            <button
               onClick={handleSave}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white hover:bg-primary/90 transition-colors rounded-lg font-bold text-sm shadow-md"
             >
@@ -115,8 +120,8 @@ export default function BBCodeTemplateEditor() {
             <p className="text-xs text-stone-500 italic pl-2">模板内容</p>
           </div>
           <textarea
-            value={template}
-            onChange={(e) => setTemplate(e.target.value)}
+            value={bbcodeTemplate}
+            onChange={(e) => setBbcodeTemplate(e.target.value)}
             className="flex-1 w-full p-4 outline-none resize-none font-mono text-sm leading-relaxed text-stone-700"
             spellCheck={false}
           />

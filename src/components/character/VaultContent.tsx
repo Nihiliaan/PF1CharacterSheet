@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Plus, Trash2, ChevronRight, User, Search, Download, HardDrive, Folder, Check, 
   CloudUpload, RotateCcw, FolderPlus, Grid, List as ListIcon, FilePlus, Sparkles, 
-  Copy, Move, Settings, Cloud, Link
+  Copy, Move, Settings, Cloud, Link, FileText
 } from 'lucide-react';
 import { getCharacterById } from '../../services/characterService';
 import { FirebaseUser, FolderMetadata, CharacterMetadata } from '../../types';
@@ -59,7 +58,7 @@ const VaultContent = ({
   const [draggedItem, setDraggedItem] = useState<{ id: string; type: 'character' | 'folder' } | null>(null);
 
   const filteredFolders = folders.filter(f => (f.parentId || null) === currentFolderId && (search ? f.name.toLowerCase().includes(search.toLowerCase()) : true));
-  const filteredChars = characters.filter(c => (c.folderId || null) === currentFolderId && (search ? c.name.toLowerCase().includes(search.toLowerCase()) : true));
+  const filteredChars = characters.filter(c => (c.folderId || null) === currentFolderId && (search ? (c.name || '未命名').toLowerCase().includes(search.toLowerCase()) : true));
 
   const getDeepAvatars = (folderId: string): string[] => {
     const directChars = characters.filter(c => c.folderId === folderId);
@@ -703,12 +702,18 @@ const VaultContent = ({
                   </div>
 
                   <div className={viewMode === 'grid' ? "aspect-square rounded-xl overflow-hidden mb-2 relative bg-stone-100 shadow-inner" : "w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-stone-100 relative"}>
-                      <img 
-                        src={char.data.basic.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + char.name} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                        referrerPolicy="no-referrer"
-                        draggable={false}
-                      />
+                      {char.isTemplate ? (
+                        <div className="w-full h-full flex items-center justify-center bg-indigo-50 text-indigo-400">
+                          <FileText size={viewMode === 'grid' ? 48 : 24} />
+                        </div>
+                      ) : (
+                        <img 
+                          src={char.data?.basic?.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + char.name} 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          referrerPolicy="no-referrer"
+                          draggable={false}
+                        />
+                      )}
                       {char.isLink && (
                         <div className="absolute top-1 right-1 bg-white/90 backdrop-blur text-blue-600 p-1 rounded border border-blue-100 shadow-sm" title="分享链接">
                           <Link size={12} strokeWidth={2.5} />
@@ -718,7 +723,7 @@ const VaultContent = ({
                   <div className={viewMode === 'grid' ? "text-center min-w-0" : "flex-1 min-w-0"}>
                       <p className={`text-xs font-bold line-clamp-1 ${isSelected ? 'text-primary' : 'text-stone-800'}`}>{char.name}</p>
                       <p className="text-[9px] text-stone-400 font-medium truncate mt-0.5">
-                        {char.data.basic.race} · {char.data.basic.classes}
+                        {char.isTemplate ? 'BBCode 导出模板' : (char.data?.basic?.race + ' · ' + char.data?.basic?.classes)}
                       </p>
                   </div>
                 </div>
@@ -737,8 +742,8 @@ const VaultContent = ({
             contextMenu.item 
             ? [
                 { 
-                  label: contextMenu.isFolder ? '打开' : '打开人物卡', 
-                  icon: contextMenu.isFolder ? Folder : User, 
+                  label: contextMenu.isFolder ? '打开' : (contextMenu.item.isTemplate ? '查看模板' : '打开人物卡'), 
+                  icon: contextMenu.isFolder ? Folder : (contextMenu.item.isTemplate ? FileText : User), 
                   onClick: () => {
                     if (contextMenu.isFolder) {
                       setCurrentFolderId(contextMenu.item.id);

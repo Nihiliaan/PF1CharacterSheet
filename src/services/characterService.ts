@@ -44,16 +44,17 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
-export async function saveCharacter(characterData: any, id?: string, folderId?: string | null) {
+export async function saveCharacter(characterData: any, id?: string, folderId?: string | null, isTemplate: boolean = false) {
   if (!auth.currentUser) throw new Error("Must be logged in to save characters");
   
   const path = 'characters';
   try {
     const payload: any = {
-      name: (characterData.basic && characterData.basic.name) || '未命名人物',
+      name: isTemplate ? "BBCode 模板" : ((characterData.basic && characterData.basic.name) || '未命名人物'),
       data: characterData,
       isPublic: true, 
       updatedAt: serverTimestamp(),
+      isTemplate: isTemplate
     };
 
     if (!id) {

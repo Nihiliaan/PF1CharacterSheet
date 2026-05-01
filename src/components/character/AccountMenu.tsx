@@ -25,10 +25,8 @@ const AccountMenu = ({ user, view, setView, recentCharacters, currentCharacterId
     };
   }, []);
 
-  // Filter out the current character and take only the first 5
-  const displayRecent = recentCharacters
-    .filter((c: any) => c.id !== currentCharacterId)
-    .slice(0, 5);
+  // Show recently opened characters, including the current one, sorted to the top
+  const displayRecent = recentCharacters.slice(0, 5);
 
   const handleViewChange = (newView: string) => {
     setView(newView);
