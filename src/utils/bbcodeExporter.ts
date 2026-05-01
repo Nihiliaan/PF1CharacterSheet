@@ -119,19 +119,40 @@ export function generateBBCode(data: any, template: string): string {
       `[tr][td]${f.level || '-'}[/td][td]${f.name || '-'}[/td][td]${f.desc || '-'}[/td][/tr]`
     ).join('\n') + '\n[/table]';
 
-  // Skills Table
-  vars['skillTable'] = '[table]\n[tr][td][b]名称[/b][/td][td][b]总计[/b][/td][td][b]计算[/b][/td][/tr]\n' + 
-    (data.skills || []).map((s: any) => 
-      `[tr][td]${s.name || '-'}[/td][td]${s.total || '-'}[/td][td]${s.source || '-'}[/td][/tr]`
-    ).join('\n') + '\n[/table]';
+  // Skill Table
+  vars['skillTable'] = '[table]\n[tr][td][b]技能[/b][/td][td][b]总值[/b][/td][td][b]等级[/b][/td][td][b]本职[/b][/td][td][b]属性[/b][/td][td][b]其它/特殊[/b][/td][/tr]\n' + 
+    (data.skills || []).map((s: any) => {
+      const abilityIdx = ATTRIBUTE_NAMES.indexOf(s.ability);
+      let abilityMod = '';
+      if (abilityIdx !== -1) {
+        const attr = data.attributes[abilityIdx];
+        if (attr) {
+          const mod = parseInt(attr.modifier);
+          abilityMod = isNaN(mod) ? '' : (mod >= 0 ? `+${mod}` : `${mod}`);
+        }
+      }
+      return `[tr][td]${s.name || '-'}[/td][td]${s.total || '-'}[/td][td]${s.rank || '-'}[/td][td]${s.cs === 'true' ? '√' : ''}[/td][td]${abilityMod}[/td][td]${s.others || ''} ${s.special || ''}[/td][/tr]`;
+    }).join('\n') + '\n[/table]';
 
   // Equipment Table
-  vars['equipmentTable'] = '[table]\n[tr][td][b]名称[/b][/td][td][b]价格[/b][/td][td][b]重量[/b][/td][td][b]说明[/b][/td][/tr]\n' + 
-    (data.equipmentBags || []).flatMap((bag: any) => 
-      (bag.items || []).map((i: any) => 
-        `[tr][td]${i.item || '-'}[/td][td]${i.cost || '-'}[/td][td]${i.weight || '-'}[/td][td]${i.notes || '-'}[/td][/tr]`
-      )
-    ).join('\n') + '\n[/table]';
+  if (!data.equipmentBags || data.equipmentBags.length === 0) {
+    vars['equipmentTable'] = '无';
+  } else {
+    vars['equipmentTable'] = data.equipmentBags.map((bag: any) => {
+      let bagResult = `[b]${bag.name}${bag.ignoreWeight ? ' (不计重)' : ''}[/b]\n`;
+      const items = bag.items || [];
+      if (items.length === 0) {
+        bagResult += '此容器内无物品\n';
+      } else {
+        bagResult += '[table]\n[tr][td][b]物品[/b][/td][td][b]数量[/b][/td][td][b]价格[/b][/td][td][b]重量[/b][/td][td][b]说明[/b][/td][/tr]\n';
+        bagResult += items.map((i: any) => 
+          `[tr][td]${i.item || '-'}[/td][td]${i.quantity || '1'}[/td][td]${i.cost || '-'}[/td][td]${i.weight || '-'}[/td][td]${i.notes || '-'}[/td][/tr]`
+        ).join('\n');
+        bagResult += '\n[/table]';
+      }
+      return bagResult;
+    }).join('\n\n');
+  }
 
   // Magic & Additional Blocks
   vars['magicBlocks'] = formatDynamicBlock(data.magicBlocks);
@@ -149,7 +170,8 @@ export function generateBBCode(data: any, template: string): string {
     }
   });
 
-  const strAttr = (data.attributes || []).find((a: any) => a.name?.includes('力量') || a.final !== undefined); // Simplified check
+  // Calculate limits based on Strength (first attribute in Pathfinder)
+  const strAttr = data.attributes?.[0];
   const strValue = strAttr ? parseInt(strAttr.final) || 10 : 10;
   const mult = parseFloat(data.encumbranceMultiplier) || 1;
 
