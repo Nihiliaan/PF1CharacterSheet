@@ -164,7 +164,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [view, setViewState] = useState<'editor' | 'vault' | 'settings' | 'bbcode-template'>('editor');
 
   // Header UI State
-  const [isHeaderPinned, setIsHeaderPinnedState] = useState(() => localStorage.getItem('header_pinned') === 'true');
+  const [isHeaderPinned, setIsHeaderPinnedState] = useState(() => localStorage.getItem('header_pinned') !== 'false');
   const [isHeaderVisible, setIsHeaderVisible] = useState(false);
 
   // Recent Characters

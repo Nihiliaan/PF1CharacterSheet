@@ -61,22 +61,22 @@ const VaultContent = ({
   const filteredFolders = folders.filter(f => (f.parentId || null) === currentFolderId && (search ? (f.name || '').toLowerCase().includes(search.toLowerCase()) : true));
   const filteredChars = characters.filter(c => (c.folderId || null) === currentFolderId && (search ? (c.name || '').toLowerCase().includes(search.toLowerCase()) : true));
 
-  const getDeepAvatars = (folderId: string): string[] => {
+  const getDeepAvatars = (folderId: string): { url: string; isTemplate?: boolean }[] => {
     const directChars = characters.filter(c => c.folderId === folderId);
-    let avatars = directChars.map(c => {
-      if (c.isTemplate) return 'https://ui-avatars.com/api/?name=T&background=6366f1&color=fff'; // Indigo 'T' for Template
-      return c.data?.basic?.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + (c.name || '');
-    });
+    let items = directChars.map(c => ({
+      url: c.data?.basic?.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + (c.name || ''),
+      isTemplate: !!c.isTemplate
+    }));
     
-    if (avatars.length < 4) {
+    if (items.length < 4) {
       const subFolders = folders.filter(f => f.parentId === folderId);
       for (const sub of subFolders) {
-        const subAvatars = getDeepAvatars(sub.id);
-        avatars = [...avatars, ...subAvatars];
-        if (avatars.length >= 4) break;
+        const subItems = getDeepAvatars(sub.id);
+        items = [...items, ...subItems];
+        if (items.length >= 4) break;
       }
     }
-    return avatars.slice(0, 4);
+    return items.slice(0, 4);
   };
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -639,21 +639,27 @@ const VaultContent = ({
 
                   <div className={viewMode === 'grid' ? "mb-3" : ""}>
                     {viewMode === 'grid' ? (
-                      <div className="aspect-square w-full bg-stone-100/80 rounded-xl overflow-hidden grid grid-cols-2 gap-1 p-1 group-hover:bg-amber-100/50 transition-colors relative">
-                        {[0, 1, 2, 3].map(i => (
-                          <div key={i} className="bg-white/60 rounded-md overflow-hidden relative border border-stone-200/50 aspect-square">
-                            {previewAvatars[i] ? (
+                      <div className="aspect-square w-full bg-stone-100/80 rounded-xl overflow-hidden grid grid-cols-2 gap-0.5 p-0.5 group-hover:bg-amber-100/50 transition-colors relative">
+                        {getDeepAvatars(folder.id).map((item, i) => (
+                          <div key={i} className="bg-white/60 rounded-md overflow-hidden flex items-center justify-center relative border border-stone-200/50 aspect-square">
+                            {item.isTemplate ? (
+                              <div className="w-full h-full flex items-center justify-center bg-indigo-50 text-indigo-400">
+                                <FileText size={10} />
+                              </div>
+                            ) : (
                               <img 
-                                src={previewAvatars[i]} 
+                                src={item.url} 
                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                 referrerPolicy="no-referrer"
                               />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center opacity-10">
-                                <User size={12} className="text-stone-400" />
-                              </div>
                             )}
                           </div>
+                        ))}
+                        {/* Placeholder for empty quadrants */}
+                        {Array.from({ length: Math.max(0, 4 - getDeepAvatars(folder.id).length) }).map((_, i) => (
+                           <div key={`empty-${i}`} className="bg-white/40 rounded-md overflow-hidden flex items-center justify-center border border-stone-200/50 aspect-square opacity-20">
+                              <User size={10} className="text-stone-400" />
+                           </div>
                         ))}
                       </div>
                     ) : (
