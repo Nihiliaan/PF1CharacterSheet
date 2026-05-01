@@ -116,6 +116,7 @@ export default function CharacterEditor({
                 value={data.basic.languages}
                 originalValue={lastSavedData.basic.languages}
                 onChange={v => updateBasic('languages', v)}
+                isAutoHeight={true}
               />
             </div>
             <div className="w-full md:w-64">

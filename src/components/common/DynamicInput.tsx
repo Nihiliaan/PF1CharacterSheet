@@ -111,7 +111,7 @@ export const DynamicInput = ({
     onChange(value === 'true' ? '' : 'true');
   };
 
-  const alignClass = align ? `text-${align}` : (isDescriptionCol(columnKey) ? 'text-left' : 'text-center');
+  const alignClass = align ? `text-${align}` : (isDescriptionCol(columnKey) || !singleLine ? 'text-left' : 'text-center');
   
   // If we are given explicit height constraints through props, we use those,
   // Otherwise we use the table default height of min-h-[32px]
