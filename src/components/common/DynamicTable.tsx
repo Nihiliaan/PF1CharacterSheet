@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { DynamicTableProps } from '../../types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
-import { validateInput } from '../utils/validation';
+import { validateInput } from '../../utils/validation';
 
 const DynamicCellInput = ({
   value,

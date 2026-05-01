@@ -15,7 +15,7 @@ interface InlineInputProps {
   displayFormatter?: (v: string, isFocused: boolean) => string;
 }
 
-import { getTransactionFilter } from '../utils/validation';
+import { getTransactionFilter } from '../../utils/validation';
 
 const InlineInput = ({
   label,
