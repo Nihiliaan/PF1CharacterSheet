@@ -128,6 +128,8 @@
       "level": "环位",
       "uses": "每日次数",
       "spell_name": "法术",
+      "notes": "备注",
+      "notes_placeholder": "在此输入关于此法术或能力的特别说明...",
       "base_level_0": "0环",
       "base_level_1": "1环",
       "computed_level": "{{n}}环"

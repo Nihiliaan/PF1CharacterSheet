@@ -473,6 +473,7 @@ export default function CharacterEditor({
                         originalValue={originalBlock?.casterLevel}
                         onChange={v => updateMagicBlock(block.id, { casterLevel: v })}
                         type="bonus"
+                        displayFormatter={(v, f) => (!f && v && !isNaN(parseInt(v)) && parseInt(v) >= 0) ? `+${parseInt(v)}` : v}
                       />
                       <InlineInput
                         className="flex-1"
@@ -481,6 +482,7 @@ export default function CharacterEditor({
                         originalValue={originalBlock?.concentration}
                         onChange={v => updateMagicBlock(block.id, { concentration: v })}
                         type="bonus"
+                        displayFormatter={(v, f) => (!f && v && !isNaN(parseInt(v)) && parseInt(v) >= 0) ? `+${parseInt(v)}` : v}
                       />
                     </div>
                   )}
@@ -512,7 +514,7 @@ export default function CharacterEditor({
                          (block.columns || []).forEach((c: any) => obj[c.key] = '');
                          return obj;
                       } : undefined}
-                      rowDraggable={block.type !== 'spell'}
+                      rowDraggable={block.type !== 'spell' || block.spellTemplate === 'sla'}
                       rowActionMode={tableActionMode}
                       onRowActionModeToggle={toggleTableActionMode}
                       // For normal tables, allow dynamic columns. For SLA, don't allow modifying columns.
