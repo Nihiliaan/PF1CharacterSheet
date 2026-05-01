@@ -20,13 +20,13 @@ const DynamicCellInput = ({
   readOnly?: boolean;
   type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus';
   options?: string[];
-  displayFormatter?: (v: string) => string;
+  displayFormatter?: (v: string, isFocused: boolean) => string;
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const isChanged = !readOnly && originalValue !== undefined && value !== originalValue;
 
   const displayValue = () => {
-    if (displayFormatter) return displayFormatter(value);
+    if (displayFormatter) return displayFormatter(value, isFocused);
     if (type === 'checkbox') return value === 'true' ? '+3' : '';
     if (type === 'quantity' && !isFocused) {
       if (!value || value === '1') return '';
@@ -47,7 +47,7 @@ const DynamicCellInput = ({
     if (type === 'int') {
       if (val !== '' && !/^-?\d*$/.test(val)) return;
     }
-    if (type === 'posInt') {
+    if (type === 'posInt' || type === 'quantity') {
       if (val !== '' && !/^\d*$/.test(val)) return;
     }
     onChange(val);
@@ -229,7 +229,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                     type={c.type as any}
                     options={c.options}
                     displayFormatter={c.displayFormatter}
-                    className={(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"}
+                    className={`${(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}
                   />
                 </td>
               ))}

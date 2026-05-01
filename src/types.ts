@@ -7,7 +7,8 @@ export type Column = {
   hideRightBorder?: boolean;
   type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus';
   options?: string[];
-  displayFormatter?: (v: string) => string;
+  displayFormatter?: (v: string, isFocused: boolean) => string;
+  className?: string;
 };
 
 export interface DynamicTableProps {

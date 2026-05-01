@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
 
 interface InlineInputProps {
@@ -10,6 +10,7 @@ interface InlineInputProps {
   className?: string;
   readOnly?: boolean;
   transactionFilter?: (tr: any) => boolean;
+  displayFormatter?: (v: string, isFocused: boolean) => string;
 }
 
 const InlineInput = ({
@@ -20,29 +21,24 @@ const InlineInput = ({
   placeholder = '',
   className = '',
   readOnly = false,
-  transactionFilter
+  transactionFilter,
+  displayFormatter
 }: InlineInputProps) => {
+  const [isFocused, setIsFocused] = useState(false);
   const isChanged = originalValue !== undefined && value !== originalValue;
 
   return (
-    <div className={`flex flex-col gap-0 pt-1 px-1.5 transition-all border-b group
-      ${isChanged
-        ? 'border-amber-400 bg-amber-50/30'
-        : 'border-stone-200 hover:border-stone-300 focus-within:border-primary focus-within:bg-stone-50/30'
-      } ${className}`}
-    >
-      <div className="flex justify-between items-center px-0.5">
-        <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest group-focus-within:text-primary transition-colors">
-          {label}
-        </label>
-        {isChanged && (
-          <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-        )}
-      </div>
-
-      <div className="pb-0">
+    <div className={`flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 transition-all group/input ${isChanged ? 'bg-amber-50/50 border-amber-300 shadow-sm' : 'hover:border-stone-400 focus-within:border-stone-600 focus-within:bg-white focus-within:shadow-sm'} ${className}`}>
+      <label className={`text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none mb-1 transition-colors ${isChanged ? 'text-amber-700' : 'group-focus-within/input:text-stone-900'}`}>
+        {label}
+      </label>
+      <div 
+        className="h-6 relative"
+        onFocusCapture={() => setIsFocused(true)}
+        onBlurCapture={() => setIsFocused(false)}
+      >
         <MarkdownInlineEditor
-          value={value}
+          value={displayFormatter ? displayFormatter(value, isFocused) : value}
           onChange={onChange}
           readOnly={readOnly}
           placeholder={placeholder}
@@ -52,6 +48,9 @@ const InlineInput = ({
           minHeight="24px"
           className="font-medium text-ink"
         />
+        {isChanged && (
+          <div className="absolute -right-0.5 -top-3 w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.6)] animate-pulse" />
+        )}
       </div>
     </div>
   );

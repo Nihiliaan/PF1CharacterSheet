@@ -21,7 +21,7 @@ interface CharacterEditorProps {
 export default function CharacterEditor({
   user
 }: CharacterEditorProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     isReadOnly,
     data,
@@ -559,18 +559,15 @@ export default function CharacterEditor({
             <div className="w-full md:w-1/6">
               <InlineInput
                 label={t('editor.skills.acp')}
-                value={!data.armorCheckPenalty || data.armorCheckPenalty === '0' ? '' : `-${data.armorCheckPenalty}`}
-                originalValue={!lastSavedData.armorCheckPenalty || lastSavedData.armorCheckPenalty === '0' ? '' : `-${lastSavedData.armorCheckPenalty}`}
+                value={data.armorCheckPenalty || '0'}
+                originalValue={lastSavedData.armorCheckPenalty || '0'}
                 onChange={v => {
-                  const val = v.replace(/^-/, '');
-                  if (val === '' || /^\d+$/.test(val)) {
-                    setData({ ...data, armorCheckPenalty: val || '0' });
+                  if (v === '' || /^\d+$/.test(v)) {
+                    setData({ ...data, armorCheckPenalty: v || '0' });
                   }
                 }}
-                transactionFilter={tr => {
-                  const nextDoc = tr.newDoc.toString().replace(/^-/, '');
-                  return nextDoc === '' || /^\d+$/.test(nextDoc);
-                }}
+                transactionFilter={tr => /^\d*$/.test(tr.newDoc.toString())}
+                displayFormatter={(v, isFocused) => (!v || v === '0' || isFocused) ? v : `-${v}`}
                 placeholder="0"
               />
             </div>
@@ -601,8 +598,8 @@ export default function CharacterEditor({
                   columns={[
                     { key: 'item', label: t('editor.items.headers.item'), width: '35%', hideRightBorder: true },
                     { key: 'quantity', label: '', width: '5%', type: 'quantity' },
-                    { key: 'cost', label: t('editor.items.headers.cost'), width: '15%', type: 'float' },
-                    { key: 'weight', label: t('editor.items.headers.weight'), width: '15%', type: 'float' },
+                    { key: 'cost', label: t('editor.items.headers.cost'), width: '15%', type: 'float', displayFormatter: (v, f) => (v && !f) ? `${v} gp` : v },
+                    { key: 'weight', label: t('editor.items.headers.weight'), width: '15%', type: 'float', displayFormatter: (v, f) => (v && !f) ? `${v} ${i18n.language.startsWith('zh') ? '磅' : 'lbs'}` : v },
                     { key: 'notes', label: t('editor.items.headers.notes'), width: '30%' },
                   ]}
                   data={bag.items}
