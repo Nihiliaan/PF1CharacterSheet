@@ -119,6 +119,19 @@
       "notes": "备注",
       "notes_placeholder": "技能特殊说明..."
     },
+    "spells": {
+      "add_sla_template": "添加类法术能力模板",
+      "add_spontaneous_template": "添加自发施法模板",
+      "add_prepared_template": "添加准备施法模板",
+      "caster_level": "施法者等级",
+      "concentration": "专注",
+      "level": "环位",
+      "uses": "每日次数",
+      "spell_name": "法术",
+      "base_level_0": "0环",
+      "base_level_1": "1环",
+      "computed_level": "{{n}}环"
+    },
     "items": {
       "headers": {
         "item": "物品",

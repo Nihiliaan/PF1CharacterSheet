@@ -8,6 +8,7 @@ import Section from '../common/Section';
 import InlineInput from '../common/InlineInput';
 import MultilineInput from '../common/MultilineInput';
 import DynamicTable from '../common/DynamicTable';
+import SpellTable from '../common/SpellTable';
 import TableOfContents from '../character/TableOfContents';
 import AvatarGallery from '../character/AvatarGallery';
 
@@ -463,6 +464,26 @@ export default function CharacterEditor({
                       <Trash2 size={12} />
                     </button>
                   </div>
+                  {block.type === 'spell' && (
+                    <div className="flex gap-4 mb-2 mt-1">
+                      <InlineInput
+                        className="flex-1"
+                        label={t('editor.spells.caster_level')}
+                        value={block.casterLevel || ''}
+                        originalValue={originalBlock?.casterLevel}
+                        onChange={v => updateMagicBlock(block.id, { casterLevel: v })}
+                        type="bonus"
+                      />
+                      <InlineInput
+                        className="flex-1"
+                        label={t('editor.spells.concentration')}
+                        value={block.concentration || ''}
+                        originalValue={originalBlock?.concentration}
+                        onChange={v => updateMagicBlock(block.id, { concentration: v })}
+                        type="bonus"
+                      />
+                    </div>
+                  )}
                   {block.type === 'text' ? (
                     <MultilineInput
                       label={t('editor.lists.content')}
@@ -471,38 +492,64 @@ export default function CharacterEditor({
                       onChange={v => updateMagicBlock(block.id, { content: v })}
                       height="120px"
                     />
+                  ) : block.type === 'spell' && block.spellTemplate !== 'sla' ? (
+                    <SpellTable
+                      columns={block.columns || []}
+                      data={block.tableData || []}
+                      originalData={originalBlock?.tableData || []}
+                      baseLevel={block.baseLevel || 0}
+                      onChange={v => updateMagicBlock(block.id, { tableData: v })}
+                      onBaseLevelChange={v => updateMagicBlock(block.id, { baseLevel: v })}
+                    />
                   ) : (
                     <DynamicTable
                       columns={block.columns || []}
                       data={block.tableData || []}
                       originalData={originalBlock?.tableData || []}
                       onChange={v => updateMagicBlock(block.id, { tableData: v })}
-                      newItemGenerator={() => {
-                        const obj: any = {};
-                        (block.columns || []).forEach((c: any) => obj[c.key] = '');
-                        return obj;
-                      }}
-                      onColumnLabelChange={(index, val) => {
+                      newItemGenerator={block.type === 'spell' ? () => {
+                         const obj: any = {};
+                         (block.columns || []).forEach((c: any) => obj[c.key] = '');
+                         return obj;
+                      } : undefined}
+                      rowDraggable={block.type !== 'spell'}
+                      rowActionMode={tableActionMode}
+                      onRowActionModeToggle={toggleTableActionMode}
+                      // For normal tables, allow dynamic columns. For SLA, don't allow modifying columns.
+                      onColumnLabelChange={block.type === 'table' ? (index, val) => {
                         const newCols = [...(block.columns || [])];
                         newCols[index] = { ...newCols[index], label: val };
                         updateMagicBlock(block.id, { columns: newCols });
-                      }}
-                      onRemoveColumn={(index) => {
+                      } : undefined}
+                      onRemoveColumn={block.type === 'table' ? (index) => {
                         const newCols = [...(block.columns || [])];
                         newCols.splice(index, 1);
                         updateMagicBlock(block.id, { columns: newCols });
-                      }}
-                      onAddColumn={() => {
+                      } : undefined}
+                      onAddColumn={block.type === 'table' ? () => {
                         updateMagicBlock(block.id, { columns: [...(block.columns || []), { key: 'col' + Math.random(), label: 'New Column' }] });
-                      }}
+                      } : undefined}
                     />
+                  )}
+                  {block.type === 'spell' && (
+                    <div className="mt-2">
+                      <MultilineInput
+                        label={t('editor.spells.notes')}
+                        value={block.notes || ''}
+                        originalValue={originalBlock?.notes}
+                        onChange={v => updateMagicBlock(block.id, { notes: v })}
+                        placeholder={t('editor.spells.notes_placeholder')}
+                        isAutoHeight={true}
+                      />
+                    </div>
                   )}
                 </div>
               );
             })}
             <div className="flex flex-wrap items-center gap-3">
-              <button onClick={() => addMagicBlock('text')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> {t('common.add_paragraph')}</button>
-              <button onClick={() => addMagicBlock('table')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> {t('common.add_list')}</button>
+              <button onClick={() => addMagicBlock('spell', 'sla')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> {t('editor.spells.add_sla_template')}</button>
+              <button onClick={() => addMagicBlock('spell', 'spontaneous')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> {t('editor.spells.add_spontaneous_template')}</button>
+              <button onClick={() => addMagicBlock('spell', 'prepared')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> {t('editor.spells.add_prepared_template')}</button>
             </div>
           </div>
         </Section>

@@ -45,7 +45,7 @@ interface CharacterContextType {
   toggleBagWeight: (id: string, ignoreWeight: boolean) => void;
   updateBagItems: (id: string, items: any[]) => void;
 
-  addMagicBlock: (type: 'text' | 'table') => void;
+  addMagicBlock: (type: 'text' | 'table' | 'spell', spellTemplate?: 'sla' | 'spontaneous' | 'prepared') => void;
   updateMagicBlock: (id: string, updates: any) => void;
   removeMagicBlock: (id: string) => void;
 
@@ -851,15 +851,50 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setData(p => ({ ...p, additionalData: p.additionalData.filter(b => b.id !== id) }));
   };
 
-  const addMagicBlock = (type: 'text' | 'table') => {
-    const newBlock = {
-      id: 'magic-' + Math.random(),
-      type,
-      title: type === 'text' ? '自定文本' : '类别名(e.g已知法术)',
-      content: '',
-      columns: [{ key: 'col0', label: '列1' }, { key: 'col1', label: '列2' }, { key: 'col2', label: '列3' }],
-      tableData: []
-    };
+  const addMagicBlock = (type: 'text' | 'table' | 'spell', spellTemplate?: 'sla' | 'spontaneous' | 'prepared') => {
+    let newBlock: any;
+    
+    if (type === 'spell' && spellTemplate) {
+      newBlock = {
+        id: 'magic-' + Math.random(),
+        type: 'spell',
+        spellTemplate,
+        title: spellTemplate === 'sla' ? '类法术能力' : (spellTemplate === 'spontaneous' ? '自发施法' : '准备施法'),
+        casterLevel: '',
+        concentration: '',
+        notes: '',
+        baseLevel: 0,
+        tableData: spellTemplate === 'sla' ? [{ uses: '', spell_name: '' }] : [{}] // Default one empty row
+      };
+      
+      if (spellTemplate === 'sla') {
+        newBlock.columns = [
+          { key: 'uses', label: '每日次数', width: '15%' },
+          { key: 'spell_name', label: '法术', width: '85%' }
+        ];
+      } else if (spellTemplate === 'spontaneous') {
+        newBlock.columns = [
+          { key: 'level', label: '环位', width: '10%' },
+          { key: 'uses', label: '每日次数', width: '20%' },
+          { key: 'spell_name', label: '法术', width: '70%' }
+        ];
+      } else if (spellTemplate === 'prepared') {
+        newBlock.columns = [
+          { key: 'level', label: '环位', width: '10%' },
+          { key: 'spell_name', label: '法术', width: '90%' }
+        ];
+      }
+    } else {
+      newBlock = {
+        id: 'magic-' + Math.random(),
+        type,
+        title: type === 'text' ? '自定文本' : '类别名(e.g已知法术)',
+        content: '',
+        columns: [{ key: 'col0', label: '列1' }, { key: 'col1', label: '列2' }, { key: 'col2', label: '列3' }],
+        tableData: []
+      };
+    }
+    
     setData(p => ({ ...p, magicBlocks: [...(p.magicBlocks || []), newBlock] }));
   };
 

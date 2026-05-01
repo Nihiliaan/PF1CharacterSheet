@@ -76,7 +76,7 @@ export interface CharacterData {
   favoredClassBonus: string;
   classFeatures: any[];
   feats: any[];
-  magicBlocks: any[];
+  magicBlocks: (MagicBlock | SpellBlock)[];
   skills: any[];
   skillsTotal: string;
   armorCheckPenalty: string;
@@ -104,6 +104,28 @@ export interface CharacterMetadata {
   ownerId?: string;
   isLink?: boolean;
   targetId?: string;
+}
+
+export interface MagicBlock {
+  id: string;
+  type: 'text' | 'table';
+  title: string;
+  content?: string;
+  columns?: Column[];
+  tableData?: Record<string, string>[];
+}
+
+export interface SpellBlock {
+  id: string;
+  type: 'spell';
+  spellTemplate: 'sla' | 'spontaneous' | 'prepared';
+  title: string;
+  casterLevel: string;
+  concentration: string;
+  notes: string;
+  baseLevel: 0 | 1;
+  columns?: Column[];
+  tableData?: Record<string, string>[];
 }
 
 export const ATTRIBUTE_NAMES = [

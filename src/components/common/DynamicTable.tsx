@@ -6,7 +6,7 @@ import MarkdownInlineEditor from './MarkdownInlineEditor';
 import { validateInput, normalizeValue } from '../../utils/validation';
 import { useNumericStepper } from '../../hooks/useNumericStepper';
 
-const DynamicCellInput = ({
+export const DynamicCellInput = ({
   value,
   originalValue,
   onChange,
