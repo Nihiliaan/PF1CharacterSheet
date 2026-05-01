@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, WidgetType } from '@codemirror/view';
+import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, WidgetType, placeholder as cmPlaceholder } from '@codemirror/view';
 import { EditorState, RangeSetBuilder } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 
@@ -178,7 +178,7 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
             onChange(newVal);
           }
         }),
-        placeholder ? EditorView.placeholder(placeholder) : [],
+        placeholder ? cmPlaceholder(placeholder) : [],
       ],
     });
 
