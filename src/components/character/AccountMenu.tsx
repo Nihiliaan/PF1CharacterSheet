@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, LayoutGrid, RotateCcw, ChevronRight, X, Settings, FilePlus, LogOut } from 'lucide-react';
 
-const AccountMenu = ({ user, view, setView, recentCharacters, currentCharacterId, onSelect, onRemoveRecent, onLogout, confirmNavigation }: any) => {
+const AccountMenu = ({ user, view, setView, recentCharacters, currentDocumentId, onSelect, onRemoveRecent, onLogout, confirmNavigation }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showRecent, setShowRecent] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);

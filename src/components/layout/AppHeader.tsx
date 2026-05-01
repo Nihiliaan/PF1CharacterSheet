@@ -38,7 +38,7 @@ export default function AppHeader({
     handleExport,
     handleExportBBCode,
     handleNew,
-    currentCharacterId,
+    currentDocumentId,
     selectCharacter,
     setShowAIModal
   } = useCharacter();
@@ -165,7 +165,7 @@ export default function AppHeader({
               view={view} 
               setView={setView} 
               recentCharacters={recentCharacters}
-              currentCharacterId={currentCharacterId}
+              currentDocumentId={currentDocumentId}
               confirmNavigation={confirmNavigation}
               onSelect={selectCharacter}
               onRemoveRecent={removeFromRecent}

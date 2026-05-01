@@ -17,8 +17,8 @@ interface CharacterContextType {
   lastSavedData: CharacterData;
   isReadOnly: boolean;
   setIsReadOnly: (val: boolean) => void;
-  currentCharacterId: string | null;
-  setCurrentCharacterId: (id: string | null) => void;
+  currentDocumentId: string | null;
+  setCurrentDocumentId: (id: string | null) => void;
   isSaving: boolean;
   isSyncing: boolean;
   setIsSyncing: (val: boolean) => void;
@@ -145,6 +145,10 @@ interface CharacterContextType {
   bbcodeTemplate: string;
   setBbcodeTemplate: (template: string) => void;
   saveAsTemplate: (name: string, content: string) => Promise<void>;
+  updateExistingTemplate: (id: string, content: string) => Promise<void>;
+  
+  // Storage info
+  getItemPath: (charId: string | null) => string;
 }
 
 const CharacterContext = createContext<CharacterContextType | undefined>(undefined);
@@ -207,7 +211,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               if (targetChar) {
                 setData(targetChar.data);
                 setLastSavedData(JSON.parse(JSON.stringify(targetChar.data)));
-                setCurrentCharacterId(targetChar.id);
+                setCurrentDocumentId(targetChar.id);
                 setIsReadOnly(targetChar.ownerId !== u?.uid);
                 setViewState('editor');
                 addToRecent(targetChar);
@@ -220,13 +224,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             } else if (char.isTemplate) {
               setBbcodeTemplate(char.data.content);
               setViewState('bbcode-template');
-              setCurrentCharacterId(char.id);
+              setCurrentDocumentId(char.id);
               setIsReadOnly(char.ownerId !== u?.uid);
               addToRecent(char);
             } else {
               setData(char.data);
               setLastSavedData(JSON.parse(JSON.stringify(char.data)));
-              setCurrentCharacterId(char.id);
+              setCurrentDocumentId(char.id);
               setIsReadOnly(char.ownerId !== u?.uid);
               setViewState('editor');
               addToRecent(char);
@@ -369,7 +373,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [data, setData] = useState<CharacterData>(DEFAULT_DATA);
   const [lastSavedData, setLastSavedData] = useState<CharacterData>(JSON.parse(JSON.stringify(DEFAULT_DATA)));
-  const [currentCharacterId, setCurrentCharacterId] = useState<string | null>(null);
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(true);
@@ -474,8 +478,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const newId = await saveCharacterService(saveData, id || undefined, folderId);
       if (newId) {
         // If we are saving the current character OR creating a new one (id is null/undefined)
-        if (!id || id === currentCharacterId) {
-          setCurrentCharacterId(newId);
+        if (!id || id === currentDocumentId) {
+          setCurrentDocumentId(newId);
           setLastSavedData(JSON.parse(JSON.stringify(saveData)));
 
           // Update URL
@@ -497,7 +501,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const handleSave = async () => {
-    return await handleSaveInternal(data, currentCharacterId, currentFolderId);
+    return await handleSaveInternal(data, currentDocumentId, currentFolderId);
   };
 
   const performCreateNew = async () => {
@@ -518,7 +522,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } else {
       setData(newData);
       setLastSavedData(JSON.parse(JSON.stringify(newData)));
-      setCurrentCharacterId(null);
+      setCurrentDocumentId(null);
       setIsReadOnly(false);
       
       const url = new URL(window.location.href);
@@ -555,13 +559,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (char.isTemplate) {
           setBbcodeTemplate(char.data.content);
           setViewState('bbcode-template');
-          setCurrentCharacterId(char.id);
+          setCurrentDocumentId(char.id);
           return;
         }
 
         setData(char.data);
         setLastSavedData(JSON.parse(JSON.stringify(char.data)));
-        setCurrentCharacterId(char.id);
+        setCurrentDocumentId(char.id);
         setIsReadOnly(char.ownerId !== user?.uid);
         
         setViewState('editor');
@@ -586,13 +590,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           if (char.isTemplate) {
             setBbcodeTemplate(char.data.content);
             setViewState('bbcode-template');
-            setCurrentCharacterId(char.id);
+            setCurrentDocumentId(char.id);
             return;
           }
 
           setData(char.data);
           setLastSavedData(JSON.parse(JSON.stringify(char.data)));
-          setCurrentCharacterId(char.id);
+          setCurrentDocumentId(char.id);
           setIsReadOnly(char.ownerId !== user?.uid);
           
           setViewState('editor');
@@ -632,9 +636,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         } else {
           setData(char.data);
           setLastSavedData(JSON.parse(JSON.stringify(char.data)));
-          setViewState('editor');
+          setCurrentDocumentId(char.id);
         }
-        setCurrentCharacterId(char.id);
+        setCurrentDocumentId(char.id);
         
         const url = new URL(window.location.href);
         url.searchParams.set('id', char.id);
@@ -871,7 +875,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     try {
       const templateFolderId = await ensureLocalFolderService('模板', null, user.uid);
-      await saveCharacterService({ content }, undefined, templateFolderId, true);
+      await saveCharacterService({ content, name }, undefined, templateFolderId, true);
       await refreshCharacterList();
       setToast({ message: "模板已保存在档案库的「模板」文件夹中", type: 'success' });
     } catch (e) {
@@ -879,14 +883,30 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  const updateExistingTemplate = async (id: string, content: string) => {
+    if (!user) {
+      setToast({ message: "请先登录", type: 'error' });
+      return;
+    }
+    try {
+      setIsSaving(true);
+      await saveCharacterService({ content }, id, undefined, true);
+      setToast({ message: "模板文件已更新", type: 'success' });
+    } catch (e) {
+      setToast({ message: "更新模板失败", type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Helpers
 
   const handleShare = () => {
-    if (!currentCharacterId) {
-      setToast({ message: "请先保存人物卡后再分享", type: 'error' });
+    if (!currentDocumentId) {
+      setToast({ message: "请先打开一个人物卡或模板", type: 'error' });
       return;
     }
-    const shareUrl = `${window.location.origin}${window.location.pathname}?id=${currentCharacterId}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?id=${currentDocumentId}`;
     navigator.clipboard.writeText(shareUrl);
     setToast({ message: "分享链接已复制到剪贴板！他人访问此链接将只能查看无法修改。" });
   };
@@ -1006,7 +1026,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setData(mergedData);
       setToast({ message: "AI 识别并填写成功！" });
       setView('editor');
-      setCurrentCharacterId(null);
+      setCurrentDocumentId(null);
       setShowAIModal(false);
       setAiInputText('');
     } catch (e: any) {
@@ -1266,8 +1286,23 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return id;
   };
 
+  const getItemPath = (charId: string | null): string => {
+    if (!charId) return "";
+    const char = myCharacters.find(c => c.id === charId);
+    if (!char) return "";
+
+    const resolvePath = (folderId: string | null | undefined): string => {
+      if (!folderId) return "档案库";
+      const folder = folders.find(f => f.id === folderId);
+      if (!folder) return "档案库";
+      return resolvePath(folder.parentId) + " / " + folder.name;
+    };
+
+    return resolvePath(char.folderId) + " / " + char.name;
+  };
+
   const value: CharacterContextType = {
-    data, setData, lastSavedData, isReadOnly, setIsReadOnly, currentCharacterId, setCurrentCharacterId, isSaving,
+    data, setData, lastSavedData, isReadOnly, setIsReadOnly, currentDocumentId, setCurrentDocumentId, isSaving,
     isSyncing, setIsSyncing, confirmModal, setConfirmModal,
     tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor,
     myCharacters, folders, currentFolderId, setCurrentFolderId, refreshCharacterList,
@@ -1290,7 +1325,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Auth & View
     user, handleLogin, handleLogout, handleLinkAccount, handleUnlinkProvider,
     view, setView, recentCharacters, addToRecent, removeFromRecent,
-    bbcodeTemplate, setBbcodeTemplate, saveAsTemplate,
+    bbcodeTemplate, setBbcodeTemplate, saveAsTemplate, updateExistingTemplate,
+    getItemPath,
     isHeaderPinned, setIsHeaderPinned, isHeaderVisible, setIsHeaderVisible,
     // Drive & Vault
     driveModal, setDriveModal, isSyncingDrive, handleBrowseDrive, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore,

@@ -50,7 +50,7 @@ export async function saveCharacter(characterData: any, id?: string, folderId?: 
   const path = 'characters';
   try {
     const payload: any = {
-      name: isTemplate ? "BBCode 模板" : ((characterData.basic && characterData.basic.name) || '未命名人物'),
+      name: characterData.name || (isTemplate ? "BBCode 模板" : ((characterData.basic && characterData.basic.name) || '未命名人物')),
       data: characterData,
       isPublic: true, 
       updatedAt: serverTimestamp(),

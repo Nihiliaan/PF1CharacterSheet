@@ -62,17 +62,23 @@ HP {hp} ({hd})
 import { useCharacter } from '../contexts/CharacterContext';
 
 export default function BBCodeTemplateEditor() {
-  const { setToast, bbcodeTemplate, setBbcodeTemplate, saveAsTemplate } = useCharacter();
+  const { setToast, bbcodeTemplate, setBbcodeTemplate, saveAsTemplate, updateExistingTemplate, getItemPath, currentDocumentId } = useCharacter();
 
-  const handleSave = () => {
-    localStorage.setItem('bbcode_template', bbcodeTemplate);
-    setToast({ message: "BBCode 模板保存成功", type: 'success' });
-  };
+  const currentPath = getItemPath(currentDocumentId);
 
   const handleSaveAsNew = () => {
     const name = window.prompt("请输入模板名称", "新 BBCode 模板");
     if (name) {
       saveAsTemplate(name, bbcodeTemplate);
+    }
+  };
+
+  const handleSave = async () => {
+    localStorage.setItem('bbcode_template', bbcodeTemplate);
+    if (currentDocumentId) {
+      await updateExistingTemplate(currentDocumentId, bbcodeTemplate);
+    } else {
+      handleSaveAsNew();
     }
   };
 
@@ -90,8 +96,15 @@ export default function BBCodeTemplateEditor() {
 
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold font-serif text-stone-800">BBCode 导出模板设置</h2>
-            <p className="text-stone-500 mt-1 text-sm">自定义生成论坛代码时使用的模板，使用 {'{'}变量名{'}'} 插入数据。</p>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-2xl font-bold font-serif text-stone-800">BBCode 导出模板设置</h2>
+              {currentPath && (
+                <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded border border-indigo-100 font-medium ml-2">
+                  {currentPath}
+                </span>
+              )}
+            </div>
+            <p className="text-stone-500 text-sm">自定义生成论坛代码时使用的模板，使用 {'{'}变量名{'}'} 插入数据。</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -101,16 +114,16 @@ export default function BBCodeTemplateEditor() {
               <RotateCcw size={16} /> 恢复默认
             </button>
             <button
-               onClick={handleSaveAsNew}
-               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 transition-colors rounded-lg font-medium text-sm shadow-md"
+              onClick={handleSaveAsNew}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 transition-colors rounded-lg font-medium text-sm shadow-md"
             >
-               <FilePlus size={16} /> 另存为新模板
+              <FilePlus size={16} /> 另存为
             </button>
             <button
               onClick={handleSave}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white hover:bg-primary/90 transition-colors rounded-lg font-bold text-sm shadow-md"
             >
-              <Save size={16} /> 保存修改
+              <Save size={16} /> {currentDocumentId ? '保存' : '保存为'}
             </button>
           </div>
         </div>
