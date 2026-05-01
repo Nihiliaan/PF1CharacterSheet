@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import MarkdownInlineEditor from './MarkdownInlineEditor';
-import { InputType } from '../types';
+import React from 'react';
+import DynamicInput from './DynamicInput';
+import { InputType } from '../../types';
+import { getTransactionFilter } from '../../utils/validation';
 
 interface InlineInputProps {
   label: string;
@@ -15,9 +16,6 @@ interface InlineInputProps {
   displayFormatter?: (v: string, isFocused: boolean) => string;
 }
 
-import { getTransactionFilter, normalizeValue } from '../../utils/validation';
-import { useNumericStepper } from '../../hooks/useNumericStepper';
-
 const InlineInput = ({
   label,
   value,
@@ -30,48 +28,35 @@ const InlineInput = ({
   transactionFilter,
   displayFormatter
 }: InlineInputProps) => {
-  const [isFocused, setIsFocused] = useState(false);
   const isChanged = originalValue !== undefined && value !== originalValue;
-
-  // Resolve transaction filter based on type
   const resolvedFilter = transactionFilter || (type !== 'text' ? getTransactionFilter(type) : undefined);
-
-  const handleChange = (v: string) => {
-    const normalized = normalizeValue(v, type || 'text');
-    onChange(normalized);
-  };
-
-  const containerRef = useNumericStepper({
-    value,
-    onChange,
-    type: type || 'text',
-    readOnly
-  });
 
   return (
     <div 
-      ref={containerRef}
       className={`flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 transition-all group/input ${isChanged ? 'bg-amber-50/50 border-amber-300 shadow-sm' : 'hover:border-stone-400 focus-within:border-stone-600 focus-within:bg-white focus-within:shadow-sm'} ${className}`}
-      onFocusCapture={() => setIsFocused(true)}
-      onBlurCapture={() => setIsFocused(false)}
     >
       <label className={`text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none mb-1 transition-colors ${isChanged ? 'text-amber-700' : 'group-focus-within/input:text-stone-900'}`}>
         {label}
       </label>
       <div className="h-6 relative">
-        <MarkdownInlineEditor
-          value={displayFormatter ? displayFormatter(value, isFocused) : value}
-          onChange={handleChange}
+        <DynamicInput
+          value={value}
+          onChange={onChange}
+          originalValue={originalValue}
+          type={type}
           readOnly={readOnly}
           placeholder={placeholder}
           singleLine={true}
           transactionFilter={resolvedFilter}
+          displayFormatter={displayFormatter}
           height="24px"
           minHeight="24px"
-          className="font-medium text-ink"
+          hideIndicator={true}
+          wrapperClassName="w-full h-full"
+          className="font-medium text-ink w-full h-full !p-0"
         />
         {isChanged && (
-          <div className="absolute -right-0.5 -top-3 w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.6)] animate-pulse" />
+          <div className="absolute -right-0.5 -top-3 w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.6)] animate-pulse pointer-events-none" />
         )}
       </div>
     </div>

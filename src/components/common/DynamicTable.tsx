@@ -6,167 +6,7 @@ import MarkdownInlineEditor from './MarkdownInlineEditor';
 import { validateInput, normalizeValue } from '../../utils/validation';
 import { useNumericStepper } from '../../hooks/useNumericStepper';
 
-export const DynamicCellInput = ({
-  value,
-  originalValue,
-  onChange,
-  className = '',
-  readOnly = false,
-  columnKey,
-  type = 'text',
-  options,
-  displayFormatter
-}: {
-  value: string;
-  originalValue?: string;
-  onChange: (v: string) => void;
-  className?: string;
-  readOnly?: boolean;
-  columnKey?: string;
-  type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight';
-  options?: string[];
-  displayFormatter?: (v: string, isFocused: boolean) => string;
-}) => {
-  const { t } = useTranslation();
-  const [isFocused, setIsFocused] = React.useState(false);
-  const isChanged = !readOnly && originalValue !== undefined && value !== originalValue;
-
-  const containerRef = useNumericStepper({
-    value,
-    onChange,
-    type: type || 'text',
-    readOnly
-  });
-
-  const isDescriptionCol = (key?: string) => {
-    if (!key) return false;
-    const k = key.toLowerCase();
-    return ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => k.includes(word));
-  };
-
-  const displayValue = () => {
-    if (displayFormatter) return displayFormatter(value, isFocused);
-    if (type === 'checkbox') return value === 'true' ? '+3' : '';
-    if (type === 'quantity' && !isFocused) {
-      if (!value || value === '1') return '';
-      return `×${value}`;
-    }
-    if (type === 'bonus' && !isFocused && value !== '') {
-      const num = parseInt(value);
-      if (!isNaN(num)) return num >= 0 ? `+${num}` : num.toString();
-    }
-    if (type === 'level' && !isFocused && value !== '') {
-      return t('editor.lists.level_format', { n: value });
-    }
-    if (type === 'distance' && !isFocused && value !== '') {
-      return t('editor.lists.distance_format', { v: value });
-    }
-    if (type === 'cost' && !isFocused) {
-      if (!value) return '—';
-      return `${value} ${t('editor.items.units.gp')}`;
-    }
-    if (type === 'weight' && !isFocused) {
-      if (!value) return '—';
-      return `${value} ${t('editor.items.units.lbs')}`;
-    }
-    return value;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
-    const val = e.target.value;
-    if (validateInput(val, type || 'text')) {
-      const normalized = normalizeValue(val, type || 'text');
-      onChange(normalized);
-    }
-  };
-
-  const toggleCheckbox = () => {
-    if (readOnly) return;
-    onChange(value === 'true' ? '' : 'true');
-  };
-
-  // Base classes used by EVERY cell to ensure pixel-perfect consistency
-  const alignClass = isDescriptionCol(columnKey) ? 'text-left' : 'text-center';
-  const BASE_CLASSES = `px-2 py-1 min-h-[32px] font-medium transition-colors ${alignClass} ${className}`;
-
-  if (readOnly) {
-    return (
-      <div className={`${BASE_CLASSES} whitespace-pre-wrap break-words flex items-center h-full`}>
-        <MarkdownInlineEditor 
-          value={value} 
-          readOnly={true} 
-          onChange={() => {}} 
-          className="!bg-transparent !p-0"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div 
-      ref={containerRef}
-      className={`grid h-full w-full relative group transition-colors min-h-[32px] ${isChanged ? 'bg-amber-100/40' : ''}`}
-    >
-      {(type === 'select' && options) || type === 'attributeIndex' ? (
-        <div className="relative w-full h-full">
-          <select
-            value={value || (type === 'attributeIndex' ? '0' : '')}
-            onChange={handleChange as any}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-          >
-            {type === 'attributeIndex' ? (
-              <>
-                <option value="0">—</option>
-                {ATTRIBUTE_NAMES.map((attr, idx) => (
-                  <option key={attr} value={String(idx + 1)}>{t('editor.attributes.' + attr)}</option>
-                ))}
-              </>
-            ) : options?.map(opt => (
-              <option key={opt} value={opt}>{opt || '—'}</option>
-            ))}
-          </select>
-          <div className={`${BASE_CLASSES} w-full h-full flex items-center justify-center ${isChanged ? 'text-amber-700' : 'text-ink'}`}>
-            {displayValue() || <span className="text-stone-300">—</span>}
-          </div>
-        </div>
-      ) : type === 'checkbox' ? (
-        <div 
-          onClick={toggleCheckbox}
-          className={`${BASE_CLASSES} w-full h-full flex items-center justify-center cursor-pointer hover:bg-stone-100/50 ${isChanged ? 'text-amber-900' : 'text-ink'}`}
-        >
-          {displayValue()}
-        </div>
-      ) : type === 'text' ? (
-          <div className={`${BASE_CLASSES} flex items-center w-full h-full`}>
-            <MarkdownInlineEditor
-                value={value}
-                onChange={onChange}
-                className="!bg-transparent !p-0"
-            />
-          </div>
-      ) : (
-        <>
-          <div className={`col-start-1 row-start-1 invisible whitespace-pre-wrap break-words ${BASE_CLASSES} pointer-events-none`}>
-            {displayValue() + '\n'}
-          </div>
-          <textarea
-            value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt' || type === 'level' || type === 'distance' || type === 'cost' || type === 'weight') ? value : displayValue()}
-            onChange={handleChange}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent ${BASE_CLASSES} ${type === 'quantity' ? 'text-stone-500' : ''} ${isChanged ? 'text-amber-900' : ''}`}
-            rows={1}
-          />
-        </>
-      )}
-      {isChanged && (
-        <div className="absolute right-0.5 top-0.5 w-1 h-1 bg-amber-500 rounded-full animate-pulse shadow-sm" />
-      )}
-    </div>
-  );
-};
+import DynamicInput from './DynamicInput';
 
 export default function DynamicTable(props: DynamicTableProps & { minWidth?: string }) {
   const { columns, data, originalData, onChange, newItemGenerator, fixedRows, readonlyColumns, footerRow, onFooterChange, footerReadonlyColumns, onColumnLabelChange, onRemoveColumn, onAddColumn, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart, onRowDragOver, onRowDrop, readOnly = false, minWidth = '600px' } = props;
@@ -258,7 +98,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
             >
               {columns.map((c) => (
                 <td key={c.key} className={`p-0 relative border-stone-300 align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
-                  <DynamicCellInput
+                  <DynamicInput
                     value={row[c.key] || ''}
                     originalValue={originalData?.[i]?.[c.key]}
                     onChange={(val) => updateData(i, c.key, val)}
@@ -308,7 +148,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
             <tr className="bg-stone-100 text-stone-800 border-t-2 border-stone-300">
               {columns.map((c) => (
                 <td key={`footer-${c.key}`} className="p-0 relative border-r border-stone-300 last:border-r-0 align-top">
-                  <DynamicCellInput
+                  <DynamicInput
                     value={footerRow[c.key] || ''}
                     onChange={(val) => onFooterChange({ ...footerRow, [c.key]: val })}
                     readOnly={readOnly || footerReadonlyColumns?.includes(c.key)}

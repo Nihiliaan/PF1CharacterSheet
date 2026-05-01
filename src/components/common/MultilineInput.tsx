@@ -1,5 +1,6 @@
 import React from 'react';
-import MarkdownInlineEditor from './MarkdownInlineEditor';
+import DynamicInput from './DynamicInput';
+import { InputType } from '../../types';
 
 interface MultilineInputProps {
   label: string;
@@ -11,6 +12,7 @@ interface MultilineInputProps {
   readOnly?: boolean;
   height?: string;
   isAutoHeight?: boolean;
+  type?: InputType;
 }
 
 const MultilineInput = ({
@@ -22,7 +24,8 @@ const MultilineInput = ({
   className = '',
   readOnly = false,
   height = '120px',
-  isAutoHeight = false
+  isAutoHeight = false,
+  type = 'text'
 }: MultilineInputProps) => {
   const isChanged = originalValue !== undefined && value !== originalValue;
 
@@ -39,21 +42,25 @@ const MultilineInput = ({
         </label>
         {isChanged && (
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse shadow-sm" />
+            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse shadow-sm pointer-events-none" />
           </div>
         )}
       </div>
 
-      <div className="flex-1 min-h-[24px] flex flex-col">
-        <MarkdownInlineEditor
+      <div className="flex-1 min-h-[24px] flex flex-col relative w-full h-full">
+        <DynamicInput
           value={value}
           onChange={onChange}
+          originalValue={originalValue}
+          type={type}
           readOnly={readOnly}
           placeholder={placeholder}
+          singleLine={false}
           height={isAutoHeight ? 'auto' : height}
           minHeight="24px"
-          singleLine={false}
-          className="text-stone-700 leading-relaxed flex-1"
+          hideIndicator={true}
+          wrapperClassName="w-full h-full flex flex-col flex-1"
+          className="text-stone-700 leading-relaxed flex-1 w-full !p-0"
         />
       </div>
     </div>

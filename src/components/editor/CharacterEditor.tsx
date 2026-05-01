@@ -108,8 +108,8 @@ export default function CharacterEditor({
               <InlineInput className="col-span-4" label={t('editor.basic.weight')} value={data.basic.weight} originalValue={lastSavedData.basic.weight} onChange={v => updateBasic('weight', v)} />
               <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.speed')} value={data.basic.speed} originalValue={lastSavedData.basic.speed} onChange={v => updateBasic('speed', v)} />
               <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.senses')} value={data.basic.senses} originalValue={lastSavedData.basic.senses} onChange={v => updateBasic('senses', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.initiative')} value={data.basic.initiative} originalValue={lastSavedData.basic.initiative} onChange={v => updateBasic('initiative', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.perception')} value={data.basic.perception} originalValue={lastSavedData.basic.perception} onChange={v => updateBasic('perception', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.initiative')} value={data.basic.initiative} originalValue={lastSavedData.basic.initiative} onChange={v => updateBasic('initiative', v)} type="bonus" />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.perception')} value={data.basic.perception} originalValue={lastSavedData.basic.perception} onChange={v => updateBasic('perception', v)} type="bonus" />
               <MultilineInput
                 className="col-span-12 mt-2"
                 label={t('editor.basic.languages')}
@@ -480,7 +480,6 @@ export default function CharacterEditor({
                         originalValue={originalBlock?.concentration}
                         onChange={v => updateMagicBlock(block.id, { concentration: v })}
                         type="bonus"
-                        displayFormatter={(v, f) => (!f && v && !isNaN(parseInt(v)) && parseInt(v) >= 0) ? `+${parseInt(v)}` : v}
                       />
                     </div>
                   )}
@@ -599,9 +598,7 @@ export default function CharacterEditor({
                 type="posInt"
                 value={data.skillsTotal || ''}
                 originalValue={lastSavedData.skillsTotal || ''}
-                onChange={v => {
-                  if (v === '' || /^\d+$/.test(v)) setData({ ...data, skillsTotal: v });
-                }}
+                onChange={v => setData({ ...data, skillsTotal: v })}
                 placeholder="0"
               />
             </div>
@@ -611,11 +608,7 @@ export default function CharacterEditor({
                 type="posInt"
                 value={data.armorCheckPenalty || '0'}
                 originalValue={lastSavedData.armorCheckPenalty || '0'}
-                onChange={v => {
-                  if (v === '' || /^\d+$/.test(v)) {
-                    setData({ ...data, armorCheckPenalty: v || '0' });
-                  }
-                }}
+                onChange={v => setData({ ...data, armorCheckPenalty: v || '0' })}
                 displayFormatter={(v, isFocused) => (!v || v === '0' || isFocused) ? v : `-${v}`}
                 placeholder="0"
               />
@@ -669,11 +662,11 @@ export default function CharacterEditor({
             </button>
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
-              <InlineInput label={t('editor.items.pp')} type="posInt" value={data.currency.pp} originalValue={lastSavedData.currency?.pp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, pp: v } })) }} placeholder="0" />
-              <InlineInput label={t('editor.items.gp')} type="posInt" value={data.currency.gp} originalValue={lastSavedData.currency?.gp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, gp: v } })) }} placeholder="0" />
-              <InlineInput label={t('editor.items.sp')} type="posInt" value={data.currency.sp} originalValue={lastSavedData.currency?.sp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, sp: v } })) }} placeholder="0" />
-              <InlineInput label={t('editor.items.cp')} type="posInt" value={data.currency.cp} originalValue={lastSavedData.currency?.cp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, cp: v } })) }} placeholder="0" />
-              <InlineInput label={t('editor.items.coin_weight')} type="float" value={data.currency.coinWeight} originalValue={lastSavedData.currency?.coinWeight} onChange={v => { if (v === '' || /^\d*\.?\d*$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, coinWeight: v } })) }} placeholder="0" />
+              <InlineInput label={t('editor.items.pp')} type="posInt" value={data.currency.pp} originalValue={lastSavedData.currency?.pp} onChange={v => setData(p => ({ ...p, currency: { ...p.currency, pp: v } }))} placeholder="0" />
+              <InlineInput label={t('editor.items.gp')} type="posInt" value={data.currency.gp} originalValue={lastSavedData.currency?.gp} onChange={v => setData(p => ({ ...p, currency: { ...p.currency, gp: v } }))} placeholder="0" />
+              <InlineInput label={t('editor.items.sp')} type="posInt" value={data.currency.sp} originalValue={lastSavedData.currency?.sp} onChange={v => setData(p => ({ ...p, currency: { ...p.currency, sp: v } }))} placeholder="0" />
+              <InlineInput label={t('editor.items.cp')} type="posInt" value={data.currency.cp} originalValue={lastSavedData.currency?.cp} onChange={v => setData(p => ({ ...p, currency: { ...p.currency, cp: v } }))} placeholder="0" />
+              <InlineInput label={t('editor.items.coin_weight')} type="float" value={data.currency.coinWeight} originalValue={lastSavedData.currency?.coinWeight} onChange={v => setData(p => ({ ...p, currency: { ...p.currency, coinWeight: v } }))} placeholder="0" />
             </div>
 
             <div className="flex flex-col md:flex-row gap-3 mt-4 items-stretch">

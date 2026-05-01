@@ -2,8 +2,7 @@ import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Column } from '../../types';
-import { DynamicCellInput } from './DynamicTable';
-
+import DynamicInput from './DynamicInput';
 interface SpellTableProps {
   columns: Column[];
   data: Record<string, string>[];
@@ -112,7 +111,7 @@ export default function SpellTable({
                         )}
                       </div>
                     ) : (
-                      <DynamicCellInput
+                      <DynamicInput
                         value={row[c.key] || ''}
                         originalValue={originalData?.[i]?.[c.key]}
                         onChange={(val) => updateData(i, c.key, val)}
