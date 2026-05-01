@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
+  Plus, Trash2, ChevronRight, User, Search, Download, HardDrive, Folder, Check, 
   CloudUpload, RotateCcw, FolderPlus, Grid, List as ListIcon, FilePlus, Sparkles, 
   Copy, Move, Settings, Cloud, Link, FileText
 } from 'lucide-react';

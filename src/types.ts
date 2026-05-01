@@ -1,4 +1,4 @@
-import { User as FirebaseUser } from 'firebase/auth';
+export type { User as FirebaseUser } from 'firebase/auth';
 
 export type Column = {
   key: string;
