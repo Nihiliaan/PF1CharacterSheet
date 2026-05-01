@@ -44,7 +44,7 @@ const MultilineInput = ({
         )}
       </div>
 
-      <div className="min-h-[24px]">
+      <div className="flex-1 min-h-[24px] flex flex-col">
         <MarkdownInlineEditor
           value={value}
           onChange={onChange}
@@ -53,7 +53,7 @@ const MultilineInput = ({
           height={isAutoHeight ? 'auto' : height}
           minHeight="24px"
           singleLine={false}
-          className="text-stone-700 leading-relaxed"
+          className="text-stone-700 leading-relaxed flex-1"
         />
       </div>
     </div>

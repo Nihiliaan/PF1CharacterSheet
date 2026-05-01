@@ -31,7 +31,13 @@ export const calculateTotalWeightNum = (data: CharacterData): number => {
     }
   });
 
-  total += parseFloat(data.currency?.coinWeight) || 0;
+  const pp = parseInt(data.currency?.pp) || 0;
+  const gp = parseInt(data.currency?.gp) || 0;
+  const sp = parseInt(data.currency?.sp) || 0;
+  const cp = parseInt(data.currency?.cp) || 0;
+  const totalCoins = pp + gp + sp + cp;
+  const coinWeight = parseFloat(data.currency?.coinWeight) || 0;
+  total += totalCoins * coinWeight;
 
   return total;
 };

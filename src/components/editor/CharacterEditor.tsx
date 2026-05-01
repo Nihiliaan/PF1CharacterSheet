@@ -187,7 +187,7 @@ export default function CharacterEditor({
               originalValue={lastSavedData.combatManeuverNotes}
               onChange={v => setData({ ...data, combatManeuverNotes: v })}
               placeholder={t('editor.attributes.maneuver_placeholder')}
-              height="80px"
+              height="100%"
             />
           </div>
         </Section>
@@ -285,7 +285,7 @@ export default function CharacterEditor({
                 originalValue={lastSavedData.defenses.acNotes}
                 onChange={v => updateDefenses('acNotes', v)}
                 placeholder={t('editor.defenses.ac_placeholder')}
-                height="80px"
+                height="100%"
               />
             </div>
 
@@ -340,7 +340,7 @@ export default function CharacterEditor({
                 originalValue={lastSavedData.defenses.savesNotes}
                 onChange={v => updateDefenses('savesNotes', v)}
                 placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
-                height="80px"
+                height="100%"
               />
             </div>
           </div>
@@ -471,7 +471,7 @@ export default function CharacterEditor({
                         value={block.casterLevel || ''}
                         originalValue={originalBlock?.casterLevel}
                         onChange={v => updateMagicBlock(block.id, { casterLevel: v })}
-                        type="bonus"
+                        type="level"
                         displayFormatter={(v, f) => (!f && v && !isNaN(parseInt(v)) && parseInt(v) >= 0) ? `+${parseInt(v)}` : v}
                       />
                       <InlineInput
