@@ -1,17 +1,17 @@
 import React, { useEffect, useRef } from 'react';
-import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, WidgetType, placeholder as cmPlaceholder } from '@codemirror/view';
+import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, placeholder as cmPlaceholder } from '@codemirror/view';
 import { EditorState, RangeSetBuilder } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 
 interface MarkdownInlineEditorProps {
   value: string;
-  originalValue?: string;
   onChange: (v: string) => void;
   readOnly?: boolean;
   className?: string;
   placeholder?: string;
   height?: string;
   minHeight?: string;
+  singleLine?: boolean;
 }
 
 const markdownConcealPlugin = ViewPlugin.fromClass(class {
@@ -60,31 +60,38 @@ const externalLinkHandler = EditorView.domEventHandlers({
       const end = match.index + match[0].length;
       const url = match[2];
       if (pos >= start && pos <= end) {
-          const selection = view.state.selection.main;
-          const isCursorInside = (selection.from >= start && selection.from <= end);
-          if (!isCursorInside || event.ctrlKey || event.metaKey) {
-              window.open(url, '_blank');
-              return true;
-          }
+        const selection = view.state.selection.main;
+        const isCursorInside = (selection.from >= start && selection.from <= end);
+        if (!isCursorInside || event.ctrlKey || event.metaKey) {
+          window.open(url, '_blank');
+          return true;
+        }
       }
     }
     return false;
   }
 });
 
-const MarkdownInlineEditor = ({ value, onChange, readOnly = false, className = '', placeholder = '', height = 'auto', minHeight = '32px' }: MarkdownInlineEditorProps) => {
+const MarkdownInlineEditor = ({ 
+  value, 
+  onChange, 
+  readOnly = false, 
+  className = '', 
+  placeholder = '', 
+  height = 'auto', 
+  minHeight = '24px',
+  singleLine = false 
+}: MarkdownInlineEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   
-  // CRITICAL: Use ref for onChange to prevent stale closure "Reset Bug"
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
   useEffect(() => {
     if (!editorRef.current) return;
-    
     if (editorRef.current.querySelector('.cm-editor')) {
-        editorRef.current.innerHTML = '';
+      editorRef.current.innerHTML = '';
     }
 
     const state = EditorState.create({
@@ -93,20 +100,40 @@ const MarkdownInlineEditor = ({ value, onChange, readOnly = false, className = '
         markdown({ base: markdownLanguage }),
         markdownConcealPlugin,
         externalLinkHandler,
-        EditorView.lineWrapping,
+        // Single line logic: Disable wrapping and sanitize newlines
+        singleLine ? [] : EditorView.lineWrapping,
+        singleLine ? EditorState.transactionFilter.of(tr => {
+            if (tr.docChanged) {
+                const text = tr.newDoc.toString();
+                if (text.includes('\n')) {
+                    // Prevent any change that adds a newline
+                    return [];
+                }
+            }
+            return tr;
+        }) : [],
         EditorState.readOnly.of(readOnly),
         EditorView.theme({
           "&": { height, minHeight, fontSize: "14px", backgroundColor: "transparent" },
           "&.cm-focused": { outline: "none" },
-          ".cm-content": { padding: "4px 0px", fontFamily: "inherit" },
+          ".cm-content": { 
+              padding: "0px", 
+              fontFamily: "inherit",
+              whiteSpace: singleLine ? "nowrap" : "pre-wrap"
+          },
           ".cm-line": { padding: "0" },
-          ".cm-scroller": { fontFamily: "inherit", overflow: height === 'auto' ? 'hidden' : 'auto' },
+          ".cm-scroller": { 
+              fontFamily: "inherit", 
+              overflowX: singleLine ? "auto" : "hidden",
+              overflowY: height === 'auto' ? 'hidden' : 'auto',
+              scrollbarWidth: "none",
+              "&::-webkit-scrollbar": { display: "none" }
+          },
           ".cm-gutters": { display: "none" },
           ".cm-placeholder": { color: "#aaa" }
         }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            // Call the REF version to ensure we always have the latest parent state
             onChangeRef.current(update.state.doc.toString());
           }
         }),
@@ -117,7 +144,7 @@ const MarkdownInlineEditor = ({ value, onChange, readOnly = false, className = '
     const view = new EditorView({ state, parent: editorRef.current });
     viewRef.current = view;
     return () => { view.destroy(); };
-  }, [readOnly, placeholder, height, minHeight]); 
+  }, [readOnly, placeholder, height, minHeight, singleLine]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -128,7 +155,6 @@ const MarkdownInlineEditor = ({ value, onChange, readOnly = false, className = '
     }
   }, [value]);
 
-  // Handle click on container to ensure focus
   const handleContainerClick = () => {
     if (viewRef.current && !viewRef.current.hasFocus) {
         viewRef.current.focus();

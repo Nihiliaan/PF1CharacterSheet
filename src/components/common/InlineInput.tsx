@@ -1,22 +1,52 @@
 import React from 'react';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
 
-const InlineInput = ({ label, value, originalValue, onChange, placeholder = '', className = '', readOnly = false }: { label: string; value: string; originalValue?: string; onChange: (v: string) => void; placeholder?: string; className?: string; readOnly?: boolean }) => {
+interface InlineInputProps {
+  label: string;
+  value: string;
+  originalValue?: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+  readOnly?: boolean;
+}
+
+const InlineInput = ({
+  label,
+  value,
+  originalValue,
+  onChange,
+  placeholder = '',
+  className = '',
+  readOnly = false
+}: InlineInputProps) => {
   const isChanged = originalValue !== undefined && value !== originalValue;
+
   return (
-    <div className={`flex flex-col gap-0.5 focus-within:ring-1 focus-within:ring-primary rounded p-1 transition-all ${isChanged ? 'bg-amber-100/70 border-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.2)]' : 'bg-white/50 border-transparent hover:border-stone-200'} border ${className}`}>
-      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex justify-between">
-        {label}
-        {isChanged && <span className="text-amber-600 font-black animate-pulse">●</span>}
-      </label>
+    <div className={`flex flex-col gap-0.5 p-1.5 transition-all border-b group
+      ${isChanged 
+        ? 'border-amber-300 bg-amber-50/30' 
+        : 'border-stone-200 hover:border-stone-300 focus-within:border-primary'
+      } ${className}`}
+    >
+      <div className="flex justify-between items-center px-0.5">
+        <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest group-focus-within:text-primary transition-colors">
+          {label}
+        </label>
+        {isChanged && (
+          <div className="w-1 h-1 bg-amber-500 rounded-full animate-pulse" />
+        )}
+      </div>
+      
       <MarkdownInlineEditor
         value={value}
-        originalValue={originalValue}
         onChange={onChange}
         readOnly={readOnly}
         placeholder={placeholder}
-        className="!bg-transparent !border-none !p-0"
+        singleLine={true}
+        height="24px"
         minHeight="24px"
+        className="font-medium text-ink"
       />
     </div>
   );

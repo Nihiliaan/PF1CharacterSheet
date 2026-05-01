@@ -5,7 +5,7 @@ import { User as FirebaseUser } from 'firebase/auth';
 import { CharacterData, ATTRIBUTE_NAMES } from '../../types';
 import Section from '../common/Section';
 import InlineInput from '../common/InlineInput';
-import AutoResizeTextarea from '../common/AutoResizeTextarea';
+import MultilineInput from '../common/MultilineInput';
 import DynamicTable from '../common/DynamicTable';
 import TableOfContents from '../character/TableOfContents';
 import AvatarGallery from '../character/AvatarGallery';
@@ -107,18 +107,14 @@ export default function CharacterEditor({
               <InlineInput className="col-span-12 sm:col-span-6" label="感官 (Senses)" value={data.basic.senses} originalValue={lastSavedData.basic.senses} onChange={v => updateBasic('senses', v)} />
               <InlineInput className="col-span-12 sm:col-span-6" label="先攻 (Initiative)" value={data.basic.initiative} originalValue={lastSavedData.basic.initiative} onChange={v => updateBasic('initiative', v)} />
               <InlineInput className="col-span-12 sm:col-span-6" label="察觉 (Perception)" value={data.basic.perception} originalValue={lastSavedData.basic.perception} onChange={v => updateBasic('perception', v)} />
-              <div className={`col-span-12 flex flex-col gap-0.5 focus-within:ring-1 focus-within:ring-primary rounded p-1 bg-white/50 border transition-colors mt-2 ${JSON.stringify(data.basic.languages) !== JSON.stringify(lastSavedData.basic.languages) ? 'bg-amber-100/50 border-amber-300' : 'border-transparent hover:border-stone-200'}`}>
-                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex justify-between">
-                  语言 (Languages)
-                  {(data.basic.languages !== lastSavedData.basic.languages) && <span className="text-amber-600 animate-pulse">●</span>}
-                </label>
-                <AutoResizeTextarea
-                  className="!bg-transparent !border-b !border-stone-300 focus:!border-stone-800 transition-colors outline-none !pb-0.5 w-full text-sm font-medium !px-0 !pt-0 !rounded-none !border-x-0 !border-t-0 shadow-none"
-                  value={data.basic.languages}
-                  originalValue={lastSavedData.basic.languages}
-                  onChange={v => updateBasic('languages', v)}
-                />
-              </div>
+              <MultilineInput
+                className="col-span-12 mt-2"
+                label="语言 (Languages)"
+                value={data.basic.languages}
+                originalValue={lastSavedData.basic.languages}
+                onChange={v => updateBasic('languages', v)}
+                height="60px"
+              />
             </div>
             <div className="w-full md:w-64">
               <AvatarGallery
@@ -130,16 +126,15 @@ export default function CharacterEditor({
         </Section>
 
         <Section id="story" title="背景故事 (Background Story)">
-          <div className={`relative ${data.basic.story !== lastSavedData.basic.story ? 'ring-2 ring-amber-300 rounded-lg' : ''}`}>
-          <AutoResizeTextarea
-            className="!p-6 text-stone-700 font-serif leading-relaxed italic shadow-inner !bg-white"
-            minHeight="160px"
+          <MultilineInput
+            label="故事 (Story)"
             placeholder="在此书写角色的过往与传说..."
             value={data.basic.story}
             originalValue={lastSavedData.basic.story}
             onChange={v => updateBasic('story', v)}
+            isAutoHeight={true}
+            className="font-serif italic"
           />
-          </div>
         </Section>
 
         <Section id="attributes" title="属性(Attributes)">
@@ -168,207 +163,180 @@ export default function CharacterEditor({
                 战斗数值 (Combat Stats)
                 <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
               </label>
-              <div className="flex-1">
-                <DynamicTable
-                  minWidth="0"
-                  columns={[
-                    { key: 'bab', label: 'BAB', width: '33.33%' },
-                    { key: 'cmb', label: 'CMB', width: '33.33%' },
-                    { key: 'cmd', label: 'CMD', width: '33.34%' }
-                  ]}
-                  data={data.babTable || [{ bab: '', cmb: '', cmd: '' }]}
-                  originalData={lastSavedData.babTable || [{ bab: '', cmb: '', cmd: '' }]}
-                  onChange={v => setData({ ...data, babTable: v })}
-                  fixedRows={true}
-                />
-              </div>
-            </div>
-            <div className="w-full md:w-1/2 flex flex-col">
-              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-                战技备注 (Combat Maneuver Notes)
-                {(data.combatManeuverNotes !== lastSavedData.combatManeuverNotes) && <span className="text-amber-600 animate-pulse">●</span>}
-              </label>
-              <div className={`flex-1 rounded border transition-colors overflow-hidden flex ${data.combatManeuverNotes !== lastSavedData.combatManeuverNotes ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
-                <AutoResizeTextarea
-                  value={data.combatManeuverNotes || ''}
-                  originalValue={lastSavedData.combatManeuverNotes}
-                  onChange={v => setData({ ...data, combatManeuverNotes: v })}
-                  className="!bg-transparent !border-none !p-0"
-                  placeholder="在此输入战技相关的特殊加值或备注..."
-                  height="100%"
-                />
-              </div>
-            </div>
-          </div>
-        </Section>
-
-        <Section id="attacks" title="攻击 (Attacks)">
-          <div className="flex flex-col gap-0 border border-stone-300 rounded overflow-hidden shadow-sm">
-            <div className="border-b border-stone-200">
               <DynamicTable
                 minWidth="0"
                 columns={[
-                  { key: 'weapon', label: '近战武器', width: '25%' },
-                  { key: 'hit', label: '命中 (Hit)', width: '15%' },
-                  { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
-                  { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
-                  { key: 'range', label: '触及 (Touch)', width: '5%' },
-                  { key: 'type', label: '类型 (Type)', width: '5%' },
-                  { key: 'special', label: '特性 (Special)', width: '25%' }
+                  { key: 'bab', label: 'BAB', width: '33.33%' },
+                  { key: 'cmb', label: 'CMB', width: '33.33%' },
+                  { key: 'cmd', label: 'CMD', width: '33.34%' }
                 ]}
-                data={data.meleeAttacks || []}
-                originalData={lastSavedData.meleeAttacks || []}
-                onChange={v => setData({ ...data, meleeAttacks: v })}
-                newItemGenerator={() => ({ weapon: '', hit: '', damage: '', crit: '', range: '', type: '', special: '' })}
-                rowDraggable={true}
-                rowActionMode={tableActionMode}
-                onRowActionModeToggle={toggleTableActionMode}
-                onRowDragStart={(idx, e) => handleTableItemDragStart('meleeAttacks', idx, e)}
-                onRowDragOver={(idx, e) => handleTableItemDragOver('meleeAttacks', idx, e)}
-                onRowDrop={(idx, e) => handleTableItemDrop('meleeAttacks', idx, e)}
+                data={data.babTable || [{ bab: '', cmb: '', cmd: '' }]}
+                originalData={lastSavedData.babTable || [{ bab: '', cmb: '', cmd: '' }]}
+                onChange={v => setData({ ...data, babTable: v })}
+                fixedRows={true}
               />
             </div>
+          </div>
+          <MultilineInput
+            className="w-full md:w-1/2"
+            label="战技备注 (Combat Maneuver Notes)"
+            value={data.combatManeuverNotes || ''}
+            originalValue={lastSavedData.combatManeuverNotes}
+            onChange={v => setData({ ...data, combatManeuverNotes: v })}
+            placeholder="在此输入战技相关的特殊加值或备注..."
+            height="80px"
+          />
+        </div>
+      </Section>
+
+      <Section id="attacks" title="攻击 (Attacks)">
+        <div className="flex flex-col gap-0 border border-stone-300 rounded overflow-hidden shadow-sm">
+          <div className="border-b border-stone-200">
             <DynamicTable
               minWidth="0"
               columns={[
-                { key: 'weapon', label: '远程武器', width: '25%' },
+                { key: 'weapon', label: '近战武器', width: '25%' },
                 { key: 'hit', label: '命中 (Hit)', width: '15%' },
                 { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
                 { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
-                { key: 'range', label: '射程 (Range)', width: '5%' },
+                { key: 'range', label: '触及 (Touch)', width: '5%' },
                 { key: 'type', label: '类型 (Type)', width: '5%' },
                 { key: 'special', label: '特性 (Special)', width: '25%' }
               ]}
-              data={data.rangedAttacks || []}
-              originalData={lastSavedData.rangedAttacks || []}
-              onChange={v => setData({ ...data, rangedAttacks: v })}
+              data={data.meleeAttacks || []}
+              originalData={lastSavedData.meleeAttacks || []}
+              onChange={v => setData({ ...data, meleeAttacks: v })}
               newItemGenerator={() => ({ weapon: '', hit: '', damage: '', crit: '', range: '', type: '', special: '' })}
               rowDraggable={true}
               rowActionMode={tableActionMode}
               onRowActionModeToggle={toggleTableActionMode}
-              onRowDragStart={(idx, e) => handleTableItemDragStart('rangedAttacks', idx, e)}
-              onRowDragOver={(idx, e) => handleTableItemDragOver('rangedAttacks', idx, e)}
-              onRowDrop={(idx, e) => handleTableItemDrop('rangedAttacks', idx, e)}
+              onRowDragStart={(idx, e) => handleTableItemDragStart('meleeAttacks', idx, e)}
+              onRowDragOver={(idx, e) => handleTableItemDragOver('meleeAttacks', idx, e)}
+              onRowDrop={(idx, e) => handleTableItemDrop('meleeAttacks', idx, e)}
             />
           </div>
-          <div className="mt-8">
-            <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex justify-between">
-              特殊攻击 (Special Attacks)
-              {data.specialAttacks !== lastSavedData.specialAttacks && <span className="text-amber-600 animate-pulse">●</span>}
+          <DynamicTable
+            minWidth="0"
+            columns={[
+              { key: 'weapon', label: '远程武器', width: '25%' },
+              { key: 'hit', label: '命中 (Hit)', width: '15%' },
+              { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
+              { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
+              { key: 'range', label: '射程 (Range)', width: '5%' },
+              { key: 'type', label: '类型 (Type)', width: '5%' },
+              { key: 'special', label: '特性 (Special)', width: '25%' }
+            ]}
+            data={data.rangedAttacks || []}
+            originalData={lastSavedData.rangedAttacks || []}
+            onChange={v => setData({ ...data, rangedAttacks: v })}
+            newItemGenerator={() => ({ weapon: '', hit: '', damage: '', crit: '', range: '', type: '', special: '' })}
+            rowDraggable={true}
+            rowActionMode={tableActionMode}
+            onRowActionModeToggle={toggleTableActionMode}
+            onRowDragStart={(idx, e) => handleTableItemDragStart('rangedAttacks', idx, e)}
+            onRowDragOver={(idx, e) => handleTableItemDragOver('rangedAttacks', idx, e)}
+            onRowDrop={(idx, e) => handleTableItemDrop('rangedAttacks', idx, e)}
+          />
+        </div>
+        <MultilineInput
+          className="mt-6"
+          label="特殊攻击 (Special Attacks)"
+          value={data.specialAttacks || ''}
+          originalValue={lastSavedData.specialAttacks || ''}
+          onChange={v => setData({ ...data, specialAttacks: v })}
+          isAutoHeight={true}
+        />
+      </Section>
+
+      <Section id="defenses" title="防御 (Defenses)">
+        <div className="flex flex-col gap-6">
+          {/* AC Row */}
+          <div className="flex flex-col md:flex-row gap-6 items-stretch">
+            <div className="w-full md:w-1/2 flex flex-col">
+              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                防护等级 (AC Details)
+                <span className="text-stone-400 font-normal">AC / 措手不及 AC / 接触 AC</span>
+              </label>
+              <DynamicTable
+                minWidth="0"
+                columns={[
+                  { key: 'ac', label: 'AC', width: '33.33%' },
+                  { key: 'flatFooted', label: '措手不及 AC', width: '33.33%' },
+                  { key: 'touch', label: '接触 AC', width: '33.34%' }
+                ]}
+                data={data.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
+                originalData={lastSavedData.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
+                onChange={v => updateDefenses('acTable', v)}
+                fixedRows={true}
+              />
+            </div>
+          </div>
+          <MultilineInput
+            className="w-full md:w-1/2"
+            label="防护备注 (AC Notes)"
+            value={data.defenses.acNotes || ''}
+            originalValue={lastSavedData.defenses.acNotes}
+            onChange={v => updateDefenses('acNotes', v)}
+            placeholder="护甲加值来源、闪避、天生护甲等..."
+            height="80px"
+          />
+        </div>
+
+        {/* HP & HD Row */}
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="w-full md:w-1/2">
+            <InlineInput
+              label="生命值 (HP)"
+              value={data.defenses.hp}
+              originalValue={lastSavedData.defenses.hp}
+              onChange={v => updateDefenses('hp', v)}
+              placeholder="例如：20"
+            />
+          </div>
+          <div className="w-full md:w-1/2">
+            <InlineInput
+              label="生命骰 (Hit Die)"
+              value={data.defenses.hd || ''}
+              originalValue={lastSavedData.defenses.hd}
+              onChange={v => updateDefenses('hd', v)}
+              placeholder="例如：3d8+3"
+            />
+          </div>
+        </div>
+
+        {/* Saves Row */}
+        <div className="flex flex-col md:flex-row gap-6 items-stretch">
+          <div className="w-full md:w-1/2 flex flex-col">
+            <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+              豁免 (Saving Throws)
+              <span className="text-stone-400 font-normal">强韧 / 反射 / 意志</span>
             </label>
-            <AutoResizeTextarea
-              value={data.specialAttacks || ''}
-              originalValue={lastSavedData.specialAttacks || ''}
-              onChange={v => setData({ ...data, specialAttacks: v })}
+            <DynamicTable
+              minWidth="0"
+              columns={[
+                { key: 'fort', label: '强韧', width: '33.33%' },
+                { key: 'ref', label: '反射', width: '33.33%' },
+                { key: 'will', label: '意志', width: '33.34%' }
+              ]}
+              data={data.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
+              originalData={lastSavedData.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
+              onChange={v => updateDefenses('savesTable', v)}
+              fixedRows={true}
             />
           </div>
-        </Section>
-
-        <Section id="defenses" title="防御 (Defenses)">
-          <div className="flex flex-col gap-6">
-            {/* AC Row */}
-            <div className="flex flex-col md:flex-row gap-6 items-stretch">
-              <div className="w-full md:w-1/2 flex flex-col">
-                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-                  防护等级 (AC Details)
-                  <span className="text-stone-400 font-normal">AC / 措手不及 AC / 接触 AC</span>
-                </label>
-                <div className="flex-1">
-                  <DynamicTable
-                    minWidth="0"
-                    columns={[
-                      { key: 'ac', label: 'AC', width: '33.33%' },
-                      { key: 'flatFooted', label: '措手不及 AC', width: '33.33%' },
-                      { key: 'touch', label: '接触 AC', width: '33.34%' }
-                    ]}
-                    data={data.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
-                    originalData={lastSavedData.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
-                    onChange={v => updateDefenses('acTable', v)}
-                    fixedRows={true}
-                  />
-                </div>
-              </div>
-              <div className="w-full md:w-1/2 flex flex-col">
-                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-                  防护备注 (AC Notes)
-                  {(data.defenses.acNotes !== lastSavedData.defenses.acNotes) && <span className="text-amber-600 animate-pulse">●</span>}
-                </label>
-                <div className={`flex-1 rounded border transition-colors overflow-hidden flex ${data.defenses.acNotes !== lastSavedData.defenses.acNotes ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
-                  <AutoResizeTextarea
-                    value={data.defenses.acNotes || ''}
-                    originalValue={lastSavedData.defenses.acNotes}
-                    onChange={v => updateDefenses('acNotes', v)}
-                    className="!bg-transparent !border-none !p-0"
-                    placeholder="护甲加值来源、闪避、天生护甲等..."
-                    height="100%"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* HP & HD Row */}
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="w-full md:w-1/2">
-                <InlineInput
-                  label="生命值 (HP)"
-                  value={data.defenses.hp}
-                  originalValue={lastSavedData.defenses.hp}
-                  onChange={v => updateDefenses('hp', v)}
-                  placeholder="例如：20"
-                />
-              </div>
-              <div className="w-full md:w-1/2">
-                <InlineInput
-                  label="生命骰 (Hit Die)"
-                  value={data.defenses.hd || ''}
-                  originalValue={lastSavedData.defenses.hd}
-                  onChange={v => updateDefenses('hd', v)}
-                  placeholder="例如：3d8+3"
-                />
-              </div>
-            </div>
-
-            {/* Saves Row */}
-            <div className="flex flex-col md:flex-row gap-6 items-stretch">
-              <div className="w-full md:w-1/2 flex flex-col">
-                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-                  豁免 (Saving Throws)
-                  <span className="text-stone-400 font-normal">强韧 / 反射 / 意志</span>
-                </label>
-                <div className="flex-1">
-                  <DynamicTable
-                    minWidth="0"
-                    columns={[
-                      { key: 'fort', label: '强韧', width: '33.33%' },
-                      { key: 'ref', label: '反射', width: '33.33%' },
-                      { key: 'will', label: '意志', width: '33.34%' }
-                    ]}
-                    data={data.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
-                    originalData={lastSavedData.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
-                    onChange={v => updateDefenses('savesTable', v)}
-                    fixedRows={true}
-                  />
-                </div>
-              </div>
-              <div className="w-full md:w-1/2 flex flex-col">
-                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-                  豁免备注 (Saves Notes)
-                  {(data.defenses.savesNotes !== lastSavedData.defenses.savesNotes) && <span className="text-amber-600 animate-pulse">●</span>}
-                </label>
-                <div className={`flex-1 rounded border transition-colors overflow-hidden flex ${data.defenses.savesNotes !== lastSavedData.defenses.savesNotes ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
-                  <AutoResizeTextarea
-                    value={data.defenses.savesNotes || ''}
-                    originalValue={lastSavedData.defenses.savesNotes}
-                    onChange={v => updateDefenses('savesNotes', v)}
-                    className="!bg-transparent !border-none !p-0"
-                    placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
-                    height="100%"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </Section>
+        </div>
+        <MultilineInput
+          className="w-full md:w-1/2"
+          label="豁免备注 (Saves Notes)"
+          value={data.defenses.savesNotes || ''}
+          originalValue={lastSavedData.defenses.savesNotes}
+          onChange={v => updateDefenses('savesNotes', v)}
+          placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
+          height="80px"
+        />
+      </div>
+    </div>
+        </Section >
 
         <Section id="racial-traits" title="种族特性 (Racial Traits)">
           <DynamicTable
@@ -488,10 +456,12 @@ export default function CharacterEditor({
                     </button>
                   </div>
                   {block.type === 'text' ? (
-                    <AutoResizeTextarea
+                    <MultilineInput
+                      label="内容 (Content)"
                       value={block.content || ''}
                       originalValue={originalBlock?.content}
                       onChange={v => updateMagicBlock(block.id, { content: v })}
+                      height="120px"
                     />
                   ) : (
                     <DynamicTable
@@ -739,10 +709,12 @@ export default function CharacterEditor({
                     <button onClick={() => removeAdditionalBlock(block.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1"><Trash2 size={14} /> 删除</button>
                   </div>
                   {block.type === 'text' ? (
-                    <AutoResizeTextarea
+                    <MultilineInput
+                      label="内容 (Content)"
                       value={block.content || ''}
                       originalValue={originalBlock?.content}
                       onChange={v => updateAdditionalBlock(block.id, { content: v })}
+                      height="120px"
                     />
                   ) : block.type === 'image' ? (
                     <div className="relative">
@@ -772,7 +744,7 @@ export default function CharacterEditor({
             </div>
           </div>
         </Section>
-      </main>
-    </motion.div>
+      </main >
+    </motion.div >
   );
 }
