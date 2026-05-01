@@ -53,31 +53,33 @@ const markdownConcealPlugin = ViewPlugin.fromClass(class {
     const doc = view.state.doc.toString();
     const selection = view.state.selection.main;
     
-    // Regex for [label](url)
-    const regex = /\[(.*?)\]\((.*?)\)/g;
+    const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
     let match;
 
     while ((match = regex.exec(doc)) !== null) {
       const start = match.index;
       const end = match.index + match[0].length;
       const label = match[1];
-      const url = match[2];
       
-      const isCursorInside = selection.from >= start && selection.to <= end;
+      const isCursorInside = (selection.from >= start && selection.from <= end) || 
+                             (selection.to >= start && selection.to <= end);
 
       if (!isCursorInside) {
-        // Hide the [
+        // 1. Hide [ (MUST BE FIRST)
         builder.add(start, start + 1, Decoration.replace({}));
-        // Hide the ](url)
-        builder.add(start + 1 + label.length, end, Decoration.replace({}));
-        // Style the label part
+        
+        // 2. Style Label (MUST BE SECOND)
         builder.add(start + 1, start + 1 + label.length, Decoration.mark({
-          class: 'text-primary underline cursor-pointer hover:text-primary/80 transition-colors'
+          attributes: { style: "color: #2563eb; text-decoration: underline; cursor: pointer;" },
+          class: "cm-md-link-active"
         }));
+        
+        // 3. Hide ](url) (MUST BE THIRD)
+        builder.add(start + 1 + label.length, end, Decoration.replace({}));
       } else {
-        // Just highlight the label part even when expanded
+        // Just style the label when expanded so user knows it's the specific link part
         builder.add(start + 1, start + 1 + label.length, Decoration.mark({
-          class: 'text-primary'
+          class: "text-primary font-bold"
         }));
       }
     }
@@ -97,7 +99,7 @@ const externalLinkHandler = EditorView.domEventHandlers({
     if (pos === null) return false;
 
     const doc = view.state.doc.toString();
-    const regex = /\[(.*?)\]\((.*?)\)/g;
+    const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
     let match;
 
     while ((match = regex.exec(doc)) !== null) {
@@ -106,17 +108,15 @@ const externalLinkHandler = EditorView.domEventHandlers({
       const url = match[2];
 
       if (pos >= start && pos <= end) {
-        // If it's a click on a link, and the selection is NOT currently inside (it's collapsed)
-        // or just generally if it's a click, we can choose to open it.
-        // To be safe, we check if the view is focused. If not, click opens link.
-        // If focused, we check if they clicked the label part.
-        const selection = view.state.selection.main;
-        const isCursorInside = selection.from >= start && selection.to <= end;
-
-        if (!isCursorInside || event.ctrlKey || event.metaKey) {
-            window.open(url, '_blank');
-            return true; // Prevent editor from focusing/moving cursor if we opened the link
-        }
+          const selection = view.state.selection.main;
+          const isCursorInside = (selection.from >= start && selection.from <= end);
+          
+          // In collapsed mode, click is always a jump. 
+          // In expanded mode, Ctrl/Cmd + Click is a jump.
+          if (!isCursorInside || event.ctrlKey || event.metaKey) {
+              window.open(url, '_blank');
+              return true;
+          }
       }
     }
     return false;
@@ -132,7 +132,7 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
     if (!editorRef.current) return;
 
     const state = EditorState.create({
-      doc: value,
+      doc: value || '',
       extensions: [
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         markdownConcealPlugin,
@@ -146,25 +146,25 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
             fontSize: "14px",
             backgroundColor: "transparent",
           },
+          "&.cm-focused": {
+            outline: "none",
+          },
           ".cm-content": {
-            padding: "4px 8px",
+            padding: "4px 0px",
             fontFamily: "inherit",
           },
           ".cm-scroller": {
             fontFamily: "inherit",
             overflow: height === 'auto' ? 'hidden' : 'auto',
           },
-          "&.cm-focused": {
-            outline: "none"
+          ".cm-line": {
+              padding: "0",
           },
           ".cm-gutters": {
             display: "none"
           },
-          ".cm-activeLine": {
-              backgroundColor: "transparent"
-          },
           ".cm-placeholder": {
-              color: "#d1d5db"
+              color: "#aaa"
           }
         }),
         EditorView.updateListener.of((update) => {
@@ -186,25 +186,25 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
     return () => {
       view.destroy();
     };
-  }, [readOnly, placeholder]); // Only re-create on major changes. Value is handled via update.
+  }, [readOnly, placeholder, height, minHeight]); 
 
   // Sync value if changed from outside
   useEffect(() => {
     const view = viewRef.current;
     if (view && value !== view.state.doc.toString()) {
       view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: value }
+        changes: { from: 0, to: view.state.doc.length, insert: value || '' }
       });
     }
   }, [value]);
 
   return (
     <div 
-      className={`relative w-full transition-colors rounded ${isChanged ? 'bg-amber-100/40 border-amber-300 ring-1 ring-amber-300/30' : 'bg-transparent'} ${className}`}
+      className={`relative w-full transition-colors rounded ${isChanged ? 'bg-amber-100/40' : ''} ${className}`}
     >
       <div ref={editorRef} className="w-full h-full" />
       {isChanged && (
-        <div className="absolute right-0.5 top-0.5 w-1 h-1 bg-amber-500 rounded-full animate-pulse shadow-sm z-10" />
+        <div className="absolute right-0 top-0 w-1 h-1 bg-amber-500 rounded-full animate-pulse shadow-sm z-10" />
       )}
     </div>
   );
