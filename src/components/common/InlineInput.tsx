@@ -24,8 +24,8 @@ const InlineInput = ({
 
   return (
     <div className={`flex flex-col gap-0 pt-1 px-1.5 transition-all border-b group
-      ${isChanged 
-        ? 'border-amber-400 bg-amber-50/30' 
+      ${isChanged
+        ? 'border-amber-400 bg-amber-50/30'
         : 'border-stone-200 hover:border-stone-300 focus-within:border-primary focus-within:bg-stone-50/30'
       } ${className}`}
     >
@@ -37,8 +37,8 @@ const InlineInput = ({
           <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
         )}
       </div>
-      
-      <div className="pb-0.5">
+
+      <div className="pb-0">
         <MarkdownInlineEditor
           value={value}
           onChange={onChange}
