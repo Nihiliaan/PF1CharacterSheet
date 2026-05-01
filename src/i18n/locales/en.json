@@ -1,0 +1,171 @@
+{
+  "common": {
+    "app_name": "Character Manager",
+    "app_subtitle": "PF1 Sheet System",
+    "save": "Save",
+    "saving": "Saving...",
+    "share": "Share",
+    "export": "Export",
+    "new": "New",
+    "login": "Login",
+    "logout": "Logout",
+    "ai_identify": "AI Extract",
+    "create_new": "Create New",
+    "pinned": "Unpin Header",
+    "unpinned": "Pin Header",
+    "add_paragraph": "Add Paragraph",
+    "add_list": "Add List",
+    "add_text": "Add Textbox",
+    "add_table": "Add Table",
+    "add_image": "Add Image",
+    "delete": "Delete",
+    "delete_container": "Delete Container"
+  },
+  "editor": {
+    "read_only_notice_copy": "Copy to My Vault",
+    "read_only_notice_text": "You are viewing a read-only version.",
+    "title": "Character Sheet",
+    "sections": {
+      "basic": "Basic Info",
+      "story": "Background Story",
+      "attributes": "Attributes",
+      "attacks": "Attacks",
+      "defenses": "Defenses",
+      "racial_traits": "Racial Traits",
+      "traits": "Traits & Favored Class",
+      "class_features": "Class Features",
+      "feats": "Feats",
+      "spells": "Spells & Abilities",
+      "skills": "Skills",
+      "equipment": "Equipment",
+      "additional": "Additional Data"
+    },
+    "basic": {
+      "name": "Name",
+      "classes": "Classes & Levels",
+      "alignment": "Alignment",
+      "deity": "Deity",
+      "size": "Size",
+      "gender": "Gender",
+      "race": "Race",
+      "age": "Age",
+      "height": "Height",
+      "weight": "Weight",
+      "speed": "Speed",
+      "senses": "Senses",
+      "initiative": "Initiative",
+      "perception": "Perception",
+      "languages": "Languages",
+      "story_placeholder": "Write your character's legends here..."
+    },
+    "attributes": {
+      "STR": "STR",
+      "DEX": "DEX",
+      "CON": "CON",
+      "INT": "INT",
+      "WIS": "WIS",
+      "CHA": "CHA",
+      "headers": {
+        "attr": "Attr",
+        "final": "Final",
+        "mod": "Mod",
+        "source": "Source",
+        "status": "Status"
+      },
+      "combat_stats": "Combat Stats",
+      "maneuver_notes": "Combat Maneuver Notes",
+      "maneuver_placeholder": "Enter bonuses or notes for combat maneuvers..."
+    },
+    "attacks": {
+      "melee": "Melee Weapons",
+      "ranged": "Ranged Weapons",
+      "hit": "Hit",
+      "damage": "Dmg",
+      "crit": "Crit",
+      "range": "Range",
+      "reach": "Reach",
+      "type": "Type",
+      "special": "Special",
+      "special_attacks": "Special Attacks"
+    },
+    "defenses": {
+      "ac_details": "AC Details",
+      "ac": "AC",
+      "flat_footed": "Flat-Footed AC",
+      "touch": "Touch AC",
+      "ac_notes": "AC Notes",
+      "ac_placeholder": "Armor sources, dodge, natural armor...",
+      "hp": "HP",
+      "hd": "Hit Die",
+      "saves": "Saving Throws",
+      "fort": "Fort",
+      "ref": "Ref",
+      "will": "Will",
+      "saves_notes": "Saves Notes"
+    },
+    "skills": {
+      "headers": {
+        "skill": "Skill",
+        "total": "Total",
+        "rank": "Rank",
+        "cs": "CS",
+        "ability": "Ability",
+        "others": "Others",
+        "special": "Special/Conditional"
+      },
+      "total_points": "Total Skill Points",
+      "notes": "Notes",
+      "notes_placeholder": "Skill specialization notes..."
+    },
+    "items": {
+      "headers": {
+        "item": "Item",
+        "cost": "Cost (gp)",
+        "weight": "Weight (lbs)",
+        "notes": "Notes"
+      },
+      "add_container": "Add Container",
+      "total_assets": "Total Assets",
+      "encumbrance_multiplier": "Encumbrance Multiplier",
+      "total_weight": "Total Weight",
+      "light": "Light",
+      "medium": "Medium",
+      "heavy": "Heavy",
+      "overload": "Overload"
+    },
+    "lists": {
+      "trait": "Trait",
+      "description": "Description",
+      "category": "Category",
+      "favored_class": "Favored Class",
+      "favored_class_bonus": "Favored Class Bonus",
+      "level": "Level",
+      "feat_name": "Feat Name",
+      "source": "Source",
+      "content": "Content",
+      "block_title": "Block Title",
+      "image_url": "Image URL"
+    },
+    "bbcode": {
+      "title": "BBCode Export Template Settings",
+      "desc": "Customize the template used for BBCode export. Use {variable_name} to insert data.",
+      "reset": "Reset Default",
+      "save_as": "Save As",
+      "content_label": "Template Content",
+      "var_ref": "Available Variables Reference",
+      "prompt_name": "Enter template name",
+      "default_name": "New BBCode Template",
+      "confirm_reset": "Are you sure you want to reset to the default template? This will overwrite your current changes.",
+      "reset_success": "Restored default template"
+    },
+    "overlays": {
+      "syncing": "Connecting to the other world...",
+      "save_and_continue": "Save and Continue"
+    },
+    "footer": {
+      "vault": "Personal Character Vault",
+      "signed_in": "Signed in as {{name}}",
+      "guest": "Guest Mode"
+    }
+  }
+}

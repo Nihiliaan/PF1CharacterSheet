@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import './i18n/config';
 
 // Mitigate "This document requires 'TrustedHTML' assignment" errors
 // which can be caused by certain extensions or userscripts in some environments.

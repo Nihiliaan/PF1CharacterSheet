@@ -96,12 +96,12 @@ export interface CharacterMetadata {
 }
 
 export const ATTRIBUTE_NAMES = [
-  '力量 (STR)',
-  '敏捷 (DEX)',
-  '体质 (CON)',
-  '智力 (INT)',
-  '感知 (WIS)',
-  '魅力 (CHA)'
+  'STR',
+  'DEX',
+  'CON',
+  'INT',
+  'WIS',
+  'CHA'
 ];
 
 export interface FolderMetadata {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, RotateCcw, FilePlus } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 
 export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 {name} {classes}
@@ -62,12 +63,13 @@ HP {hp} ({hd})
 import { useCharacter } from '../contexts/CharacterContext';
 
 export default function BBCodeTemplateEditor() {
+  const { t } = useTranslation();
   const { setToast, bbcodeTemplate, setBbcodeTemplate, saveAsTemplate, updateExistingTemplate, getItemPath, currentDocumentId } = useCharacter();
 
   const currentPath = getItemPath(currentDocumentId);
 
   const handleSaveAsNew = () => {
-    const name = window.prompt("请输入模板名称", "新 BBCode 模板");
+    const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
     if (name) {
       saveAsTemplate(name, bbcodeTemplate);
     }
@@ -83,10 +85,10 @@ export default function BBCodeTemplateEditor() {
   };
 
   const handleReset = () => {
-    if (window.confirm("确定要恢复默认模板吗？这将覆盖您当前的修改。")) {
+    if (window.confirm(t('editor.bbcode.confirm_reset'))) {
       setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
       localStorage.removeItem('bbcode_template');
-      setToast({ message: "已恢复默认模板", type: 'success' });
+      setToast({ message: t('editor.bbcode.reset_success'), type: 'success' });
     }
   };
 
@@ -97,40 +99,40 @@ export default function BBCodeTemplateEditor() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-2xl font-bold font-serif text-stone-800">BBCode 导出模板设置</h2>
+              <h2 className="text-2xl font-bold font-serif text-stone-800">{t('editor.bbcode.title')}</h2>
               {currentPath && (
                 <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded border border-indigo-100 font-medium ml-2">
                   {currentPath}
                 </span>
               )}
             </div>
-            <p className="text-stone-500 text-sm">自定义生成论坛代码时使用的模板，使用 {'{'}变量名{'}'} 插入数据。</p>
+            <p className="text-stone-500 text-sm">{t('editor.bbcode.desc')}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleReset}
               className="flex items-center gap-2 px-4 py-2 bg-stone-200 text-stone-700 hover:bg-stone-300 transition-colors rounded-lg font-medium text-sm"
             >
-              <RotateCcw size={16} /> 恢复默认
+              <RotateCcw size={16} /> {t('editor.bbcode.reset')}
             </button>
             <button
               onClick={handleSaveAsNew}
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 transition-colors rounded-lg font-medium text-sm shadow-md"
             >
-              <FilePlus size={16} /> 另存为
+              <FilePlus size={16} /> {t('editor.bbcode.save_as')}
             </button>
             <button
               onClick={handleSave}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white hover:bg-primary/90 transition-colors rounded-lg font-bold text-sm shadow-md"
             >
-              <Save size={16} /> {currentDocumentId ? '保存' : '保存为'}
+              <Save size={16} /> {currentDocumentId ? t('common.save') : t('editor.bbcode.save_as')}
             </button>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden flex-1 flex flex-col min-h-[400px]">
           <div className="p-2 bg-stone-100 border-b border-stone-200">
-            <p className="text-xs text-stone-500 italic pl-2">模板内容</p>
+            <p className="text-xs text-stone-500 italic pl-2">{t('editor.bbcode.content_label')}</p>
           </div>
           <textarea
             value={bbcodeTemplate}
@@ -141,127 +143,125 @@ export default function BBCodeTemplateEditor() {
         </div>
 
         <div className="mt-8 bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
-          <h3 className="font-bold text-stone-800 mb-6 text-base border-b pb-2">可用变量参考 (按 CharacterData 顺序排序)</h3>
+          <h3 className="font-bold text-stone-800 mb-6 text-base border-b pb-2">{t('editor.bbcode.var_ref')}</h3>
           <div className="space-y-8">
             {/* 1. Basic Info */}
             <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">1. 基础信息 (Basic Info)</h4>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">1. {t('editor.sections.basic')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span>{'{name}'} - 姓名</span>
-                <span>{'{classes}'} - 职业等级</span>
-                <span>{'{alignment}'} - 阵营</span>
-                <span>{'{deity}'} - 信仰</span>
-                <span>{'{size}'} - 体型</span>
-                <span>{'{gender}'} - 性别</span>
-                <span>{'{race}'} - 种族</span>
-                <span>{'{age}'} - 年龄</span>
-                <span>{'{height}'} - 身高</span>
-                <span>{'{weight}'} - 体重</span>
-                <span>{'{speed}'} - 速度</span>
-                <span>{'{senses}'} - 感官</span>
-                <span>{'{initiative}'} - 先攻</span>
-                <span>{'{perception}'} - 察觉</span>
-                <span>{'{languages}'} - 语言</span>
-                <span>{'{avatarUrl}'} - 1号头像URL</span>
+                <span>{'{name}'} - {t('editor.basic.name')}</span>
+                <span>{'{classes}'} - {t('editor.basic.classes')}</span>
+                <span>{'{alignment}'} - {t('editor.basic.alignment')}</span>
+                <span>{'{deity}'} - {t('editor.basic.deity')}</span>
+                <span>{'{size}'} - {t('editor.basic.size')}</span>
+                <span>{'{gender}'} - {t('editor.basic.gender')}</span>
+                <span>{'{race}'} - {t('editor.basic.race')}</span>
+                <span>{'{age}'} - {t('editor.basic.age')}</span>
+                <span>{'{height}'} - {t('editor.basic.height')}</span>
+                <span>{'{weight}'} - {t('editor.basic.weight')}</span>
+                <span>{'{speed}'} - {t('editor.basic.speed')}</span>
+                <span>{'{senses}'} - {t('editor.basic.senses')}</span>
+                <span>{'{initiative}'} - {t('editor.basic.initiative')}</span>
+                <span>{'{perception}'} - {t('editor.basic.perception')}</span>
+                <span>{'{languages}'} - {t('editor.basic.languages')}</span>
+                <span>{'{avatarUrl}'} - 1{t('editor.lists.image_url')}</span>
               </div>
             </section>
 
             {/* 2. Story */}
             <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">2. 背景故事 (Story)</h4>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">2. {t('editor.sections.story')}</h4>
               <div className="grid grid-cols-1 gap-y-2 text-[11px] font-mono text-stone-600">
-                <span>{'{story}'} - 背景故事全文本</span>
+                <span>{'{story}'} - {t('editor.sections.story')}</span>
               </div>
             </section>
 
             {/* 3. Attributes */}
             <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">3. 属性 (Attributes)</h4>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">3. {t('editor.sections.attributes')}</h4>
               <div className="grid grid-cols-1 gap-y-2 text-[11px] font-mono text-stone-600">
-                <span>{'{attributesTable}'} - 完整属性表格 (含 [table] 和表头)</span>
+                <span>{'{attributesTable}'} - {t('editor.sections.attributes')}</span>
               </div>
             </section>
 
             {/* 4. Combat Stats */}
             <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">4. 战斗数值 (Combat Stats)</h4>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">4. {t('editor.attributes.combat_stats')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span>{'{bab}'} - 基础攻击加值</span>
-                <span>{'{cmb}'} - 战技加值</span>
-                <span>{'{cmd}'} - 战技防御</span>
-                <span className="col-span-full">{'{combatManeuverNotes}'} - 战技备注</span>
+                <span>{'{bab}'} - BAB</span>
+                <span>{'{cmb}'} - CMB</span>
+                <span>{'{cmd}'} - CMD</span>
+                <span className="col-span-full">{'{combatManeuverNotes}'} - {t('editor.attributes.maneuver_notes')}</span>
               </div>
             </section>
 
             {/* 5. Attacks */}
             <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">5. 攻击 (Attacks)</h4>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">5. {t('editor.sections.attacks')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span>{'{meleeAttackTable}'} - 完整近战攻击表</span>
-                <span>{'{rangedAttackTable}'} - 完整远程攻击表</span>
-                <span className="col-span-full">{'{specialAttacks}'} - 特殊攻击全文本</span>
+                <span>{'{meleeAttackTable}'} - {t('editor.attacks.melee')}</span>
+                <span>{'{rangedAttackTable}'} - {t('editor.attacks.ranged')}</span>
+                <span className="col-span-full">{'{specialAttacks}'} - {t('editor.attacks.special_attacks')}</span>
               </div>
             </section>
 
             {/* 6. Defenses */}
             <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">6. 防御 (Defenses)</h4>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">6. {t('editor.sections.defenses')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span>{'{hp}'} - 生命值</span>
-                <span>{'{hd}'} - 生命骰</span>
-                <span>{'{ac}'} - 防御等级</span>
-                <span>{'{acFlatFooted}'} - 措手不及</span>
-                <span>{'{acTouch}'} - 接触</span>
-                <span className="col-span-2">{'{acNotes}'} - 防护备注</span>
-                <span>{'{saveFort}'} - 强韧豁免</span>
-                <span>{'{saveRef}'} - 反射豁免</span>
-                <span>{'{saveWill}'} - 意志豁免</span>
-                <span className="col-span-2">{'{savesNotes}'} - 豁免备注</span>
-                <span className="col-span-full">{'{defensiveAbilities}'} - 防御能力段落</span>
-                <span className="col-span-full italic text-stone-400 font-serif border-t pt-1 mt-1">快捷整合: {'{hpLine}'} / {'{acLine}'} / {'{saveLine}'}</span>
+                <span>{'{hp}'} - {t('editor.defenses.hp')}</span>
+                <span>{'{hd}'} - {t('editor.defenses.hd')}</span>
+                <span>{'{ac}'} - {t('editor.defenses.ac')}</span>
+                <span>{'{acFlatFooted}'} - {t('editor.defenses.flat_footed')}</span>
+                <span>{'{acTouch}'} - {t('editor.defenses.touch')}</span>
+                <span className="col-span-2">{'{acNotes}'} - {t('editor.defenses.ac_notes')}</span>
+                <span>{'{saveFort}'} - {t('editor.defenses.fort')}</span>
+                <span>{'{saveRef}'} - {t('editor.defenses.ref')}</span>
+                <span>{'{saveWill}'} - {t('editor.defenses.will')}</span>
+                <span className="col-span-2">{'{savesNotes}'} - {t('editor.defenses.saves_notes')}</span>
+                <span className="col-span-full">{'{defensiveAbilities}'} - {t('editor.sections.defenses')}</span>
               </div>
             </section>
 
             {/* 7. Traits */}
             <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">7. 特性与加成 (Traits & Bonus)</h4>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">7. {t('editor.sections.traits')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span className="col-span-full">{'{racialTraits}'} - 种族特性列表</span>
-                <span className="col-span-full">{'{backgroundTraits}'} - 背景特性列表</span>
-                <span>{'{favoredClass}'} - 天赋职业</span>
-                <span>{'{favoredClassBonus}'} - 天赋职业奖励</span>
-                <span className="col-span-full">{'{classFeatures}'} - 职业特性列表</span>
+                <span className="col-span-full">{'{racialTraits}'} - {t('editor.sections.racial_traits')}</span>
+                <span className="col-span-full">{'{backgroundTraits}'} - {t('editor.sections.traits')}</span>
+                <span>{'{favoredClass}'} - {t('editor.lists.favored_class')}</span>
+                <span>{'{favoredClassBonus}'} - {t('editor.lists.favored_class_bonus')}</span>
+                <span className="col-span-full">{'{classFeatures}'} - {t('editor.sections.class_features')}</span>
               </div>
             </section>
 
             {/* 8. Feats & Skills */}
             <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">8. 专长与技能 (Feats & Skills)</h4>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">8. {t('editor.sections.feats')} & {t('editor.sections.skills')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span>{'{featTable}'} - 完整专长表格</span>
-                <span>{'{skillTable}'} - 完整技能表格</span>
-                <span className="col-span-full">{'{skillsTotal}'} - 技能总点数</span>
-                <span className="col-span-full">{'{skillsNotes}'} - 技能备注</span>
-                <span className="col-span-full">{'{magicBlocks}'} - 法术与类法术模块</span>
+                <span>{'{featTable}'} - {t('editor.sections.feats')}</span>
+                <span>{'{skillTable}'} - {t('editor.sections.skills')}</span>
+                <span className="col-span-full">{'{skillsTotal}'} - {t('editor.skills.total_points')}</span>
+                <span className="col-span-full">{'{skillsNotes}'} - {t('editor.skills.notes')}</span>
+                <span className="col-span-full">{'{magicBlocks}'} - {t('editor.sections.spells')}</span>
               </div>
             </section>
 
             {/* 9. Equipment */}
             <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">9. 装备与物品 (Equipment)</h4>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">9. {t('editor.sections.equipment')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span className="col-span-full">{'{equipmentTable}'} - 完整装备表格</span>
-                <span className="col-span-2">{'{equipmentNotes}'} - 装备备注</span>
-                <span>{'{loadStatus}'} - 负重状态</span>
-                <span>{'{loadLimits}'} - 负重限额</span>
+                <span className="col-span-full">{'{equipmentTable}'} - {t('editor.sections.equipment')}</span>
+                <span>{'{loadStatus}'} - {t('editor.items.total_weight')}</span>
+                <span>{'{loadLimits}'} - {t('editor.items.heavy')}</span>
               </div>
             </section>
 
             {/* 10. Additional */}
             <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">10. 附加数据 (Additional)</h4>
+              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">10. {t('editor.sections.additional')}</h4>
               <div className="grid grid-cols-1 gap-y-2 text-[11px] font-mono text-stone-600">
-                <span>{'{additionalData}'} - 附加数据自定义区块</span>
+                <span>{'{additionalData}'} - {t('editor.sections.additional')}</span>
               </div>
             </section>
           </div>

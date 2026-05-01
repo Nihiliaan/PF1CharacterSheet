@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnimatePresence } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import Dialog from '../common/Dialog';
 import Toast from '../common/Toast';
 import AIExtractionModal from '../character/AIExtractionModal';
@@ -7,6 +8,7 @@ import AIExtractionModal from '../character/AIExtractionModal';
 import { useCharacter } from '../../contexts/CharacterContext';
 
 export default function AppOverlays() {
+  const { t } = useTranslation();
   const { 
     handleAIExtract, 
     isSyncing, 
@@ -32,7 +34,7 @@ export default function AppOverlays() {
       {isSyncing && (
         <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-[100] flex items-center justify-center text-white flex-col gap-4">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="font-serif italic font-medium">正在连接到异世界...</p>
+          <p className="font-serif italic font-medium">{t('overlays.syncing')}</p>
         </div>
       )}
 
@@ -42,7 +44,7 @@ export default function AppOverlays() {
           <Dialog 
             type="confirm" title={confirmModal.title} onConfirm={() => { confirmModal.onConfirm(); setConfirmModal(null); }} onCancel={() => setConfirmModal(null)} 
             onSecondaryConfirm={confirmModal.onSecondaryConfirm ? () => { confirmModal.onSecondaryConfirm!(); setConfirmModal(null); } : undefined}
-            secondaryLabel="立即保存并继续"
+            secondaryLabel={t('overlays.save_and_continue')}
           />
         )}
         {toast && (

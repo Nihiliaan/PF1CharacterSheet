@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { googleProvider } from './lib/firebase';
 
 // Components
@@ -27,6 +28,7 @@ export default function App() {
 }
 
 function AppContent() {
+  const { t } = useTranslation();
   const { 
     user, 
     view, 
@@ -70,7 +72,7 @@ function AppContent() {
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-stone-50">
                   <User size={64} className="text-stone-300 mb-6" />
                   <h2 className="text-2xl font-serif font-bold text-stone-800 mb-2">未检测到登录状态</h2>
-                  <button onClick={() => handleLogin(googleProvider)} className="px-8 py-3 bg-stone-800 text-white rounded-lg font-bold shadow-xl flex items-center gap-3">使用 Google 账号登录</button>
+                  <button onClick={() => handleLogin(googleProvider)} className="px-8 py-3 bg-stone-800 text-white rounded-lg font-bold shadow-xl flex items-center gap-3">{t('common.login')}</button>
                 </div>
               )}
             </motion.div>
@@ -104,13 +106,14 @@ function AppContent() {
 }
 
 function GlobalSavingOverlay() {
+  const { t } = useTranslation();
   const { isSaving } = useCharacter();
   if (!isSaving) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/20 backdrop-blur-[2px]">
        <div className="bg-white p-4 rounded-xl shadow-2xl flex items-center gap-3 border border-stone-200">
-         <div className="w-5 h-5 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" />
-         <span className="text-sm font-bold text-stone-800 underline decoration-stone-200 underline-offset-4">正在保存您的修改...</span>
+          <div className="w-5 h-5 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-bold text-stone-800 underline decoration-stone-200 underline-offset-4">{t('common.saving')}</span>
        </div>
     </div>
   );

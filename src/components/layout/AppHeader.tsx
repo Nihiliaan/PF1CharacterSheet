@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { 
-  LayoutGrid, Save, Share2, Download, Copy, FilePlus, Sparkles, Plus, Pin, User 
+  LayoutGrid, Save, Share2, Download, Copy, FilePlus, Sparkles, Plus, Pin, User, Languages 
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { User as FirebaseUser } from 'firebase/auth';
 import AccountMenu from '../character/AccountMenu';
 import { googleProvider } from '../../lib/firebase';
@@ -23,6 +24,7 @@ export default function AppHeader({
   isHeaderPinned,
   setIsHeaderPinned
 }: AppHeaderProps) {
+  const { t, i18n } = useTranslation();
   const {
     view,
     setView,
@@ -43,10 +45,12 @@ export default function AppHeader({
     setShowAIModal
   } = useCharacter();
 
+  const toggleLanguage = () => {
+    const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';
+    i18n.changeLanguage(newLang);
+  };
+
   const confirmNavigation = (action: () => void) => {
-    // We can move this logic to context too, but for now let's keep it here or call a context helper
-    // Actually, context's handleNew already does this if we pass the callback.
-    // For general navigation (view change), we might need a context helper.
     action(); 
   };
   return (
@@ -70,7 +74,9 @@ export default function AppHeader({
             <LayoutGrid size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-serif font-bold leading-none tracking-tight">人物卡管理系统 <span className="text-stone-400 font-sans text-xs font-normal">Character Manager</span></h1>
+            <h1 className="text-lg font-serif font-bold leading-none tracking-tight">
+              {t('common.app_name')} <span className="text-stone-400 font-sans text-xs font-normal">{t('common.app_subtitle')}</span>
+            </h1>
           </div>
         </button>
       </div>
@@ -86,14 +92,14 @@ export default function AppHeader({
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors disabled:opacity-50"
                 >
                   <Save size={16} />
-                  <span className="hidden sm:inline">{isSaving ? '正在保存...' : '保存'}</span>
+                  <span className="hidden sm:inline">{isSaving ? t('common.saving') : t('common.save')}</span>
                 </button>
                 <button 
                   onClick={handleShare}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
                 >
                   <Share2 size={16} />
-                  <span className="hidden sm:inline">分享</span>
+                  <span className="hidden sm:inline">{t('common.share')}</span>
                 </button>
               </>
             )}
@@ -101,16 +107,16 @@ export default function AppHeader({
             <button 
               onClick={handleExport}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-              title="导出为 JSON"
+              title={t('common.export')}
             >
               <Download size={16} />
-              <span className="hidden sm:inline">导出</span>
+              <span className="hidden sm:inline">{t('common.export')}</span>
             </button>
 
             <button 
               onClick={handleExportBBCode}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-              title="导出为 BBCode 并复制到剪贴板"
+              title="BBCode"
             >
               <Copy size={16} />
               <span className="hidden sm:inline">BBCode</span>
@@ -121,7 +127,7 @@ export default function AppHeader({
               className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
             >
               <FilePlus size={16} />
-              <span className="hidden sm:inline">新建</span>
+              <span className="hidden sm:inline">{t('common.new')}</span>
             </button>
           </>
         ) : (
@@ -131,35 +137,45 @@ export default function AppHeader({
               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-medium transition-colors shadow-lg shadow-indigo-200"
             >
               <Sparkles size={16} />
-              <span className="hidden sm:inline">AI 识别</span>
+              <span className="hidden sm:inline">{t('common.ai_identify')}</span>
             </button>
             <button 
               onClick={handleNew}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-primary text-white rounded text-sm font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
           >
             <Plus size={18} />
-            创建新角色
+            {t('common.create_new')}
           </button>
           </div>
         )}
 
         <div className="h-6 w-px bg-stone-600 mx-1"></div>
 
-        {user ? (
-          <div className="flex items-center gap-1 sm:gap-2">
-            <button
-              onClick={() => setIsHeaderPinned(!isHeaderPinned)}
-              className={`p-2 rounded-full transition-colors ${isHeaderPinned ? 'bg-primary text-white' : 'text-stone-400 hover:bg-stone-700 hover:text-white'}`}
-              title={isHeaderPinned ? "取消固定顶部栏" : "固定顶部栏"}
-            >
-              <motion.div
-                animate={{ rotate: isHeaderPinned ? -90 : 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              >
-                <Pin size={16} className="rotate-135" />
-              </motion.div>
-            </button>
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Language Switcher */}
+          <button
+            onClick={toggleLanguage}
+            className="p-2 text-stone-400 hover:bg-stone-700 hover:text-white rounded-full transition-colors flex items-center gap-1"
+            title={i18n.language.startsWith('zh') ? 'Switch to English' : '切换至中文'}
+          >
+            <Languages size={16} />
+            <span className="text-[10px] font-bold uppercase">{i18n.language.startsWith('zh') ? 'EN' : '中文'}</span>
+          </button>
 
+          <button
+            onClick={() => setIsHeaderPinned(!isHeaderPinned)}
+            className={`p-2 rounded-full transition-colors ${isHeaderPinned ? 'bg-primary text-white' : 'text-stone-400 hover:bg-stone-700 hover:text-white'}`}
+            title={isHeaderPinned ? t('common.pinned') : t('common.unpinned')}
+          >
+            <motion.div
+              animate={{ rotate: isHeaderPinned ? -90 : 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            >
+              <Pin size={16} className="rotate-135" />
+            </motion.div>
+          </button>
+
+          {user ? (
             <AccountMenu 
               user={user} 
               view={view} 
@@ -171,29 +187,15 @@ export default function AppHeader({
               onRemoveRecent={removeFromRecent}
               onLogout={logout}
             />
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsHeaderPinned(!isHeaderPinned)}
-              className={`p-2 rounded-full transition-colors ${isHeaderPinned ? 'bg-primary text-white' : 'text-stone-400 hover:bg-stone-700 hover:text-white'}`}
-              title={isHeaderPinned ? "取消固定顶部栏" : "固定顶部栏"}
-            >
-              <motion.div
-                animate={{ rotate: isHeaderPinned ? -90 : 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              >
-                <Pin size={16} className="rotate-135" />
-              </motion.div>
-            </button>
+          ) : (
             <button 
               onClick={() => handleLogin(googleProvider)}
-              className="px-3 py-1.5 bg-white text-stone-800 rounded text-xs font-bold flex items-center gap-1.5 hover:bg-stone-100 transition-colors"
+              className="px-3 py-1.5 bg-white text-stone-800 rounded text-xs font-bold flex items-center gap-1.5 hover:bg-stone-100 transition-colors ml-1"
             >
-              <User size={14} /> 登录
+              <User size={14} /> {t('common.login')}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </motion.header>
   );

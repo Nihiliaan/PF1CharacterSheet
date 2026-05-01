@@ -1,0 +1,171 @@
+{
+  "common": {
+    "app_name": "人物卡管理系统",
+    "app_subtitle": "Character Manager",
+    "save": "保存",
+    "saving": "正在保存...",
+    "share": "分享",
+    "export": "导出",
+    "new": "新建",
+    "login": "登录",
+    "logout": "退出",
+    "ai_identify": "AI 识别",
+    "create_new": "创建新角色",
+    "pinned": "固定顶部栏",
+    "unpinned": "取消固定顶部栏",
+    "add_paragraph": "添加段落",
+    "add_list": "添加列表",
+    "add_text": "添加文本框",
+    "add_table": "添加表格",
+    "add_image": "添加图片",
+    "delete": "删除",
+    "delete_container": "删除容器"
+  },
+  "editor": {
+    "read_only_notice_copy": "复制到我的收藏",
+    "read_only_notice_text": "您正在查看的内容为只读版本。",
+    "title": "角色卡 (Character Sheet)",
+    "sections": {
+      "basic": "基本信息 (Basic Info)",
+      "story": "背景故事 (Background Story)",
+      "attributes": "属性 (Attributes)",
+      "attacks": "攻击 (Attacks)",
+      "defenses": "防御 (Defenses)",
+      "racial_traits": "种族特性 (Racial Traits)",
+      "traits": "背景特性与天赋职业 (Background Traits & Favored Class)",
+      "class_features": "职业特性 (Class Features)",
+      "feats": "专长 (Feats)",
+      "spells": "法术与类法术能力 (Spells & Sp)",
+      "skills": "技能加点 (Skills)",
+      "equipment": "装备与物品 (Equipment)",
+      "additional": "附加数据 (Additional Data)"
+    },
+    "basic": {
+      "name": "角色名",
+      "classes": "职业与等级",
+      "alignment": "阵营",
+      "deity": "信仰",
+      "size": "体型",
+      "gender": "性别",
+      "race": "种族",
+      "age": "年龄",
+      "height": "身高",
+      "weight": "体重",
+      "speed": "移动速度",
+      "senses": "感官",
+      "initiative": "先攻",
+      "perception": "察觉",
+      "languages": "语言",
+      "story_placeholder": "在此书写角色的过往与传说..."
+    },
+    "attributes": {
+      "STR": "力量",
+      "DEX": "敏捷",
+      "CON": "体质",
+      "INT": "智力",
+      "WIS": "感知",
+      "CHA": "魅力",
+      "headers": {
+        "attr": "属性",
+        "final": "最终值",
+        "mod": "调整值",
+        "source": "来源",
+        "status": "状态"
+      },
+      "combat_stats": "战斗数值",
+      "maneuver_notes": "战技备注",
+      "maneuver_placeholder": "在此输入战技相关的特殊加值或备注..."
+    },
+    "attacks": {
+      "melee": "近战武器",
+      "ranged": "远程武器",
+      "hit": "命中",
+      "damage": "伤害",
+      "crit": "重击",
+      "range": "射程",
+      "reach": "触及",
+      "type": "类型",
+      "special": "特性",
+      "special_attacks": "特殊攻击"
+    },
+    "defenses": {
+      "ac_details": "防护等级",
+      "ac": "AC",
+      "flat_footed": "措手不及 AC",
+      "touch": "接触 AC",
+      "ac_notes": "防护备注",
+      "ac_placeholder": "护甲加值来源、闪避、天生护甲等...",
+      "hp": "生命值",
+      "hd": "生命骰",
+      "saves": "豁免",
+      "fort": "强韧",
+      "ref": "反射",
+      "will": "意志",
+      "saves_notes": "豁免备注"
+    },
+    "skills": {
+      "headers": {
+        "skill": "技能",
+        "total": "总加值",
+        "rank": "等级",
+        "cs": "本职",
+        "ability": "属性",
+        "others": "其它",
+        "special": "特殊说明"
+      },
+      "total_points": "总技能点",
+      "notes": "备注",
+      "notes_placeholder": "技能特殊说明..."
+    },
+    "items": {
+      "headers": {
+        "item": "物品",
+        "cost": "价格 (gp)",
+        "weight": "重量 (lbs)",
+        "notes": "备注"
+      },
+      "add_container": "添加物品容器",
+      "total_assets": "总资产",
+      "encumbrance_multiplier": "负重倍率",
+      "total_weight": "总负重",
+      "light": "轻载",
+      "medium": "中载",
+      "heavy": "重载",
+      "overload": "超载"
+    },
+    "lists": {
+      "trait": "特性",
+      "description": "描述",
+      "category": "分类",
+      "favored_class": "天赋职业",
+      "favored_class_bonus": "天赋职业奖励",
+      "level": "等级",
+      "feat_name": "专长名称",
+      "source": "来源",
+      "content": "内容",
+      "block_title": "区块标题",
+      "image_url": "图片链接"
+    },
+    "bbcode": {
+      "title": "BBCode 导出模板设置",
+      "desc": "自定义生成论坛代码时使用的模板，使用 {变量名} 插入数据。",
+      "reset": "恢复默认",
+      "save_as": "另存为",
+      "content_label": "模板内容",
+      "var_ref": "可用变量参考",
+      "prompt_name": "请输入模板名称",
+      "default_name": "新 BBCode 模板",
+      "confirm_reset": "确定要恢复默认模板吗？这将覆盖您当前的修改。",
+      "reset_success": "已恢复默认模板"
+    },
+    "overlays": {
+      "syncing": "正在连接到异世界...",
+      "save_and_continue": "立即保存并继续"
+    },
+    "footer": {
+      "vault": "个人角色库",
+      "signed_in": "已登录为 {{name}}",
+      "guest": "访客模式"
+    }
+  }
+}

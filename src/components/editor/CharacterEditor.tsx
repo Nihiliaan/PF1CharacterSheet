@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { ShieldCheck, GripVertical, Trash2, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { User as FirebaseUser } from 'firebase/auth';
 import { CharacterData, ATTRIBUTE_NAMES } from '../../types';
 import Section from '../common/Section';
@@ -20,6 +21,7 @@ interface CharacterEditorProps {
 export default function CharacterEditor({
   user
 }: CharacterEditorProps) {
+  const { t } = useTranslation();
   const {
     isReadOnly,
     data,
@@ -67,7 +69,7 @@ export default function CharacterEditor({
       {isReadOnly && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-center gap-3 text-amber-800 text-sm font-medium sticky top-0 z-[55]">
           <ShieldCheck size={18} />
-          <span>您正在查看的内容为只读版本。</span>
+          <span>{t('editor.read_only_notice_text')}</span>
           {user && (
             <button
               onClick={async () => {
@@ -78,7 +80,7 @@ export default function CharacterEditor({
               }}
               className="px-2 py-1 bg-amber-200 hover:bg-amber-300 rounded text-xs transition-colors"
             >
-              复制到我的收藏
+              {t('editor.read_only_notice_copy')}
             </button>
           )}
         </div>
@@ -87,29 +89,29 @@ export default function CharacterEditor({
       <TableOfContents />
       <main className={`max-w-5xl mx-auto py-12 px-4 sm:px-8 pb-32 transition-all duration-300 ${isReadOnly ? 'pointer-events-none opacity-90 grayscale-[0.2]' : ''}`}>
         <header className="mb-8 text-center flex flex-col items-center">
-          <h1 className="text-4xl font-serif font-bold mb-2">角色卡 (Character Sheet)</h1>
+          <h1 className="text-4xl font-serif font-bold mb-2">{t('editor.title')}</h1>
         </header>
 
-        <Section id="basic-info" title="基本信息 (Basic Info)" className="max-w-[1200px] mx-auto">
+        <Section id="basic-info" title={t('editor.sections.basic')} className="max-w-[1200px] mx-auto">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-1 grid grid-cols-12 gap-y-4 gap-x-4">
-              <InlineInput className="col-span-12 sm:col-span-6 text-lg" label="角色名 (Name)" value={data.basic.name} originalValue={lastSavedData.basic.name} onChange={v => updateBasic('name', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6 text-lg" label="职业与等级 (Classes & Levels)" value={data.basic.classes} originalValue={lastSavedData.basic.classes} onChange={v => updateBasic('classes', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label="阵营 (Alignment)" value={data.basic.alignment} originalValue={lastSavedData.basic.alignment} onChange={v => updateBasic('alignment', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label="信仰 (Deity)" value={data.basic.deity || ''} originalValue={lastSavedData.basic.deity || ''} onChange={v => updateBasic('deity', v)} />
-              <InlineInput className="col-span-4" label="体型 (Size)" value={data.basic.size} originalValue={lastSavedData.basic.size} onChange={v => updateBasic('size', v)} />
-              <InlineInput className="col-span-4" label="性别 (Gender)" value={data.basic.gender} originalValue={lastSavedData.basic.gender} onChange={v => updateBasic('gender', v)} />
-              <InlineInput className="col-span-4" label="种族 (Race)" value={data.basic.race} originalValue={lastSavedData.basic.race} onChange={v => updateBasic('race', v)} />
-              <InlineInput className="col-span-4" label="年龄 (Age)" value={data.basic.age} originalValue={lastSavedData.basic.age} onChange={v => updateBasic('age', v)} />
-              <InlineInput className="col-span-4" label="身高 (Height)" value={data.basic.height} originalValue={lastSavedData.basic.height} onChange={v => updateBasic('height', v)} />
-              <InlineInput className="col-span-4" label="体重 (Weight)" value={data.basic.weight} originalValue={lastSavedData.basic.weight} onChange={v => updateBasic('weight', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label="移动速度 (Speed)" value={data.basic.speed} originalValue={lastSavedData.basic.speed} onChange={v => updateBasic('speed', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label="感官 (Senses)" value={data.basic.senses} originalValue={lastSavedData.basic.senses} onChange={v => updateBasic('senses', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label="先攻 (Initiative)" value={data.basic.initiative} originalValue={lastSavedData.basic.initiative} onChange={v => updateBasic('initiative', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label="察觉 (Perception)" value={data.basic.perception} originalValue={lastSavedData.basic.perception} onChange={v => updateBasic('perception', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6 text-lg" label={t('editor.basic.name')} value={data.basic.name} originalValue={lastSavedData.basic.name} onChange={v => updateBasic('name', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6 text-lg" label={t('editor.basic.classes')} value={data.basic.classes} originalValue={lastSavedData.basic.classes} onChange={v => updateBasic('classes', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.alignment')} value={data.basic.alignment} originalValue={lastSavedData.basic.alignment} onChange={v => updateBasic('alignment', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.deity')} value={data.basic.deity || ''} originalValue={lastSavedData.basic.deity || ''} onChange={v => updateBasic('deity', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.size')} value={data.basic.size} originalValue={lastSavedData.basic.size} onChange={v => updateBasic('size', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.gender')} value={data.basic.gender} originalValue={lastSavedData.basic.gender} onChange={v => updateBasic('gender', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.race')} value={data.basic.race} originalValue={lastSavedData.basic.race} onChange={v => updateBasic('race', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.age')} value={data.basic.age} originalValue={lastSavedData.basic.age} onChange={v => updateBasic('age', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.height')} value={data.basic.height} originalValue={lastSavedData.basic.height} onChange={v => updateBasic('height', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.weight')} value={data.basic.weight} originalValue={lastSavedData.basic.weight} onChange={v => updateBasic('weight', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.speed')} value={data.basic.speed} originalValue={lastSavedData.basic.speed} onChange={v => updateBasic('speed', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.senses')} value={data.basic.senses} originalValue={lastSavedData.basic.senses} onChange={v => updateBasic('senses', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.initiative')} value={data.basic.initiative} originalValue={lastSavedData.basic.initiative} onChange={v => updateBasic('initiative', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.perception')} value={data.basic.perception} originalValue={lastSavedData.basic.perception} onChange={v => updateBasic('perception', v)} />
               <MultilineInput
                 className="col-span-12 mt-2"
-                label="语言 (Languages)"
+                label={t('editor.basic.languages')}
                 value={data.basic.languages}
                 originalValue={lastSavedData.basic.languages}
                 onChange={v => updateBasic('languages', v)}
@@ -125,10 +127,10 @@ export default function CharacterEditor({
           </div>
         </Section>
 
-        <Section id="story" title="背景故事 (Background Story)">
+        <Section id="story" title={t('editor.sections.story')}>
           <MultilineInput
-            label="故事 (Story)"
-            placeholder="在此书写角色的过往与传说..."
+            label={t('editor.sections.story')}
+            placeholder={t('editor.basic.story_placeholder')}
             value={data.basic.story}
             originalValue={lastSavedData.basic.story}
             onChange={v => updateBasic('story', v)}
@@ -137,18 +139,18 @@ export default function CharacterEditor({
           />
         </Section>
 
-        <Section id="attributes" title="属性(Attributes)">
+        <Section id="attributes" title={t('editor.sections.attributes')}>
           <div className="mb-4">
             <DynamicTable
               columns={[
-                { key: 'name', label: '属性 (Attr)', width: '10%' },
-                { key: 'final', label: '最终值 (Final)', width: '10%', type: 'posInt' },
-                { key: 'modifier', label: '调整值 (Mod)', width: '10%', type: 'bonus' },
-                { key: 'source', label: '来源 (Source)', width: '40%' },
-                { key: 'status', label: '状态 (Status)', width: '30%' }
+                { key: 'name', label: t('editor.attributes.headers.attr'), width: '10%' },
+                { key: 'final', label: t('editor.attributes.headers.final'), width: '10%', type: 'posInt' },
+                { key: 'modifier', label: t('editor.attributes.headers.mod'), width: '10%', type: 'bonus' },
+                { key: 'source', label: t('editor.attributes.headers.source'), width: '40%' },
+                { key: 'status', label: t('editor.attributes.headers.status'), width: '30%' }
               ]}
-              data={data.attributes.map((a, i) => ({ ...a, name: ATTRIBUTE_NAMES[i] }))}
-              originalData={lastSavedData.attributes.map((a, i) => ({ ...a, name: ATTRIBUTE_NAMES[i] }))}
+              data={data.attributes.map((a, i) => ({ ...a, name: t('editor.attributes.' + ATTRIBUTE_NAMES[i]) }))}
+              originalData={lastSavedData.attributes.map((a, i) => ({ ...a, name: t('editor.attributes.' + ATTRIBUTE_NAMES[i]) }))}
               onChange={newAttrs => setData({
                 ...data,
                 attributes: newAttrs.map(({ name, ...rest }: any) => rest)
@@ -160,7 +162,7 @@ export default function CharacterEditor({
           <div className="flex flex-col md:flex-row gap-6 mt-4 items-stretch">
             <div className="w-full md:w-1/2 flex flex-col">
               <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-                战斗数值 (Combat Stats)
+                {t('editor.attributes.combat_stats')}
                 <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
               </label>
               <div className="flex-1">
@@ -180,29 +182,29 @@ export default function CharacterEditor({
             </div>
             <MultilineInput
               className="w-full md:w-1/2"
-              label="战技备注 (Combat Maneuver Notes)"
+              label={t('editor.attributes.maneuver_notes')}
               value={data.combatManeuverNotes || ''}
               originalValue={lastSavedData.combatManeuverNotes}
               onChange={v => setData({ ...data, combatManeuverNotes: v })}
-              placeholder="在此输入战技相关的特殊加值或备注..."
+              placeholder={t('editor.attributes.maneuver_placeholder')}
               height="80px"
             />
           </div>
         </Section>
 
-        <Section id="attacks" title="攻击 (Attacks)">
+        <Section id="attacks" title={t('editor.sections.attacks')}>
           <div className="flex flex-col gap-0 border border-stone-300 rounded overflow-hidden shadow-sm">
             <div className="border-b border-stone-200">
               <DynamicTable
                 minWidth="0"
                 columns={[
-                  { key: 'weapon', label: '近战武器', width: '25%' },
-                  { key: 'hit', label: '命中 (Hit)', width: '15%' },
-                  { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
-                  { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
-                  { key: 'range', label: '触及 (Touch)', width: '5%' },
-                  { key: 'type', label: '类型 (Type)', width: '5%' },
-                  { key: 'special', label: '特性 (Special)', width: '25%' }
+                  { key: 'weapon', label: t('editor.attacks.melee'), width: '25%' },
+                  { key: 'hit', label: t('editor.attacks.hit'), width: '15%' },
+                  { key: 'damage', label: t('editor.attacks.damage'), width: '15%' },
+                  { key: 'crit', label: t('editor.attacks.crit'), width: '10%' },
+                  { key: 'range', label: t('editor.attacks.reach'), width: '5%' },
+                  { key: 'type', label: t('editor.attacks.type'), width: '5%' },
+                  { key: 'special', label: t('editor.attacks.special'), width: '25%' }
                 ]}
                 data={data.meleeAttacks || []}
                 originalData={lastSavedData.meleeAttacks || []}
@@ -219,13 +221,13 @@ export default function CharacterEditor({
             <DynamicTable
               minWidth="0"
               columns={[
-                { key: 'weapon', label: '远程武器', width: '25%' },
-                { key: 'hit', label: '命中 (Hit)', width: '15%' },
-                { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
-                { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
-                { key: 'range', label: '射程 (Range)', width: '5%' },
-                { key: 'type', label: '类型 (Type)', width: '5%' },
-                { key: 'special', label: '特性 (Special)', width: '25%' }
+                { key: 'weapon', label: t('editor.attacks.ranged'), width: '25%' },
+                { key: 'hit', label: t('editor.attacks.hit'), width: '15%' },
+                { key: 'damage', label: t('editor.attacks.damage'), width: '15%' },
+                { key: 'crit', label: t('editor.attacks.crit'), width: '10%' },
+                { key: 'range', label: t('editor.attacks.range'), width: '5%' },
+                { key: 'type', label: t('editor.attacks.type'), width: '5%' },
+                { key: 'special', label: t('editor.attacks.special'), width: '25%' }
               ]}
               data={data.rangedAttacks || []}
               originalData={lastSavedData.rangedAttacks || []}
@@ -241,7 +243,7 @@ export default function CharacterEditor({
           </div>
           <MultilineInput
             className="mt-6"
-            label="特殊攻击 (Special Attacks)"
+            label={t('editor.attacks.special_attacks')}
             value={data.specialAttacks || ''}
             originalValue={lastSavedData.specialAttacks || ''}
             onChange={v => setData({ ...data, specialAttacks: v })}
@@ -249,22 +251,22 @@ export default function CharacterEditor({
           />
         </Section>
 
-        <Section id="defenses" title="防御 (Defenses)">
+        <Section id="defenses" title={t('editor.sections.defenses')}>
           <div className="flex flex-col gap-6">
             {/* AC Row */}
             <div className="flex flex-col md:flex-row gap-6 items-stretch">
               <div className="w-full md:w-1/2 flex flex-col">
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-                  防护等级 (AC Details)
-                  <span className="text-stone-400 font-normal">AC / 措手不及 AC / 接触 AC</span>
+                  {t('editor.defenses.ac_details')}
+                  <span className="text-stone-400 font-normal">AC / {t('editor.defenses.flat_footed')} / {t('editor.defenses.touch')}</span>
                 </label>
                 <div className="flex-1">
                   <DynamicTable
                     minWidth="0"
                     columns={[
-                      { key: 'ac', label: 'AC', width: '33.33%' },
-                      { key: 'flatFooted', label: '措手不及 AC', width: '33.33%' },
-                      { key: 'touch', label: '接触 AC', width: '33.34%' }
+                      { key: 'ac', label: t('editor.defenses.ac'), width: '33.33%' },
+                      { key: 'flatFooted', label: t('editor.defenses.flat_footed'), width: '33.33%' },
+                      { key: 'touch', label: t('editor.defenses.touch'), width: '33.34%' }
                     ]}
                     data={data.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
                     originalData={lastSavedData.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
@@ -275,11 +277,11 @@ export default function CharacterEditor({
               </div>
               <MultilineInput
                 className="w-full md:w-1/2"
-                label="防护备注 (AC Notes)"
+                label={t('editor.defenses.ac_notes')}
                 value={data.defenses.acNotes || ''}
                 originalValue={lastSavedData.defenses.acNotes}
                 onChange={v => updateDefenses('acNotes', v)}
-                placeholder="护甲加值来源、闪避、天生护甲等..."
+                placeholder={t('editor.defenses.ac_placeholder')}
                 height="80px"
               />
             </div>
@@ -288,7 +290,7 @@ export default function CharacterEditor({
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-1/2">
                 <InlineInput
-                  label="生命值 (HP)"
+                  label={t('editor.defenses.hp')}
                   value={data.defenses.hp}
                   originalValue={lastSavedData.defenses.hp}
                   onChange={v => updateDefenses('hp', v)}
@@ -297,7 +299,7 @@ export default function CharacterEditor({
               </div>
               <div className="w-full md:w-1/2">
                 <InlineInput
-                  label="生命骰 (Hit Die)"
+                  label={t('editor.defenses.hd')}
                   value={data.defenses.hd || ''}
                   originalValue={lastSavedData.defenses.hd}
                   onChange={v => updateDefenses('hd', v)}
@@ -310,16 +312,16 @@ export default function CharacterEditor({
             <div className="flex flex-col md:flex-row gap-6 items-stretch">
               <div className="w-full md:w-1/2 flex flex-col">
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-                  豁免 (Saving Throws)
-                  <span className="text-stone-400 font-normal">强韧 / 反射 / 意志</span>
+                  {t('editor.defenses.saves')}
+                  <span className="text-stone-400 font-normal">{t('editor.defenses.fort')} / {t('editor.defenses.ref')} / {t('editor.defenses.will')}</span>
                 </label>
                 <div className="flex-1">
                   <DynamicTable
                     minWidth="0"
                     columns={[
-                      { key: 'fort', label: '强韧', width: '33.33%' },
-                      { key: 'ref', label: '反射', width: '33.33%' },
-                      { key: 'will', label: '意志', width: '33.34%' }
+                      { key: 'fort', label: t('editor.defenses.fort'), width: '33.33%' },
+                      { key: 'ref', label: t('editor.defenses.ref'), width: '33.33%' },
+                      { key: 'will', label: t('editor.defenses.will'), width: '33.34%' }
                     ]}
                     data={data.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
                     originalData={lastSavedData.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
@@ -330,7 +332,7 @@ export default function CharacterEditor({
               </div>
               <MultilineInput
                 className="w-full md:w-1/2"
-                label="豁免备注 (Saves Notes)"
+                label={t('editor.defenses.saves_notes')}
                 value={data.defenses.savesNotes || ''}
                 originalValue={lastSavedData.defenses.savesNotes}
                 onChange={v => updateDefenses('savesNotes', v)}
@@ -341,11 +343,11 @@ export default function CharacterEditor({
           </div>
         </Section>
 
-        <Section id="racial-traits" title="种族特性 (Racial Traits)">
+        <Section id="racial-traits" title={t('editor.sections.racial_traits')}>
           <DynamicTable
             columns={[
-              { key: 'name', label: '特性 (Trait)', width: '10%' },
-              { key: 'desc', label: '描述 (Description)', width: '90%' }
+              { key: 'name', label: t('editor.lists.trait'), width: '10%' },
+              { key: 'desc', label: t('editor.lists.description'), width: '90%' }
             ]}
             data={data.racialTraits}
             originalData={lastSavedData.racialTraits}
@@ -360,13 +362,13 @@ export default function CharacterEditor({
           />
         </Section>
 
-        <Section id="traits" title="背景特性与天赋职业 (Background Traits & Favored Class)">
+        <Section id="traits" title={t('editor.sections.traits')}>
           <div className="flex flex-col gap-6">
             <DynamicTable
               columns={[
-                { key: 'name', label: '特性名称 (Trait Name)', width: '25%' },
-                { key: 'type', label: '分类 (Category)', width: '5%' },
-                { key: 'desc', label: '说明 (Description)', width: '70%' }
+                { key: 'name', label: t('editor.lists.feat_name'), width: '25%' },
+                { key: 'type', label: t('editor.lists.category'), width: '5%' },
+                { key: 'desc', label: t('editor.lists.description'), width: '70%' }
               ]}
               data={data.backgroundTraits}
               originalData={lastSavedData.backgroundTraits}
@@ -380,19 +382,19 @@ export default function CharacterEditor({
               onRowDrop={(idx, e) => handleTableItemDrop('backgroundTraits', idx, e)}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <InlineInput label="天赋职业 (Favored Class)" value={data.favoredClass} onChange={v => setData(p => ({ ...p, favoredClass: v }))} />
-              <InlineInput label="天赋职业奖励 (Favored Class Bonus)" value={data.favoredClassBonus} onChange={v => setData(p => ({ ...p, favoredClassBonus: v }))} />
+              <InlineInput label={t('editor.lists.favored_class')} value={data.favoredClass} onChange={v => setData(p => ({ ...p, favoredClass: v }))} />
+              <InlineInput label={t('editor.lists.favored_class_bonus')} value={data.favoredClassBonus} onChange={v => setData(p => ({ ...p, favoredClassBonus: v }))} />
             </div>
           </div>
         </Section>
 
-        <Section id="class-features" title="职业特性 (Class Features)">
+        <Section id="class-features" title={t('editor.sections.class_features')}>
           <DynamicTable
             columns={[
-              { key: 'level', label: '等级\n(Level)', width: '5%', type: 'posInt' },
-              { key: 'name', label: '特性 (Features)', width: '25%' },
-              { key: 'type', label: '类型\n(Type)', width: '5%', type: 'select', options: ['', 'Sp', 'Su', 'Ex'] },
-              { key: 'desc', label: '说明 (Description)', width: '65%' }
+              { key: 'level', label: t('editor.lists.level'), width: '5%', type: 'posInt' },
+              { key: 'name', label: t('editor.sections.class_features'), width: '25%' },
+              { key: 'type', label: t('editor.attacks.type'), width: '5%', type: 'select', options: ['', 'Sp', 'Su', 'Ex'] },
+              { key: 'desc', label: t('editor.lists.description'), width: '65%' }
             ]}
             data={data.classFeatures}
             originalData={lastSavedData.classFeatures}
@@ -407,14 +409,14 @@ export default function CharacterEditor({
           />
         </Section>
 
-        <Section id="feats" title="专长 (Feats)">
+        <Section id="feats" title={t('editor.sections.feats')}>
           <DynamicTable
             columns={[
-              { key: 'level', label: '等级 (Level)', width: '5%', type: 'posInt' },
-              { key: 'source', label: '来源 (Source)', width: '15%' },
-              { key: 'name', label: '专长名称 (Feat Name)', width: '20%' },
-              { key: 'type', label: '类型 (Type)', width: '5%' },
-              { key: 'desc', label: '说明 (Description)', width: '55%' }
+              { key: 'level', label: t('editor.lists.level'), width: '5%', type: 'posInt' },
+              { key: 'source', label: t('editor.lists.source'), width: '15%' },
+              { key: 'name', label: t('editor.lists.feat_name'), width: '20%' },
+              { key: 'type', label: t('editor.attacks.type'), width: '5%' },
+              { key: 'desc', label: t('editor.lists.description'), width: '55%' }
             ]}
             data={data.feats}
             originalData={lastSavedData.feats}
@@ -429,7 +431,7 @@ export default function CharacterEditor({
           />
         </Section>
 
-        <Section id="spells" title="法术与类法术能力 (Spells & Sp)">
+        <Section id="spells" title={t('editor.sections.spells')}>
           <div className="flex flex-col gap-6 w-full">
             {data.magicBlocks.map(block => {
               const originalBlock = lastSavedData.magicBlocks?.find(b => b.id === block.id);
@@ -451,7 +453,7 @@ export default function CharacterEditor({
                       className={`text-[10px] font-bold uppercase tracking-wider bg-transparent border-b outline-none transition-colors max-w-sm ${isTitleChanged ? 'text-amber-600 border-amber-300' : 'text-stone-500 border-transparent focus:border-stone-400'}`}
                       value={block.title}
                       onChange={e => updateMagicBlock(block.id, { title: e.target.value })}
-                      placeholder="小字标题"
+                      placeholder={t('editor.lists.block_title')}
                     />
                     {isTitleChanged && <span className="text-amber-500 text-[8px] animate-pulse">●</span>}
                     <button onClick={() => removeMagicBlock(block.id)} className="text-stone-300 hover:text-red-500 opacity-0 group-hover/title:opacity-100 transition-opacity p-0.5 rounded">
@@ -460,7 +462,7 @@ export default function CharacterEditor({
                   </div>
                   {block.type === 'text' ? (
                     <MultilineInput
-                      label="内容 (Content)"
+                      label={t('editor.lists.content')}
                       value={block.content || ''}
                       originalValue={originalBlock?.content}
                       onChange={v => updateMagicBlock(block.id, { content: v })}
@@ -488,7 +490,7 @@ export default function CharacterEditor({
                         updateMagicBlock(block.id, { columns: newCols });
                       }}
                       onAddColumn={() => {
-                        updateMagicBlock(block.id, { columns: [...(block.columns || []), { key: 'col' + Math.random(), label: '新列' }] });
+                        updateMagicBlock(block.id, { columns: [...(block.columns || []), { key: 'col' + Math.random(), label: 'New Column' }] });
                       }}
                     />
                   )}
@@ -496,22 +498,22 @@ export default function CharacterEditor({
               );
             })}
             <div className="flex flex-wrap items-center gap-3">
-              <button onClick={() => addMagicBlock('text')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> 添加段落</button>
-              <button onClick={() => addMagicBlock('table')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> 添加列表</button>
+              <button onClick={() => addMagicBlock('text')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> {t('common.add_paragraph')}</button>
+              <button onClick={() => addMagicBlock('table')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> {t('common.add_list')}</button>
             </div>
           </div>
         </Section>
 
-        <Section id="skills" title="技能加点 (Skills)">
+        <Section id="skills" title={t('editor.sections.skills')}>
           <DynamicTable
             columns={[
-              { key: 'name', label: '技能 (Skill)', width: '15%' },
-              { key: 'total', label: '总加值 (Total)', width: '5%', type: 'bonus' },
-              { key: 'rank', label: '等级 (Rank)', width: '5%', type: 'posInt' },
-              { key: 'cs', label: '本职 (CS)', width: '5%', type: 'checkbox' },
+              { key: 'name', label: t('editor.skills.headers.skill'), width: '15%' },
+              { key: 'total', label: t('editor.skills.headers.total'), width: '5%', type: 'bonus' },
+              { key: 'rank', label: t('editor.skills.headers.rank'), width: '5%', type: 'posInt' },
+              { key: 'cs', label: t('editor.skills.headers.cs'), width: '5%', type: 'checkbox' },
               {
                 key: 'ability',
-                label: '属性 (Ability)',
+                label: t('editor.skills.headers.ability'),
                 width: '5%',
                 type: 'select',
                 options: ['', ...ATTRIBUTE_NAMES],
@@ -526,8 +528,8 @@ export default function CharacterEditor({
                   return mod >= 0 ? `+${mod}` : mod.toString();
                 }
               },
-              { key: 'others', label: '其它 (Others)', width: '20%' },
-              { key: 'special', label: '特殊说明 (Special/Conditional)', width: '35%' }
+              { key: 'others', label: t('editor.skills.headers.others'), width: '20%' },
+              { key: 'special', label: t('editor.skills.headers.special'), width: '35%' }
             ]}
             data={data.skills}
             originalData={lastSavedData.skills}
@@ -543,7 +545,7 @@ export default function CharacterEditor({
           <div className="flex flex-col md:flex-row gap-6 mt-4 items-stretch">
             <div className="w-full md:w-1/6">
               <InlineInput
-                label="总技能点"
+                label={t('editor.skills.total_points')}
                 value={data.skillsTotal || ''}
                 originalValue={lastSavedData.skillsTotal || ''}
                 onChange={v => {
@@ -554,17 +556,17 @@ export default function CharacterEditor({
             </div>
             <div className="w-full md:w-5/6">
               <InlineInput
-                label="备注 (Notes)"
+                label={t('editor.skills.notes')}
                 value={data.skillsNotes || ''}
                 originalValue={lastSavedData.skillsNotes || ''}
                 onChange={v => setData({ ...data, skillsNotes: v })}
-                placeholder="技能特殊说明，例如未列出技能的加成、护甲减值的影响等..."
+                placeholder={t('editor.skills.notes_placeholder')}
               />
             </div>
           </div>
         </Section>
 
-        <Section id="equipment" title="装备与物品 (Equipment)">
+        <Section id="equipment" title={t('editor.sections.equipment')}>
           <div className="flex flex-col gap-8">
             {data.equipmentBags.map((bag, bagIndex) => (
               <div key={bag.id} className="border rounded p-4 bg-stone-50/50 border-stone-200" onDragOver={(e) => handleBagDragOver(e, bagIndex)} onDrop={(e) => handleBagDrop(e, bagIndex)}>
@@ -573,15 +575,15 @@ export default function CharacterEditor({
                     <div className="cursor-grab text-stone-300 hover:text-stone-600 active:cursor-grabbing p-1" draggable onDragStart={(e) => handleBagDragStart(e, bagIndex)}><GripVertical size={18} /></div>
                     <input className="text-lg font-bold font-serif bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 max-w-sm w-full" value={bag.name} onChange={e => updateBagName(bag.id, e.target.value)} />
                   </div>
-                  <button onClick={() => removeBag(bag.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1 transition-colors"><Trash2 size={14} /> 删除容器</button>
+                  <button onClick={() => removeBag(bag.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1 transition-colors"><Trash2 size={14} /> {t('common.delete_container')}</button>
                 </div>
                 <DynamicTable
                   columns={[
-                    { key: 'item', label: '物品 (Item)', width: '35%', hideRightBorder: true },
+                    { key: 'item', label: t('editor.items.headers.item'), width: '35%', hideRightBorder: true },
                     { key: 'quantity', label: '', width: '5%', type: 'quantity' },
-                    { key: 'cost', label: '价格 (Cost)(gp)', width: '15%', type: 'float' },
-                    { key: 'weight', label: '重量 (Weight)(lbs)', width: '15%', type: 'float' },
-                    { key: 'notes', label: '备注 (Notes)', width: '30%' },
+                    { key: 'cost', label: t('editor.items.headers.cost'), width: '15%', type: 'float' },
+                    { key: 'weight', label: t('editor.items.headers.weight'), width: '15%', type: 'float' },
+                    { key: 'notes', label: t('editor.items.headers.notes'), width: '30%' },
                   ]}
                   data={bag.items}
                   originalData={lastSavedData.equipmentBags?.find((b: any) => b.id === bag.id)?.items || []}
@@ -597,17 +599,17 @@ export default function CharacterEditor({
               </div>
             ))}
             <button onClick={addBag} className="flex items-center gap-1 text-sm text-stone-600 border border-dashed border-stone-300 hover:border-stone-500 hover:text-stone-900 rounded p-3 justify-center transition-colors">
-              <Plus size={16} /> 添加物品容器 (Add Container/Bag)
+              <Plus size={16} /> {t('editor.items.add_container')}
             </button>
 
             <div className="flex flex-col md:flex-row gap-3 mt-4 items-stretch">
               <div className="flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 w-24 shrink-0 justify-center">
-                <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">总资产</label>
+                <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">{t('editor.items.total_assets')}</label>
                 <div className="text-sm font-medium text-ink px-0.5">{calculateTotalCost(data)}<span className="text-xs font-normal text-stone-500 ml-1">gp</span></div>
               </div>
               <div className={`flex flex-col gap-0 border rounded p-1.5 focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-colors w-24 shrink-0 justify-center ${data.encumbranceMultiplier !== lastSavedData.encumbranceMultiplier ? 'bg-amber-50 border-amber-300' : 'bg-stone-50 border-stone-200'}`}>
                 <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none flex justify-between items-center">
-                  负重倍率
+                  {t('editor.items.encumbrance_multiplier')}
                   {data.encumbranceMultiplier !== lastSavedData.encumbranceMultiplier && <span className="text-amber-600 animate-pulse text-[8px]">●</span>}
                 </label>
                 <input className="text-sm font-medium text-ink bg-transparent outline-none px-0.5 w-full"
@@ -645,7 +647,7 @@ export default function CharacterEditor({
                   return (
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
                       <div className="flex flex-col sm:items-center shrink-0 w-20">
-                        <span className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">总负重</span>
+                        <span className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">{t('editor.items.total_weight')}</span>
                         <span className="text-lg font-bold font-serif text-ink leading-tight">{currentWeight.toLocaleString('en-US', { maximumFractionDigits: 2 })} <span className="text-xs font-normal text-stone-500">lbs</span></span>
                       </div>
 
@@ -666,20 +668,20 @@ export default function CharacterEditor({
                         {/* Bottom labels with arrows */}
                         <div className="absolute -bottom-3.5 left-0 right-0 h-3">
                           <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${lightPct / 2}%` }}>
-                            <span>轻载</span>
+                            <span>{t('editor.items.light')}</span>
                           </span>
                           <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${(lightPct + medPct) / 2}%` }}>
-                            <span>中载</span>
+                            <span>{t('editor.items.medium')}</span>
                           </span>
                           <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${(medPct + heavyPct) / 2}%` }}>
-                            <span>重载</span>
+                            <span>{t('editor.items.heavy')}</span>
                           </span>
                         </div>
                       </div>
 
                       {/* Overload label */}
                       <div className="shrink-0 w-10 flex items-center justify-center">
-                        {isOverloaded && <span className="text-[10px] font-bold text-white bg-red-600 px-1 py-0.5 rounded shadow-inner rotate-[-5deg]">超载</span>}
+                        {isOverloaded && <span className="text-[10px] font-bold text-white bg-red-600 px-1 py-0.5 rounded shadow-inner rotate-[-5deg]">{t('editor.items.overload')}</span>}
                       </div>
                     </div>
                   );
@@ -689,7 +691,7 @@ export default function CharacterEditor({
           </div>
         </Section>
 
-        <Section id="additional-data" title="附加数据 (Additional Data)">
+        <Section id="additional-data" title={t('editor.sections.additional')}>
           <div className="flex flex-col gap-8">
             {data.additionalData.map(block => {
               const originalBlock = lastSavedData.additionalData?.find(b => b.id === block.id);
@@ -705,15 +707,15 @@ export default function CharacterEditor({
                         className={`text-lg font-bold font-serif bg-transparent border-b outline-none px-1 py-0.5 flex-1 ${isTitleChanged ? 'text-amber-600 border-amber-300' : 'text-primary border-transparent focus:border-primary'}`}
                         value={block.title}
                         onChange={e => updateAdditionalBlock(block.id, { title: e.target.value })}
-                        placeholder="区块标题"
+                        placeholder={t('editor.lists.block_title')}
                       />
                       {isTitleChanged && <span className="text-amber-500 animate-pulse">●</span>}
                     </div>
-                    <button onClick={() => removeAdditionalBlock(block.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1"><Trash2 size={14} /> 删除</button>
+                    <button onClick={() => removeAdditionalBlock(block.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1"><Trash2 size={14} /> {t('common.delete')}</button>
                   </div>
                   {block.type === 'text' ? (
                     <MultilineInput
-                      label="内容 (Content)"
+                      label={t('editor.lists.content')}
                       value={block.content || ''}
                       originalValue={originalBlock?.content}
                       onChange={v => updateAdditionalBlock(block.id, { content: v })}
@@ -725,7 +727,7 @@ export default function CharacterEditor({
                         className={`w-full border rounded px-3 py-2 text-sm outline-none transition-colors ${isUrlChanged ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-white border-stone-200 focus:border-stone-400'}`}
                         value={block.url || ''}
                         onChange={e => updateAdditionalBlock(block.id, { url: e.target.value })}
-                        placeholder="图片链接"
+                        placeholder={t('editor.lists.image_url')}
                       />
                       {isUrlChanged && <div className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />}
                     </div>
@@ -741,9 +743,9 @@ export default function CharacterEditor({
               );
             })}
             <div className="flex flex-wrap items-center gap-3">
-              <button onClick={() => addAdditionalBlock('text')} className="flex items-center gap-1 text-sm bg-white text-stone-600 border border-stone-300 rounded px-4 py-2"><Plus size={16} /> 添加文本框</button>
-              <button onClick={() => addAdditionalBlock('table')} className="flex items-center gap-1 text-sm bg-white text-stone-600 border border-stone-300 rounded px-4 py-2"><Plus size={16} /> 添加表格</button>
-              <button onClick={() => addAdditionalBlock('image')} className="flex items-center gap-1 text-sm bg-white text-stone-600 border border-stone-300 rounded px-4 py-2"><Plus size={16} /> 添加图片</button>
+              <button onClick={() => addAdditionalBlock('text')} className="flex items-center gap-1 text-sm bg-white text-stone-600 border border-stone-300 rounded px-4 py-2"><Plus size={16} /> {t('common.add_text')}</button>
+              <button onClick={() => addAdditionalBlock('table')} className="flex items-center gap-1 text-sm bg-white text-stone-600 border border-stone-300 rounded px-4 py-2"><Plus size={16} /> {t('common.add_table')}</button>
+              <button onClick={() => addAdditionalBlock('image')} className="flex items-center gap-1 text-sm bg-white text-stone-600 border border-stone-300 rounded px-4 py-2"><Plus size={16} /> {t('common.add_image')}</button>
             </div>
           </div>
         </Section>
