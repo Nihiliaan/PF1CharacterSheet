@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
-import { DynamicTableProps } from '../../types';
+import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { DynamicTableProps, InputType } from '../../types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
 import { validateInput, normalizeValue } from '../../utils/validation';
 
@@ -19,10 +20,11 @@ const DynamicCellInput = ({
   onChange: (v: string) => void;
   className?: string;
   readOnly?: boolean;
-  type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus';
+  type?: InputType;
   options?: string[];
   displayFormatter?: (v: string, isFocused: boolean) => string;
 }) => {
+  const { i18n } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
   const isChanged = !readOnly && originalValue !== undefined && value !== originalValue;
 
@@ -35,9 +37,32 @@ const DynamicCellInput = ({
     }
     if (type === 'bonus' && !isFocused && value !== '') {
       const num = parseInt(value);
-      if (!isNaN(num) && num >= 0) return `+${num}`;
+      if (!isNaN(num)) return num >= 0 ? `+${num}` : num.toString();
+    }
+    if (type === 'ft5' && !isFocused && value !== '') {
+      return `${value} ft`;
+    }
+    if (type === 'level' && !isFocused && value !== '') {
+      return i18n.language.startsWith('zh') ? `${value}级` : `Lv. ${value}`;
     }
     return value;
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (readOnly || type !== 'level') return;
+    e.preventDefault();
+    const current = parseInt(value) || 1;
+    const delta = e.deltaY > 0 ? 1 : -1; // User requested: Down is +1, Up is -1
+    const next = Math.min(20, Math.max(1, current + delta));
+    if (next.toString() !== value) {
+      onChange(next.toString());
+    }
+  };
+
+  const adjustLevel = (delta: number) => {
+    const current = parseInt(value) || 1;
+    const next = Math.min(20, Math.max(1, current + delta));
+    onChange(next.toString());
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -45,6 +70,25 @@ const DynamicCellInput = ({
     if (validateInput(val, type || 'text')) {
       const normalized = normalizeValue(val, type || 'text');
       onChange(normalized);
+    }
+  };
+
+  const handleLevelChange = (v: string) => {
+    if (validateInput(v, 'level')) {
+      onChange(v);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    if (type === 'ft5' && value !== '') {
+      const num = parseInt(value);
+      if (!isNaN(num)) {
+        const rounded = Math.round(num / 5) * 5;
+        if (rounded.toString() !== value) {
+          onChange(rounded.toString());
+        }
+      }
     }
   };
 
@@ -60,7 +104,7 @@ const DynamicCellInput = ({
     return (
       <div className={`${BASE_CLASSES} whitespace-pre-wrap break-words flex items-center h-full`}>
         <MarkdownInlineEditor 
-          value={value} 
+          value={displayValue()} 
           readOnly={true} 
           onChange={() => {}} 
           className="!bg-transparent !p-0"
@@ -77,7 +121,7 @@ const DynamicCellInput = ({
             value={value}
             onChange={handleChange as any}
             onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onBlur={handleBlur}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
             {options.map(opt => (
@@ -87,6 +131,41 @@ const DynamicCellInput = ({
           <div className={`${BASE_CLASSES} w-full h-full flex items-center ${isChanged ? 'text-amber-700' : 'text-ink'}`}>
             {displayValue() || <span className="text-stone-300">—</span>}
           </div>
+        </div>
+      ) : type === 'level' ? (
+        <div 
+          onWheel={handleWheel}
+          onFocusCapture={() => setIsFocused(true)}
+          onBlurCapture={handleBlur}
+          className={`${BASE_CLASSES} w-full h-full flex items-center justify-between group/level ${isChanged ? 'text-amber-900 border-amber-200' : 'text-ink'}`}
+        >
+          <div className="flex-1">
+            <MarkdownInlineEditor 
+              value={displayValue()} 
+              onChange={handleLevelChange}
+              readOnly={readOnly}
+              singleLine={true}
+              height="24px"
+              minHeight="24px"
+              className="!bg-transparent !p-0"
+            />
+          </div>
+          {!readOnly && (
+            <div className="flex flex-col opacity-0 group-hover/level:opacity-100 transition-opacity border-l border-stone-200 ml-1 pl-1">
+              <button 
+                onClick={(e) => { e.stopPropagation(); adjustLevel(1); }}
+                className="hover:text-primary p-0.5"
+              >
+                <ChevronUp size={12} />
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); adjustLevel(-1); }}
+                className="hover:text-primary p-0.5"
+              >
+                <ChevronDown size={12} />
+              </button>
+            </div>
+          )}
         </div>
       ) : type === 'checkbox' ? (
         <div 

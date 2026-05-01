@@ -40,11 +40,24 @@ const InlineInput = ({
     onChange(normalized);
   };
 
+  const handleBlur = () => {
+    setIsFocused(false);
+    if (type === 'ft5' && value !== '') {
+      const num = parseInt(value);
+      if (!isNaN(num)) {
+        const rounded = Math.round(num / 5) * 5;
+        if (rounded.toString() !== value) {
+          onChange(rounded.toString());
+        }
+      }
+    }
+  };
+
   return (
     <div 
       className={`flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 transition-all group/input ${isChanged ? 'bg-amber-50/50 border-amber-300 shadow-sm' : 'hover:border-stone-400 focus-within:border-stone-600 focus-within:bg-white focus-within:shadow-sm'} ${className}`}
       onFocusCapture={() => setIsFocused(true)}
-      onBlurCapture={() => setIsFocused(false)}
+      onBlurCapture={handleBlur}
     >
       <label className={`text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none mb-1 transition-colors ${isChanged ? 'text-amber-700' : 'group-focus-within/input:text-stone-900'}`}>
         {label}
