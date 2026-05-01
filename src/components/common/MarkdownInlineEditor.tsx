@@ -4,8 +4,6 @@ import { EditorState, RangeSetBuilder } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language';
 
-console.log('[MarkdownEditor] Module loaded');
-
 interface MarkdownInlineEditorProps {
   value: string;
   originalValue?: string;
@@ -18,7 +16,7 @@ interface MarkdownInlineEditorProps {
 }
 
 /**
- * Custom Link Widget
+ * Custom Link Widget to make links clickable even when they are part of a text block
  */
 class LinkWidget extends WidgetType {
   constructor(readonly label: string, readonly url: string) {
@@ -35,6 +33,7 @@ class LinkWidget extends WidgetType {
 
 /**
  * The Conceal Extension for Markdown Links
+ * It hides [ ] and (url) when the cursor is not within the range.
  */
 const markdownConcealPlugin = ViewPlugin.fromClass(class {
   decorations: DecorationSet;
@@ -53,6 +52,7 @@ const markdownConcealPlugin = ViewPlugin.fromClass(class {
     const builder = new RangeSetBuilder<Decoration>();
     const doc = view.state.doc.toString();
     const selection = view.state.selection.main;
+    
     const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
     let match;
 
@@ -60,22 +60,32 @@ const markdownConcealPlugin = ViewPlugin.fromClass(class {
       const start = match.index;
       const end = match.index + match[0].length;
       const label = match[1];
+      
       const isCursorInside = (selection.from >= start && selection.from <= end) || 
                              (selection.to >= start && selection.to <= end);
 
+      console.log(`[MarkdownEditor] Link match found: "${label}" at [${start}, ${end}]. isCursorInside: ${isCursorInside}`);
+
       if (!isCursorInside) {
+        // 1. Hide [ (MUST BE FIRST)
         builder.add(start, start + 1, Decoration.replace({}));
+        
+        // 2. Style Label (MUST BE SECOND)
         builder.add(start + 1, start + 1 + label.length, Decoration.mark({
           attributes: { style: "color: #2563eb; text-decoration: underline; cursor: pointer;" },
           class: "cm-md-link-active"
         }));
+        
+        // 3. Hide ](url) (MUST BE THIRD)
         builder.add(start + 1 + label.length, end, Decoration.replace({}));
       } else {
+        // Just style the label when expanded so user knows it's the specific link part
         builder.add(start + 1, start + 1 + label.length, Decoration.mark({
           class: "text-primary font-bold"
         }));
       }
     }
+
     return builder.finish();
   }
 }, {
@@ -102,6 +112,9 @@ const externalLinkHandler = EditorView.domEventHandlers({
       if (pos >= start && pos <= end) {
           const selection = view.state.selection.main;
           const isCursorInside = (selection.from >= start && selection.from <= end);
+          
+          // In collapsed mode, click is always a jump. 
+          // In expanded mode, Ctrl/Cmd + Click is a jump.
           if (!isCursorInside || event.ctrlKey || event.metaKey) {
               window.open(url, '_blank');
               return true;
@@ -119,10 +132,11 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
 
   useEffect(() => {
     if (!editorRef.current) return;
-    console.log('[MarkdownEditor] Component mounting...');
+    console.log('[MarkdownEditor] Mounting component. Initial value:', value);
 
     const state = EditorState.create({
       doc: value || '',
+// ... (rest of the extensions)
       extensions: [
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         markdownConcealPlugin,
@@ -139,18 +153,29 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
           "&.cm-focused": {
             outline: "none",
           },
-          ".cm-content": { padding: "4px 0px" },
+          ".cm-content": {
+            padding: "4px 0px",
+            fontFamily: "inherit",
+          },
           ".cm-scroller": {
             fontFamily: "inherit",
             overflow: height === 'auto' ? 'hidden' : 'auto',
           },
-          ".cm-line": { padding: "0" },
-          ".cm-gutters": { display: "none" },
-          ".cm-placeholder": { color: "#aaa" }
+          ".cm-line": {
+              padding: "0",
+          },
+          ".cm-gutters": {
+            display: "none"
+          },
+          ".cm-placeholder": {
+              color: "#aaa"
+          }
         }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            onChange(update.state.doc.toString());
+            const newVal = update.state.doc.toString();
+            console.log('[MarkdownEditor] Value changed:', newVal);
+            onChange(newVal);
           }
         }),
         placeholder ? EditorView.placeholder(placeholder) : [],
@@ -165,14 +190,15 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
     viewRef.current = view;
 
     return () => {
-      console.log('[MarkdownEditor] Component unmounting');
+      console.log('[MarkdownEditor] Unmounting component');
       view.destroy();
     };
   }, [readOnly, placeholder, height, minHeight]); 
 
+  // Sync value if changed from outside
   useEffect(() => {
     const view = viewRef.current;
-    if (view && (value || '') !== view.state.doc.toString()) {
+    if (view && value !== view.state.doc.toString()) {
       view.dispatch({
         changes: { from: 0, to: view.state.doc.length, insert: value || '' }
       });
@@ -180,7 +206,9 @@ const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false
   }, [value]);
 
   return (
-    <div className={`relative w-full transition-colors rounded ${isChanged ? 'bg-amber-100/40' : ''} ${className}`}>
+    <div 
+      className={`relative w-full transition-colors rounded ${isChanged ? 'bg-amber-100/40' : ''} ${className}`}
+    >
       <div ref={editorRef} className="w-full h-full" />
       {isChanged && (
         <div className="absolute right-0 top-0 w-1 h-1 bg-amber-500 rounded-full animate-pulse shadow-sm z-10" />
