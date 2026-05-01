@@ -16,6 +16,7 @@ interface InlineInputProps {
 }
 
 import { getTransactionFilter, normalizeValue } from '../../utils/validation';
+import { useNumericStepper } from '../../hooks/useNumericStepper';
 
 const InlineInput = ({
   label,
@@ -40,8 +41,16 @@ const InlineInput = ({
     onChange(normalized);
   };
 
+  const containerRef = useNumericStepper({
+    value,
+    onChange,
+    type: type || 'text',
+    readOnly
+  });
+
   return (
     <div 
+      ref={containerRef}
       className={`flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 transition-all group/input ${isChanged ? 'bg-amber-50/50 border-amber-300 shadow-sm' : 'hover:border-stone-400 focus-within:border-stone-600 focus-within:bg-white focus-within:shadow-sm'} ${className}`}
       onFocusCapture={() => setIsFocused(true)}
       onBlurCapture={() => setIsFocused(false)}

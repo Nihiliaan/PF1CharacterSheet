@@ -512,7 +512,7 @@ export default function CharacterEditor({
             columns={[
               { key: 'name', label: t('editor.skills.headers.skill'), width: '15%' },
               { key: 'total', label: t('editor.skills.headers.total'), width: '5%', type: 'bonus' },
-              { key: 'rank', label: t('editor.skills.headers.rank'), width: '5%', type: 'posInt' },
+              { key: 'rank', label: t('editor.skills.headers.rank'), width: '5%', type: 'level' },
               { key: 'cs', label: t('editor.skills.headers.cs'), width: '5%', type: 'checkbox' },
               {
                 key: 'ability',

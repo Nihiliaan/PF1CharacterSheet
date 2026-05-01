@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { DynamicTableProps } from '../../types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
 import { validateInput, normalizeValue } from '../../utils/validation';
+import { useNumericStepper } from '../../hooks/useNumericStepper';
 
 const DynamicCellInput = ({
   value,
@@ -29,6 +30,13 @@ const DynamicCellInput = ({
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
   const isChanged = !readOnly && originalValue !== undefined && value !== originalValue;
+
+  const containerRef = useNumericStepper({
+    value,
+    onChange,
+    type: type || 'text',
+    readOnly
+  });
 
   const isDescriptionCol = (key?: string) => {
     if (!key) return false;
@@ -69,19 +77,6 @@ const DynamicCellInput = ({
     onChange(value === 'true' ? '' : 'true');
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (type === 'level' && !readOnly) {
-      e.stopPropagation();
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? 1 : -1;
-      const currentVal = parseInt(value, 10) || 1;
-      let newVal = currentVal + delta;
-      if (newVal > 20) newVal = 20;
-      if (newVal < 1) newVal = 1;
-      onChange(newVal.toString());
-    }
-  };
-
   // Base classes used by EVERY cell to ensure pixel-perfect consistency
   const alignClass = isDescriptionCol(columnKey) ? 'text-left' : 'text-center';
   const BASE_CLASSES = `px-2 py-1 min-h-[32px] font-medium transition-colors ${alignClass} ${className}`;
@@ -101,7 +96,7 @@ const DynamicCellInput = ({
 
   return (
     <div 
-      onWheel={handleWheel}
+      ref={containerRef}
       className={`grid h-full w-full relative group transition-colors min-h-[32px] ${isChanged ? 'bg-amber-100/40' : ''}`}
     >
       {type === 'select' && options ? (
