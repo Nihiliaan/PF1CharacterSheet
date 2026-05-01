@@ -1,4 +1,5 @@
 import React from 'react';
+import MarkdownInlineEditor from './MarkdownInlineEditor';
 
 const InlineInput = ({ label, value, originalValue, onChange, placeholder = '', className = '', readOnly = false }: { label: string; value: string; originalValue?: string; onChange: (v: string) => void; placeholder?: string; className?: string; readOnly?: boolean }) => {
   const isChanged = originalValue !== undefined && value !== originalValue;
@@ -8,12 +9,14 @@ const InlineInput = ({ label, value, originalValue, onChange, placeholder = '', 
         {label}
         {isChanged && <span className="text-amber-600 font-black animate-pulse">●</span>}
       </label>
-      <input
+      <MarkdownInlineEditor
         value={value}
-        onChange={(e) => !readOnly && onChange(e.target.value)}
+        originalValue={originalValue}
+        onChange={onChange}
         readOnly={readOnly}
         placeholder={placeholder}
-        className={`bg-transparent border-b border-stone-300 focus:border-stone-800 transition-colors outline-none pb-0.5 w-full text-sm font-medium text-ink ${readOnly ? 'cursor-default' : ''}`}
+        className="!bg-transparent !border-none !p-0"
+        minHeight="24px"
       />
     </div>
   );
