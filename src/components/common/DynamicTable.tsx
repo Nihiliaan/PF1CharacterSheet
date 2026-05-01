@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { DynamicTableProps } from '../../types';
+import MarkdownInlineEditor from './MarkdownInlineEditor';
 
 const DynamicCellInput = ({
   value,
@@ -63,7 +64,12 @@ const DynamicCellInput = ({
   if (readOnly) {
     return (
       <div className={`${BASE_CLASSES} whitespace-pre-wrap break-words flex items-center h-full`}>
-        {displayValue()}
+        <MarkdownInlineEditor 
+          value={value} 
+          readOnly={true} 
+          onChange={() => {}} 
+          className="!bg-transparent !p-0"
+        />
       </div>
     );
   }
@@ -94,6 +100,15 @@ const DynamicCellInput = ({
         >
           {displayValue()}
         </div>
+      ) : type === 'text' ? (
+          <div className={`${BASE_CLASSES} flex items-center w-full h-full`}>
+            <MarkdownInlineEditor
+                value={value}
+                originalValue={originalValue}
+                onChange={onChange}
+                className="!bg-transparent !p-0"
+            />
+          </div>
       ) : (
         <>
           <div className={`col-start-1 row-start-1 invisible whitespace-pre-wrap break-words ${BASE_CLASSES} pointer-events-none`}>

@@ -48,19 +48,19 @@ export function generateBBCode(data: any, template: string): string {
   basicFields.forEach(f => {
     vars[f] = String(getS(data, `basic.${f}`) || '');
   });
-  
+
   vars['avatarUrl'] = getS(data, 'basic.avatars.0.url') || 'http://此处填写人物头像图片地址';
 
   // Attributes Table
-  vars['attributesTable'] = '[table]\n[tr][td][b]属性[/b][/td][td][b]数值[/b][/td][td][b]调整值[/b][/td][td][b]说明[/b][/td][/tr]\n' + 
-    (data.attributes || []).map((a: any, i: number) => 
+  vars['attributesTable'] = '[table]\n[tr][td][b]属性[/b][/td][td][b]数值[/b][/td][td][b]调整值[/b][/td][td][b]说明[/b][/td][/tr]\n' +
+    (data.attributes || []).map((a: any, i: number) =>
       `[tr][td]${ATTRIBUTE_NAMES[i] || '-'}[/td][td]${a.final || '-'}[/td][td]${a.modifier || '-'}[/td][td]${a.source || ''}${a.status ? ' ' + a.status : ''}[/td][/tr]`
     ).join('\n') + '\n[/table]';
 
   // BAB/CMB/CMD
   const babTable = getS(data, 'babTable');
   const cmNotes = getS(data, 'combatManeuverNotes');
-  
+
   let bab = '', cmb = '', cmd = '';
   if (babTable && Array.isArray(babTable) && babTable.length > 0) {
     bab = babTable[0].bab;
@@ -74,11 +74,11 @@ export function generateBBCode(data: any, template: string): string {
 
   // Attack Tables
   const attackHeader = '[tr][td][b]名称[/b][/td][td][b]命中[/b][/td][td][b]伤害/重击/类型[/b][/td][td][b]射程/特性[/b][/td][/tr]';
-  
+
   vars['meleeAttackTable'] = '[table]\n' + attackHeader + '\n' + (data.meleeAttacks || []).map((m: any) =>
     `[tr][td]${m.weapon || '-'}[/td][td]${m.hit || '-'}[/td][td]${m.damage || '-'}/${m.crit || '-'}/${m.type || '-'}[/td][td]${m.range || '-'}/${m.special || '-'}[/td][/tr]`
   ).join('\n') + '\n[/table]';
-  
+
   vars['rangedAttackTable'] = '[table]\n' + attackHeader + '\n' + (data.rangedAttacks || []).map((m: any) =>
     `[tr][td]${m.weapon || '-'}[/td][td]${m.hit || '-'}[/td][td]${m.damage || '-'}/${m.crit || '-'}/${m.type || '-'}[/td][td]${m.range || '-'}/${m.special || '-'}[/td][/tr]`
   ).join('\n') + '\n[/table]';
@@ -91,11 +91,11 @@ export function generateBBCode(data: any, template: string): string {
   vars['acTouch'] = acData.touch || '';
   vars['acNotes'] = defenses.acNotes || '';
   vars['acLine'] = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]措手不及[/b] ${acData.flatFooted || '-'}, [b]接触[/b] ${acData.touch || '-'}${defenses.acNotes ? ` (${defenses.acNotes})` : ''}` : '';
-  
+
   vars['hp'] = defenses.hp || '';
   vars['hd'] = defenses.hd || '';
   vars['hpLine'] = `[b]HP[/b] ${defenses.hp}${defenses.hd ? ` (${defenses.hd})` : ''}`;
-  
+
   const saveData = defenses.savesTable?.[0] || {};
   vars['saveFort'] = saveData.fort || '';
   vars['saveRef'] = saveData.ref || '';
@@ -114,13 +114,13 @@ export function generateBBCode(data: any, template: string): string {
   vars['classFeatures'] = (data.classFeatures || []).map((f: any) => `[b]${f.name}[/b]: ${f.desc}`).join('\n') || '无';
 
   // Feats Table
-  vars['featTable'] = '[table]\n[tr][td][b]等级[/b][/td][td][b]名称[/b][/td][td][b]描述[/b][/td][/tr]\n' + 
-    (data.feats || []).map((f: any) => 
+  vars['featTable'] = '[table]\n[tr][td][b]等级[/b][/td][td][b]名称[/b][/td][td][b]描述[/b][/td][/tr]\n' +
+    (data.feats || []).map((f: any) =>
       `[tr][td]${f.level || '-'}[/td][td]${f.name || '-'}[/td][td]${f.desc || '-'}[/td][/tr]`
     ).join('\n') + '\n[/table]';
 
   // Skill Table
-  vars['skillTable'] = '[table]\n[tr][td][b]技能[/b][/td][td][b]总值[/b][/td][td][b]等级[/b][/td][td][b]本职[/b][/td][td][b]属性[/b][/td][td][b]其它/特殊[/b][/td][/tr]\n' + 
+  vars['skillTable'] = '[table]\n[tr][td][b]技能[/b][/td][td][b]总值[/b][/td][td][b]等级[/b][/td][td][b]本职[/b][/td][td][b]属性[/b][/td][td][b]其它/特殊[/b][/td][/tr]\n' +
     (data.skills || []).map((s: any) => {
       const abilityIdx = ATTRIBUTE_NAMES.indexOf(s.ability);
       let abilityMod = '';
@@ -131,7 +131,7 @@ export function generateBBCode(data: any, template: string): string {
           abilityMod = isNaN(mod) ? '' : (mod >= 0 ? `+${mod}` : `${mod}`);
         }
       }
-      return `[tr][td]${s.name || '-'}[/td][td]${s.total || '-'}[/td][td]${s.rank || '-'}[/td][td]${s.cs === 'true' ? '√' : ''}[/td][td]${abilityMod}[/td][td]${s.others || ''} ${s.special || ''}[/td][/tr]`;
+      return `[tr][td]${s.name || '-'}[/td][td]${s.total || '-'}[/td][td]${s.rank || '-'}[/td][td]${s.cs === 'true' ? '+3' : ''}[/td][td]${abilityMod}[/td][td]${s.others || ''} ${s.special || ''}[/td][/tr]`;
     }).join('\n') + '\n[/table]';
 
   // Equipment Table
@@ -145,7 +145,7 @@ export function generateBBCode(data: any, template: string): string {
         bagResult += '此容器内无物品\n';
       } else {
         bagResult += '[table]\n[tr][td][b]物品[/b][/td][td][b]数量[/b][/td][td][b]价格[/b][/td][td][b]重量[/b][/td][td][b]说明[/b][/td][/tr]\n';
-        bagResult += items.map((i: any) => 
+        bagResult += items.map((i: any) =>
           `[tr][td]${i.item || '-'}[/td][td]${i.quantity || '1'}[/td][td]${i.cost || '-'}[/td][td]${i.weight || '-'}[/td][td]${i.notes || '-'}[/td][/tr]`
         ).join('\n');
         bagResult += '\n[/table]';
@@ -205,11 +205,11 @@ export function generateBBCode(data: any, template: string): string {
   bbcode = bbcode.replace(regex, (match, path) => {
     // 1. Check special/computed vars
     if (vars[path] !== undefined) return vars[path];
-    
+
     // 2. Check path in data
     const pathVal = getS(data, path);
     if (typeof pathVal === 'string' || typeof pathVal === 'number') return String(pathVal);
-    
+
     return match; // Keep the placeholder if no match found
   });
 

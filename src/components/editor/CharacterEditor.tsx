@@ -131,15 +131,14 @@ export default function CharacterEditor({
 
         <Section id="story" title="背景故事 (Background Story)">
           <div className={`relative ${data.basic.story !== lastSavedData.basic.story ? 'ring-2 ring-amber-300 rounded-lg' : ''}`}>
-            <textarea
-              className={`w-full min-h-[160px] p-6 text-stone-700 font-serif leading-relaxed italic bg-white border border-stone-200 rounded-lg outline-none focus:border-primary transition-all shadow-inner ${data.basic.story !== lastSavedData.basic.story ? 'bg-amber-50/30' : ''}`}
-              placeholder="在此书写角色的过往与传说..."
-              value={data.basic.story}
-              onChange={e => updateBasic('story', e.target.value)}
-            />
-            {data.basic.story !== lastSavedData.basic.story && (
-              <div className="absolute right-4 top-4 w-2 h-2 bg-amber-500 rounded-full animate-pulse" title="未保存更改" />
-            )}
+          <AutoResizeTextarea
+            className="!p-6 text-stone-700 font-serif leading-relaxed italic shadow-inner !bg-white"
+            minHeight="160px"
+            placeholder="在此书写角色的过往与传说..."
+            value={data.basic.story}
+            originalValue={lastSavedData.basic.story}
+            onChange={v => updateBasic('story', v)}
+          />
           </div>
         </Section>
 
@@ -190,11 +189,13 @@ export default function CharacterEditor({
                 {(data.combatManeuverNotes !== lastSavedData.combatManeuverNotes) && <span className="text-amber-600 animate-pulse">●</span>}
               </label>
               <div className={`flex-1 rounded border transition-colors overflow-hidden flex ${data.combatManeuverNotes !== lastSavedData.combatManeuverNotes ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
-                <textarea
+                <AutoResizeTextarea
                   value={data.combatManeuverNotes || ''}
-                  onChange={e => setData({ ...data, combatManeuverNotes: e.target.value })}
-                  className="w-full h-full bg-transparent outline-none px-3 py-2 text-sm font-medium resize-none placeholder:text-stone-300 leading-relaxed"
+                  originalValue={lastSavedData.combatManeuverNotes}
+                  onChange={v => setData({ ...data, combatManeuverNotes: v })}
+                  className="!bg-transparent !border-none !p-0"
                   placeholder="在此输入战技相关的特殊加值或备注..."
+                  height="100%"
                 />
               </div>
             </div>
@@ -293,11 +294,13 @@ export default function CharacterEditor({
                   {(data.defenses.acNotes !== lastSavedData.defenses.acNotes) && <span className="text-amber-600 animate-pulse">●</span>}
                 </label>
                 <div className={`flex-1 rounded border transition-colors overflow-hidden flex ${data.defenses.acNotes !== lastSavedData.defenses.acNotes ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
-                  <textarea
+                  <AutoResizeTextarea
                     value={data.defenses.acNotes || ''}
-                    onChange={e => updateDefenses('acNotes', e.target.value)}
-                    className="w-full h-full bg-transparent outline-none px-3 py-2 text-sm font-medium resize-none placeholder:text-stone-300 leading-relaxed"
+                    originalValue={lastSavedData.defenses.acNotes}
+                    onChange={v => updateDefenses('acNotes', v)}
+                    className="!bg-transparent !border-none !p-0"
                     placeholder="护甲加值来源、闪避、天生护甲等..."
+                    height="100%"
                   />
                 </div>
               </div>
@@ -353,11 +356,13 @@ export default function CharacterEditor({
                   {(data.defenses.savesNotes !== lastSavedData.defenses.savesNotes) && <span className="text-amber-600 animate-pulse">●</span>}
                 </label>
                 <div className={`flex-1 rounded border transition-colors overflow-hidden flex ${data.defenses.savesNotes !== lastSavedData.defenses.savesNotes ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
-                  <textarea
+                  <AutoResizeTextarea
                     value={data.defenses.savesNotes || ''}
-                    onChange={e => updateDefenses('savesNotes', e.target.value)}
-                    className="w-full h-full bg-transparent outline-none px-3 py-2 text-sm font-medium resize-none placeholder:text-stone-300 leading-relaxed"
+                    originalValue={lastSavedData.defenses.savesNotes}
+                    onChange={v => updateDefenses('savesNotes', v)}
+                    className="!bg-transparent !border-none !p-0"
                     placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
+                    height="100%"
                   />
                 </div>
               </div>
@@ -413,7 +418,7 @@ export default function CharacterEditor({
         <Section id="class-features" title="职业特性 (Class Features)">
           <DynamicTable
             columns={[
-              { key: 'level', label: '等级\n(Level)', width: '5%' },
+              { key: 'level', label: '等级\n(Level)', width: '5%', type: 'posInt' },
               { key: 'name', label: '特性 (Features)', width: '25%' },
               { key: 'type', label: '类型\n(Type)', width: '5%', type: 'select', options: ['', 'Sp', 'Su', 'Ex'] },
               { key: 'desc', label: '说明 (Description)', width: '65%' }
@@ -434,7 +439,7 @@ export default function CharacterEditor({
         <Section id="feats" title="专长 (Feats)">
           <DynamicTable
             columns={[
-              { key: 'level', label: '等级\n(Level)', width: '5%' },
+              { key: 'level', label: '等级\n(Level)', width: '5%', type: 'posInt' },
               { key: 'type', label: '类型\n(Type)', width: '5%' },
               { key: 'name', label: '专长名称\n(Feat Name)', width: '20%' },
               { key: 'source', label: '来源\n(Source)', width: '15%' },
