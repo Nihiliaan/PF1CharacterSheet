@@ -81,10 +81,11 @@
       "ranged": "Ranged Weapons",
       "hit": "Hit",
       "damage": "Dmg",
-      "crit": "Crit",
+      "crit_range": "Crit Range",
+      "crit_multiplier": "Crit Multiplier",
       "range": "Range",
       "reach": "Reach",
-      "type": "Type",
+      "damage_type": "Damage Type",
       "special": "Special",
       "special_attacks": "Special Attacks"
     },
@@ -151,7 +152,9 @@
       "source": "Source",
       "content": "Content",
       "block_title": "Block Title",
-      "image_url": "Image URL"
+      "image_url": "Image URL",
+      "level_format": "Lv. {{n}}",
+      "distance_format": "{{v}} ft"
     },
     "bbcode": {
       "title": "BBCode Export Template Settings",

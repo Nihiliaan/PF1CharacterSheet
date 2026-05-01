@@ -81,10 +81,11 @@
       "ranged": "远程武器",
       "hit": "命中",
       "damage": "伤害",
-      "crit": "重击",
+      "crit_range": "重击范围",
+      "crit_multiplier": "重击倍率",
       "range": "射程",
       "reach": "触及",
-      "type": "类型",
+      "damage_type": "伤害类型",
       "special": "特性",
       "special_attacks": "特殊攻击"
     },
@@ -151,7 +152,9 @@
       "source": "来源",
       "content": "内容",
       "block_title": "区块标题",
-      "image_url": "图片链接"
+      "image_url": "图片链接",
+      "level_format": "{{n}}级",
+      "distance_format": "{{v}} 英尺"
     },
     "bbcode": {
       "title": "BBCode 导出模板设置",

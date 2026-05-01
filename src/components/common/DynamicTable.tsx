@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { DynamicTableProps, InputType } from '../../types';
+import { DynamicTableProps } from '../../types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
 import { validateInput, normalizeValue } from '../../utils/validation';
 
@@ -11,6 +11,7 @@ const DynamicCellInput = ({
   onChange,
   className = '',
   readOnly = false,
+  columnKey,
   type = 'text',
   options,
   displayFormatter
@@ -20,13 +21,20 @@ const DynamicCellInput = ({
   onChange: (v: string) => void;
   className?: string;
   readOnly?: boolean;
-  type?: InputType;
+  columnKey?: string;
+  type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance';
   options?: string[];
   displayFormatter?: (v: string, isFocused: boolean) => string;
 }) => {
-  const { i18n } = useTranslation();
+  const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
   const isChanged = !readOnly && originalValue !== undefined && value !== originalValue;
+
+  const isDescriptionCol = (key?: string) => {
+    if (!key) return false;
+    const k = key.toLowerCase();
+    return ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => k.includes(word));
+  };
 
   const displayValue = () => {
     if (displayFormatter) return displayFormatter(value, isFocused);
@@ -39,30 +47,13 @@ const DynamicCellInput = ({
       const num = parseInt(value);
       if (!isNaN(num)) return num >= 0 ? `+${num}` : num.toString();
     }
-    if (type === 'ft5' && !isFocused && value !== '') {
-      return `${value} ft`;
-    }
     if (type === 'level' && !isFocused && value !== '') {
-      return i18n.language.startsWith('zh') ? `${value}级` : `Lv. ${value}`;
+      return t('editor.lists.level_format', { n: value });
+    }
+    if (type === 'distance' && !isFocused && value !== '') {
+      return t('editor.lists.distance_format', { v: value });
     }
     return value;
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    if (readOnly || type !== 'level') return;
-    e.preventDefault();
-    const current = parseInt(value) || 1;
-    const delta = e.deltaY > 0 ? 1 : -1; // User requested: Down is +1, Up is -1
-    const next = Math.min(20, Math.max(1, current + delta));
-    if (next.toString() !== value) {
-      onChange(next.toString());
-    }
-  };
-
-  const adjustLevel = (delta: number) => {
-    const current = parseInt(value) || 1;
-    const next = Math.min(20, Math.max(1, current + delta));
-    onChange(next.toString());
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -73,38 +64,33 @@ const DynamicCellInput = ({
     }
   };
 
-  const handleLevelChange = (v: string) => {
-    if (validateInput(v, 'level')) {
-      onChange(v);
-    }
-  };
-
-  const handleBlur = () => {
-    setIsFocused(false);
-    if (type === 'ft5' && value !== '') {
-      const num = parseInt(value);
-      if (!isNaN(num)) {
-        const rounded = Math.round(num / 5) * 5;
-        if (rounded.toString() !== value) {
-          onChange(rounded.toString());
-        }
-      }
-    }
-  };
-
   const toggleCheckbox = () => {
     if (readOnly) return;
     onChange(value === 'true' ? '' : 'true');
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    if (type === 'level' && !readOnly) {
+      e.stopPropagation();
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 1 : -1;
+      const currentVal = parseInt(value, 10) || 1;
+      let newVal = currentVal + delta;
+      if (newVal > 20) newVal = 20;
+      if (newVal < 1) newVal = 1;
+      onChange(newVal.toString());
+    }
+  };
+
   // Base classes used by EVERY cell to ensure pixel-perfect consistency
-  const BASE_CLASSES = `px-2 py-1 min-h-[32px] font-medium transition-colors ${className}`;
+  const alignClass = isDescriptionCol(columnKey) ? 'text-left' : 'text-center';
+  const BASE_CLASSES = `px-2 py-1 min-h-[32px] font-medium transition-colors ${alignClass} ${className}`;
 
   if (readOnly) {
     return (
       <div className={`${BASE_CLASSES} whitespace-pre-wrap break-words flex items-center h-full`}>
         <MarkdownInlineEditor 
-          value={displayValue()} 
+          value={value} 
           readOnly={true} 
           onChange={() => {}} 
           className="!bg-transparent !p-0"
@@ -114,63 +100,31 @@ const DynamicCellInput = ({
   }
 
   return (
-    <div className={`grid h-full w-full relative group transition-colors min-h-[32px] ${isChanged ? 'bg-amber-100/40' : ''}`}>
+    <div 
+      onWheel={handleWheel}
+      className={`grid h-full w-full relative group transition-colors min-h-[32px] ${isChanged ? 'bg-amber-100/40' : ''}`}
+    >
       {type === 'select' && options ? (
         <div className="relative w-full h-full">
           <select
             value={value}
             onChange={handleChange as any}
             onFocus={() => setIsFocused(true)}
-            onBlur={handleBlur}
+            onBlur={() => setIsFocused(false)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
             {options.map(opt => (
               <option key={opt} value={opt}>{opt || '—'}</option>
             ))}
           </select>
-          <div className={`${BASE_CLASSES} w-full h-full flex items-center ${isChanged ? 'text-amber-700' : 'text-ink'}`}>
+          <div className={`${BASE_CLASSES} w-full h-full flex items-center justify-center ${isChanged ? 'text-amber-700' : 'text-ink'}`}>
             {displayValue() || <span className="text-stone-300">—</span>}
           </div>
-        </div>
-      ) : type === 'level' ? (
-        <div 
-          onWheel={handleWheel}
-          onFocusCapture={() => setIsFocused(true)}
-          onBlurCapture={handleBlur}
-          className={`${BASE_CLASSES} w-full h-full flex items-center justify-between group/level ${isChanged ? 'text-amber-900 border-amber-200' : 'text-ink'}`}
-        >
-          <div className="flex-1">
-            <MarkdownInlineEditor 
-              value={displayValue()} 
-              onChange={handleLevelChange}
-              readOnly={readOnly}
-              singleLine={true}
-              height="24px"
-              minHeight="24px"
-              className="!bg-transparent !p-0"
-            />
-          </div>
-          {!readOnly && (
-            <div className="flex flex-col opacity-0 group-hover/level:opacity-100 transition-opacity border-l border-stone-200 ml-1 pl-1">
-              <button 
-                onClick={(e) => { e.stopPropagation(); adjustLevel(1); }}
-                className="hover:text-primary p-0.5"
-              >
-                <ChevronUp size={12} />
-              </button>
-              <button 
-                onClick={(e) => { e.stopPropagation(); adjustLevel(-1); }}
-                className="hover:text-primary p-0.5"
-              >
-                <ChevronDown size={12} />
-              </button>
-            </div>
-          )}
         </div>
       ) : type === 'checkbox' ? (
         <div 
           onClick={toggleCheckbox}
-          className={`${BASE_CLASSES} w-full h-full flex items-center cursor-pointer hover:bg-stone-100/50 ${isChanged ? 'text-amber-900' : 'text-ink'}`}
+          className={`${BASE_CLASSES} w-full h-full flex items-center justify-center cursor-pointer hover:bg-stone-100/50 ${isChanged ? 'text-amber-900' : 'text-ink'}`}
         >
           {displayValue()}
         </div>
@@ -178,7 +132,6 @@ const DynamicCellInput = ({
           <div className={`${BASE_CLASSES} flex items-center w-full h-full`}>
             <MarkdownInlineEditor
                 value={value}
-                originalValue={originalValue}
                 onChange={onChange}
                 className="!bg-transparent !p-0"
             />
@@ -189,7 +142,7 @@ const DynamicCellInput = ({
             {displayValue() + '\n'}
           </div>
           <textarea
-            value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt') ? value : displayValue()}
+            value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt' || type === 'level' || type === 'distance') ? value : displayValue()}
             onChange={handleChange}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
@@ -236,7 +189,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
         <thead>
           <tr className="bg-stone-200 text-stone-700">
             {columns.map((c, index) => (
-              <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-left font-semibold group/th relative whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+              <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold group/th relative whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
                 {onColumnLabelChange ? (
                   <input
                     value={c.label}
@@ -300,6 +253,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                     originalValue={originalData?.[i]?.[c.key]}
                     onChange={(val) => updateData(i, c.key, val)}
                     readOnly={readOnly || readonlyColumns?.includes(c.key)}
+                    columnKey={c.key}
                     type={c.type as any}
                     options={c.options}
                     displayFormatter={c.displayFormatter}
@@ -348,6 +302,8 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                     value={footerRow[c.key] || ''}
                     onChange={(val) => onFooterChange({ ...footerRow, [c.key]: val })}
                     readOnly={readOnly || footerReadonlyColumns?.includes(c.key)}
+                    columnKey={c.key}
+                    type={c.type as any}
                     className={(readOnly || footerReadonlyColumns?.includes(c.key)) ? "font-bold bg-stone-200/50 text-stone-800" : "font-bold hover:bg-stone-50 focus:bg-white"}
                   />
                 </td>

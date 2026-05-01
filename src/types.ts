@@ -1,6 +1,6 @@
 export type { User as FirebaseUser } from 'firebase/auth';
 
-export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'ft5' | 'level';
+export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance';
 
 export interface Column {
   key: string;
@@ -34,16 +34,6 @@ export interface DynamicTableProps {
   onRowDragOver?: (index: number, e: React.DragEvent) => void;
   onRowDrop?: (index: number, e: React.DragEvent) => void;
   readOnly?: boolean;
-}
-
-export interface Weapon {
-  name: string;
-  attackBonus: string;
-  damage: string;
-  critRange: string;
-  critMulti: string;
-  range: string;
-  damageType: string;
 }
 
 export interface CharacterData {

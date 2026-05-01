@@ -12,8 +12,8 @@ export const validateInput = (value: string, type: string): boolean => {
   switch (type) {
     case 'posInt':
     case 'quantity':
-    case 'ft5':
     case 'level':
+    case 'distance':
       return REGEX_PATTERNS.posInt.test(value);
     case 'int':
     case 'bonus':
@@ -31,16 +31,12 @@ export const validateInput = (value: string, type: string): boolean => {
 export const normalizeValue = (value: string, type: string): string => {
   if (value === '') return '';
   
-  if (type === 'posInt' || type === 'int' || type === 'bonus' || type === 'quantity' || type === 'ft5' || type === 'level') {
+  if (type === 'posInt' || type === 'int' || type === 'bonus' || type === 'quantity' || type === 'level' || type === 'distance') {
     const parsed = parseInt(value, 10);
     if (isNaN(parsed)) return '';
-    
-    if (type === 'level') {
-      return Math.min(20, Math.max(1, parsed)).toString();
+    if (type === 'distance') {
+      return (Math.round(parsed / 5) * 5).toString();
     }
-    
-    // For ft5, we enforce multiple of 5 on Blur or final state, 
-    // but here we just normalize the string.
     return parsed.toString();
   }
   

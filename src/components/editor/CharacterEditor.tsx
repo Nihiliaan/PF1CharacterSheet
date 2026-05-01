@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { ShieldCheck, GripVertical, Trash2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { User as FirebaseUser } from 'firebase/auth';
-import { CharacterData, ATTRIBUTE_NAMES, Column } from '../../types';
+import { CharacterData, ATTRIBUTE_NAMES } from '../../types';
 import Section from '../common/Section';
 import InlineInput from '../common/InlineInput';
 import MultilineInput from '../common/MultilineInput';
@@ -57,29 +57,6 @@ export default function CharacterEditor({
     removeAdditionalBlock,
     saveCharacter
   } = useCharacter();
-
-  const weaponColumns: Column[] = [
-    { key: 'name', label: t('editor.weapons.name'), width: '25%', type: 'text' },
-    { key: 'attackBonus', label: t('editor.weapons.attack'), width: '12%', type: 'bonus' },
-    { key: 'damage', label: t('editor.weapons.damage'), width: '15%', type: 'text' },
-    { 
-      key: 'critRange', 
-      label: t('editor.weapons.crit_range'), 
-      width: '12%', 
-      type: 'select', 
-      options: ['20', '19', '18', '17', '16', '15', '14', '13', '12', '11'] 
-    },
-    { 
-      key: 'critMulti', 
-      label: t('editor.weapons.crit_multi'), 
-      width: '12%', 
-      type: 'select', 
-      options: ['x2', 'x3', 'x4', 'x5'] 
-    },
-    { key: 'range', label: t('editor.weapons.range'), width: '12%', type: 'ft5' },
-    { key: 'damageType', label: t('editor.weapons.damage_type'), width: '12%', type: 'text' },
-  ];
-
   return (
     <motion.div
       key="editor"
@@ -192,9 +169,9 @@ export default function CharacterEditor({
                 <DynamicTable
                   minWidth="0"
                   columns={[
-                    { key: 'bab', label: 'BAB', width: '33.33%' },
-                    { key: 'cmb', label: 'CMB', width: '33.33%' },
-                    { key: 'cmd', label: 'CMD', width: '33.34%' }
+                    { key: 'bab', label: 'BAB', width: '33.33%', type: 'bonus' },
+                    { key: 'cmb', label: 'CMB', width: '33.33%', type: 'bonus' },
+                    { key: 'cmd', label: 'CMD', width: '33.34%', type: 'int' }
                   ]}
                   data={data.babTable || [{ bab: '', cmb: '', cmd: '' }]}
                   originalData={lastSavedData.babTable || [{ bab: '', cmb: '', cmd: '' }]}
@@ -220,11 +197,20 @@ export default function CharacterEditor({
             <div className="border-b border-stone-200">
               <DynamicTable
                 minWidth="0"
-                columns={weaponColumns}
-                data={data.meleeAttacks || []}
+                columns={[
+                  { key: 'weapon', label: t('editor.attacks.melee'), width: '20%' },
+                  { key: 'hit', label: t('editor.attacks.hit'), width: '12%', type: 'bonus' },
+                  { key: 'damage', label: t('editor.attacks.damage'), width: '12%' },
+                  { key: 'critRange', label: t('editor.attacks.crit_range'), width: '8%', type: 'select', options: ['20', '19', '18', '17', '16', '15', '14', '13', '12', '11'] },
+                  { key: 'critMultiplier', label: t('editor.attacks.crit_multiplier'), width: '8%', type: 'select', options: ['×2', '×3', '×4', '×5'] },
+                  { key: 'range', label: t('editor.attacks.reach'), width: '8%', type: 'distance' },
+                  { key: 'damageType', label: t('editor.attacks.damage_type'), width: '10%' },
+                  { key: 'special', label: t('editor.attacks.special'), width: '22%' }
+                ]}
+                data={data.meleeAttacks?.map((a: any) => ({ ...a, critRange: a.critRange || a.crit, critMultiplier: a.critMultiplier || (a.crit?.includes('x') ? a.crit.split('x')[1] : '') })) || []}
                 originalData={lastSavedData.meleeAttacks || []}
                 onChange={v => setData({ ...data, meleeAttacks: v })}
-                newItemGenerator={() => ({ name: '', attackBonus: '', damage: '', critRange: '20', critMulti: 'x2', range: '', damageType: '' })}
+                newItemGenerator={() => ({ weapon: '', hit: '', damage: '', critRange: '20', critMultiplier: '×2', range: '5', damageType: '', special: '' })}
                 rowDraggable={true}
                 rowActionMode={tableActionMode}
                 onRowActionModeToggle={toggleTableActionMode}
@@ -235,11 +221,20 @@ export default function CharacterEditor({
             </div>
             <DynamicTable
               minWidth="0"
-              columns={weaponColumns}
-              data={data.rangedAttacks || []}
+              columns={[
+                { key: 'weapon', label: t('editor.attacks.ranged'), width: '20%' },
+                { key: 'hit', label: t('editor.attacks.hit'), width: '12%', type: 'bonus' },
+                { key: 'damage', label: t('editor.attacks.damage'), width: '12%' },
+                { key: 'critRange', label: t('editor.attacks.crit_range'), width: '8%', type: 'select', options: ['20', '19', '18', '17', '16', '15', '14', '13', '12', '11'] },
+                { key: 'critMultiplier', label: t('editor.attacks.crit_multiplier'), width: '8%', type: 'select', options: ['×2', '×3', '×4', '×5'] },
+                { key: 'range', label: t('editor.attacks.range'), width: '8%', type: 'distance' },
+                { key: 'damageType', label: t('editor.attacks.damage_type'), width: '10%' },
+                { key: 'special', label: t('editor.attacks.special'), width: '22%' }
+              ]}
+              data={data.rangedAttacks?.map((a: any) => ({ ...a, critRange: a.critRange || a.crit, critMultiplier: a.critMultiplier || (a.crit?.includes('x') ? a.crit.split('x')[1] : '') })) || []}
               originalData={lastSavedData.rangedAttacks || []}
               onChange={v => setData({ ...data, rangedAttacks: v })}
-              newItemGenerator={() => ({ name: '', attackBonus: '', damage: '', critRange: '20', critMulti: 'x2', range: '', damageType: '' })}
+              newItemGenerator={() => ({ weapon: '', hit: '', damage: '', critRange: '20', critMultiplier: '×2', range: '20', damageType: '', special: '' })}
               rowDraggable={true}
               rowActionMode={tableActionMode}
               onRowActionModeToggle={toggleTableActionMode}
@@ -260,24 +255,45 @@ export default function CharacterEditor({
 
         <Section id="defenses" title={t('editor.sections.defenses')}>
           <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <InlineInput label={t('editor.defenses.ac')} type="int" value={data.defenses.ac} originalValue={lastSavedData.defenses?.ac} onChange={v => setData({ ...data, defenses: { ...data.defenses, ac: v } })} placeholder="10" />
-              <InlineInput label={t('editor.defenses.touch')} type="int" value={data.defenses.touch} originalValue={lastSavedData.defenses?.touch} onChange={v => setData({ ...data, defenses: { ...data.defenses, touch: v } })} placeholder="10" />
-              <InlineInput label={t('editor.defenses.flat_footed')} type="int" value={data.defenses.flat_footed} originalValue={lastSavedData.defenses?.flat_footed} onChange={v => setData({ ...data, defenses: { ...data.defenses, flat_footed: v } })} placeholder="10" />
-              <InlineInput label={t('editor.defenses.reach')} type="ft5" value={data.defenses.reach || '5'} originalValue={lastSavedData.defenses?.reach} onChange={v => setData({ ...data, defenses: { ...data.defenses, reach: v } })} placeholder="5" />
+            {/* AC Row */}
+            <div className="flex flex-col md:flex-row gap-6 items-stretch">
+              <div className="w-full md:w-1/2 flex flex-col">
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                  {t('editor.defenses.ac_details')}
+                  <span className="text-stone-400 font-normal">AC / {t('editor.defenses.touch')} / {t('editor.defenses.flat_footed')}</span>
+                </label>
+                <div className="flex-1">
+                  <DynamicTable
+                    minWidth="0"
+                    columns={[
+                      { key: 'ac', label: t('editor.defenses.ac'), width: '15%', type: 'int' },
+                      { key: 'source', label: t('editor.attributes.headers.source'), width: '55%' },
+                      { key: 'touch', label: t('editor.defenses.touch'), width: '15%', type: 'int' },
+                      { key: 'flatFooted', label: t('editor.defenses.flat_footed'), width: '15%', type: 'int' }
+                    ]}
+                    data={data.defenses.acTable || [{ ac: '', source: '', flatFooted: '', touch: '' }]}
+                    originalData={lastSavedData.defenses.acTable || [{ ac: '', source: '', flatFooted: '', touch: '' }]}
+                    onChange={v => updateDefenses('acTable', v)}
+                    fixedRows={true}
+                  />
+                </div>
+              </div>
+              <MultilineInput
+                className="w-full md:w-1/2"
+                label={t('editor.defenses.ac_notes')}
+                value={data.defenses.acNotes || ''}
+                originalValue={lastSavedData.defenses.acNotes}
+                onChange={v => updateDefenses('acNotes', v)}
+                placeholder={t('editor.defenses.ac_placeholder')}
+                height="80px"
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <InlineInput label={t('editor.defenses.fort')} type="bonus" value={data.defenses.fort} originalValue={lastSavedData.defenses?.fort} onChange={v => setData({ ...data, defenses: { ...data.defenses, fort: v } })} placeholder="+0" />
-              <InlineInput label={t('editor.defenses.ref')} type="bonus" value={data.defenses.ref} originalValue={lastSavedData.defenses?.ref} onChange={v => setData({ ...data, defenses: { ...data.defenses, ref: v } })} placeholder="+0" />
-              <InlineInput label={t('editor.defenses.will')} type="bonus" value={data.defenses.will} originalValue={lastSavedData.defenses?.will} onChange={v => setData({ ...data, defenses: { ...data.defenses, will: v } })} placeholder="+0" />
-            </div>
-
+            {/* HP & HD Row */}
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-1/2">
                 <InlineInput
                   label={t('editor.defenses.hp')}
-                  type="posInt"
                   value={data.defenses.hp}
                   originalValue={lastSavedData.defenses.hp}
                   onChange={v => updateDefenses('hp', v)}
@@ -295,15 +311,38 @@ export default function CharacterEditor({
               </div>
             </div>
 
-            <MultilineInput
-              className="w-full"
-              label={t('editor.defenses.ac_notes')}
-              value={data.defenses.acNotes || ''}
-              originalValue={lastSavedData.defenses.acNotes}
-              onChange={v => updateDefenses('acNotes', v)}
-              placeholder={t('editor.defenses.ac_placeholder')}
-              height="80px"
-            />
+            {/* Saves Row */}
+            <div className="flex flex-col md:flex-row gap-6 items-stretch">
+              <div className="w-full md:w-1/2 flex flex-col">
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                  {t('editor.defenses.saves')}
+                  <span className="text-stone-400 font-normal">{t('editor.defenses.fort')} / {t('editor.defenses.ref')} / {t('editor.defenses.will')}</span>
+                </label>
+                <div className="flex-1">
+                  <DynamicTable
+                    minWidth="0"
+                    columns={[
+                      { key: 'fort', label: t('editor.defenses.fort'), width: '33.33%', type: 'bonus' },
+                      { key: 'ref', label: t('editor.defenses.ref'), width: '33.33%', type: 'bonus' },
+                      { key: 'will', label: t('editor.defenses.will'), width: '33.34%', type: 'bonus' }
+                    ]}
+                    data={data.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
+                    originalData={lastSavedData.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
+                    onChange={v => updateDefenses('savesTable', v)}
+                    fixedRows={true}
+                  />
+                </div>
+              </div>
+              <MultilineInput
+                className="w-full md:w-1/2"
+                label={t('editor.defenses.saves_notes')}
+                value={data.defenses.savesNotes || ''}
+                originalValue={lastSavedData.defenses.savesNotes}
+                onChange={v => updateDefenses('savesNotes', v)}
+                placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
+                height="80px"
+              />
+            </div>
           </div>
         </Section>
 
@@ -355,15 +394,15 @@ export default function CharacterEditor({
         <Section id="class-features" title={t('editor.sections.class_features')}>
           <DynamicTable
             columns={[
-              { key: 'level', label: t('editor.lists.level'), width: '7%', type: 'level' },
-              { key: 'name', label: t('editor.sections.class_features'), width: '23%' },
-              { key: 'type', label: t('editor.attacks.type'), width: '5%', type: 'select', options: ['', 'Sp', 'Su', 'Ex'] },
+              { key: 'level', label: t('editor.lists.level'), width: '8%', type: 'level' },
+              { key: 'name', label: t('editor.sections.class_features'), width: '22%' },
+              { key: 'type', label: t('editor.attacks.damage_type'), width: '5%', type: 'select', options: ['', 'Sp', 'Su', 'Ex'] },
               { key: 'desc', label: t('editor.lists.description'), width: '65%' }
             ]}
             data={data.classFeatures}
             originalData={lastSavedData.classFeatures}
             onChange={v => setData({ ...data, classFeatures: v })}
-            newItemGenerator={() => ({ level: '1', name: '', type: '', desc: '' })}
+            newItemGenerator={() => ({ level: '', name: '', type: '', desc: '' })}
             rowDraggable={true}
             rowActionMode={tableActionMode}
             onRowActionModeToggle={toggleTableActionMode}
@@ -376,16 +415,16 @@ export default function CharacterEditor({
         <Section id="feats" title={t('editor.sections.feats')}>
           <DynamicTable
             columns={[
-              { key: 'level', label: t('editor.lists.level'), width: '7%', type: 'level' },
-              { key: 'source', label: t('editor.lists.source'), width: '13%' },
+              { key: 'level', label: t('editor.lists.level'), width: '8%', type: 'level' },
+              { key: 'source', label: t('editor.lists.source'), width: '12%' },
               { key: 'name', label: t('editor.lists.feat_name'), width: '20%' },
-              { key: 'type', label: t('editor.attacks.type'), width: '5%' },
+              { key: 'type', label: t('editor.attacks.damage_type'), width: '5%' },
               { key: 'desc', label: t('editor.lists.description'), width: '55%' }
             ]}
             data={data.feats}
             originalData={lastSavedData.feats}
             onChange={v => setData({ ...data, feats: v })}
-            newItemGenerator={() => ({ level: '1', name: '', type: '', source: '', desc: '' })}
+            newItemGenerator={() => ({ level: '', name: '', type: '', source: '', desc: '' })}
             rowDraggable={true}
             rowActionMode={tableActionMode}
             onRowActionModeToggle={toggleTableActionMode}
@@ -478,18 +517,20 @@ export default function CharacterEditor({
               {
                 key: 'ability',
                 label: t('editor.skills.headers.ability'),
-                width: '5%',
+                width: '10%',
                 type: 'select',
-                options: ['', ...ATTRIBUTE_NAMES],
+                options: ['', ...ATTRIBUTE_NAMES.map(attr => t('editor.attributes.' + attr))],
                 displayFormatter: (val) => {
                   if (!val) return '';
-                  const idx = ATTRIBUTE_NAMES.indexOf(val);
+                  const localizedNames = ATTRIBUTE_NAMES.map(attr => t('editor.attributes.' + attr));
+                  const idx = localizedNames.indexOf(val);
                   if (idx === -1) return val;
-                  const attr = data.attributes[idx];
-                  if (!attr) return val;
-                  const mod = parseInt(attr.modifier);
-                  if (isNaN(mod)) return attr.modifier || '0';
-                  return mod >= 0 ? `+${mod}` : mod.toString();
+                  const attrKey = ATTRIBUTE_NAMES[idx];
+                  const attrData = data.attributes[idx];
+                  if (!attrData) return val;
+                  const mod = parseInt(attrData.modifier);
+                  const sign = isNaN(mod) ? '' : (mod >= 0 ? '+' : '');
+                  return `${val} ${sign}${attrData.modifier}`;
                 }
               },
               { key: 'others', label: t('editor.skills.headers.others'), width: '20%' },
