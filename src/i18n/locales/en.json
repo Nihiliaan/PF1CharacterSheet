@@ -126,6 +126,10 @@
         "weight": "Weight (lbs)",
         "notes": "Notes"
       },
+      "units": {
+        "gp": "gp",
+        "lbs": "lbs"
+      },
       "add_container": "Add Container",
       "total_assets": "Total Assets",
       "encumbrance_multiplier": "Encumbrance Multiplier",

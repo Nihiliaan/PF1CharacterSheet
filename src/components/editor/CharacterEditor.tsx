@@ -116,7 +116,6 @@ export default function CharacterEditor({
                 value={data.basic.languages}
                 originalValue={lastSavedData.basic.languages}
                 onChange={v => updateBasic('languages', v)}
-                height="60px"
               />
             </div>
             <div className="w-full md:w-64">
@@ -510,9 +509,9 @@ export default function CharacterEditor({
                       originalData={originalBlock?.tableData || []}
                       onChange={v => updateMagicBlock(block.id, { tableData: v })}
                       newItemGenerator={block.type === 'spell' ? () => {
-                         const obj: any = {};
-                         (block.columns || []).forEach((c: any) => obj[c.key] = '');
-                         return obj;
+                        const obj: any = {};
+                        (block.columns || []).forEach((c: any) => obj[c.key] = '');
+                        return obj;
                       } : undefined}
                       rowDraggable={block.type !== 'spell' || block.spellTemplate === 'sla'}
                       rowActionMode={tableActionMode}
@@ -649,8 +648,8 @@ export default function CharacterEditor({
                   columns={[
                     { key: 'item', label: t('editor.items.headers.item'), width: '35%', hideRightBorder: true },
                     { key: 'quantity', label: '', width: '5%', type: 'quantity' },
-                    { key: 'cost', label: t('editor.items.headers.cost'), width: '15%', type: 'float', displayFormatter: (v, f) => (v && !f) ? `${v} gp` : v },
-                    { key: 'weight', label: t('editor.items.headers.weight'), width: '15%', type: 'float', displayFormatter: (v, f) => (v && !f) ? `${v} ${i18n.language.startsWith('zh') ? '磅' : 'lbs'}` : v },
+                    { key: 'cost', label: t('editor.items.headers.cost'), width: '15%', type: 'cost' },
+                    { key: 'weight', label: t('editor.items.headers.weight'), width: '15%', type: 'weight' },
                     { key: 'notes', label: t('editor.items.headers.notes'), width: '30%' },
                   ]}
                   data={bag.items}

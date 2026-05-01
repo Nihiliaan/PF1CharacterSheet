@@ -19,6 +19,8 @@ export const validateInput = (value: string, type: string): boolean => {
     case 'bonus':
       return REGEX_PATTERNS.int.test(value);
     case 'float':
+    case 'cost':
+    case 'weight':
       return REGEX_PATTERNS.float.test(value);
     case 'attributeIndex':
       return /^[0-6]$/.test(value);
@@ -52,7 +54,7 @@ export const normalizeValue = (value: string, type: string): string => {
     return '0';
   }
 
-  if (type === 'float') {
+  if (type === 'float' || type === 'cost' || type === 'weight') {
     // Avoid stripping trailing decimal points while typing (e.g., "1.")
     if (value.endsWith('.')) return value;
     const parsed = parseFloat(value);

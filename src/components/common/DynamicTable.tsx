@@ -23,7 +23,7 @@ export const DynamicCellInput = ({
   className?: string;
   readOnly?: boolean;
   columnKey?: string;
-  type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex';
+  type?: 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight';
   options?: string[];
   displayFormatter?: (v: string, isFocused: boolean) => string;
 }) => {
@@ -60,6 +60,14 @@ export const DynamicCellInput = ({
     }
     if (type === 'distance' && !isFocused && value !== '') {
       return t('editor.lists.distance_format', { v: value });
+    }
+    if (type === 'cost' && !isFocused) {
+      if (!value) return '—';
+      return `${value} ${t('editor.items.units.gp')}`;
+    }
+    if (type === 'weight' && !isFocused) {
+      if (!value) return '—';
+      return `${value} ${t('editor.items.units.lbs')}`;
     }
     return value;
   };
@@ -144,7 +152,7 @@ export const DynamicCellInput = ({
             {displayValue() + '\n'}
           </div>
           <textarea
-            value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt' || type === 'level' || type === 'distance') ? value : displayValue()}
+            value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt' || type === 'level' || type === 'distance' || type === 'cost' || type === 'weight') ? value : displayValue()}
             onChange={handleChange}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}

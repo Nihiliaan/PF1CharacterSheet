@@ -141,6 +141,10 @@
         "weight": "重量 (lbs)",
         "notes": "备注"
       },
+      "units": {
+        "gp": "gp",
+        "lbs": "磅"
+      },
       "add_container": "添加物品容器",
       "total_assets": "总资产",
       "encumbrance_multiplier": "负重倍率",
