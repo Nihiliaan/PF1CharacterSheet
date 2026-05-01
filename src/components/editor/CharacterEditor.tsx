@@ -472,7 +472,6 @@ export default function CharacterEditor({
                         originalValue={originalBlock?.casterLevel}
                         onChange={v => updateMagicBlock(block.id, { casterLevel: v })}
                         type="level"
-                        displayFormatter={(v, f) => (!f && v && !isNaN(parseInt(v)) && parseInt(v) >= 0) ? `+${parseInt(v)}` : v}
                       />
                       <InlineInput
                         className="flex-1"
