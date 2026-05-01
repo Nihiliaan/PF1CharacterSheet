@@ -217,6 +217,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 url.searchParams.set('id', targetChar.id);
                 window.history.replaceState({}, '', url.toString());
               }
+            } else if (char.isTemplate) {
+              setBbcodeTemplate(char.data.content);
+              setViewState('bbcode-template');
+              setCurrentCharacterId(char.id);
+              setIsReadOnly(char.ownerId !== u?.uid);
+              addToRecent(char);
             } else {
               setData(char.data);
               setLastSavedData(JSON.parse(JSON.stringify(char.data)));
@@ -341,7 +347,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const newItem = {
         id: char.id,
         name: name,
-        avatar: char.avatar || char.data?.basic?.avatars?.[0]?.url || '',
+        avatar: char.isTemplate ? 'https://ui-avatars.com/api/?name=T&background=6366f1&color=fff' : (char.avatar || char.data?.basic?.avatars?.[0]?.url || ''),
         classes: char.classes || char.data?.basic?.classes || '',
         data: char.data
       };
@@ -478,7 +484,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           window.history.replaceState({}, '', url.toString());
         }
 
-        addToRecent({ id: newId, name: saveData.basic.name, data: saveData });
+        addToRecent({ id: newId, name: saveData?.basic?.name || '未命名人物', data: saveData });
         await refreshCharacterList();
         setToast({ message: id ? "人物卡保存成功！" : "已创建并保存新人物卡" });
         return newId;
@@ -545,17 +551,19 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return;
         }
         const char = idOrChar;
+        
+        if (char.isTemplate) {
+          setBbcodeTemplate(char.data.content);
+          setViewState('bbcode-template');
+          setCurrentCharacterId(char.id);
+          return;
+        }
+
         setData(char.data);
         setLastSavedData(JSON.parse(JSON.stringify(char.data)));
         setCurrentCharacterId(char.id);
         setIsReadOnly(char.ownerId !== user?.uid);
         
-        if (char.isTemplate) {
-          setBbcodeTemplate(char.data.content);
-          setViewState('bbcode-template');
-          return;
-        }
-
         setViewState('editor');
         addToRecent(char);
         
@@ -574,17 +582,19 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             await loadSharedCharacter(char.targetId);
             return;
           }
+          
+          if (char.isTemplate) {
+            setBbcodeTemplate(char.data.content);
+            setViewState('bbcode-template');
+            setCurrentCharacterId(char.id);
+            return;
+          }
+
           setData(char.data);
           setLastSavedData(JSON.parse(JSON.stringify(char.data)));
           setCurrentCharacterId(char.id);
           setIsReadOnly(char.ownerId !== user?.uid);
           
-          if (char.isTemplate) {
-            setBbcodeTemplate(char.data.content);
-            setViewState('bbcode-template');
-            return;
-          }
-
           setViewState('editor');
           addToRecent(char);
           
@@ -616,10 +626,15 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       const char = await getCharacterById(id);
       if (char) {
-        setData(char.data);
-        setLastSavedData(JSON.parse(JSON.stringify(char.data)));
+        if (char.isTemplate) {
+          setBbcodeTemplate(char.data.content);
+          setViewState('bbcode-template');
+        } else {
+          setData(char.data);
+          setLastSavedData(JSON.parse(JSON.stringify(char.data)));
+          setViewState('editor');
+        }
         setCurrentCharacterId(char.id);
-        setViewState('editor');
         
         const url = new URL(window.location.href);
         url.searchParams.set('id', char.id);

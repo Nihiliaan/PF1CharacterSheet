@@ -58,12 +58,15 @@ const VaultContent = ({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: any; isFolder: boolean } | null>(null);
   const [draggedItem, setDraggedItem] = useState<{ id: string; type: 'character' | 'folder' } | null>(null);
 
-  const filteredFolders = folders.filter(f => (f.parentId || null) === currentFolderId && (search ? f.name.toLowerCase().includes(search.toLowerCase()) : true));
-  const filteredChars = characters.filter(c => (c.folderId || null) === currentFolderId && (search ? (c.name || '未命名').toLowerCase().includes(search.toLowerCase()) : true));
+  const filteredFolders = folders.filter(f => (f.parentId || null) === currentFolderId && (search ? (f.name || '').toLowerCase().includes(search.toLowerCase()) : true));
+  const filteredChars = characters.filter(c => (c.folderId || null) === currentFolderId && (search ? (c.name || '').toLowerCase().includes(search.toLowerCase()) : true));
 
   const getDeepAvatars = (folderId: string): string[] => {
-    const directChars = characters.filter(c => c.folderId === folderId && !c.isTemplate);
-    let avatars = directChars.map(c => c.data?.basic?.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + (c.name || ''));
+    const directChars = characters.filter(c => c.folderId === folderId);
+    let avatars = directChars.map(c => {
+      if (c.isTemplate) return 'https://ui-avatars.com/api/?name=T&background=6366f1&color=fff'; // Indigo 'T' for Template
+      return c.data?.basic?.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + (c.name || '');
+    });
     
     if (avatars.length < 4) {
       const subFolders = folders.filter(f => f.parentId === folderId);
@@ -318,22 +321,22 @@ const VaultContent = ({
         });
         return; 
       } else if (action === 'rename' && isFolder) {
-          if (item.name === '来自分享') {
+          if (item?.name === '来自分享') {
             setToast({ message: "无法重命名来源文件夹", type: 'error' });
             return;
           }
           setModal({
             type: 'prompt',
             title: '重命名文件夹',
-            defaultValue: item.name,
+            defaultValue: item?.name || '',
             onConfirm: async (newName) => {
               const trimmed = newName.trim();
-              if (!trimmed || trimmed === item.name) return;
-              if (folders.some(f => f.parentId === item.parentId && f.name.toLowerCase() === trimmed.toLowerCase() && f.id !== item.id)) {
+              if (!trimmed || trimmed === item?.name) return;
+              if (folders.some(f => f.parentId === item?.parentId && (f.name || '').toLowerCase() === trimmed.toLowerCase() && f.id !== item?.id)) {
                 setToast({ message: "该目录下已存在同名文件夹", type: 'error' });
                 return;
               }
-              await renameItem(item.id, 'folder', trimmed);
+              await renameItem(item!.id, 'folder', trimmed);
               setToast({ message: "重命名成功" });
               onRefresh();
             }
