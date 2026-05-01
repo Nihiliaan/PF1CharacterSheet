@@ -130,7 +130,8 @@ const MarkdownInlineEditor = ({
               "&::-webkit-scrollbar": { display: "none" }
           },
           ".cm-gutters": { display: "none" },
-          ".cm-placeholder": { color: "#aaa" }
+          ".cm-placeholder": { color: "#aaa" },
+          "&.cm-focused .cm-placeholder": { display: "none" }
         }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {

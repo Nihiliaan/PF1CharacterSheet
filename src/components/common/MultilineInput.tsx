@@ -28,8 +28,8 @@ const MultilineInput = ({
 
   return (
     <div className={`flex flex-col gap-1.5 p-3 rounded-xl transition-all border group
-      ${isChanged 
-        ? 'bg-amber-50/50 border-amber-200 shadow-sm' 
+      ${isChanged
+        ? 'bg-amber-50/50 border-amber-200 shadow-sm'
         : 'bg-stone-50/30 border-stone-200 hover:border-stone-300 focus-within:border-primary/50 focus-within:bg-white focus-within:shadow-md'
       } ${className}`}
     >
@@ -39,12 +39,11 @@ const MultilineInput = ({
         </label>
         {isChanged && (
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tighter">未保存</span>
             <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse shadow-sm" />
           </div>
         )}
       </div>
-      
+
       <div className="min-h-[24px]">
         <MarkdownInlineEditor
           value={value}
