@@ -117,7 +117,7 @@ interface CharacterContextType {
   handleShare: () => void;
   handleExport: () => void;
   handleExportBBCode: () => void;
-  selectCharacter: (id: string) => Promise<void>;
+  selectCharacter: (id: string, skipDirtyCheck?: boolean) => Promise<void>;
   loadSharedCharacter: (id: string) => Promise<void>;
 
   // Drag & Drop
@@ -467,10 +467,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (user) {
       setToast({ message: "正在创建新角色..." });
       try {
-        // handleSaveInternal handles state updates and list refresh
-        const newId = await handleSaveInternal(newData, null, currentFolderId);
+        const newId = await saveCharacterService(newData, undefined, currentFolderId);
         if (newId) {
-          setViewState('editor');
+          await refreshCharacterList();
+          await selectCharacter(newId, true);
+          setToast({ message: "已创建并打开新人物卡" });
         }
       } catch (e: any) {
         setToast({ message: "创建新角色失败", type: 'error' });
@@ -503,7 +504,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  const selectCharacter = async (idOrChar: string | any) => {
+  const selectCharacter = async (idOrChar: string | any, skipDirtyCheck: boolean = false) => {
     const performSelect = async () => {
       if (typeof idOrChar === 'object' && idOrChar !== null && idOrChar.id) {
         if (idOrChar.isLink && idOrChar.targetId) {
@@ -549,7 +550,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     };
 
-    if (isDirty) {
+    if (isDirty && !skipDirtyCheck) {
       setConfirmModal({
         title: "是否保存当前修改后再打开新角色？",
         onConfirm: () => performSelect(),
