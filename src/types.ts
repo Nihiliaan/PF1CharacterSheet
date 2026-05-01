@@ -62,7 +62,7 @@ export interface CharacterData {
   defenses: {
     hp: string;
     hd: string;
-    acTable: { ac: string; flatFooted: string; touch: string }[];
+    acTable: { ac: string; source: string; flatFooted: string; touch: string }[];
     acNotes: string;
     savesTable: { fort: string; ref: string; will: string }[];
     savesNotes: string;
@@ -76,10 +76,18 @@ export interface CharacterData {
   magicBlocks: any[];
   skills: any[];
   skillsTotal: string;
+  armorCheckPenalty: string;
   skillsNotes: string;
   equipmentBags: any[];
   encumbranceMultiplier: string;
   equipmentNotes: string;
+  currency: {
+    pp: string;
+    gp: string;
+    sp: string;
+    cp: string;
+    coinWeight: string;
+  };
   additionalData: any[];
 }
 

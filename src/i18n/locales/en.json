@@ -91,8 +91,8 @@
     "defenses": {
       "ac_details": "AC Details",
       "ac": "AC",
-      "flat_footed": "Flat-Footed AC",
       "touch": "Touch AC",
+      "flat_footed": "Flat-Footed AC",
       "ac_notes": "AC Notes",
       "ac_placeholder": "Armor sources, dodge, natural armor...",
       "hp": "HP",
@@ -114,6 +114,7 @@
         "special": "Special/Conditional"
       },
       "total_points": "Total Skill Points",
+      "acp": "Armor Check Penalty",
       "notes": "Notes",
       "notes_placeholder": "Skill specialization notes..."
     },
@@ -131,10 +132,16 @@
       "light": "Light",
       "medium": "Medium",
       "heavy": "Heavy",
-      "overload": "Overload"
+      "overload": "Overload",
+      "pp": "Platinum (pp)",
+      "gp": "Gold (gp)",
+      "sp": "Silver (sp)",
+      "cp": "Copper (cp)",
+      "coin_weight": "Coin Weight (lbs)"
     },
     "lists": {
       "trait": "Trait",
+      "trait_name": "Trait Name",
       "description": "Description",
       "category": "Category",
       "favored_class": "Favored Class",

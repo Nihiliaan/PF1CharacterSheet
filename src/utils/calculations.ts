@@ -9,6 +9,13 @@ export const calculateTotalCost = (data: CharacterData): string => {
       total += cost * qty;
     });
   });
+
+  const pp = parseInt(data.currency?.pp) || 0;
+  const gp = parseInt(data.currency?.gp) || 0;
+  const sp = parseInt(data.currency?.sp) || 0;
+  const cp = parseInt(data.currency?.cp) || 0;
+  total += pp * 10 + gp + sp * 0.1 + cp * 0.01;
+
   return total.toLocaleString('en-US', { maximumFractionDigits: 2 });
 };
 
@@ -23,6 +30,9 @@ export const calculateTotalWeightNum = (data: CharacterData): number => {
       });
     }
   });
+
+  total += parseFloat(data.currency?.coinWeight) || 0;
+
   return total;
 };
 

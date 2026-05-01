@@ -258,18 +258,20 @@ export default function CharacterEditor({
               <div className="w-full md:w-1/2 flex flex-col">
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
                   {t('editor.defenses.ac_details')}
-                  <span className="text-stone-400 font-normal">AC / {t('editor.defenses.flat_footed')} / {t('editor.defenses.touch')}</span>
+                  <span className="text-stone-400 font-normal">AC / {t('editor.defenses.touch') / { t('editor.defenses.flat_footed') }}</span>
+                  <span className="text-stone-400 font-normal">AC / {t('editor.defenses.touch')} / {t('editor.defenses.flat_footed')}</span>
                 </label>
                 <div className="flex-1">
                   <DynamicTable
                     minWidth="0"
                     columns={[
-                      { key: 'ac', label: t('editor.defenses.ac'), width: '33.33%' },
-                      { key: 'flatFooted', label: t('editor.defenses.flat_footed'), width: '33.33%' },
-                      { key: 'touch', label: t('editor.defenses.touch'), width: '33.34%' }
+                      { key: 'ac', label: t('editor.defenses.ac'), width: '15%' },
+                      { key: 'source', label: t('editor.attributes.headers.source'), width: '55%' },
+                      { key: 'touch', label: t('editor.defenses.touch'), width: '15%' },
+                      { key: 'flatFooted', label: t('editor.defenses.flat_footed'), width: '15%' }
                     ]}
-                    data={data.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
-                    originalData={lastSavedData.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
+                    data={data.defenses.acTable || [{ ac: '', source: '', flatFooted: '', touch: '' }]}
+                    originalData={lastSavedData.defenses.acTable || [{ ac: '', source: '', flatFooted: '', touch: '' }]}
                     onChange={v => updateDefenses('acTable', v)}
                     fixedRows={true}
                   />
@@ -366,7 +368,7 @@ export default function CharacterEditor({
           <div className="flex flex-col gap-6">
             <DynamicTable
               columns={[
-                { key: 'name', label: t('editor.lists.feat_name'), width: '25%' },
+                { key: 'name', label: t('editor.lists.trait_name'), width: '25%' },
                 { key: 'type', label: t('editor.lists.category'), width: '5%' },
                 { key: 'desc', label: t('editor.lists.description'), width: '70%' }
               ]}
@@ -554,7 +556,21 @@ export default function CharacterEditor({
                 placeholder="0"
               />
             </div>
-            <div className="w-full md:w-5/6">
+            <div className="w-full md:w-1/6">
+              <InlineInput
+                label={t('editor.skills.acp')}
+                value={!data.armorCheckPenalty || data.armorCheckPenalty === '0' ? '' : `-${data.armorCheckPenalty}`}
+                originalValue={!lastSavedData.armorCheckPenalty || lastSavedData.armorCheckPenalty === '0' ? '' : `-${lastSavedData.armorCheckPenalty}`}
+                onChange={v => {
+                  const val = v.replace(/^-/, '');
+                  if (val === '' || /^\d+$/.test(val)) {
+                    setData({ ...data, armorCheckPenalty: val || '0' });
+                  }
+                }}
+                placeholder="0"
+              />
+            </div>
+            <div className="w-full md:w-4/6">
               <InlineInput
                 label={t('editor.skills.notes')}
                 value={data.skillsNotes || ''}
@@ -601,6 +617,14 @@ export default function CharacterEditor({
             <button onClick={addBag} className="flex items-center gap-1 text-sm text-stone-600 border border-dashed border-stone-300 hover:border-stone-500 hover:text-stone-900 rounded p-3 justify-center transition-colors">
               <Plus size={16} /> {t('editor.items.add_container')}
             </button>
+
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+              <InlineInput label={t('editor.items.pp')} value={data.currency.pp} originalValue={lastSavedData.currency?.pp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, pp: v } })) }} placeholder="0" />
+              <InlineInput label={t('editor.items.gp')} value={data.currency.gp} originalValue={lastSavedData.currency?.gp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, gp: v } })) }} placeholder="0" />
+              <InlineInput label={t('editor.items.sp')} value={data.currency.sp} originalValue={lastSavedData.currency?.sp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, sp: v } })) }} placeholder="0" />
+              <InlineInput label={t('editor.items.cp')} value={data.currency.cp} originalValue={lastSavedData.currency?.cp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, cp: v } })) }} placeholder="0" />
+              <InlineInput label={t('editor.items.coin_weight')} value={data.currency.coinWeight} originalValue={lastSavedData.currency?.coinWeight} onChange={v => { if (v === '' || /^\d*\.?\d*$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, coinWeight: v } })) }} placeholder="0" />
+            </div>
 
             <div className="flex flex-col md:flex-row gap-3 mt-4 items-stretch">
               <div className="flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 w-24 shrink-0 justify-center">

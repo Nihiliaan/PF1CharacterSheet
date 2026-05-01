@@ -36,7 +36,7 @@ export const DEFAULT_DATA: CharacterData = {
   defenses: {
     hp: '',
     hd: '',
-    acTable: [{ ac: '', flatFooted: '', touch: '' }],
+    acTable: [{ ac: '', source: '', flatFooted: '', touch: '' }],
     acNotes: '',
     savesTable: [{ fort: '', ref: '', will: '' }],
     savesNotes: ''
@@ -50,9 +50,17 @@ export const DEFAULT_DATA: CharacterData = {
   magicBlocks: [] as any[],
   skills: [],
   skillsTotal: '0',
+  armorCheckPenalty: '0',
   skillsNotes: '',
   equipmentBags: [],
   encumbranceMultiplier: '1',
   equipmentNotes: '',
+  currency: {
+    pp: '0',
+    gp: '0',
+    sp: '0',
+    cp: '0',
+    coinWeight: '0'
+  },
   additionalData: [] as any[]
 };

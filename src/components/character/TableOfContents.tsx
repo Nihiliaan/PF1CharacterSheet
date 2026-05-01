@@ -1,22 +1,25 @@
 import React from 'react';
-
-const SECTIONS = [
-  { id: 'basic-info', label: '基本信息' },
-  { id: 'story', label: '背景故事' },
-  { id: 'attributes', label: '属性与战技' },
-  { id: 'attacks', label: '攻击' },
-  { id: 'defenses', label: '防御' },
-  { id: 'racial-traits', label: '种族特性' },
-  { id: 'traits', label: '背景特性' },
-  { id: 'class-features', label: '职业特性' },
-  { id: 'feats', label: '专长' },
-  { id: 'spells', label: '法术与类法术能力' },
-  { id: 'skills', label: '技能加点' },
-  { id: 'equipment', label: '装备与物品' },
-  { id: 'additional-data', label: '附加数据' }
-];
+import { useTranslation } from 'react-i18next';
 
 export default function TableOfContents() {
+  const { t } = useTranslation();
+
+  const sections = [
+    { id: 'basic-info', label: t('editor.sections.basic') },
+    { id: 'story', label: t('editor.sections.story') },
+    { id: 'attributes', label: t('editor.sections.attributes') },
+    { id: 'attacks', label: t('editor.sections.attacks') },
+    { id: 'defenses', label: t('editor.sections.defenses') },
+    { id: 'racial-traits', label: t('editor.sections.racial_traits') },
+    { id: 'traits', label: t('editor.sections.traits') },
+    { id: 'class-features', label: t('editor.sections.class_features') },
+    { id: 'feats', label: t('editor.sections.feats') },
+    { id: 'spells', label: t('editor.sections.spells') },
+    { id: 'skills', label: t('editor.sections.skills') },
+    { id: 'equipment', label: t('editor.sections.equipment') },
+    { id: 'additional-data', label: t('editor.sections.additional') }
+  ];
+
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -27,7 +30,7 @@ export default function TableOfContents() {
         {/* The vertical line */}
         <div className="absolute left-[18px] top-1.5 bottom-1.5 w-0.5 bg-stone-300 drop-shadow-sm transition-colors pointer-events-none rounded-full" />
         
-        {SECTIONS.map((sec) => (
+        {sections.map((sec) => (
           <button
             key={sec.id}
             onClick={() => scrollTo(sec.id)}
