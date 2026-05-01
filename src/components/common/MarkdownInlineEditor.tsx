@@ -90,6 +90,9 @@ const MarkdownInlineEditor = ({
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
+  const transactionFilterRef = useRef(transactionFilter);
+  useEffect(() => { transactionFilterRef.current = transactionFilter; }, [transactionFilter]);
+
   useEffect(() => {
     if (!editorRef.current) return;
     if (editorRef.current.querySelector('.cm-editor')) {
@@ -102,7 +105,7 @@ const MarkdownInlineEditor = ({
         markdown({ base: markdownLanguage }),
         markdownConcealPlugin,
         externalLinkHandler,
-        // Transaction filtering
+        // Transaction filtering using Ref to avoid re-creating extensions
         EditorState.transactionFilter.of(tr => {
             if (tr.docChanged) {
                 // If singleLine is enabled, prevent any change that adds a newline
@@ -110,7 +113,7 @@ const MarkdownInlineEditor = ({
                     return [];
                 }
                 // Custom external filter
-                if (transactionFilter && !transactionFilter(tr)) {
+                if (transactionFilterRef.current && !transactionFilterRef.current(tr)) {
                     return [];
                 }
             }
@@ -151,7 +154,7 @@ const MarkdownInlineEditor = ({
     const view = new EditorView({ state, parent: editorRef.current });
     viewRef.current = view;
     return () => { view.destroy(); };
-  }, [readOnly, placeholder, height, minHeight, singleLine, transactionFilter]);
+  }, [readOnly, placeholder, singleLine]);
 
   useEffect(() => {
     const view = viewRef.current;
