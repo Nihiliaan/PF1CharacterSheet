@@ -126,6 +126,7 @@ const externalLinkHandler = EditorView.domEventHandlers({
 });
 
 const MarkdownInlineEditor = ({ value, originalValue, onChange, readOnly = false, className = '', placeholder = '', height = 'auto', minHeight = '32px' }: MarkdownInlineEditorProps) => {
+  console.log('[MarkdownEditor] Component Internal Start');
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const isChanged = originalValue !== undefined && value !== originalValue;
