@@ -163,180 +163,183 @@ export default function CharacterEditor({
                 战斗数值 (Combat Stats)
                 <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
               </label>
+              <div className="flex-1">
+                <DynamicTable
+                  minWidth="0"
+                  columns={[
+                    { key: 'bab', label: 'BAB', width: '33.33%' },
+                    { key: 'cmb', label: 'CMB', width: '33.33%' },
+                    { key: 'cmd', label: 'CMD', width: '33.34%' }
+                  ]}
+                  data={data.babTable || [{ bab: '', cmb: '', cmd: '' }]}
+                  originalData={lastSavedData.babTable || [{ bab: '', cmb: '', cmd: '' }]}
+                  onChange={v => setData({ ...data, babTable: v })}
+                  fixedRows={true}
+                />
+              </div>
+            </div>
+            <MultilineInput
+              className="w-full md:w-1/2"
+              label="战技备注 (Combat Maneuver Notes)"
+              value={data.combatManeuverNotes || ''}
+              originalValue={lastSavedData.combatManeuverNotes}
+              onChange={v => setData({ ...data, combatManeuverNotes: v })}
+              placeholder="在此输入战技相关的特殊加值或备注..."
+              height="80px"
+            />
+          </div>
+        </Section>
+
+        <Section id="attacks" title="攻击 (Attacks)">
+          <div className="flex flex-col gap-0 border border-stone-300 rounded overflow-hidden shadow-sm">
+            <div className="border-b border-stone-200">
               <DynamicTable
                 minWidth="0"
                 columns={[
-                  { key: 'bab', label: 'BAB', width: '33.33%' },
-                  { key: 'cmb', label: 'CMB', width: '33.33%' },
-                  { key: 'cmd', label: 'CMD', width: '33.34%' }
+                  { key: 'weapon', label: '近战武器', width: '25%' },
+                  { key: 'hit', label: '命中 (Hit)', width: '15%' },
+                  { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
+                  { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
+                  { key: 'range', label: '触及 (Touch)', width: '5%' },
+                  { key: 'type', label: '类型 (Type)', width: '5%' },
+                  { key: 'special', label: '特性 (Special)', width: '25%' }
                 ]}
-                data={data.babTable || [{ bab: '', cmb: '', cmd: '' }]}
-                originalData={lastSavedData.babTable || [{ bab: '', cmb: '', cmd: '' }]}
-                onChange={v => setData({ ...data, babTable: v })}
-                fixedRows={true}
+                data={data.meleeAttacks || []}
+                originalData={lastSavedData.meleeAttacks || []}
+                onChange={v => setData({ ...data, meleeAttacks: v })}
+                newItemGenerator={() => ({ weapon: '', hit: '', damage: '', crit: '', range: '', type: '', special: '' })}
+                rowDraggable={true}
+                rowActionMode={tableActionMode}
+                onRowActionModeToggle={toggleTableActionMode}
+                onRowDragStart={(idx, e) => handleTableItemDragStart('meleeAttacks', idx, e)}
+                onRowDragOver={(idx, e) => handleTableItemDragOver('meleeAttacks', idx, e)}
+                onRowDrop={(idx, e) => handleTableItemDrop('meleeAttacks', idx, e)}
               />
             </div>
-          </div>
-          <MultilineInput
-            className="w-full md:w-1/2"
-            label="战技备注 (Combat Maneuver Notes)"
-            value={data.combatManeuverNotes || ''}
-            originalValue={lastSavedData.combatManeuverNotes}
-            onChange={v => setData({ ...data, combatManeuverNotes: v })}
-            placeholder="在此输入战技相关的特殊加值或备注..."
-            height="80px"
-          />
-        </div>
-      </Section>
-
-      <Section id="attacks" title="攻击 (Attacks)">
-        <div className="flex flex-col gap-0 border border-stone-300 rounded overflow-hidden shadow-sm">
-          <div className="border-b border-stone-200">
             <DynamicTable
               minWidth="0"
               columns={[
-                { key: 'weapon', label: '近战武器', width: '25%' },
+                { key: 'weapon', label: '远程武器', width: '25%' },
                 { key: 'hit', label: '命中 (Hit)', width: '15%' },
                 { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
                 { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
-                { key: 'range', label: '触及 (Touch)', width: '5%' },
+                { key: 'range', label: '射程 (Range)', width: '5%' },
                 { key: 'type', label: '类型 (Type)', width: '5%' },
                 { key: 'special', label: '特性 (Special)', width: '25%' }
               ]}
-              data={data.meleeAttacks || []}
-              originalData={lastSavedData.meleeAttacks || []}
-              onChange={v => setData({ ...data, meleeAttacks: v })}
+              data={data.rangedAttacks || []}
+              originalData={lastSavedData.rangedAttacks || []}
+              onChange={v => setData({ ...data, rangedAttacks: v })}
               newItemGenerator={() => ({ weapon: '', hit: '', damage: '', crit: '', range: '', type: '', special: '' })}
               rowDraggable={true}
               rowActionMode={tableActionMode}
               onRowActionModeToggle={toggleTableActionMode}
-              onRowDragStart={(idx, e) => handleTableItemDragStart('meleeAttacks', idx, e)}
-              onRowDragOver={(idx, e) => handleTableItemDragOver('meleeAttacks', idx, e)}
-              onRowDrop={(idx, e) => handleTableItemDrop('meleeAttacks', idx, e)}
+              onRowDragStart={(idx, e) => handleTableItemDragStart('rangedAttacks', idx, e)}
+              onRowDragOver={(idx, e) => handleTableItemDragOver('rangedAttacks', idx, e)}
+              onRowDrop={(idx, e) => handleTableItemDrop('rangedAttacks', idx, e)}
             />
           </div>
-          <DynamicTable
-            minWidth="0"
-            columns={[
-              { key: 'weapon', label: '远程武器', width: '25%' },
-              { key: 'hit', label: '命中 (Hit)', width: '15%' },
-              { key: 'damage', label: '伤害 (Dmg)', width: '15%' },
-              { key: 'crit', label: '重击范围和倍率 (Crit)', width: '10%' },
-              { key: 'range', label: '射程 (Range)', width: '5%' },
-              { key: 'type', label: '类型 (Type)', width: '5%' },
-              { key: 'special', label: '特性 (Special)', width: '25%' }
-            ]}
-            data={data.rangedAttacks || []}
-            originalData={lastSavedData.rangedAttacks || []}
-            onChange={v => setData({ ...data, rangedAttacks: v })}
-            newItemGenerator={() => ({ weapon: '', hit: '', damage: '', crit: '', range: '', type: '', special: '' })}
-            rowDraggable={true}
-            rowActionMode={tableActionMode}
-            onRowActionModeToggle={toggleTableActionMode}
-            onRowDragStart={(idx, e) => handleTableItemDragStart('rangedAttacks', idx, e)}
-            onRowDragOver={(idx, e) => handleTableItemDragOver('rangedAttacks', idx, e)}
-            onRowDrop={(idx, e) => handleTableItemDrop('rangedAttacks', idx, e)}
+          <MultilineInput
+            className="mt-6"
+            label="特殊攻击 (Special Attacks)"
+            value={data.specialAttacks || ''}
+            originalValue={lastSavedData.specialAttacks || ''}
+            onChange={v => setData({ ...data, specialAttacks: v })}
+            isAutoHeight={true}
           />
-        </div>
-        <MultilineInput
-          className="mt-6"
-          label="特殊攻击 (Special Attacks)"
-          value={data.specialAttacks || ''}
-          originalValue={lastSavedData.specialAttacks || ''}
-          onChange={v => setData({ ...data, specialAttacks: v })}
-          isAutoHeight={true}
-        />
-      </Section>
+        </Section>
 
-      <Section id="defenses" title="防御 (Defenses)">
-        <div className="flex flex-col gap-6">
-          {/* AC Row */}
-          <div className="flex flex-col md:flex-row gap-6 items-stretch">
-            <div className="w-full md:w-1/2 flex flex-col">
-              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-                防护等级 (AC Details)
-                <span className="text-stone-400 font-normal">AC / 措手不及 AC / 接触 AC</span>
-              </label>
-              <DynamicTable
-                minWidth="0"
-                columns={[
-                  { key: 'ac', label: 'AC', width: '33.33%' },
-                  { key: 'flatFooted', label: '措手不及 AC', width: '33.33%' },
-                  { key: 'touch', label: '接触 AC', width: '33.34%' }
-                ]}
-                data={data.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
-                originalData={lastSavedData.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
-                onChange={v => updateDefenses('acTable', v)}
-                fixedRows={true}
+        <Section id="defenses" title="防御 (Defenses)">
+          <div className="flex flex-col gap-6">
+            {/* AC Row */}
+            <div className="flex flex-col md:flex-row gap-6 items-stretch">
+              <div className="w-full md:w-1/2 flex flex-col">
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                  防护等级 (AC Details)
+                  <span className="text-stone-400 font-normal">AC / 措手不及 AC / 接触 AC</span>
+                </label>
+                <div className="flex-1">
+                  <DynamicTable
+                    minWidth="0"
+                    columns={[
+                      { key: 'ac', label: 'AC', width: '33.33%' },
+                      { key: 'flatFooted', label: '措手不及 AC', width: '33.33%' },
+                      { key: 'touch', label: '接触 AC', width: '33.34%' }
+                    ]}
+                    data={data.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
+                    originalData={lastSavedData.defenses.acTable || [{ ac: '', flatFooted: '', touch: '' }]}
+                    onChange={v => updateDefenses('acTable', v)}
+                    fixedRows={true}
+                  />
+                </div>
+              </div>
+              <MultilineInput
+                className="w-full md:w-1/2"
+                label="防护备注 (AC Notes)"
+                value={data.defenses.acNotes || ''}
+                originalValue={lastSavedData.defenses.acNotes}
+                onChange={v => updateDefenses('acNotes', v)}
+                placeholder="护甲加值来源、闪避、天生护甲等..."
+                height="80px"
+              />
+            </div>
+
+            {/* HP & HD Row */}
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-full md:w-1/2">
+                <InlineInput
+                  label="生命值 (HP)"
+                  value={data.defenses.hp}
+                  originalValue={lastSavedData.defenses.hp}
+                  onChange={v => updateDefenses('hp', v)}
+                  placeholder="例如：20"
+                />
+              </div>
+              <div className="w-full md:w-1/2">
+                <InlineInput
+                  label="生命骰 (Hit Die)"
+                  value={data.defenses.hd || ''}
+                  originalValue={lastSavedData.defenses.hd}
+                  onChange={v => updateDefenses('hd', v)}
+                  placeholder="例如：3d8+3"
+                />
+              </div>
+            </div>
+
+            {/* Saves Row */}
+            <div className="flex flex-col md:flex-row gap-6 items-stretch">
+              <div className="w-full md:w-1/2 flex flex-col">
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                  豁免 (Saving Throws)
+                  <span className="text-stone-400 font-normal">强韧 / 反射 / 意志</span>
+                </label>
+                <div className="flex-1">
+                  <DynamicTable
+                    minWidth="0"
+                    columns={[
+                      { key: 'fort', label: '强韧', width: '33.33%' },
+                      { key: 'ref', label: '反射', width: '33.33%' },
+                      { key: 'will', label: '意志', width: '33.34%' }
+                    ]}
+                    data={data.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
+                    originalData={lastSavedData.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
+                    onChange={v => updateDefenses('savesTable', v)}
+                    fixedRows={true}
+                  />
+                </div>
+              </div>
+              <MultilineInput
+                className="w-full md:w-1/2"
+                label="豁免备注 (Saves Notes)"
+                value={data.defenses.savesNotes || ''}
+                originalValue={lastSavedData.defenses.savesNotes}
+                onChange={v => updateDefenses('savesNotes', v)}
+                placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
+                height="80px"
               />
             </div>
           </div>
-          <MultilineInput
-            className="w-full md:w-1/2"
-            label="防护备注 (AC Notes)"
-            value={data.defenses.acNotes || ''}
-            originalValue={lastSavedData.defenses.acNotes}
-            onChange={v => updateDefenses('acNotes', v)}
-            placeholder="护甲加值来源、闪避、天生护甲等..."
-            height="80px"
-          />
-        </div>
-
-        {/* HP & HD Row */}
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="w-full md:w-1/2">
-            <InlineInput
-              label="生命值 (HP)"
-              value={data.defenses.hp}
-              originalValue={lastSavedData.defenses.hp}
-              onChange={v => updateDefenses('hp', v)}
-              placeholder="例如：20"
-            />
-          </div>
-          <div className="w-full md:w-1/2">
-            <InlineInput
-              label="生命骰 (Hit Die)"
-              value={data.defenses.hd || ''}
-              originalValue={lastSavedData.defenses.hd}
-              onChange={v => updateDefenses('hd', v)}
-              placeholder="例如：3d8+3"
-            />
-          </div>
-        </div>
-
-        {/* Saves Row */}
-        <div className="flex flex-col md:flex-row gap-6 items-stretch">
-          <div className="w-full md:w-1/2 flex flex-col">
-            <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-              豁免 (Saving Throws)
-              <span className="text-stone-400 font-normal">强韧 / 反射 / 意志</span>
-            </label>
-            <DynamicTable
-              minWidth="0"
-              columns={[
-                { key: 'fort', label: '强韧', width: '33.33%' },
-                { key: 'ref', label: '反射', width: '33.33%' },
-                { key: 'will', label: '意志', width: '33.34%' }
-              ]}
-              data={data.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
-              originalData={lastSavedData.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
-              onChange={v => updateDefenses('savesTable', v)}
-              fixedRows={true}
-            />
-          </div>
-        </div>
-        <MultilineInput
-          className="w-full md:w-1/2"
-          label="豁免备注 (Saves Notes)"
-          value={data.defenses.savesNotes || ''}
-          originalValue={lastSavedData.defenses.savesNotes}
-          onChange={v => updateDefenses('savesNotes', v)}
-          placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
-          height="80px"
-        />
-      </div>
-    </div>
-        </Section >
+        </Section>
 
         <Section id="racial-traits" title="种族特性 (Racial Traits)">
           <DynamicTable
@@ -744,7 +747,7 @@ export default function CharacterEditor({
             </div>
           </div>
         </Section>
-      </main >
-    </motion.div >
+      </main>
+    </motion.div>
   );
 }
