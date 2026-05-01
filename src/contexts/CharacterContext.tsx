@@ -204,30 +204,38 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
 
         if (charId) {
-          const char = await getCharacterById(charId);
-          if (char) {
+          try {
+            const char = await getCharacterById(charId);
+            if (!char || !char.data) throw new Error("Character not found or data is missing");
+
             if (char.isLink && char.targetId) {
               const targetChar = await getCharacterById(char.targetId);
-              if (targetChar) {
-                setData(targetChar.data);
-                setLastSavedData(JSON.parse(JSON.stringify(targetChar.data)));
-                setCurrentDocumentId(targetChar.id);
-                setIsReadOnly(targetChar.ownerId !== u?.uid);
-                setViewState('editor');
-                addToRecent(targetChar);
+              if (!targetChar || !targetChar.data) throw new Error("Linked target character not found or data is missing");
+              
+              // Validate by attempting a clone
+              JSON.parse(JSON.stringify(targetChar.data));
+              
+              setData(targetChar.data);
+              setLastSavedData(JSON.parse(JSON.stringify(targetChar.data)));
+              setCurrentDocumentId(targetChar.id);
+              setIsReadOnly(targetChar.ownerId !== u?.uid);
+              setViewState('editor');
+              addToRecent(targetChar);
 
-                // Update URL to match loaded character
-                const url = new URL(window.location.href);
-                url.searchParams.set('id', targetChar.id);
-                window.history.replaceState({}, '', url.toString());
-              }
+              const url = new URL(window.location.href);
+              url.searchParams.set('id', targetChar.id);
+              window.history.replaceState({}, '', url.toString());
             } else if (char.isTemplate) {
+              if (typeof char.data.content !== 'string') throw new Error("Template content is missing or invalid");
               setBbcodeTemplate(char.data.content);
               setViewState('bbcode-template');
               setCurrentDocumentId(char.id);
               setIsReadOnly(char.ownerId !== u?.uid);
               addToRecent(char);
             } else {
+              // Validate by attempting a clone
+              JSON.parse(JSON.stringify(char.data));
+
               setData(char.data);
               setLastSavedData(JSON.parse(JSON.stringify(char.data)));
               setCurrentDocumentId(char.id);
@@ -235,12 +243,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setViewState('editor');
               addToRecent(char);
 
-              // Update URL to match loaded character
               const url = new URL(window.location.href);
               url.searchParams.set('id', char.id);
               window.history.replaceState({}, '', url.toString());
 
-              // Auto-save link if it's someone else's character and we are logged in
               if (u && char.ownerId !== u.uid) {
                 try {
                   const folderId = await ensureLocalFolderService('来自分享', null, u.uid);
@@ -254,6 +260,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 }
               }
             }
+          } catch (e: any) {
+            console.error("Error loading auto-opened character:", e);
+            setToast({ message: "人物卡数据损坏或读取失败，已为您打开新卡。", type: 'error' });
+            await performCreateNew();
           }
         }
 
@@ -549,50 +559,25 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const selectCharacter = async (idOrChar: string | any, skipDirtyCheck: boolean = false) => {
     const performSelect = async () => {
-      if (typeof idOrChar === 'object' && idOrChar !== null && idOrChar.id) {
-        if (idOrChar.isLink && idOrChar.targetId) {
-          await loadSharedCharacter(idOrChar.targetId);
-          return;
-        }
-        const char = idOrChar;
-        
-        if (char.isTemplate) {
-          setBbcodeTemplate(char.data.content);
-          setViewState('bbcode-template');
-          setCurrentDocumentId(char.id);
-          return;
-        }
-
-        setData(char.data);
-        setLastSavedData(JSON.parse(JSON.stringify(char.data)));
-        setCurrentDocumentId(char.id);
-        setIsReadOnly(char.ownerId !== user?.uid);
-        
-        setViewState('editor');
-        addToRecent(char);
-        
-        const url = new URL(window.location.href);
-        url.searchParams.set('id', char.id);
-        window.history.replaceState({}, '', url.toString());
-        return;
-      }
-
-      const id = idOrChar as string;
-      setToast({ message: "正在加载人物资料..." });
       try {
-        const char = await getCharacterById(id);
-        if (char) {
-          if (char.isLink && char.targetId) {
-            await loadSharedCharacter(char.targetId);
+        if (typeof idOrChar === 'object' && idOrChar !== null && idOrChar.id) {
+          if (idOrChar.isLink && idOrChar.targetId) {
+            await loadSharedCharacter(idOrChar.targetId);
             return;
           }
+          const char = idOrChar;
           
           if (char.isTemplate) {
+            if (!char.data || typeof char.data.content !== 'string') throw new Error("Invalid template data");
             setBbcodeTemplate(char.data.content);
             setViewState('bbcode-template');
             setCurrentDocumentId(char.id);
             return;
           }
+
+          if (!char.data) throw new Error("Character data is missing");
+          // Smoke test to catch corruption
+          JSON.parse(JSON.stringify(char.data));
 
           setData(char.data);
           setLastSavedData(JSON.parse(JSON.stringify(char.data)));
@@ -603,11 +588,47 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           addToRecent(char);
           
           const url = new URL(window.location.href);
-          url.searchParams.set('id', id);
+          url.searchParams.set('id', char.id);
           window.history.replaceState({}, '', url.toString());
+          return;
         }
-      } catch (e) {
-        setToast({ message: "加载失败", type: 'error' });
+
+        const id = idOrChar as string;
+        setToast({ message: "正在加载人物资料..." });
+        const char = await getCharacterById(id);
+        
+        if (!char || !char.data) throw new Error("Character not found or data missing");
+
+        if (char.isLink && char.targetId) {
+          await loadSharedCharacter(char.targetId);
+          return;
+        }
+        
+        if (char.isTemplate) {
+          if (typeof char.data.content !== 'string') throw new Error("Invalid template data");
+          setBbcodeTemplate(char.data.content);
+          setViewState('bbcode-template');
+          setCurrentDocumentId(char.id);
+          return;
+        }
+
+        // Smoke test to catch corruption
+        JSON.parse(JSON.stringify(char.data));
+
+        setData(char.data);
+        setLastSavedData(JSON.parse(JSON.stringify(char.data)));
+        setCurrentDocumentId(char.id);
+        setIsReadOnly(char.ownerId !== user?.uid);
+        
+        setViewState('editor');
+        addToRecent(char);
+        
+        const url = new URL(window.location.href);
+        url.searchParams.set('id', id);
+        window.history.replaceState({}, '', url.toString());
+      } catch (e: any) {
+        console.error("Error selecting character:", e);
+        setToast({ message: "人物卡加载失败: 数据已损坏或文件无法读取", type: 'error' });
       }
     };
 

@@ -410,10 +410,10 @@ export default function CharacterEditor({
         <Section id="feats" title="专长 (Feats)">
           <DynamicTable
             columns={[
-              { key: 'level', label: '等级\n(Level)', width: '5%', type: 'posInt' },
-              { key: 'type', label: '类型\n(Type)', width: '5%' },
-              { key: 'name', label: '专长名称\n(Feat Name)', width: '20%' },
-              { key: 'source', label: '来源\n(Source)', width: '15%' },
+              { key: 'level', label: '等级 (Level)', width: '5%', type: 'posInt' },
+              { key: 'source', label: '来源 (Source)', width: '15%' },
+              { key: 'name', label: '专长名称 (Feat Name)', width: '20%' },
+              { key: 'type', label: '类型 (Type)', width: '5%' },
               { key: 'desc', label: '说明 (Description)', width: '55%' }
             ]}
             data={data.feats}
