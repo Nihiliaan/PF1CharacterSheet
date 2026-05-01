@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { DynamicTableProps } from '../../types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
-import { validateInput } from '../../utils/validation';
+import { validateInput, normalizeValue } from '../../utils/validation';
 
 const DynamicCellInput = ({
   value,
@@ -43,7 +43,8 @@ const DynamicCellInput = ({
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
     const val = e.target.value;
     if (validateInput(val, type || 'text')) {
-      onChange(val);
+      const normalized = normalizeValue(val, type || 'text');
+      onChange(normalized);
     }
   };
 

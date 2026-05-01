@@ -15,7 +15,7 @@ interface InlineInputProps {
   displayFormatter?: (v: string, isFocused: boolean) => string;
 }
 
-import { getTransactionFilter } from '../../utils/validation';
+import { getTransactionFilter, normalizeValue } from '../../utils/validation';
 
 const InlineInput = ({
   label,
@@ -35,6 +35,11 @@ const InlineInput = ({
   // Resolve transaction filter based on type
   const resolvedFilter = transactionFilter || (type !== 'text' ? getTransactionFilter(type) : undefined);
 
+  const handleChange = (v: string) => {
+    const normalized = normalizeValue(v, type || 'text');
+    onChange(normalized);
+  };
+
   return (
     <div 
       className={`flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 transition-all group/input ${isChanged ? 'bg-amber-50/50 border-amber-300 shadow-sm' : 'hover:border-stone-400 focus-within:border-stone-600 focus-within:bg-white focus-within:shadow-sm'} ${className}`}
@@ -47,7 +52,7 @@ const InlineInput = ({
       <div className="h-6 relative">
         <MarkdownInlineEditor
           value={displayFormatter ? displayFormatter(value, isFocused) : value}
-          onChange={onChange}
+          onChange={handleChange}
           readOnly={readOnly}
           placeholder={placeholder}
           singleLine={true}
