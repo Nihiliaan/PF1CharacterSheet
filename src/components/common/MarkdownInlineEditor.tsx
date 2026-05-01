@@ -12,6 +12,7 @@ interface MarkdownInlineEditorProps {
   height?: string;
   minHeight?: string;
   singleLine?: boolean;
+  transactionFilter?: (tr: any) => boolean;
 }
 
 const markdownConcealPlugin = ViewPlugin.fromClass(class {
@@ -80,7 +81,8 @@ const MarkdownInlineEditor = ({
   placeholder = '', 
   height = 'auto', 
   minHeight = '24px',
-  singleLine = false 
+  singleLine = false,
+  transactionFilter
 }: MarkdownInlineEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -100,18 +102,22 @@ const MarkdownInlineEditor = ({
         markdown({ base: markdownLanguage }),
         markdownConcealPlugin,
         externalLinkHandler,
-        // Single line logic: Disable wrapping and sanitize newlines
-        singleLine ? [] : EditorView.lineWrapping,
-        singleLine ? EditorState.transactionFilter.of(tr => {
+        // Transaction filtering
+        EditorState.transactionFilter.of(tr => {
             if (tr.docChanged) {
-                const text = tr.newDoc.toString();
-                if (text.includes('\n')) {
-                    // Prevent any change that adds a newline
+                // If singleLine is enabled, prevent any change that adds a newline
+                if (singleLine && tr.newDoc.toString().includes('\n')) {
+                    return [];
+                }
+                // Custom external filter
+                if (transactionFilter && !transactionFilter(tr)) {
                     return [];
                 }
             }
             return tr;
-        }) : [],
+        }),
+        // Single line logic: Disable wrapping
+        singleLine ? [] : EditorView.lineWrapping,
         EditorState.readOnly.of(readOnly),
         EditorView.theme({
           "&": { height, minHeight, fontSize: "14px", backgroundColor: "transparent" },
@@ -145,7 +151,7 @@ const MarkdownInlineEditor = ({
     const view = new EditorView({ state, parent: editorRef.current });
     viewRef.current = view;
     return () => { view.destroy(); };
-  }, [readOnly, placeholder, height, minHeight, singleLine]);
+  }, [readOnly, placeholder, height, minHeight, singleLine, transactionFilter]);
 
   useEffect(() => {
     const view = viewRef.current;

@@ -552,6 +552,7 @@ export default function CharacterEditor({
                 onChange={v => {
                   if (v === '' || /^\d+$/.test(v)) setData({ ...data, skillsTotal: v });
                 }}
+                transactionFilter={tr => /^\d*$/.test(tr.newDoc.toString())}
                 placeholder="0"
               />
             </div>
@@ -565,6 +566,10 @@ export default function CharacterEditor({
                   if (val === '' || /^\d+$/.test(val)) {
                     setData({ ...data, armorCheckPenalty: val || '0' });
                   }
+                }}
+                transactionFilter={tr => {
+                  const nextDoc = tr.newDoc.toString().replace(/^-/, '');
+                  return nextDoc === '' || /^\d+$/.test(nextDoc);
                 }}
                 placeholder="0"
               />
@@ -618,11 +623,11 @@ export default function CharacterEditor({
             </button>
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
-              <InlineInput label={t('editor.items.pp')} value={data.currency.pp} originalValue={lastSavedData.currency?.pp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, pp: v } })) }} placeholder="0" />
-              <InlineInput label={t('editor.items.gp')} value={data.currency.gp} originalValue={lastSavedData.currency?.gp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, gp: v } })) }} placeholder="0" />
-              <InlineInput label={t('editor.items.sp')} value={data.currency.sp} originalValue={lastSavedData.currency?.sp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, sp: v } })) }} placeholder="0" />
-              <InlineInput label={t('editor.items.cp')} value={data.currency.cp} originalValue={lastSavedData.currency?.cp} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, cp: v } })) }} placeholder="0" />
-              <InlineInput label={t('editor.items.coin_weight')} value={data.currency.coinWeight} originalValue={lastSavedData.currency?.coinWeight} onChange={v => { if (v === '' || /^\d*\.?\d*$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, coinWeight: v } })) }} placeholder="0" />
+              <InlineInput label={t('editor.items.pp')} value={data.currency.pp} originalValue={lastSavedData.currency?.pp} transactionFilter={tr => /^\d*$/.test(tr.newDoc.toString())} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, pp: v } })) }} placeholder="0" />
+              <InlineInput label={t('editor.items.gp')} value={data.currency.gp} originalValue={lastSavedData.currency?.gp} transactionFilter={tr => /^\d*$/.test(tr.newDoc.toString())} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, gp: v } })) }} placeholder="0" />
+              <InlineInput label={t('editor.items.sp')} value={data.currency.sp} originalValue={lastSavedData.currency?.sp} transactionFilter={tr => /^\d*$/.test(tr.newDoc.toString())} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, sp: v } })) }} placeholder="0" />
+              <InlineInput label={t('editor.items.cp')} value={data.currency.cp} originalValue={lastSavedData.currency?.cp} transactionFilter={tr => /^\d*$/.test(tr.newDoc.toString())} onChange={v => { if (v === '' || /^\d+$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, cp: v } })) }} placeholder="0" />
+              <InlineInput label={t('editor.items.coin_weight')} value={data.currency.coinWeight} originalValue={lastSavedData.currency?.coinWeight} transactionFilter={tr => /^\d*\.?\d*$/.test(tr.newDoc.toString())} onChange={v => { if (v === '' || /^\d*\.?\d*$/.test(v)) setData(p => ({ ...p, currency: { ...p.currency, coinWeight: v } })) }} placeholder="0" />
             </div>
 
             <div className="flex flex-col md:flex-row gap-3 mt-4 items-stretch">

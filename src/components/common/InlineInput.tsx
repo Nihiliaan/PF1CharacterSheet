@@ -9,6 +9,7 @@ interface InlineInputProps {
   placeholder?: string;
   className?: string;
   readOnly?: boolean;
+  transactionFilter?: (tr: any) => boolean;
 }
 
 const InlineInput = ({
@@ -18,7 +19,8 @@ const InlineInput = ({
   onChange,
   placeholder = '',
   className = '',
-  readOnly = false
+  readOnly = false,
+  transactionFilter
 }: InlineInputProps) => {
   const isChanged = originalValue !== undefined && value !== originalValue;
 
@@ -45,6 +47,7 @@ const InlineInput = ({
           readOnly={readOnly}
           placeholder={placeholder}
           singleLine={true}
+          transactionFilter={transactionFilter}
           height="24px"
           minHeight="24px"
           className="font-medium text-ink"

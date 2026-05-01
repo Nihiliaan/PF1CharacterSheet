@@ -133,10 +133,10 @@
       "medium": "中载",
       "heavy": "重载",
       "overload": "超载",
-      "pp": "白金 (pp)",
-      "gp": "金 (gp)",
-      "sp": "银 (sp)",
-      "cp": "铜 (cp)",
+      "pp": "白金币 (pp)",
+      "gp": "金币 (gp)",
+      "sp": "银币 (sp)",
+      "cp": "铜币 (cp)",
       "coin_weight": "钱币重量 (lbs)"
     },
     "lists": {
