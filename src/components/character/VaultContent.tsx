@@ -62,8 +62,8 @@ const VaultContent = ({
   const filteredChars = characters.filter(c => (c.folderId || null) === currentFolderId && (search ? (c.name || '未命名').toLowerCase().includes(search.toLowerCase()) : true));
 
   const getDeepAvatars = (folderId: string): string[] => {
-    const directChars = characters.filter(c => c.folderId === folderId);
-    let avatars = directChars.map(c => c.data.basic.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + c.name);
+    const directChars = characters.filter(c => c.folderId === folderId && !c.isTemplate);
+    let avatars = directChars.map(c => c.data?.basic?.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + (c.name || ''));
     
     if (avatars.length < 4) {
       const subFolders = folders.filter(f => f.parentId === folderId);
