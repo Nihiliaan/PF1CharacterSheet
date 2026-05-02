@@ -53,11 +53,21 @@ export const DynamicInput = ({
   const [isFocused, setIsFocused] = React.useState(false);
   const isChanged = !readOnly && originalValue !== undefined && value !== originalValue;
 
+  const [tempValue, setTempValue] = React.useState(value);
+  React.useEffect(() => {
+    if (!isFocused) setTempValue(value);
+  }, [value, isFocused]);
+
+  const handleStepperChange = (v: string) => {
+    setTempValue(v);
+    onChange(v);
+  };
+
   const containerRef = useNumericStepper({
-    value,
-    onChange,
+    value: tempValue,
+    onChange: handleStepperChange,
     type: type || 'text',
-    readOnly
+    readOnly: readOnly,
   });
 
   const isDescriptionCol = (key?: string) => {
@@ -69,11 +79,6 @@ export const DynamicInput = ({
   const displayValue = () => {
     return getDisplayValue(value, type || 'text', t, { isFocused, columnKey, row, displayFormatter });
   };
-
-  const [tempValue, setTempValue] = React.useState(value);
-  React.useEffect(() => {
-    if (!isFocused) setTempValue(value);
-  }, [value, isFocused]);
 
   const handleChange = (val: string) => {
     setTempValue(val);

@@ -9,24 +9,30 @@ interface UseNumericStepperProps {
   max?: number;
 }
 
+const STEP_CONFIG: Record<string, { step?: number; min?: number; max?: number }> = {
+  level: { min: 1, max: 20 },
+  distance: { step: 5, min: 0 },
+  bonus: {},
+  int: {},
+  posInt: { min: 0 },
+  quantity: { min: 1 },
+};
+
 /**
  * Hook to add mouse wheel stepper functionality to a component.
- * Specifically handles the 'level' type with 0-20 range.
+ * Supports various numeric types with specific ranges and steps.
  */
 export function useNumericStepper({
   value,
   onChange,
   type,
   readOnly = false,
-  min = 0,
-  max = 20,
 }: UseNumericStepperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Use refs for value and onChange to keep the event listener stable
+
   const valueRef = useRef(value);
   const onChangeRef = useRef(onChange);
-  
+
   useEffect(() => {
     valueRef.current = value;
     onChangeRef.current = onChange;
@@ -34,28 +40,33 @@ export function useNumericStepper({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || type !== 'level' || readOnly) return;
+    const config = STEP_CONFIG[type] || {}; // Default to empty object if type is unhandled
+    if (!container || readOnly) return;
+
+    // Determine defaults
+    const step = config.step ?? 1;
+    const min = config.min ?? -Infinity;
+    const max = config.max ?? Infinity;
 
     const handleWheelNative = (e: WheelEvent) => {
-      // Only allow adjustment if we are focused
       if (!container.contains(document.activeElement)) return;
-      
+
       e.preventDefault();
       e.stopPropagation();
-      
-      const delta = e.deltaY > 0 ? 1 : -1;
+
+      const delta = e.deltaY > 0 ? -step : step;
       const currentVal = parseInt(valueRef.current, 10) || 0;
       let newVal = currentVal + delta;
-      
+
       if (newVal > max) newVal = max;
       if (newVal < min) newVal = min;
-      
+
       onChangeRef.current(newVal.toString());
     };
 
     container.addEventListener('wheel', handleWheelNative, { passive: false });
     return () => container.removeEventListener('wheel', handleWheelNative);
-  }, [type, readOnly, min, max]);
+  }, [type, readOnly]);
 
   return containerRef;
 }

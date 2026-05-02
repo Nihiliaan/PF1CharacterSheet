@@ -39,7 +39,7 @@ export const normalizeValue = (value: string, type: string): string => {
       if (value === '+' || value === '-') return value;
       const parsed = parseInt(value, 10);
       if (isNaN(parsed)) return '';
-      if (type === 'level') return Math.max(1, parsed).toString();
+      if (type === 'level') return Math.min(20, Math.max(1, parsed)).toString();
       if (type === 'distance') {
         return (Math.round(parsed / 5) * 5).toString();
       }
