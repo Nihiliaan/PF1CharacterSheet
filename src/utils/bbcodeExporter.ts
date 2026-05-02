@@ -120,13 +120,21 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
       `[tr][td]${getDisplayValue(f.level, 'level', t)}[/td][td]${f.name || ''}${f.type ? ` (${f.type})` : ''}[/td][td]${f.desc || ''}[/td][/tr]`
     ).join('\n') + '\n[/table]';
 
+  const displayFormatter1 = (val) => {
+    if (!val || val === '0') return '';
+    const idx = parseInt(val, 10) - 1;
+    const localizedName = t('editor.attributes.' + ATTRIBUTE_NAMES[idx]);
+    const modStr = getDisplayValue(data.attributes[idx].modifier, 'bonus', t);
+    return `${modStr}${localizedName}`;
+  }
+
   vars['skillTable'] = '[table]\n' +
     (data.skills || []).map((s: any) => {
       const rankVal = parseInt(s.rank) || 0;
       const details = [
         getDisplayValue(s.rank, 'level', t),
         (s.cs === 'true' && rankVal > 0) ? `+3${t('editor.sections.cs_short')}` : '',
-        getDisplayValue(s.ability, 'bonus', t),
+        displayFormatter1(s.ability),
         s.others,
         s.special
       ].filter(x => x).join('');
