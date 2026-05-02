@@ -345,6 +345,16 @@ export default function CharacterEditor({
                 height="100%"
               />
             </div>
+            <div className="mt-8">
+              <MultilineInput
+                label={t('editor.defenses.special_defenses')}
+                value={data.defenses.specialDefenses || ''}
+                originalValue={lastSavedData.defenses.specialDefenses || ''}
+                onChange={v => setData({ ...data, defenses: { ...data.defenses, specialDefenses: v } })}
+                placeholder={t('editor.defenses.special_defenses_placeholder')}
+                height="100px"
+              />
+            </div>
           </div>
         </Section>
 
@@ -756,16 +766,6 @@ export default function CharacterEditor({
                 })()}
               </div>
             </div>
-          </div>
-          <div className="mt-8">
-            <MultilineInput
-              label={t('editor.defenses.special_defenses')}
-              value={data.defenses.specialDefenses || ''}
-              originalValue={lastSavedData.defenses.specialDefenses || ''}
-              onChange={v => setData({ ...data, defenses: { ...data.defenses, specialDefenses: v } })}
-              placeholder={t('editor.defenses.special_defenses_placeholder')}
-              height="100px"
-            />
           </div>
         </Section>
 
