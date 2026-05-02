@@ -39,14 +39,29 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
         // Spell blocks (SLA, Spontaneous, Prepared)
         const cl = block.casterLevel || '0';
         const conc = block.concentration || '0';
-        blockResult += `[b]${t('editor.spells.cl') || '施法者等级'}[/b] ${getDisplayValue(cl, 'level', t)} [b]${t('editor.spells.concentration') || '集中'}[/b] ${getDisplayValue(conc, 'bonus', t)}\n`;
+        blockResult += `[b]${t('editor.spells.caster_level') || '施法者等级'}[/b] ${getDisplayValue(cl, 'level', t)} [b]${t('editor.spells.concentration') || '集中'}[/b] ${getDisplayValue(conc, 'bonus', t)}\n`;
 
         const cols = block.columns || [];
         const tableData = block.tableData || [];
+        const baseLevel = block.baseLevel || 0;
         if (tableData.length > 0) {
           blockResult += '[table]\n';
-          tableData.forEach((row: any) => {
-            blockResult += '[tr]' + cols.map((c: any) => `[td]${row[c.key] || ''}[/td]`).join('') + '[/tr]\n';
+          tableData.forEach((row: any, i: number) => {
+            blockResult += '[tr]' + cols.map((c: any) => {
+              let val = row[c.key] || '';
+              if (c.key === 'level') {
+                // Determine if we should show the computed level
+                // In prepared/spontaneous, the level column is usually computed
+                const levelNum = tableData.length - 1 - i + baseLevel;
+                val = t('editor.spells.computed_level', { n: levelNum }) || `${levelNum}环`;
+              } else if (c.key === 'uses' && val) {
+                // If it's a numeric usage count without a unit, append "次/日"
+                if (/^\d+(\/\d+)?$/.test(val) && !val.includes(t('common.day') || '日') && !val.includes('day')) {
+                  val = val + (t('editor.spells.times_per_day') || '次/日');
+                }
+              }
+              return `[td]${val}[/td]`;
+            }).join('') + '[/tr]\n';
           });
           blockResult += '[/table]\n';
         }
