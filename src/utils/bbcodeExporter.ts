@@ -108,12 +108,12 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['defensiveAbilities'] = getS(data, 'defenses.defensiveAbilities') || t('common.none');
   vars['specialDefenses'] = getS(data, 'defenses.specialDefenses') || t('common.none');
 
-  vars['racialTraits'] = (data.racialTraits || []).map((r: any) => `[b]${r.name}[/b]: ${r.desc}`).join('\n') || t('common.none');
-  vars['backgroundTraits'] = (data.backgroundTraits || []).map((r: any) => `[b]${r.name}[/b] (${r.type}): ${r.desc}`).join('\n') || t('common.none');
+  vars['racialTraits'] = '[table]\n' + (data.racialTraits || []).map((r: any) => `[tr][td]${r.name}[/td][td]${r.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
+  vars['backgroundTraits'] = (data.backgroundTraits || []).map((r: any) => `${r.name}(${r.type}): ${r.desc}`).join('\n') || t('common.none');
 
   vars['favoredClass'] = getS(data, 'favoredClass') || '';
   vars['favoredClassBonus'] = getS(data, 'favoredClassBonus') || '';
-  vars['classFeatures'] = (data.classFeatures || []).map((f: any) => `[b]${f.name}[/b] [i]${getDisplayValue(f.level, 'level', t)}${f.type ? ' ' + f.type : ''}[/i]: ${f.desc}`).join('\n') || t('common.none');
+  vars['classFeatures'] = '[table]\n' + (data.classFeatures || []).map((f: any) => `[tr][td]${getDisplayValue(f.level, 'level', t)}${f.type ? ' ' + f.type : ''}[/td][td][td]${f.name}[/td][td]${f.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
 
   vars['featTable'] = '[table]\n' +
     (data.feats || []).map((f: any) =>
@@ -142,7 +142,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
       const totalValue = getDisplayValue(s.total, 'bonus', t) || '0';
       const mergedString = details ? `${totalValue} (${details})` : totalValue;
 
-      return `[tr][td]${s.name || ''}[/td][td]${mergedString}[/td][/tr]`;
+      return `[tr][td]${s.name || ''}[/td][td]${mergedString}[/td][td]${s.special || ''}[/td][/tr]`;
     }).join('\n') + '\n[/table]';
 
   let itemsWeight = 0;

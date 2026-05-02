@@ -39,10 +39,13 @@ hp {hp} ({hd})
 特殊防御
 {specialDefenses}
 [hr]
-[b]种族特性和背景特性[/b]
+[b]背景特性[/b]
+[hr]
+{backgroundTraits}
+[hr]
+[b]种族特性[/b]
 [hr]
 {racialTraits}
-{backgroundTraits}
 [hr]
 [b]职业特性[/b]
 [hr]
