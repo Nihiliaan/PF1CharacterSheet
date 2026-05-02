@@ -19,7 +19,8 @@
     "add_table": "添加表格",
     "add_image": "添加图片",
     "delete": "删除",
-    "delete_container": "删除容器"
+    "delete_container": "删除容器",
+    "none": "无"
   },
   "editor": {
     "read_only_notice_copy": "复制到我的收藏",

@@ -19,7 +19,8 @@
     "add_table": "Add Table",
     "add_image": "Add Image",
     "delete": "Delete",
-    "delete_container": "Delete Container"
+    "delete_container": "Delete Container",
+    "none": "none"
   },
   "editor": {
     "read_only_notice_copy": "Copy to My Vault",

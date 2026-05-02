@@ -105,15 +105,15 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['saveWill'] = getDisplayValue(saveData.will, 'bonus', t);
   vars['savesNotes'] = defenses.savesNotes || '';
   vars['saveLine'] = saveData.fort ? `[b]${t('editor.defenses.fort')}[/b] ${getDisplayValue(saveData.fort, 'bonus', t)}, [b]${t('editor.defenses.ref')}[/b] ${getDisplayValue(saveData.ref, 'bonus', t)}, [b]${t('editor.defenses.will')}[/b] ${getDisplayValue(saveData.will, 'bonus', t)}${defenses.savesNotes ? ` (${defenses.savesNotes})` : ''}` : '';
-  vars['defensiveAbilities'] = getS(data, 'defenses.defensiveAbilities') || (t('common.none') || '无');
-  vars['specialDefenses'] = getS(data, 'defenses.specialDefenses') || (t('common.none') || '无');
+  vars['defensiveAbilities'] = getS(data, 'defenses.defensiveAbilities') || t('common.none');
+  vars['specialDefenses'] = getS(data, 'defenses.specialDefenses') || t('common.none');
 
-  vars['racialTraits'] = (data.racialTraits || []).map((r: any) => `[b]${r.name}[/b]: ${r.desc}`).join('\n') || '无';
-  vars['backgroundTraits'] = (data.backgroundTraits || []).map((r: any) => `[b]${r.name}[/b] (${r.type}): ${r.desc}`).join('\n') || '无';
+  vars['racialTraits'] = (data.racialTraits || []).map((r: any) => `[b]${r.name}[/b]: ${r.desc}`).join('\n') || t('common.none');
+  vars['backgroundTraits'] = (data.backgroundTraits || []).map((r: any) => `[b]${r.name}[/b] (${r.type}): ${r.desc}`).join('\n') || t('common.none');
 
   vars['favoredClass'] = getS(data, 'favoredClass') || '';
   vars['favoredClassBonus'] = getS(data, 'favoredClassBonus') || '';
-  vars['classFeatures'] = (data.classFeatures || []).map((f: any) => `[b]${f.name}[/b] [i]${getDisplayValue(f.level, 'level', t)}${f.type ? ' ' + f.type : ''}[/i]: ${f.desc}`).join('\n') || '无';
+  vars['classFeatures'] = (data.classFeatures || []).map((f: any) => `[b]${f.name}[/b] [i]${getDisplayValue(f.level, 'level', t)}${f.type ? ' ' + f.type : ''}[/i]: ${f.desc}`).join('\n') || t('common.none');
 
   vars['featTable'] = '[table]\n' +
     (data.feats || []).map((f: any) =>
@@ -122,30 +122,11 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
 
   vars['skillTable'] = '[table]\n' +
     (data.skills || []).map((s: any) => {
-      let abilityIdx = -1;
-      if (typeof s.ability === 'string' && /^\d+$/.test(s.ability)) {
-        abilityIdx = parseInt(s.ability) - 1;
-      } else {
-        abilityIdx = ATTRIBUTE_NAMES.indexOf(s.ability);
-      }
-
-      let abilityStr = '';
-      if (abilityIdx >= 0 && abilityIdx < 6) {
-        const attrData = data.attributes[abilityIdx];
-        if (attrData) {
-          const localizedName = t('editor.attributes.' + ATTRIBUTE_NAMES[abilityIdx]);
-          const modStr = getDisplayValue(attrData.modifier, 'bonus', t);
-          abilityStr = `${localizedName} ${modStr}`;
-        }
-      } else {
-        abilityStr = '—';
-      }
-
       const rankVal = parseInt(s.rank) || 0;
       const details = [
         getDisplayValue(s.rank, 'level', t),
-        (s.cs === 'true' && rankVal > 0) ? `+3${t('editor.cs_localized') || '本职'}` : '',
-        abilityStr,
+        (s.cs === 'true' && rankVal > 0) ? `+3${t('editor.sections.cs_short')}` : '',
+        getDisplayValue(s.ability, 'bonus', t),
         s.others,
         s.special
       ].filter(x => x).join('');
@@ -158,7 +139,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
 
   let itemsWeight = 0;
   let itemsValue = 0;
-  
+
   if (!data.equipmentBags || data.equipmentBags.length === 0) {
     vars['equipmentTable'] = '无';
   } else {
@@ -175,7 +156,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
           const c = parseFloat(i.cost) || 0;
           const totalW = (w * q).toFixed(1);
           const totalC = (c * q).toFixed(1);
-          
+
           if (!bag.ignoreWeight) itemsWeight += w * q;
           itemsValue += c * q;
 
@@ -194,18 +175,18 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   const cp = parseInt(data.currency?.cp) || 0;
   const currencyWeight = parseFloat(data.currency?.coinWeight) || 0;
   const currencyValue = pp * 10 + gp + sp * 0.1 + cp * 0.01;
-  
+
   const coinTexts = [];
   if (pp > 0) coinTexts.push(`${pp}${t('editor.items.pp')}`);
   if (gp > 0) coinTexts.push(`${gp}${t('editor.items.gp')}`);
   if (sp > 0) coinTexts.push(`${sp}${t('editor.items.sp')}`);
   if (cp > 0) coinTexts.push(`${cp}${t('editor.items.cp')}`);
   const coinsLine = coinTexts.length > 0 ? `${t('editor.items.currency') || '钱币'}（${coinTexts.join('')}）` : `${t('editor.items.currency') || '钱币'}（无）`;
-  
+
   vars['currencyLine'] = `[b]${coinsLine} ${t('editor.items.coin_weight_total') || '钱币总重'} ${currencyWeight.toFixed(1)}磅 ${t('editor.items.total_assets') || '钱币总价值'} ${currencyValue.toFixed(2)}gp[/b]`;
 
   const finalTotalWeight = itemsWeight + currencyWeight;
-  
+
   const strAttr = data.attributes?.[0];
   const strValue = strAttr ? parseInt(strAttr.final) || 10 : 10;
   const mult = parseFloat(data.encumbranceMultiplier) || 1;
