@@ -1,6 +1,5 @@
-import { ATTRIBUTE_NAMES, CharacterData, Column } from '../types';
+import { ATTRIBUTE_NAMES, CharacterData } from '../types';
 import { getDisplayValue } from './formatters';
-import { getSkillColumns, getMeleeAttackColumns, getRangedAttackColumns, BASIC_FIELD_SPECS, DEFENSE_FIELD_SPECS, OTHER_FIELD_SPECS } from './characterSchema';
 
 export function generateBBCode(data: CharacterData, template: string, t: any): string {
   let bbcode = template;
@@ -43,9 +42,14 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
 
   const vars: Record<string, string> = {};
 
-  BASIC_FIELD_SPECS.forEach(field => {
-    const val = getS(data, field.path) || '';
-    vars[field.key] = getDisplayValue(val, field.type || 'text', t);
+  const basicFields = ['name', 'classes', 'alignment', 'deity', 'size', 'gender', 'race', 'age', 'height', 'weight', 'speed', 'senses', 'initiative', 'perception', 'languages'];
+  basicFields.forEach(f => {
+    const val = getS(data, `basic.${f}`) || '';
+    if (f === 'initiative' || f === 'perception') {
+      vars[f] = getDisplayValue(val, 'bonus', t);
+    } else {
+      vars[f] = String(val);
+    }
   });
 
   vars['avatarUrl'] = (getS(data, 'basic.avatars')?.[0]?.url) || 'http://此处填写人物头像图片地址';
@@ -72,27 +76,15 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['combatManeuverNotes'] = cmNotes || '';
 
   vars['meleeAttackTable'] = '[table]\n' + (data.meleeAttacks || []).map((m: any) => {
-    const cols = getMeleeAttackColumns(t);
-    const rowContent = cols.map(c => {
-       const val = getDisplayValue(m[c.key], c.type || 'text', t, { 
-         displayFormatter: c.displayFormatter,
-         formatterArgs: [m, c.key]
-       });
-       return `[td]${val}[/td]`;
-    }).join('');
-    return `[tr]${rowContent}[/tr]`;
+    const critStr = `${m.critRange || m.crit || ''}${m.critMultiplier || ''}`;
+    const damageType = m.damageType || m.type || '';
+    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}}[/td][td]${m.damage || ''}/${critStr}/${damageType}[/td][td]${getDisplayValue(m.range, 'distance', t)}/${m.special || ''}[/td][/tr]`;
   }).join('\n') + '\n[/table]';
 
   vars['rangedAttackTable'] = '[table]\n' + (data.rangedAttacks || []).map((m: any) => {
-    const cols = getRangedAttackColumns(t);
-    const rowContent = cols.map(c => {
-       const val = getDisplayValue(m[c.key], c.type || 'text', t, { 
-         displayFormatter: c.displayFormatter,
-         formatterArgs: [m, c.key]
-       });
-       return `[td]${val}[/td]`;
-    }).join('');
-    return `[tr]${rowContent}[/tr]`;
+    const critStr = `${m.critRange || m.crit || ''}${m.critMultiplier || ''}`;
+    const damageType = m.damageType || m.type || '';
+    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}/${critStr}/${damageType}[/td][td]${getDisplayValue(m.range, 'distance', t)}/${m.special || ''}[/td][/tr]`;
   }).join('\n') + '\n[/table]';
 
   const defenses = data.defenses || {} as any;
@@ -100,13 +92,8 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['ac'] = acData.ac || '';
   vars['acFlatFooted'] = acData.flatFooted || '';
   vars['acTouch'] = acData.touch || '';
-
-  DEFENSE_FIELD_SPECS.forEach(field => {
-    const val = getS(data, field.path) || '';
-    vars[field.key] = getDisplayValue(val, field.type || 'text', t);
-  });
-
-  vars['acLine'] = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]${t('editor.defenses.flat_footed')}[/b] ${acData.flatFooted || ''}, [b]${t('editor.defenses.touch')}[/b] ${acData.touch || ''}${vars['acNotes'] ? ` (${vars['acNotes']})` : ''}` : '';
+  vars['acNotes'] = defenses.acNotes || '';
+  vars['acLine'] = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]${t('editor.defenses.flat_footed')}[/b] ${acData.flatFooted || ''}, [b]${t('editor.defenses.touch')}[/b] ${acData.touch || ''}${defenses.acNotes ? ` (${defenses.acNotes})` : ''}` : '';
 
   vars['hp'] = defenses.hp || '';
   vars['hd'] = defenses.hd || '';
@@ -124,10 +111,8 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['racialTraits'] = (data.racialTraits || []).map((r: any) => `[b]${r.name}[/b]: ${r.desc}`).join('\n') || t('common.none');
   vars['backgroundTraits'] = (data.backgroundTraits || []).map((r: any) => `[b]${r.name}[/b] (${r.type}): ${r.desc}`).join('\n') || t('common.none');
 
-  OTHER_FIELD_SPECS.forEach(field => {
-    const val = getS(data, field.path) || '';
-    vars[field.key] = getDisplayValue(val, field.type || 'text', t);
-  });
+  vars['favoredClass'] = getS(data, 'favoredClass') || '';
+  vars['favoredClassBonus'] = getS(data, 'favoredClassBonus') || '';
   vars['classFeatures'] = (data.classFeatures || []).map((f: any) => `[b]${f.name}[/b] [i]${getDisplayValue(f.level, 'level', t)}${f.type ? ' ' + f.type : ''}[/i]: ${f.desc}`).join('\n') || t('common.none');
 
   vars['featTable'] = '[table]\n' +
@@ -137,26 +122,19 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
 
   vars['skillTable'] = '[table]\n' +
     (data.skills || []).map((s: any) => {
-      const cols = getSkillColumns(t, data);
-      const name = getDisplayValue(s.name, 'text', t, { 
-        displayFormatter: cols[0].displayFormatter,
-        formatterArgs: [s, 'name']
-      });
-      const total = getDisplayValue(s.total, 'bonus', t, { 
-        displayFormatter: cols[1].displayFormatter,
-        formatterArgs: [s, 'total']
-      });
-      
-      const details = [2, 3, 4, 5].map(idx => {
-         const col = cols[idx];
-         return getDisplayValue(s[col.key], col.type || 'text', t, {
-            displayFormatter: col.displayFormatter,
-            formatterArgs: [s, col.key]
-         });
-      }).filter(x => x).join('+').replace(/\+\+/g, '+'); // Join with + and clean up
+      const rankVal = parseInt(s.rank) || 0;
+      const details = [
+        getDisplayValue(s.rank, 'level', t),
+        (s.cs === 'true' && rankVal > 0) ? `+3${t('editor.sections.cs_short')}` : '',
+        getDisplayValue(s.ability, 'bonus', t),
+        s.others,
+        s.special
+      ].filter(x => x).join('');
 
-      const mergedString = details ? `${total} (${details})` : total;
-      return `[tr][td]${name || ''}[/td][td]${mergedString}[/td][/tr]`;
+      const totalValue = getDisplayValue(s.total, 'bonus', t) || '0';
+      const mergedString = details ? `${totalValue} (${details})` : totalValue;
+
+      return `[tr][td]${s.name || ''}[/td][td]${mergedString}[/td][/tr]`;
     }).join('\n') + '\n[/table]';
 
   let itemsWeight = 0;

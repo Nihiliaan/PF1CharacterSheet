@@ -15,7 +15,6 @@ import AvatarGallery from '../character/AvatarGallery';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../../utils/calculations';
 import { getDisplayValue } from '../../utils/formatters';
-import { getSkillColumns, getMeleeAttackColumns, getRangedAttackColumns, BASIC_FIELD_SPECS, DEFENSE_FIELD_SPECS, OTHER_FIELD_SPECS } from '../../utils/characterSchema';
 
 interface CharacterEditorProps {
   user: FirebaseUser | null;
@@ -60,10 +59,6 @@ export default function CharacterEditor({
     removeAdditionalBlock,
     saveCharacter
   } = useCharacter();
-
-  const getS = (obj: any, path: string) => {
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
-  };
   return (
     <motion.div
       key="editor"
@@ -102,25 +97,20 @@ export default function CharacterEditor({
         <Section id="basic-info" title={t('editor.sections.basic')} className="max-w-[1200px] mx-auto">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-1 grid grid-cols-12 gap-y-4 gap-x-4">
-              {BASIC_FIELD_SPECS.map(field => {
-                const isLarge = field.key === 'name' || field.key === 'classes' || field.key === 'alignment' || field.key === 'deity' || field.key === 'speed' || field.key === 'senses' || field.key === 'initiative' || field.key === 'perception';
-                const colSpan = isLarge ? 'col-span-12 sm:col-span-6' : 'col-span-4';
-                const label = t(field.labelKey || '');
-                const value = getS(data, field.path);
-                const originalValue = getS(lastSavedData, field.path);
-
-                return (
-                  <InlineInput
-                    key={field.key}
-                    className={colSpan + (field.key === 'name' || field.key === 'classes' ? ' text-lg' : '')}
-                    label={label}
-                    value={value}
-                    originalValue={originalValue}
-                    onChange={v => updateBasic(field.key, v)}
-                    type={field.type}
-                  />
-                );
-              })}
+              <InlineInput className="col-span-12 sm:col-span-6 text-lg" label={t('editor.basic.name')} value={data.basic.name} originalValue={lastSavedData.basic.name} onChange={v => updateBasic('name', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6 text-lg" label={t('editor.basic.classes')} value={data.basic.classes} originalValue={lastSavedData.basic.classes} onChange={v => updateBasic('classes', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.alignment')} value={data.basic.alignment} originalValue={lastSavedData.basic.alignment} onChange={v => updateBasic('alignment', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.deity')} value={data.basic.deity || ''} originalValue={lastSavedData.basic.deity || ''} onChange={v => updateBasic('deity', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.size')} value={data.basic.size} originalValue={lastSavedData.basic.size} onChange={v => updateBasic('size', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.gender')} value={data.basic.gender} originalValue={lastSavedData.basic.gender} onChange={v => updateBasic('gender', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.race')} value={data.basic.race} originalValue={lastSavedData.basic.race} onChange={v => updateBasic('race', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.age')} value={data.basic.age} originalValue={lastSavedData.basic.age} onChange={v => updateBasic('age', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.height')} value={data.basic.height} originalValue={lastSavedData.basic.height} onChange={v => updateBasic('height', v)} />
+              <InlineInput className="col-span-4" label={t('editor.basic.weight')} value={data.basic.weight} originalValue={lastSavedData.basic.weight} onChange={v => updateBasic('weight', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.speed')} value={data.basic.speed} originalValue={lastSavedData.basic.speed} onChange={v => updateBasic('speed', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.senses')} value={data.basic.senses} originalValue={lastSavedData.basic.senses} onChange={v => updateBasic('senses', v)} />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.initiative')} value={data.basic.initiative} originalValue={lastSavedData.basic.initiative} onChange={v => updateBasic('initiative', v)} type="bonus" />
+              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.perception')} value={data.basic.perception} originalValue={lastSavedData.basic.perception} onChange={v => updateBasic('perception', v)} type="bonus" />
               <MultilineInput
                 className="col-span-12 mt-2"
                 label={t('editor.basic.languages')}
@@ -209,7 +199,16 @@ export default function CharacterEditor({
             <div className="border-b border-stone-200">
               <DynamicTable
                 minWidth="0"
-                columns={getMeleeAttackColumns(t)}
+                columns={[
+                  { key: 'weapon', label: t('editor.attacks.melee'), width: '20%' },
+                  { key: 'hit', label: t('editor.attacks.hit'), width: '12%', type: 'bonus' },
+                  { key: 'damage', label: t('editor.attacks.damage'), width: '12%' },
+                  { key: 'critRange', label: t('editor.attacks.crit_range'), width: '8%', type: 'select', options: ['20', '19', '18', '17', '16', '15', '14', '13', '12', '11'] },
+                  { key: 'critMultiplier', label: t('editor.attacks.crit_multiplier'), width: '8%', type: 'select', options: ['×2', '×3', '×4', '×5'] },
+                  { key: 'range', label: t('editor.attacks.reach'), width: '8%', type: 'distance' },
+                  { key: 'damageType', label: t('editor.attacks.damage_type'), width: '10%' },
+                  { key: 'special', label: t('editor.attacks.special'), width: '22%' }
+                ]}
                 data={data.meleeAttacks?.map((a: any) => ({ ...a, critRange: a.critRange || a.crit, critMultiplier: a.critMultiplier || (a.crit?.includes('x') ? a.crit.split('x')[1] : '') })) || []}
                 originalData={lastSavedData.meleeAttacks || []}
                 onChange={v => setData({ ...data, meleeAttacks: v })}
@@ -224,7 +223,16 @@ export default function CharacterEditor({
             </div>
             <DynamicTable
               minWidth="0"
-              columns={getRangedAttackColumns(t)}
+              columns={[
+                { key: 'weapon', label: t('editor.attacks.ranged'), width: '20%' },
+                { key: 'hit', label: t('editor.attacks.hit'), width: '12%', type: 'bonus' },
+                { key: 'damage', label: t('editor.attacks.damage'), width: '12%' },
+                { key: 'critRange', label: t('editor.attacks.crit_range'), width: '8%', type: 'select', options: ['20', '19', '18', '17', '16', '15', '14', '13', '12', '11'] },
+                { key: 'critMultiplier', label: t('editor.attacks.crit_multiplier'), width: '8%', type: 'select', options: ['×2', '×3', '×4', '×5'] },
+                { key: 'range', label: t('editor.attacks.range'), width: '8%', type: 'distance' },
+                { key: 'damageType', label: t('editor.attacks.damage_type'), width: '10%' },
+                { key: 'special', label: t('editor.attacks.special'), width: '22%' }
+              ]}
               data={data.rangedAttacks?.map((a: any) => ({ ...a, critRange: a.critRange || a.crit, critMultiplier: a.critMultiplier || (a.crit?.includes('x') ? a.crit.split('x')[1] : '') })) || []}
               originalData={lastSavedData.rangedAttacks || []}
               onChange={v => setData({ ...data, rangedAttacks: v })}
@@ -285,18 +293,24 @@ export default function CharacterEditor({
 
             {/* HP & HD Row */}
             <div className="flex flex-col md:flex-row gap-6">
-              {DEFENSE_FIELD_SPECS.filter(f => f.key === 'hp' || f.key === 'hd').map(field => (
-                <div key={field.key} className="w-full md:w-1/2">
-                  <InlineInput
-                    label={t(field.labelKey || '')}
-                    value={getS(data, field.path)}
-                    originalValue={getS(lastSavedData, field.path)}
-                    onChange={v => updateDefenses(field.key, v)}
-                    placeholder={field.key === 'hp' ? "例如：20" : "例如：3d8+3"}
-                    type={field.type}
-                  />
-                </div>
-              ))}
+              <div className="w-full md:w-1/2">
+                <InlineInput
+                  label={t('editor.defenses.hp')}
+                  value={data.defenses.hp}
+                  originalValue={lastSavedData.defenses.hp}
+                  onChange={v => updateDefenses('hp', v)}
+                  placeholder="例如：20"
+                />
+              </div>
+              <div className="w-full md:w-1/2">
+                <InlineInput
+                  label={t('editor.defenses.hd')}
+                  value={data.defenses.hd || ''}
+                  originalValue={lastSavedData.defenses.hd}
+                  onChange={v => updateDefenses('hd', v)}
+                  placeholder="例如：3d8+3"
+                />
+              </div>
             </div>
 
             {/* Saves Row */}
@@ -331,17 +345,14 @@ export default function CharacterEditor({
                 height="100%"
               />
             </div>
-            {DEFENSE_FIELD_SPECS.filter(f => f.key === 'specialDefenses').map(field => (
-              <MultilineInput
-                key={field.key}
-                className="mt-6"
-                label={t(field.labelKey || '')}
-                value={getS(data, field.path) || ''}
-                originalValue={getS(lastSavedData, field.path)}
-                onChange={v => setData({ ...data, defenses: { ...data.defenses, [field.key]: v } })}
-                placeholder={t('editor.defenses.special_defenses_placeholder')}
-              />
-            ))}
+            <MultilineInput
+              className="mt-6"
+              label={t('editor.defenses.special_defenses')}
+              value={data.defenses.specialDefenses || ''}
+              originalValue={lastSavedData.defenses.specialDefenses || ''}
+              onChange={v => setData({ ...data, defenses: { ...data.defenses, specialDefenses: v } })}
+              placeholder={t('editor.defenses.special_defenses_placeholder')}
+            />
           </div>
         </Section>
 
@@ -384,15 +395,8 @@ export default function CharacterEditor({
               onRowDrop={(idx, e) => handleTableItemDrop('backgroundTraits', idx, e)}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {OTHER_FIELD_SPECS.filter(f => f.key === 'favoredClass' || f.key === 'favoredClassBonus').map(field => (
-                <InlineInput
-                  key={field.key}
-                  label={t(field.labelKey || '')}
-                  value={getS(data, field.path)}
-                  onChange={v => setData(p => ({ ...p, [field.key]: v }))}
-                  type={field.type}
-                />
-              ))}
+              <InlineInput label={t('editor.lists.favored_class')} value={data.favoredClass} onChange={v => setData(p => ({ ...p, favoredClass: v }))} />
+              <InlineInput label={t('editor.lists.favored_class_bonus')} value={data.favoredClassBonus} onChange={v => setData(p => ({ ...p, favoredClassBonus: v }))} />
             </div>
           </div>
         </Section>
@@ -561,7 +565,32 @@ export default function CharacterEditor({
 
         <Section id="skills" title={t('editor.sections.skills')}>
           <DynamicTable
-            columns={getSkillColumns(t, data)}
+            columns={[
+              { key: 'name', label: t('editor.skills.headers.skill'), width: '15%' },
+              { key: 'total', label: t('editor.skills.headers.total'), width: '5%', type: 'bonus' },
+              { key: 'rank', label: t('editor.skills.headers.rank'), width: '5%', type: 'level' },
+              {
+                key: 'cs', label: t('editor.skills.headers.cs'), width: '5%', type: 'bool',
+                displayFormatter: (val, isFocused, row) => {
+                  return (parseInt(row?.rank) || 0 > 0 && val) ? '+3' : '';
+                }
+              },
+              {
+                key: 'ability',
+                label: t('editor.skills.headers.ability'),
+                width: '10%',
+                type: 'attributeIndex',
+                displayFormatter: (val) => {
+                  if (!val || val === '0') return '';
+                  const idx = parseInt(val, 10) - 1;
+                  const localizedName = t('editor.attributes.' + ATTRIBUTE_NAMES[idx]);
+                  const modStr = getDisplayValue(data.attributes[idx].modifier, 'bonus', t);
+                  return `${modStr}${localizedName}`;
+                }
+              },
+              { key: 'others', label: t('editor.skills.headers.others'), width: '20%' },
+              { key: 'special', label: t('editor.skills.headers.special'), width: '35%' }
+            ]}
             data={data.skills}
             originalData={lastSavedData.skills}
             onChange={v => setData({ ...data, skills: v })}
