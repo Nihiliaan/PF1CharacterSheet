@@ -97,13 +97,13 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['meleeAttackTable'] = '[table]\n' + (data.meleeAttacks || []).map((m: any) => {
     const critStr = `${m.critRange || m.crit || ''}${m.critMultiplier || ''}`;
     const damageType = m.damageType || m.type || '';
-    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}/${critStr}/${damageType}[/td][td]${getDisplayValue(m.range, 'distance', t)}/${m.special || ''}[/td][/tr]`;
+    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${damageType}[/td][td]${getDisplayValue(m.range, 'distance', t)}[/td][td]${m.special || ''}[/td][/tr]`;
   }).join('\n') + '\n[/table]';
 
   vars['rangedAttackTable'] = '[table]\n' + (data.rangedAttacks || []).map((m: any) => {
     const critStr = `${m.critRange || m.crit || ''}${m.critMultiplier || ''}`;
     const damageType = m.damageType || m.type || '';
-    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}/${critStr}/${damageType}[/td][td]${getDisplayValue(m.range, 'distance', t)}/${m.special || ''}[/td][/tr]`;
+    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${damageType}[/td][td]${getDisplayValue(m.range, 'distance', t)}[/td][td]${m.special || ''}[/td][/tr]`;
   }).join('\n') + '\n[/table]';
 
   const defenses = data.defenses || {} as any;
