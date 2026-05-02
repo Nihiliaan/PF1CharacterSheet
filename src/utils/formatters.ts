@@ -1,15 +1,20 @@
 export const getDisplayValue = (
-  value: string,
+  value: any,
   type: string,
   t: any,
   options: {
     isFocused?: boolean;
-    displayFormatter?: (v: string, isFocused: boolean) => string;
+    displayFormatter?: (v: any, ...args: any[]) => string;
+    formatterArgs?: any[];
   } = {}
 ): string => {
-  const { isFocused, displayFormatter } = options;
+  const { isFocused, displayFormatter, formatterArgs = [] } = options;
 
-  if (displayFormatter) return displayFormatter(value, isFocused || false);
+  if (displayFormatter) return displayFormatter(value, isFocused || false, ...formatterArgs);
+
+  if (type === 'bool') {
+    return (value === true || value === 'true') ? `✓` : '';
+  }
 
   if (type === 'quantity' && !isFocused) {
     if (!value || value === '1') return '';
