@@ -20,7 +20,7 @@ export const calculateTotalCost = (data: CharacterData): string => {
 };
 
 export const calculateTotalWeightNum = (data: CharacterData): number => {
-  let total = 0;
+  let total = parseFloat(data.currency?.coinWeight) || 0;
   data.equipmentBags.forEach(bag => {
     if (!bag.ignoreWeight) {
       bag.items.forEach(item => {
@@ -30,15 +30,6 @@ export const calculateTotalWeightNum = (data: CharacterData): number => {
       });
     }
   });
-
-  const pp = parseInt(data.currency?.pp) || 0;
-  const gp = parseInt(data.currency?.gp) || 0;
-  const sp = parseInt(data.currency?.sp) || 0;
-  const cp = parseInt(data.currency?.cp) || 0;
-  const totalCoins = pp + gp + sp + cp;
-  const coinWeight = parseFloat(data.currency?.coinWeight) || 0;
-  total += totalCoins * coinWeight;
-
   return total;
 };
 

@@ -1,27 +1,5 @@
 import { ATTRIBUTE_NAMES, CharacterData } from '../types';
-
-const getDisplayValue = (value: string, type: string, t: any): string => {
-  if (type === 'bonus' && value !== '') {
-    const num = parseInt(value);
-    if (!isNaN(num)) return num >= 0 ? `+${num}` : num.toString();
-  }
-  if (type === 'level' && value !== '') {
-    return t('editor.lists.level_format', { n: value });
-  }
-  if (type === 'distance' && value !== '') {
-    return t('editor.lists.distance_format', { v: value });
-  }
-  if (type === 'cost') {
-    if (!value) return '—';
-    return `${value} ${t('editor.items.units.gp')}`;
-  }
-  if (type === 'weight') {
-    if (!value) return '—';
-    return `${value} ${t('editor.items.units.lbs')}`;
-  }
-  if (value === '' || value === undefined || value === null) return '';
-  return String(value);
-};
+import { getDisplayValue } from './formatters';
 
 export function generateBBCode(data: CharacterData, template: string, t: any): string {
   let bbcode = template;
@@ -127,7 +105,8 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['saveWill'] = getDisplayValue(saveData.will, 'bonus', t);
   vars['savesNotes'] = defenses.savesNotes || '';
   vars['saveLine'] = saveData.fort ? `[b]${t('editor.defenses.fort')}[/b] ${getDisplayValue(saveData.fort, 'bonus', t)}, [b]${t('editor.defenses.ref')}[/b] ${getDisplayValue(saveData.ref, 'bonus', t)}, [b]${t('editor.defenses.will')}[/b] ${getDisplayValue(saveData.will, 'bonus', t)}${defenses.savesNotes ? ` (${defenses.savesNotes})` : ''}` : '';
-  vars['defensiveAbilities'] = getS(data, 'defenses.defensiveAbilities') || '无';
+  vars['defensiveAbilities'] = getS(data, 'defenses.defensiveAbilities') || (t('common.none') || '无');
+  vars['specialDefenses'] = getS(data, 'defenses.specialDefenses') || (t('common.none') || '无');
 
   vars['racialTraits'] = (data.racialTraits || []).map((r: any) => `[b]${r.name}[/b]: ${r.desc}`).join('\n') || '无';
   vars['backgroundTraits'] = (data.backgroundTraits || []).map((r: any) => `[b]${r.name}[/b] (${r.type}): ${r.desc}`).join('\n') || '无';
@@ -162,9 +141,10 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
         abilityStr = '—';
       }
 
+      const rankVal = parseInt(s.rank) || 0;
       const details = [
         getDisplayValue(s.rank, 'level', t),
-        s.cs === 'true' ? '+3' : '',
+        (s.cs === 'true' && rankVal > 0) ? `+3${t('editor.cs_localized') || '本职'}` : '',
         abilityStr,
         s.others,
         s.special
@@ -212,20 +192,17 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   const gp = parseInt(data.currency?.gp) || 0;
   const sp = parseInt(data.currency?.sp) || 0;
   const cp = parseInt(data.currency?.cp) || 0;
-  const totalCoins = pp + gp + sp + cp;
-  const coinWeightStr = data.currency?.coinWeight || '0.02';
-  const coinWeight = parseFloat(coinWeightStr);
-  const currencyWeight = totalCoins * coinWeight;
+  const currencyWeight = parseFloat(data.currency?.coinWeight) || 0;
   const currencyValue = pp * 10 + gp + sp * 0.1 + cp * 0.01;
   
   const coinTexts = [];
-  if (pp > 0) coinTexts.push(`${pp}${t('editor.items.pp').split(' (')[0]}`);
-  if (gp > 0) coinTexts.push(`${gp}${t('editor.items.gp').split(' (')[0]}`);
-  if (sp > 0) coinTexts.push(`${sp}${t('editor.items.sp').split(' (')[0]}`);
-  if (cp > 0) coinTexts.push(`${cp}${t('editor.items.cp').split(' (')[0]}`);
+  if (pp > 0) coinTexts.push(`${pp}${t('editor.items.pp')}`);
+  if (gp > 0) coinTexts.push(`${gp}${t('editor.items.gp')}`);
+  if (sp > 0) coinTexts.push(`${sp}${t('editor.items.sp')}`);
+  if (cp > 0) coinTexts.push(`${cp}${t('editor.items.cp')}`);
   const coinsLine = coinTexts.length > 0 ? `${t('editor.items.currency') || '钱币'}（${coinTexts.join('')}）` : `${t('editor.items.currency') || '钱币'}（无）`;
   
-  vars['currencyLine'] = `[b]${coinsLine} ${t('editor.items.coin_weight_total') || '钱币总重量'} ${currencyWeight.toFixed(1)}磅 ${t('editor.items.total_assets') || '钱币总价值'} ${currencyValue.toFixed(2)}gp[/b]`;
+  vars['currencyLine'] = `[b]${coinsLine} ${t('editor.items.coin_weight_total') || '钱币总重'} ${currencyWeight.toFixed(1)}磅 ${t('editor.items.total_assets') || '钱币总价值'} ${currencyValue.toFixed(2)}gp[/b]`;
 
   const finalTotalWeight = itemsWeight + currencyWeight;
   
@@ -256,7 +233,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   else if (finalTotalWeight > mediumLimit) statusKey = t('editor.items.heavy');
   else if (finalTotalWeight > lightLimit) statusKey = t('editor.items.medium');
 
-  vars['loadSummary'] = `[b]${t('editor.items.total_weight') || '负重'} ${statusKey} ${finalTotalWeight.toFixed(1)}磅（${t('editor.items.actual_weight') || '实际总负重'}） ${lightLimit}/${mediumLimit}/${heavyLimit}（${t('editor.items.load_limits') || '轻载/中载/重载上限'}）[/b]`;
+  vars['loadSummary'] = `[b]${t('editor.items.total_weight') || '负重'} ${statusKey} ${finalTotalWeight.toFixed(1)}磅 ${lightLimit}/${mediumLimit}/${heavyLimit}[/b]`;
 
   vars['loadStatus'] = `${statusKey} (${finalTotalWeight.toFixed(1)} lbs)`;
   vars['loadLimits'] = `${lightLimit} / ${mediumLimit} / ${heavyLimit}`;

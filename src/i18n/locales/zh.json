@@ -38,7 +38,9 @@
       "spells": "法术与类法术能力",
       "skills": "技能加点",
       "equipment": "装备与物品",
-      "additional": "附加数据"
+      "additional": "附加数据",
+      "cs_localized": "本职",
+      "cs_short": "本职"
     },
     "basic": {
       "name": "角色名",
@@ -92,8 +94,8 @@
     "defenses": {
       "ac_details": "防御等级",
       "ac": "AC",
-      "touch": "接触 AC",
-      "flat_footed": "措手不及 AC",
+      "touch": "接触",
+      "flat_footed": "措手不及",
       "ac_notes": "AC 备注",
       "ac_placeholder": "特殊情况加值减值，如在对抗巨人亚种的怪物时，AC 获得+4 闪避加值",
       "hp": "生命值",
@@ -102,7 +104,10 @@
       "fort": "强韧",
       "ref": "反射",
       "will": "意志",
-      "saves_notes": "豁免备注"
+      "saves_notes": "豁免备注",
+      "defensive_abilities": "躲避与特殊防御",
+      "special_defenses": "特殊防御",
+      "special_defenses_placeholder": "在此输入特殊防御能力，如：伤害减免、能量抗力、法术抗力等..."
     },
     "skills": {
       "headers": {
@@ -138,7 +143,7 @@
       "headers": {
         "item": "物品",
         "cost": "价格 (gp)",
-        "weight": "重量 (lbs)",
+        "weight": "重量 (磅)",
         "notes": "备注"
       },
       "units": {
@@ -153,11 +158,16 @@
       "medium": "中载",
       "heavy": "重载",
       "overload": "超载",
-      "pp": "白金币 (pp)",
-      "gp": "金币 (gp)",
-      "sp": "银币 (sp)",
-      "cp": "铜币 (cp)",
-      "coin_weight": "钱币重量 (lbs)"
+      "pp": "白金币",
+      "gp": "金币",
+      "sp": "银币",
+      "cp": "铜币",
+      "coin_weight": "钱币总重 (磅)",
+      "currency": "钱币",
+      "coin_weight_total": "钱币总重量",
+      "actual_weight": "实际总负重",
+      "load_limits": "负重上限",
+      "no_items": "此容器内无物品"
     },
     "lists": {
       "trait": "背景特性",

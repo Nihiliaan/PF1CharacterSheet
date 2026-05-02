@@ -114,6 +114,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                     options={c.options}
                     displayFormatter={c.displayFormatter}
                     align={c.align || (isDescriptionCol(c.key) ? 'left' : 'center')}
+                    row={row}
                     className={`${(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}
                   />
                 </td>

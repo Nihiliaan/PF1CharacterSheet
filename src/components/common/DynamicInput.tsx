@@ -4,6 +4,7 @@ import { ATTRIBUTE_NAMES, InputType } from '../../types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
 import { validateInput, normalizeValue } from '../../utils/validation';
 import { useNumericStepper } from '../../hooks/useNumericStepper';
+import { getDisplayValue } from '../../utils/formatters';
 
 export interface DynamicInputProps {
   value: string;
@@ -25,6 +26,7 @@ export interface DynamicInputProps {
   align?: 'left' | 'center' | 'right';
   height?: string;
   minHeight?: string;
+  row?: any;
 }
 
 export const DynamicInput = ({
@@ -44,7 +46,8 @@ export const DynamicInput = ({
   hideIndicator = false,
   align,
   height,
-  minHeight
+  minHeight,
+  row
 }: DynamicInputProps) => {
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = React.useState(false);
@@ -64,42 +67,43 @@ export const DynamicInput = ({
   };
 
   const displayValue = () => {
-    if (displayFormatter) return displayFormatter(value, isFocused);
-    if (type === 'checkbox') return value === 'true' ? '+3' : '';
-    if (type === 'quantity' && !isFocused) {
-      if (!value || value === '1') return '';
-      return `×${value}`;
-    }
-    if (type === 'bonus' && !isFocused && value !== '') {
-      const num = parseInt(value);
-      if (!isNaN(num)) return num >= 0 ? `+${num}` : num.toString();
-    }
-    if (type === 'level' && !isFocused && value !== '') {
-      return t('editor.lists.level_format', { n: value });
-    }
-    if (type === 'distance' && !isFocused && value !== '') {
-      return t('editor.lists.distance_format', { v: value });
-    }
-    if (type === 'cost' && !isFocused) {
-      if (!value) return '—';
-      return `${value} ${t('editor.items.units.gp')}`;
-    }
-    if (type === 'weight' && !isFocused) {
-      if (!value) return '—';
-      return `${value} ${t('editor.items.units.lbs')}`;
-    }
-    return value;
+    return getDisplayValue(value, type || 'text', t, { isFocused, columnKey, row, displayFormatter });
   };
 
+  const [tempValue, setTempValue] = React.useState(value);
+  React.useEffect(() => {
+    if (!isFocused) setTempValue(value);
+  }, [value, isFocused]);
+
   const handleChange = (val: string) => {
-    if (validateInput(val, type || 'text')) {
-      const normalized = normalizeValue(val, type || 'text');
-      onChange(normalized);
+    setTempValue(val);
+    // Real-time for text/checkbox, but deferred for numeric types that need normalization
+    if (type === 'text' || type === 'checkbox' || type === 'select' || type === 'attributeIndex' || type === 'markdown') {
+       if (validateInput(val, type || 'text')) {
+         const normalized = normalizeValue(val, type || 'text');
+         onChange(normalized);
+       }
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    if (type !== 'text' && type !== 'checkbox' && type !== 'select' && type !== 'attributeIndex' && type !== 'markdown') {
+        if (validateInput(tempValue, type || 'text')) {
+          let normalized = normalizeValue(tempValue, type || 'text');
+          if (type === 'level' && normalized === '0') normalized = '1';
+          onChange(normalized);
+        } else {
+          setTempValue(value); // Revert on failure
+        }
     }
   };
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    handleChange(e.target.value);
+    const val = e.target.value;
+    if (validateInput(val, type || 'text')) {
+      onChange(normalizeValue(val, type || 'text'));
+    }
   };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -189,10 +193,10 @@ export const DynamicInput = ({
             {displayValue() + '\n'}
           </div>
           <textarea
-            value={isFocused && (type === 'quantity' || type === 'bonus' || type === 'int' || type === 'posInt' || type === 'level' || type === 'distance' || type === 'cost' || type === 'weight') ? value : displayValue()}
+            value={isFocused ? tempValue : displayValue()}
             onChange={handleTextareaChange}
             onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onBlur={handleBlur}
             className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent ${paddingClass} ${innerClass} ${type === 'quantity' ? 'text-stone-500' : ''} ${isChanged ? 'text-amber-900' : ''}`}
             rows={1}
             placeholder={placeholder}

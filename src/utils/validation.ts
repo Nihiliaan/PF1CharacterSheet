@@ -38,6 +38,7 @@ export const normalizeValue = (value: string, type: string): string => {
   if (type === 'posInt' || type === 'int' || type === 'bonus' || type === 'quantity' || type === 'level' || type === 'distance') {
     const parsed = parseInt(value, 10);
     if (isNaN(parsed)) return '';
+    if (type === 'level') return Math.max(1, parsed).toString();
     if (type === 'distance') {
       return (Math.round(parsed / 5) * 5).toString();
     }

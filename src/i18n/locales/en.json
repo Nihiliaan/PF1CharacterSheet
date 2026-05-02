@@ -38,7 +38,9 @@
       "spells": "Spells & Abilities",
       "skills": "Skills",
       "equipment": "Equipment",
-      "additional": "Additional Data"
+      "additional": "Additional Data",
+      "cs_localized": "Class Skill",
+      "cs_short": "CS"
     },
     "basic": {
       "name": "Name",
@@ -102,7 +104,10 @@
       "fort": "Fort",
       "ref": "Ref",
       "will": "Will",
-      "saves_notes": "Saves Notes"
+      "saves_notes": "Saves Notes",
+      "defensive_abilities": "Defensive Abilities",
+      "special_defenses": "Special Defenses",
+      "special_defenses_placeholder": "Enter SR, DR, ER, or other special defenses..."
     },
     "skills": {
       "headers": {
@@ -138,11 +143,16 @@
       "medium": "Medium",
       "heavy": "Heavy",
       "overload": "Overload",
-      "pp": "Platinum (pp)",
-      "gp": "Gold (gp)",
-      "sp": "Silver (sp)",
-      "cp": "Copper (cp)",
-      "coin_weight": "Coin Weight (lbs)"
+      "pp": "Platinum",
+      "gp": "Gold",
+      "sp": "Silver",
+      "cp": "Copper",
+      "coin_weight": "Coin Total Weight (lbs)",
+      "currency": "Currency",
+      "coin_weight_total": "Total Coin Weight",
+      "actual_weight": "Actual Total Weight",
+      "load_limits": "Load Limits",
+      "no_items": "This container is empty"
     },
     "lists": {
       "trait": "Trait",

@@ -1,6 +1,6 @@
 export type { User as FirebaseUser } from 'firebase/auth';
 
-export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight';
+export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight' | 'markdown';
 
 export interface Column {
   key: string;
@@ -70,6 +70,8 @@ export interface CharacterData {
     acNotes: string;
     savesTable: { fort: string; ref: string; will: string }[];
     savesNotes: string;
+    defensiveAbilities: string;
+    specialDefenses: string;
   };
   racialTraits: any[];
   backgroundTraits: any[];

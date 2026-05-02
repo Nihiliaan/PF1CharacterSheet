@@ -14,6 +14,7 @@ import AvatarGallery from '../character/AvatarGallery';
 
 import { useCharacter } from '../../contexts/CharacterContext';
 import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../../utils/calculations';
+import { getDisplayValue } from '../../utils/formatters';
 
 interface CharacterEditorProps {
   user: FirebaseUser | null;
@@ -573,9 +574,8 @@ export default function CharacterEditor({
                   const attrData = data.attributes[idx];
                   if (!attrData) return val;
                   const localizedName = t('editor.attributes.' + ATTRIBUTE_NAMES[idx]);
-                  const mod = parseInt(attrData.modifier);
-                  const sign = isNaN(mod) ? '' : (mod >= 0 ? '+' : '');
-                  return `${localizedName} ${sign}${attrData.modifier}`;
+                  const modStr = getDisplayValue(attrData.modifier, 'bonus', t);
+                  return `${modStr}${localizedName}`;
                 }
               },
               { key: 'others', label: t('editor.skills.headers.others'), width: '20%' },
@@ -756,6 +756,16 @@ export default function CharacterEditor({
                 })()}
               </div>
             </div>
+          </div>
+          <div className="mt-8">
+            <MultilineInput
+              label={t('editor.defenses.special_defenses')}
+              value={data.defenses.specialDefenses || ''}
+              originalValue={lastSavedData.defenses.specialDefenses || ''}
+              onChange={v => setData({ ...data, defenses: { ...data.defenses, specialDefenses: v } })}
+              placeholder={t('editor.defenses.special_defenses_placeholder')}
+              height="100px"
+            />
           </div>
         </Section>
 
