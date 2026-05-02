@@ -9,55 +9,58 @@ export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 {size} {gender} {race}
 {height} {weight} {age} {speed}
 先攻 {initiative} 察觉 {perception}
-语言：{languages}
+语言 {languages}
 [/td]
 [td][img width=200 height=200]{avatarUrl}[/img][/td]
 [/tr]
 [/table]
 [hr]
-[spoiler]
 [b]属性[/b]
+[hr]
 {attributesTable}
-[table][tr][td]BAB{bab}[/td][td]CMB{cmb}[/td][td]CMD{cmd}[/td][/tr][/table]
+[table][tr][td]BAB {bab}[/td][td]CMB {cmb}[/td][td]CMD {cmd}[/td][/tr][/table]
 [hr]
 [b]攻击[/b]
+[hr]
+[b]近战攻击[/b]
 {meleeAttackTable}
+[b]远程攻击[/b]
 {rangedAttackTable}
-特殊攻击
+[b]特殊攻击[/b]
 {specialAttacks}
 [hr]
 [b]防御[/b]
-AC {ac}，措手不及{acFlatFooted}，接触{acTouch}
-{acNotes}
-HP {hp} ({hd})
-强韧{saveFort}，反射{saveRef}，意志{saveWill}
-{savesNotes}
+[hr]
+AC {ac}，措手不及{acFlatFooted}，接触{acTouch}；{acNotes}
+hp {hp} ({hd})
+强韧{saveFort}，反射{saveRef}，意志{saveWill}；{savesNotes}
 防御能力
 {defensiveAbilities}
 [hr]
 [b]种族特性和背景特性[/b]
+[hr]
 {racialTraits}
 {backgroundTraits}
 [hr]
 [b]职业特性[/b]
-天赋职业：{favoredClass} ({favoredClassBonus})
+[hr]
+[b]天赋职业[/b] {favoredClass} ({favoredClassBonus})
 {classFeatures}
 {magicBlocks}
 [hr]
 [b]专长[/b]
+[hr]
 {featTable}
 [hr]
-[b]技能加点[/b]
+[b]技能 总计{skillsTotal}点；防具检定减值{acp}[/b]
+[hr]
 {skillTable}
-总计：{skillsTotal}
-备注：{skillsNotes}
+备注
+{skillsNotes}
 [hr]
-[/spoiler]
-[b]装备[/b]
-{equipmentTable}
-[table][tr][td]负重[/td][td]{loadStatus}[/td][td]{loadLimits}[/td][/tr]
-[/table]
+[b]装备与物品[/b]
 [hr]
+{equipmentSection}
 `;
 
 import { useCharacter } from '../contexts/CharacterContext';
@@ -238,10 +241,11 @@ export default function BBCodeTemplateEditor() {
             {/* 8. Feats & Skills */}
             <section>
               <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">8. {t('editor.sections.feats')} & {t('editor.sections.skills')}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
                 <span>{'{featTable}'} - {t('editor.sections.feats')}</span>
                 <span>{'{skillTable}'} - {t('editor.sections.skills')}</span>
-                <span className="col-span-full">{'{skillsTotal}'} - {t('editor.skills.total_points')}</span>
+                <span>{'{acp}'} - {t('editor.skills.acp')}</span>
+                <span>{'{skillsTotal}'} - {t('editor.skills.total_points')}</span>
                 <span className="col-span-full">{'{skillsNotes}'} - {t('editor.skills.notes')}</span>
                 <span className="col-span-full">{'{magicBlocks}'} - {t('editor.sections.spells')}</span>
               </div>
@@ -252,8 +256,11 @@ export default function BBCodeTemplateEditor() {
               <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">9. {t('editor.sections.equipment')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
                 <span className="col-span-full">{'{equipmentTable}'} - {t('editor.sections.equipment')}</span>
-                <span>{'{loadStatus}'} - {t('editor.items.total_weight')}</span>
-                <span>{'{loadLimits}'} - {t('editor.items.heavy')}</span>
+                <span className="col-span-full">{'{currencyLine}'} - {t('editor.items.total_assets')}</span>
+                <span className="col-span-full">{'{loadSummary}'} - {t('editor.items.total_weight')}</span>
+                <span className="col-span-full">{'{equipmentSection}'} - {t('editor.sections.equipment')} ({t('common.all')})</span>
+                <span>{'{loadStatus}'} - {t('editor.items.total_weight')} (Legacy)</span>
+                <span>{'{loadLimits}'} - {t('editor.items.heavy')} (Legacy)</span>
               </div>
             </section>
 

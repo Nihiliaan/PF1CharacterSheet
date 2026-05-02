@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, googleProvider, githubProvider, discordProvider } from '../lib/firebase';
 import { loginWithProvider, logout as authLogout, linkAccount, unlinkProvider } from '../services/authService';
@@ -174,6 +175,7 @@ const mergeWithDefault = (data: any, defaults: any): any => {
 };
 
 export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { t } = useTranslation();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [view, setViewState] = useState<'editor' | 'vault' | 'settings' | 'bbcode-template'>('editor');
 
@@ -993,7 +995,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleExportBBCode = () => {
     const tmpl = localStorage.getItem('bbcode_template') || DEFAULT_BBCODE_TEMPLATE;
-    const bbcode = generateBBCode(data, tmpl);
+    const bbcode = generateBBCode(data, tmpl, t);
     navigator.clipboard.writeText(bbcode);
     setToast({ message: "BBCode 已复制到剪贴板！可以直接到跑团论坛粘贴。" });
   };
