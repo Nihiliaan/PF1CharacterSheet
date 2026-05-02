@@ -40,7 +40,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
         const cl = block.casterLevel || '0';
         const conc = block.concentration || '0';
         blockResult += `[b]${t('editor.spells.cl') || '施法者等级'}[/b] ${getDisplayValue(cl, 'level', t)} [b]${t('editor.spells.concentration') || '集中'}[/b] ${getDisplayValue(conc, 'bonus', t)}\n`;
-        
+
         const cols = block.columns || [];
         const tableData = block.tableData || [];
         if (tableData.length > 0) {
@@ -50,7 +50,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
           });
           blockResult += '[/table]\n';
         }
-        
+
         if (block.notes) {
           blockResult += `${block.notes}`;
         }
@@ -97,7 +97,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['meleeAttackTable'] = '[table]\n' + (data.meleeAttacks || []).map((m: any) => {
     const critStr = `${m.critRange || m.crit || ''}${m.critMultiplier || ''}`;
     const damageType = m.damageType || m.type || '';
-    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}}[/td][td]${m.damage || ''}/${critStr}/${damageType}[/td][td]${getDisplayValue(m.range, 'distance', t)}/${m.special || ''}[/td][/tr]`;
+    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}/${critStr}/${damageType}[/td][td]${getDisplayValue(m.range, 'distance', t)}/${m.special || ''}[/td][/tr]`;
   }).join('\n') + '\n[/table]';
 
   vars['rangedAttackTable'] = '[table]\n' + (data.rangedAttacks || []).map((m: any) => {
