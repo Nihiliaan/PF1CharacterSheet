@@ -77,8 +77,8 @@ export const DynamicInput = ({
 
   const handleChange = (val: string) => {
     setTempValue(val);
-    // Real-time for text/checkbox, but deferred for numeric types that need normalization
-    if (type === 'text' || type === 'checkbox' || type === 'select' || type === 'attributeIndex' || type === 'markdown') {
+    // Real-time for most types now, ensuring bonus/int can handle signs
+    if (type === 'text' || type === 'checkbox' || type === 'select' || type === 'attributeIndex' || type === 'markdown' || type === 'bonus' || type === 'int' || type === 'posInt') {
        if (validateInput(val, type || 'text')) {
          const normalized = normalizeValue(val, type || 'text');
          onChange(normalized);
@@ -88,14 +88,16 @@ export const DynamicInput = ({
 
   const handleBlur = () => {
     setIsFocused(false);
-    if (type !== 'text' && type !== 'checkbox' && type !== 'select' && type !== 'attributeIndex' && type !== 'markdown') {
-        if (validateInput(tempValue, type || 'text')) {
-          let normalized = normalizeValue(tempValue, type || 'text');
-          if (type === 'level' && normalized === '0') normalized = '1';
-          onChange(normalized);
-        } else {
-          setTempValue(value); // Revert on failure
-        }
+    // Final normalization pass across all types
+    let blurValue = tempValue;
+    if (blurValue === '+' || blurValue === '-') blurValue = '0';
+    
+    if (validateInput(blurValue, type || 'text')) {
+      let normalized = normalizeValue(blurValue, type || 'text');
+      if (type === 'level' && normalized === '0') normalized = '1';
+      onChange(normalized);
+    } else {
+      setTempValue(value);
     }
   };
 

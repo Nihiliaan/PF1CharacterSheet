@@ -2,7 +2,7 @@ import { Transaction } from "@codemirror/state";
 
 export const REGEX_PATTERNS = {
   posInt: /^\d*$/,
-  int: /^-?\d*$/,
+  int: /^[+-]?\d*$/,
   float: /^-?\d*\.?\d*$/,
 };
 
@@ -35,15 +35,16 @@ export const validateInput = (value: string, type: string): boolean => {
 export const normalizeValue = (value: string, type: string): string => {
   if (value === '') return '';
   
-  if (type === 'posInt' || type === 'int' || type === 'bonus' || type === 'quantity' || type === 'level' || type === 'distance') {
-    const parsed = parseInt(value, 10);
-    if (isNaN(parsed)) return '';
-    if (type === 'level') return Math.max(1, parsed).toString();
-    if (type === 'distance') {
-      return (Math.round(parsed / 5) * 5).toString();
+    if (type === 'posInt' || type === 'int' || type === 'bonus' || type === 'quantity' || type === 'level' || type === 'distance') {
+      if (value === '+' || value === '-') return value;
+      const parsed = parseInt(value, 10);
+      if (isNaN(parsed)) return '';
+      if (type === 'level') return Math.max(1, parsed).toString();
+      if (type === 'distance') {
+        return (Math.round(parsed / 5) * 5).toString();
+      }
+      return parsed.toString();
     }
-    return parsed.toString();
-  }
   
   if (type === 'attributeIndex') {
     if (value === '') return '0';

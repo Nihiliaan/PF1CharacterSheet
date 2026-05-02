@@ -1,10 +1,10 @@
 export const getDisplayValue = (
-  value: string, 
-  type: string, 
-  t: any, 
-  options: { 
-    isFocused?: boolean; 
-    columnKey?: string; 
+  value: string,
+  type: string,
+  t: any,
+  options: {
+    isFocused?: boolean;
+    columnKey?: string;
     row?: any;
     displayFormatter?: (v: string, isFocused: boolean) => string;
   } = {}
@@ -15,7 +15,7 @@ export const getDisplayValue = (
 
   if (type === 'checkbox') {
     if (columnKey === 'cs' && row && (parseInt(row.rank) || 0) <= 0) return '';
-    return value === 'true' ? `+3${t('editor.cs_short') || 'CS'}` : '';
+    return value === 'true' ? `+3` : '';
   }
 
   if (type === 'quantity' && !isFocused) {

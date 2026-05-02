@@ -37,8 +37,9 @@ export function useNumericStepper({
     if (!container || type !== 'level' || readOnly) return;
 
     const handleWheelNative = (e: WheelEvent) => {
-      // Check if the element or any parent is scrollable? 
-      // Usually, we just want to block it if we are interacting with the level.
+      // Only allow adjustment if we are focused
+      if (!container.contains(document.activeElement)) return;
+      
       e.preventDefault();
       e.stopPropagation();
       
