@@ -8,7 +8,7 @@ export interface Column {
   width?: string;
   type?: InputType;
   options?: string[];
-  displayFormatter?: (v: any, ...args: any[]) => string;
+  displayFormatter?: (v: any, isFocused: boolean, row?: Record<string, any>) => string;
   hideRightBorder?: boolean;
   className?: string;
   align?: 'left' | 'center' | 'right';

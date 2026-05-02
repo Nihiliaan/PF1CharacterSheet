@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check } from 'lucide-react';
 import { ATTRIBUTE_NAMES, InputType } from '../../types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
 import { validateInput, normalizeValue } from '../../utils/validation';
@@ -17,7 +16,7 @@ export interface DynamicInputProps {
   columnKey?: string;
   type?: InputType;
   options?: string[];
-  displayFormatter?: (v: any, ...args: any[]) => string;
+  displayFormatter?: (v: string, isFocused: boolean) => string;
   
   // Extended props for broader use
   placeholder?: string;
@@ -78,11 +77,7 @@ export const DynamicInput = ({
   };
 
   const displayValue = () => {
-    return getDisplayValue(value, type || 'text', t, { 
-      isFocused, 
-      displayFormatter, 
-      formatterArgs: [row, columnKey] 
-    });
+    return getDisplayValue(value, type || 'text', t, { isFocused, columnKey, row, displayFormatter });
   };
 
   const handleChange = (val: string) => {

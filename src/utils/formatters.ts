@@ -4,16 +4,18 @@ export const getDisplayValue = (
   t: any,
   options: {
     isFocused?: boolean;
-    displayFormatter?: (v: any, ...args: any[]) => string;
-    formatterArgs?: any[];
+    columnKey?: string;
+    row?: any;
+    displayFormatter?: (v: any, isFocused: boolean, row?: any) => string;
   } = {}
 ): string => {
-  const { isFocused, displayFormatter, formatterArgs = [] } = options;
+  const { isFocused, columnKey, row, displayFormatter } = options;
 
-  if (displayFormatter) return displayFormatter(value, isFocused || false, ...formatterArgs);
+  if (displayFormatter) return displayFormatter(value, isFocused || false, row);
 
   if (type === 'bool') {
-    return (value === true || value === 'true') ? `✓` : '';
+    if (columnKey === 'cs' && row && (parseInt(row.rank) || 0) <= 0) return '';
+    return (value === true || value === 'true') ? `+3` : '';
   }
 
   if (type === 'quantity' && !isFocused) {
