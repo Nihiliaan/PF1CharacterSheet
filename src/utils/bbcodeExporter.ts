@@ -113,7 +113,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
 
   vars['favoredClass'] = getS(data, 'favoredClass') || '';
   vars['favoredClassBonus'] = getS(data, 'favoredClassBonus') || '';
-  vars['classFeatures'] = '[table]\n' + (data.classFeatures || []).map((f: any) => `[tr][td]${getDisplayValue(f.level, 'level', t)}${f.type ? ' ' + f.type : ''}[/td][td][td]${f.name}[/td][td]${f.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
+  vars['classFeatures'] = '[table]\n' + (data.classFeatures || []).map((f: any) => `[tr][td]${getDisplayValue(f.level, 'level', t)}${f.type ? ' ' + f.type : ''}[/td][td]${f.name}[/td][td]${f.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
 
   vars['featTable'] = '[table]\n' +
     (data.feats || []).map((f: any) =>
@@ -152,12 +152,12 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
     vars['equipmentTable'] = '无';
   } else {
     vars['equipmentTable'] = data.equipmentBags.map((bag: any) => {
-      let bagResult = `[b]${bag.name}${bag.ignoreWeight ? ' (' + (t('editor.items.units.ignore_weight') || '不计重') + ')' : ''}[/b]\n`;
+      let bagResult = `[quote]\n[b]${bag.name}${bag.ignoreWeight ? ' (' + (t('editor.items.units.ignore_weight') || '不计重') + ')' : ''}[/b]\n`;
       const items = bag.items || [];
       if (items.length === 0) {
         bagResult += (t('editor.items.no_items') || '此容器内无物品') + '\n';
       } else {
-        bagResult += '[quote][table]\n';
+        bagResult += '[table]\n';
         bagResult += items.map((i: any) => {
           const q = parseInt(i.quantity) || 1;
           const w = parseFloat(i.weight) || 0;
@@ -171,8 +171,9 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
           const name = i.item + (q > 1 ? `(${q})` : '');
           return `[tr][td]${name || ''}[/td][td]${(totalC === '0.0' || totalC === '0') ? '' : totalC + 'gp'}[/td][td]${(totalW === '0.0' || totalW === '0') ? '' : totalW + 'lbs'}[/td][td]${i.notes || ''}[/td][/tr]`;
         }).join('\n');
-        bagResult += '\n[/table][/quote]';
+        bagResult += '\n[/table]';
       }
+      bagResult += '\n[/quote]'
       return bagResult;
     }).join('\n');
   }
