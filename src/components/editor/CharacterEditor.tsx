@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, GripVertical, Trash2, Plus, Check } from 'lucide-react';
+import { ShieldCheck, GripVertical, Trash2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { User as FirebaseUser } from 'firebase/auth';
 import { CharacterData, ATTRIBUTE_NAMES } from '../../types';
@@ -570,9 +570,9 @@ export default function CharacterEditor({
               { key: 'total', label: t('editor.skills.headers.total'), width: '5%', type: 'bonus' },
               { key: 'rank', label: t('editor.skills.headers.rank'), width: '5%', type: 'level' },
               {
-                key: 'cs', label: t('editor.skills.headers.cs'), width: '5%', type: 'bool',
-                displayFormatter: (val, isFocused, row) => {
-                  return (parseInt(row?.rank) || 0 > 0 && val) ? '+3' : '';
+                key: 'cs', label: t('editor.skills.headers.cs'), width: '5%', type: 'checkbox',
+                displayFormatter: (val) => {
+                  return val === 'true' ? '+3' : '';
                 }
               },
               {

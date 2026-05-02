@@ -1,6 +1,6 @@
 export type { User as FirebaseUser } from 'firebase/auth';
 
-export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'bool' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight' | 'markdown';
+export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight' | 'markdown';
 
 export interface Column {
   key: string;
@@ -8,7 +8,7 @@ export interface Column {
   width?: string;
   type?: InputType;
   options?: string[];
-  displayFormatter?: (v: any, isFocused: boolean, row?: Record<string, any>) => string;
+  displayFormatter?: (v: string, isFocused: boolean) => string;
   hideRightBorder?: boolean;
   className?: string;
   align?: 'left' | 'center' | 'right';
@@ -16,14 +16,14 @@ export interface Column {
 
 export interface DynamicTableProps {
   columns: Column[];
-  data: Record<string, any>[];
-  originalData?: Record<string, any>[];
-  onChange: (data: Record<string, any>[]) => void;
-  newItemGenerator?: () => Record<string, any>;
+  data: Record<string, string>[];
+  originalData?: Record<string, string>[];
+  onChange: (data: Record<string, string>[]) => void;
+  newItemGenerator?: () => Record<string, string>;
   fixedRows?: boolean;
   readonlyColumns?: string[];
-  footerRow?: Record<string, any>;
-  onFooterChange?: (data: Record<string, any>) => void;
+  footerRow?: Record<string, string>;
+  onFooterChange?: (data: Record<string, string>) => void;
   footerReadonlyColumns?: string[];
   onColumnLabelChange?: (index: number, newLabel: string) => void;
   onRemoveColumn?: (index: number) => void;

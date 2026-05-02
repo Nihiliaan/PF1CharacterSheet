@@ -7,9 +7,9 @@ import { useNumericStepper } from '../../hooks/useNumericStepper';
 import { getDisplayValue } from '../../utils/formatters';
 
 export interface DynamicInputProps {
-  value: any;
-  originalValue?: any;
-  onChange: (v: any) => void;
+  value: string;
+  originalValue?: string;
+  onChange: (v: string) => void;
   className?: string; // Applied to inner element
   wrapperClassName?: string; // Applied to outermost div
   readOnly?: boolean;
@@ -83,7 +83,7 @@ export const DynamicInput = ({
   const handleChange = (val: string) => {
     setTempValue(val);
     // Real-time for most types now, ensuring bonus/int can handle signs
-    if (type === 'text' || type === 'bool' || type === 'select' || type === 'attributeIndex' || type === 'markdown' || type === 'bonus' || type === 'int' || type === 'posInt') {
+    if (type === 'text' || type === 'checkbox' || type === 'select' || type === 'attributeIndex' || type === 'markdown' || type === 'bonus' || type === 'int' || type === 'posInt') {
        if (validateInput(val, type || 'text')) {
          const normalized = normalizeValue(val, type || 'text');
          onChange(normalized);
@@ -115,6 +115,11 @@ export const DynamicInput = ({
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     handleChange(e.target.value);
+  };
+
+  const toggleCheckbox = () => {
+    if (readOnly) return;
+    onChange(value === 'true' ? '' : 'true');
   };
 
   const alignClass = align ? `text-${align}` : '';
@@ -169,14 +174,12 @@ export const DynamicInput = ({
             {displayValue() || <span className="text-stone-300">—</span>}
           </div>
         </div>
-      ) : type === 'bool' ? (
-        <div className={`${paddingClass} ${innerClass} flex items-center justify-center`}>
-          <button
-            onClick={() => onChange(!value)}
-            className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center shrink-0 ${value === true || value === 'true' ? 'bg-primary border-primary text-white shadow-sm' : 'border-stone-300 hover:border-stone-400 bg-white'}`}
-          >
-            {(value === true || value === 'true') && <Check size={14} strokeWidth={3} />}
-          </button>
+      ) : type === 'checkbox' ? (
+        <div 
+          onClick={toggleCheckbox}
+          className={`${paddingClass} ${innerClass} flex items-center justify-center cursor-pointer hover:bg-stone-100/50 ${isChanged ? 'text-amber-900' : 'text-ink'}`}
+        >
+          {displayValue()}
         </div>
       ) : type === 'text' ? (
           <div className={`${paddingClass} ${innerClass} flex items-center`}>
