@@ -35,6 +35,25 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
         blockResult += '[/table]';
       } else if (block.type === 'image') {
         blockResult += block.url ? `[img]${block.url}[/img]` : (t('editor.lists.no_image') || '暂无图片');
+      } else if (block.type === 'spell') {
+        // Spell blocks (SLA, Spontaneous, Prepared)
+        const cl = block.casterLevel || '0';
+        const conc = block.concentration || '0';
+        blockResult += `[b]${t('editor.spells.cl') || '施法者等级'}[/b] ${getDisplayValue(cl, 'level', t)} [b]${t('editor.spells.concentration') || '集中'}[/b] ${getDisplayValue(conc, 'bonus', t)}\n`;
+        
+        const cols = block.columns || [];
+        const tableData = block.tableData || [];
+        if (tableData.length > 0) {
+          blockResult += '[table]\n';
+          tableData.forEach((row: any) => {
+            blockResult += '[tr]' + cols.map((c: any) => `[td]${row[c.key] || ''}[/td]`).join('') + '[/tr]\n';
+          });
+          blockResult += '[/table]\n';
+        }
+        
+        if (block.notes) {
+          blockResult += `${block.notes}`;
+        }
       }
       return blockResult;
     }).join('\n[hr]\n');
@@ -230,9 +249,13 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
 
   vars['equipmentSection'] = vars['equipmentTable'] + '\n' + vars['currencyLine'] + '\n' + vars['loadSummary'];
 
+  vars['magicBlocks'] = formatDynamicBlock(data.magicBlocks || []);
+  vars['additionalData'] = formatDynamicBlock(data.additionalData || []);
+
   const regex = /\{([a-zA-Z0-9._]+)\}/g;
   bbcode = bbcode.replace(regex, (match, path) => {
     if (vars[path] !== undefined) return vars[path];
+
     const pathVal = getS(data, path);
     if (typeof pathVal === 'string' || typeof pathVal === 'number') return String(pathVal);
     if (path === 'armorCheckPenalty') return vars['acp'];

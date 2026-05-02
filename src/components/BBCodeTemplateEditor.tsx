@@ -33,9 +33,7 @@ export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 [hr]
 AC {ac}，措手不及 {acFlatFooted}，接触 {acTouch}；{acNotes}
 hp {hp} ({hd})
-{saveLine}
-防御能力
-{defensiveAbilities}
+强韧 {saveFort}，反射 {saveRef}，意志 {saveWill}；（{savesNotes}）
 特殊防御
 {specialDefenses}
 [hr]
@@ -227,7 +225,6 @@ export default function BBCodeTemplateEditor() {
                 <span>{'{saveRef}'} - {t('editor.defenses.ref')}</span>
                 <span>{'{saveWill}'} - {t('editor.defenses.will')}</span>
                 <span className="col-span-2">{'{savesNotes}'} - {t('editor.defenses.saves_notes')}</span>
-                <span className="col-span-full">{'{defensiveAbilities}'} - {t('editor.defenses.defensive_abilities')}</span>
                 <span className="col-span-full">{'{specialDefenses}'} - {t('editor.defenses.special_defenses')}</span>
               </div>
             </section>
