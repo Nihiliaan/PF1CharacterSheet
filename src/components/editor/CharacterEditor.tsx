@@ -346,12 +346,13 @@ export default function CharacterEditor({
               />
             </div>
             <MultilineInput
-              className="mt-6"
+              className="mt-4"
               label={t('editor.defenses.special_defenses')}
               value={data.defenses.specialDefenses || ''}
               originalValue={lastSavedData.defenses.specialDefenses || ''}
               onChange={v => setData({ ...data, defenses: { ...data.defenses, specialDefenses: v } })}
               placeholder={t('editor.defenses.special_defenses_placeholder')}
+              height="100%"
             />
           </div>
         </Section>
