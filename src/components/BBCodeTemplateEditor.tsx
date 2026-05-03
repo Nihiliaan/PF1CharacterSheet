@@ -6,8 +6,9 @@ import { useTranslation } from 'react-i18next';
 export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 {name} {classes}
 {alignment} {deity}
-{size} {gender} {race}
-{height} {weight} {age}岁 {speed}
+{size} {gender} {race} 
+{height} {weight} {age}岁
+{speed} {senses}
 先攻 {initiative} 察觉 {perception}
 语言 {languages}
 [/td]
@@ -18,7 +19,7 @@ export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 [b]属性[/b]
 [hr]
 {attributesTable}
-BAB{bab}，CMB{cmb}，CMD{cmd}{combatManeuverNotes?；$}
+BAB{bab}，CMB{cmb}，CMD {cmd}{combatManeuverNotes?；$}
 [hr]
 [b]攻击[/b]
 [hr]
@@ -29,7 +30,7 @@ BAB{bab}，CMB{cmb}，CMD{cmd}{combatManeuverNotes?；$}
 {specialAttacks?特殊攻击\n$\n}[hr]
 [b]防御[/b]
 [hr]
-AC {ac} {acSource?（$）}，措手不及 {acFlatFooted}，接触 {acTouch}{acNotes?；$}
+AC {ac} {acSource?($)}，措手不及 {acFlatFooted}，接触 {acTouch}{acNotes?；$}
 hp {hp} ({hd})
 强韧 {saveFort}，反射 {saveRef}，意志 {saveWill}{savesNotes?；$}
 {specialDefenses?特殊防御\n$\n}[hr]
@@ -159,7 +160,7 @@ export default function BBCodeTemplateEditor() {
                 <div className="flex flex-col gap-1">
                   <span className="text-amber-800">{'{field?ifNotEmpty}'}</span>
                   <span className="text-stone-500 italic">{t('editor.bbcode.syntax_simple_not_empty')}</span>
-                  <span className="text-stone-400 mt-1">Ex: {'{acNotes?（$）}'}</span>
+                  <span className="text-stone-400 mt-1">Ex: {'{acNotes?($)}'}</span>
                 </div>
                 <div className="flex flex-col gap-1">
                   <span className="text-amber-800">{'{field:ifEmpty}'}</span>

@@ -187,7 +187,7 @@
       "block_title": "区块标题",
       "image_url": "图片链接",
       "level_format": "{{n}}级",
-      "distance_format": "{{v}} 英尺"
+      "distance_format": "{{v}}英尺"
     },
     "bbcode": {
       "title": "BBCode 导出模板设置",
