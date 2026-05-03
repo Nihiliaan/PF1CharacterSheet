@@ -149,6 +149,7 @@
       "cp": "Copper",
       "coin_weight": "Coin Total Weight (lbs)",
       "currency": "Currency",
+      "ignore_weight": "Ignore Weight",
       "coin_weight_total": "Total Coin Weight",
       "actual_weight": "Actual Total Weight",
       "load_limits": "Load Limits",

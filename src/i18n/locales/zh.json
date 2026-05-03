@@ -165,6 +165,7 @@
       "cp": "铜币",
       "coin_weight": "钱币总重 (磅)",
       "currency": "钱币",
+      "ignore_weight": "不计重量",
       "coin_weight_total": "钱币总重量",
       "actual_weight": "实际总负重",
       "load_limits": "负重上限",

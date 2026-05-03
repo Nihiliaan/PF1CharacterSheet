@@ -39,6 +39,7 @@ export default function CharacterEditor({
     addBag,
     removeBag,
     updateBagName,
+    toggleBagWeight,
     updateBagItems,
     handleBagDragStart,
     handleBagDragOver,
@@ -565,6 +566,29 @@ export default function CharacterEditor({
         </Section>
 
         <Section id="skills" title={t('editor.sections.skills')}>
+          <div className="flex flex-col md:flex-row gap-6 items-stretch">
+            <div className="w-full md:w-1/6">
+              <InlineInput
+                label={t('editor.skills.total_points')}
+                type="posInt"
+                value={data.skillsTotal || ''}
+                originalValue={lastSavedData.skillsTotal || ''}
+                onChange={v => setData({ ...data, skillsTotal: v })}
+                placeholder="0"
+              />
+            </div>
+            <div className="w-full md:w-1/6">
+              <InlineInput
+                label={t('editor.skills.acp')}
+                type="posInt"
+                value={data.armorCheckPenalty || '0'}
+                originalValue={lastSavedData.armorCheckPenalty || '0'}
+                onChange={v => setData({ ...data, armorCheckPenalty: v || '0' })}
+                displayFormatter={(v, isFocused) => (!v || v === '0' || isFocused) ? v : `-${v}`}
+                placeholder="0"
+              />
+            </div>
+          </div>
           <DynamicTable
             columns={[
               { key: 'name', label: t('editor.skills.headers.skill'), width: '15%' },
@@ -603,38 +627,6 @@ export default function CharacterEditor({
             onRowDragOver={(idx, e) => handleTableItemDragOver('skills', idx, e)}
             onRowDrop={(idx, e) => handleTableItemDrop('skills', idx, e)}
           />
-          <div className="flex flex-col md:flex-row gap-6 mt-4 items-stretch">
-            <div className="w-full md:w-1/6">
-              <InlineInput
-                label={t('editor.skills.total_points')}
-                type="posInt"
-                value={data.skillsTotal || ''}
-                originalValue={lastSavedData.skillsTotal || ''}
-                onChange={v => setData({ ...data, skillsTotal: v })}
-                placeholder="0"
-              />
-            </div>
-            <div className="w-full md:w-1/6">
-              <InlineInput
-                label={t('editor.skills.acp')}
-                type="posInt"
-                value={data.armorCheckPenalty || '0'}
-                originalValue={lastSavedData.armorCheckPenalty || '0'}
-                onChange={v => setData({ ...data, armorCheckPenalty: v || '0' })}
-                displayFormatter={(v, isFocused) => (!v || v === '0' || isFocused) ? v : `-${v}`}
-                placeholder="0"
-              />
-            </div>
-            <div className="w-full md:w-4/6">
-              <InlineInput
-                label={t('editor.skills.notes')}
-                value={data.skillsNotes || ''}
-                originalValue={lastSavedData.skillsNotes || ''}
-                onChange={v => setData({ ...data, skillsNotes: v })}
-                placeholder={t('editor.skills.notes_placeholder')}
-              />
-            </div>
-          </div>
         </Section>
 
         <Section id="equipment" title={t('editor.sections.equipment')}>
@@ -645,6 +637,15 @@ export default function CharacterEditor({
                   <div className="flex items-center gap-4 flex-1">
                     <div className="cursor-grab text-stone-300 hover:text-stone-600 active:cursor-grabbing p-1" draggable onDragStart={(e) => handleBagDragStart(e, bagIndex)}><GripVertical size={18} /></div>
                     <input className="text-lg font-bold font-serif bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 max-w-sm w-full" value={bag.name} onChange={e => updateBagName(bag.id, e.target.value)} />
+                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-stone-400 hover:text-stone-600 transition-colors shrink-0 ml-2">
+                      <input
+                        type="checkbox"
+                        checked={bag.ignoreWeight}
+                        onChange={e => toggleBagWeight(bag.id, e.target.checked)}
+                        className="rounded border-stone-300 text-primary focus:ring-primary h-3 w-3"
+                      />
+                      {t('editor.items.ignore_weight')}
+                    </label>
                   </div>
                   <button onClick={() => removeBag(bag.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1 transition-colors"><Trash2 size={14} /> {t('common.delete_container')}</button>
                 </div>
