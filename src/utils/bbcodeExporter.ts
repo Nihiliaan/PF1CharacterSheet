@@ -55,10 +55,11 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
               } else if (c.key === 'uses' && val) {
                 // If it's a numeric usage count without a unit, append "次/日"
                 if (/^\d+(\/\d+)?$/.test(val) && !val.includes(t('common.day') || '日') && !val.includes('day')) {
-                  val = val + (t('editor.spells.times_per_day') || '次/日');
+                  val += t('editor.spells.times_per_day');
                 }
+                val += '—'
               }
-              return `[td]${val}—[/td]`;
+              return `[td]${val}[/td]`;
             }).join('') + '[/tr]\n';
           });
           blockResult += '[/table]\n';
