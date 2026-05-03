@@ -199,10 +199,10 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
     vars['equipmentTable'] = '无';
   } else {
     vars['equipmentTable'] = data.equipmentBags.map((bag: any) => {
-      let bagResult = `[quote author=${bag.name}$]\n[b]{bag.ignoreWeight ? ' (' + (t('editor.items.units.ignore_weight') || '不计重') + ')' : ''}[/b]\n`;
+      let bagResult = `[quote author=${bag.name}${bag.ignoreWeight ? ' (' + (t('editor.items.units.ignore_weight')) + ')' : ''}]\n`;
       const items = bag.items || [];
       if (items.length === 0) {
-        bagResult += (t('editor.items.no_items') || '此容器内无物品') + '\n';
+        bagResult += t('editor.items.no_items') + '\n';
       } else {
         bagResult += '[table]\n';
         bagResult += items.map((i: any) => {
