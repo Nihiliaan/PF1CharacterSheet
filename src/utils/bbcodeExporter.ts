@@ -152,8 +152,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['saveWill'] = getDisplayValue(saveData.will, 'bonus', t);
   vars['savesNotes'] = defenses.savesNotes || '';
   vars['saveLine'] = saveData.fort ? `[b]${t('editor.defenses.fort')}[/b] ${getDisplayValue(saveData.fort, 'bonus', t)}, [b]${t('editor.defenses.ref')}[/b] ${getDisplayValue(saveData.ref, 'bonus', t)}, [b]${t('editor.defenses.will')}[/b] ${getDisplayValue(saveData.will, 'bonus', t)}${defenses.savesNotes ? ` (${defenses.savesNotes})` : ''}` : '';
-  vars['defensiveAbilities'] = getS(data, 'defenses.defensiveAbilities') || t('common.none');
-  vars['specialDefenses'] = getS(data, 'defenses.specialDefenses') || t('common.none');
+  vars['specialDefenses'] = getS(data, 'defenses.specialDefenses');
 
   vars['racialTraits'] = '[table]\n' + (data.racialTraits || []).map((r: any) => `[tr][td]${r.name}[/td][td]${r.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
   vars['backgroundTraits'] = (data.backgroundTraits || []).map((r: any) => `${r.name}(${r.type}): ${r.desc}`).join('\n') || t('common.none');
