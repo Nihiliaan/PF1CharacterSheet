@@ -22,7 +22,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   const formatDynamicBlock = (blocks: any[]) => {
     if (!blocks || blocks.length === 0) return '无';
     return blocks.map(block => {
-      let blockResult = `[b]${block.title}[/b]\n`;
+      let blockResult = `[b]${block.title}[/b]`;
       if (block.type === 'text') {
         blockResult += block.content || t('editor.lists.no_content') || '暂无内容';
       } else if (block.type === 'table') {
@@ -33,13 +33,11 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
           blockResult += '[tr]' + cols.map((c: any) => `[td]${row[c.key] || ''}[/td]`).join('') + '[/tr]\n';
         });
         blockResult += '[/table]';
-      } else if (block.type === 'image') {
-        blockResult += block.url ? `[img]${block.url}[/img]` : (t('editor.lists.no_image') || '暂无图片');
       } else if (block.type === 'spell') {
         // Spell blocks (SLA, Spontaneous, Prepared)
         const cl = block.casterLevel || '0';
         const conc = block.concentration || '0';
-        blockResult += `[b]${t('editor.spells.caster_level') || '施法者等级'}[/b] ${getDisplayValue(cl, 'level', t)} [b]${t('editor.spells.concentration') || '集中'}[/b] ${getDisplayValue(conc, 'bonus', t)}\n`;
+        blockResult += `（[b]${t('editor.spells.caster_level')}[/b] ${getDisplayValue(cl, 'level', t)}；[b]${t('editor.spells.concentration')}[/b] ${getDisplayValue(conc, 'bonus', t)}）\n`;
 
         const cols = block.columns || [];
         const tableData = block.tableData || [];
@@ -109,25 +107,40 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['cmd'] = cmd;
   vars['combatManeuverNotes'] = cmNotes || '';
 
+  const formatCrit = (range: string, multi: string) => {
+    const r = range || '20';
+    const m = multi || '×2';
+    if (r === '20' && (m === '×2' || m === 'x2')) return '';
+    const rangeStr = r === '20' ? '20' : `${r}-20`;
+    return `${rangeStr}${m}`;
+  };
+
+  const formatDistance = (val: any) => {
+    if (!val || val === '5' || val === 5) return '';
+    return getDisplayValue(val, 'distance', t);
+  };
+
   vars['meleeAttackTable'] = '[table]\n' + (data.meleeAttacks || []).map((m: any) => {
-    const critStr = `${m.critRange || m.crit || ''}${m.critMultiplier || ''}`;
+    const critStr = formatCrit(m.critRange || m.crit, m.critMultiplier || m.multiplier);
+    const damageType = m.damageType || m.type || '';
+    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${damageType}[/td][td]${formatDistance(m.range)}[/td][td]${m.special || ''}[/td][/tr]`;
+  }).join('\n') + '\n[/table]';
+
+  vars['rangedAttackTable'] = '[table]\n' + (data.rangedAttacks || []).map((m: any) => {
+    const critStr = formatCrit(m.critRange || m.crit, m.critMultiplier || m.multiplier);
     const damageType = m.damageType || m.type || '';
     return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${damageType}[/td][td]${getDisplayValue(m.range, 'distance', t)}[/td][td]${m.special || ''}[/td][/tr]`;
   }).join('\n') + '\n[/table]';
 
-  vars['rangedAttackTable'] = '[table]\n' + (data.rangedAttacks || []).map((m: any) => {
-    const critStr = `${m.critRange || m.crit || ''}${m.critMultiplier || ''}`;
-    const damageType = m.damageType || m.type || '';
-    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${damageType}[/td][td]${getDisplayValue(m.range, 'distance', t)}[/td][td]${m.special || ''}[/td][/tr]`;
-  }).join('\n') + '\n[/table]';
 
   const defenses = data.defenses || {} as any;
   const acData = defenses.acTable?.[0] || {};
   vars['ac'] = acData.ac || '';
   vars['acFlatFooted'] = acData.flatFooted || '';
   vars['acTouch'] = acData.touch || '';
+  vars['acSource'] = acData.source || '';
   vars['acNotes'] = defenses.acNotes || '';
-  vars['acLine'] = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]${t('editor.defenses.flat_footed')}[/b] ${acData.flatFooted || ''}, [b]${t('editor.defenses.touch')}[/b] ${acData.touch || ''}${defenses.acNotes ? ` (${defenses.acNotes})` : ''}` : '';
+  vars['acLine'] = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]${t('editor.defenses.flat_footed')}[/b] ${acData.flatFooted || ''}, [b]${t('editor.defenses.touch')}[/b] ${acData.touch || ''}${acData.source ? ` (${acData.source})` : ''}${defenses.acNotes ? `；${defenses.acNotes}` : ''}` : '';
 
   vars['hp'] = defenses.hp || '';
   vars['hd'] = defenses.hd || '';
@@ -147,7 +160,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
 
   vars['favoredClass'] = getS(data, 'favoredClass') || '';
   vars['favoredClassBonus'] = getS(data, 'favoredClassBonus') || '';
-  vars['classFeatures'] = '[table]\n' + (data.classFeatures || []).map((f: any) => `[tr][td]${getDisplayValue(f.level, 'level', t)}${f.type ? ' ' + f.type : ''}[/td][td]${f.name}[/td][td]${f.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
+  vars['classFeatures'] = '[table]\n' + (data.classFeatures || []).map((f: any) => `[tr][td]${getDisplayValue(f.level, 'level', t)}[/td][td]${f.name}${f.type ? `（${f.type}）` : ''}[/td][td]${f.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
 
   vars['featTable'] = '[table]\n' +
     (data.feats || []).map((f: any) =>
@@ -196,14 +209,14 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
           const q = parseInt(i.quantity) || 1;
           const w = parseFloat(i.weight) || 0;
           const c = parseFloat(i.cost) || 0;
-          const totalW = (w * q).toFixed(1);
-          const totalC = (c * q).toFixed(1);
+          const totalW = Number((w * q).toFixed(4));
+          const totalC = Number((c * q).toFixed(4));
 
           if (!bag.ignoreWeight) itemsWeight += w * q;
           itemsValue += c * q;
 
           const name = i.item + (q > 1 ? `(${q})` : '');
-          return `[tr][td]${name || ''}[/td][td]${(totalC === '0.0' || totalC === '0') ? '' : totalC + 'gp'}[/td][td]${(totalW === '0.0' || totalW === '0') ? '' : totalW + '磅'}[/td][td]${i.notes || ''}[/td][/tr]`;
+          return `[tr][td]${name || ''}[/td][td]${totalC === 0 ? '' : totalC + 'gp'}[/td][td]${totalW === 0 ? '' : totalW + '磅'}[/td][td]${i.notes || ''}[/td][/tr]`;
         }).join('\n');
         bagResult += '\n[/table]';
       }
@@ -267,15 +280,108 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   vars['magicBlocks'] = formatDynamicBlock(data.magicBlocks || []);
   vars['additionalData'] = formatDynamicBlock(data.additionalData || []);
 
-  const regex = /\{([a-zA-Z0-9._]+)\}/g;
-  bbcode = bbcode.replace(regex, (match, path) => {
-    if (vars[path] !== undefined) return vars[path];
-
+  const resolveValue = (path: string) => {
+    if (vars[path] !== undefined) return String(vars[path]);
     const pathVal = getS(data, path);
     if (typeof pathVal === 'string' || typeof pathVal === 'number') return String(pathVal);
-    if (path === 'armorCheckPenalty') return vars['acp'];
-    return match;
-  });
+    if (path === 'armorCheckPenalty') return String(vars['acp']);
+    return undefined;
+  };
 
-  return bbcode;
+  const tagRegex = /\{((?:[^{}\\]|\\.)+)\}/g;
+  let passes = 0;
+  let changed = true;
+  while (changed && passes < 3) {
+    const oldBBCode = bbcode;
+    bbcode = bbcode.replace(tagRegex, (match, content) => {
+      // Find unescaped separators
+      let firstQ = -1;
+      let firstC = -1;
+      let escaped = false;
+      for (let i = 0; i < content.length; i++) {
+        if (escaped) { escaped = false; continue; }
+        if (content[i] === '\\') { escaped = true; continue; }
+        if (content[i] === '?') { if (firstQ === -1) firstQ = i; }
+        else if (content[i] === ':') { if (firstC === -1) firstC = i; }
+      }
+
+      let path = '';
+      let ifNotEmpty = '';
+      let ifEmpty = '';
+      const hasQ = firstQ !== -1;
+      const hasC = firstC !== -1;
+
+      if (!hasQ && !hasC) {
+        path = content;
+      } else if (hasQ && !hasC) {
+        path = content.substring(0, firstQ);
+        ifNotEmpty = content.substring(firstQ + 1);
+      } else if (!hasQ && hasC) {
+        path = content.substring(0, firstC);
+        ifEmpty = content.substring(firstC + 1);
+      } else {
+        if (firstQ < firstC) {
+          path = content.substring(0, firstQ);
+          ifNotEmpty = content.substring(firstQ + 1, firstC);
+          ifEmpty = content.substring(firstC + 1);
+        } else {
+          path = content.substring(0, firstC);
+          ifEmpty = content.substring(firstC + 1, firstQ);
+          ifNotEmpty = content.substring(firstQ + 1);
+        }
+      }
+
+      const val = resolveValue(path);
+      const isEmpty = val === undefined || val === null || val === '';
+
+      let chosen = '';
+      if (!hasQ && !hasC) {
+        chosen = val !== undefined ? val : match;
+      } else if (hasQ && !hasC) {
+        chosen = !isEmpty ? ifNotEmpty : '';
+      } else if (!hasQ && hasC) {
+        chosen = !isEmpty ? val : ifEmpty;
+      } else {
+        chosen = !isEmpty ? ifNotEmpty : ifEmpty;
+      }
+
+      if (val !== undefined && chosen.includes('$')) {
+        let sub = '';
+        let subEscaped = false;
+        for (let i = 0; i < chosen.length; i++) {
+          if (subEscaped) {
+            sub += chosen[i];
+            subEscaped = false;
+          } else if (chosen[i] === '\\') {
+            sub += '\\';
+            subEscaped = true;
+          } else if (chosen[i] === '$') {
+            sub += val;
+          } else {
+            sub += chosen[i];
+          }
+        }
+        chosen = sub;
+      }
+
+      return chosen;
+    });
+    changed = bbcode !== oldBBCode;
+    passes++;
+  }
+
+  let finalBBCode = '';
+  let finalEscaped = false;
+  for (let i = 0; i < bbcode.length; i++) {
+    if (finalEscaped) {
+      finalBBCode += bbcode[i];
+      finalEscaped = false;
+    } else if (bbcode[i] === '\\') {
+      finalEscaped = true;
+    } else {
+      finalBBCode += bbcode[i];
+    }
+  }
+
+  return finalBBCode;
 }

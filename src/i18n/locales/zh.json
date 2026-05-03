@@ -198,7 +198,13 @@
       "prompt_name": "请输入模板名称",
       "default_name": "新 BBCode 模板",
       "confirm_reset": "确定要恢复默认模板吗？这将覆盖您当前的修改。",
-      "reset_success": "已恢复默认模板"
+      "reset_success": "已恢复默认模板",
+      "syntax_title": "高级语法：条件判断",
+      "syntax_cond": "字段非空显示分支 1，为空显示分支 2",
+      "syntax_simple_not_empty": "仅当非空时显示",
+      "syntax_simple_empty": "仅当为空时显示",
+      "syntax_placeholder": "在分支内代指字段的值",
+      "syntax_escape": "对符号 ? : $ \\ 进行转义"
     },
     "overlays": {
       "syncing": "正在连接到异世界...",

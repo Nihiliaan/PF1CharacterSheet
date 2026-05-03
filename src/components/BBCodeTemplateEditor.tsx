@@ -7,7 +7,7 @@ export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 {name} {classes}
 {alignment} {deity}
 {size} {gender} {race}
-{height} {weight} {age} {speed}
+{height} {weight} {age}岁 {speed}
 先攻 {initiative} 察觉 {perception}
 语言 {languages}
 [/td]
@@ -18,23 +18,23 @@ export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 [b]属性[/b]
 [hr]
 {attributesTable}
-[table][tr][td]BAB{bab}[/td][td]CMB{cmb}[/td][td]CMD{cmd}[/td][td]{combatManeuverNotes}[/td][/tr][/table]
+BAB{bab}，CMB{cmb}，CMD{cmd}{combatManeuverNotes?；$}
 [hr]
 [b]攻击[/b]
 [hr]
-[b]近战攻击[/b]
+近战攻击
 {meleeAttackTable}
-[b]远程攻击[/b]
+远程攻击
 {rangedAttackTable}
-[b]特殊攻击[/b]
+{specialAttacks?特殊攻击}
 {specialAttacks}
 [hr]
 [b]防御[/b]
 [hr]
-AC {ac} （），措手不及 {acFlatFooted}，接触 {acTouch}；{acNotes}
+AC {ac} {acSource?（$）}，措手不及 {acFlatFooted}，接触 {acTouch}{acNotes?；$}；
 hp {hp} ({hd})
-强韧 {saveFort}，反射 {saveRef}，意志 {saveWill}；{savesNotes}
-特殊防御
+强韧 {saveFort}，反射 {saveRef}，意志 {saveWill}{savesNotes?；$}
+{specialDefenses?特殊防御}
 {specialDefenses}
 [hr]
 [b]背景特性[/b]
@@ -55,7 +55,7 @@ hp {hp} ({hd})
 [hr]
 {featTable}
 [hr]
-[b]技能 总计{skillsTotal}点；防具检定减值{acp}[/b]
+[b]技能 总计{skillsTotal}点{acp?；防具检定减值 $}[/b]
 [hr]
 {skillTable}
 [hr]
@@ -149,6 +149,35 @@ export default function BBCodeTemplateEditor() {
         <div className="mt-8 bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
           <h3 className="font-bold text-stone-800 mb-6 text-base border-b pb-2">{t('editor.bbcode.var_ref')}</h3>
           <div className="space-y-8">
+            {/* Syntax Guide */}
+            <section className="bg-amber-50/50 p-4 rounded-lg border border-amber-100">
+              <h4 className="text-xs font-bold text-amber-700 mb-3 uppercase tracking-widest border-l-2 border-amber-600 pl-2">
+                {t('editor.bbcode.syntax_title')}
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-6 text-[11px] font-mono text-stone-600">
+                <div className="flex flex-col gap-1">
+                  <span className="text-amber-800">{'{field?ifNotEmpty:ifEmpty}'}</span>
+                  <span className="text-stone-500 italic">{t('editor.bbcode.syntax_cond')}</span>
+                  <span className="text-stone-400 mt-1">Ex: {'{specialAttacks?攻:$:无}'}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-amber-800">{'{field?ifNotEmpty}'}</span>
+                  <span className="text-stone-500 italic">{t('editor.bbcode.syntax_simple_not_empty')}</span>
+                  <span className="text-stone-400 mt-1">Ex: {'{acNotes?（$）}'}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-amber-800">{'{field:ifEmpty}'}</span>
+                  <span className="text-stone-500 italic">{t('editor.bbcode.syntax_simple_empty')}</span>
+                  <span className="text-stone-400 mt-1">Ex: {'{deity:无信仰}'}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-amber-800">$ / \? / \: / \$ / \\</span>
+                  <span className="text-stone-500 italic">{t('editor.bbcode.syntax_placeholder')} & {t('editor.bbcode.syntax_escape')}</span>
+                  <span className="text-stone-400 mt-1">Ex: {'{name?英雄：\$:未知}'}</span>
+                </div>
+              </div>
+            </section>
+
             {/* 1. Basic Info */}
             <section>
               <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">1. {t('editor.sections.basic')}</h4>
@@ -218,6 +247,7 @@ export default function BBCodeTemplateEditor() {
                 <span>{'{ac}'} - {t('editor.defenses.ac')}</span>
                 <span>{'{acFlatFooted}'} - {t('editor.defenses.flat_footed')}</span>
                 <span>{'{acTouch}'} - {t('editor.defenses.touch')}</span>
+                <span>{'{acSource}'} - {t('editor.attributes.headers.source')}</span>
                 <span className="col-span-2">{'{acNotes}'} - {t('editor.defenses.ac_notes')}</span>
                 <span>{'{saveFort}'} - {t('editor.defenses.fort')}</span>
                 <span>{'{saveRef}'} - {t('editor.defenses.ref')}</span>
