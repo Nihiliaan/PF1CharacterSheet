@@ -18,7 +18,7 @@ export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 [b]属性[/b]
 [hr]
 {attributesTable}
-[table][tr][td]BAB {bab}[/td][td]CMB {cmb}[/td][td]CMD {cmd}[/td][/tr][/table]
+[table][tr][td]BAB{bab}[/td][td]CMB{cmb}[/td][td]CMD{cmd}[/td][td]{combatManeuverNotes}[/td][/tr][/table]
 [hr]
 [b]攻击[/b]
 [hr]
@@ -31,9 +31,9 @@ export const DEFAULT_BBCODE_TEMPLATE = `[table][tr][td]
 [hr]
 [b]防御[/b]
 [hr]
-AC {ac}，措手不及 {acFlatFooted}，接触 {acTouch}；{acNotes}
+AC {ac} （），措手不及 {acFlatFooted}，接触 {acTouch}；{acNotes}
 hp {hp} ({hd})
-强韧 {saveFort}，反射 {saveRef}，意志 {saveWill}；（{savesNotes}）
+强韧 {saveFort}，反射 {saveRef}，意志 {saveWill}；{savesNotes}
 特殊防御
 {specialDefenses}
 [hr]
@@ -58,8 +58,6 @@ hp {hp} ({hd})
 [b]技能 总计{skillsTotal}点；防具检定减值{acp}[/b]
 [hr]
 {skillTable}
-备注
-{skillsNotes}
 [hr]
 [b]装备与物品[/b]
 [hr]

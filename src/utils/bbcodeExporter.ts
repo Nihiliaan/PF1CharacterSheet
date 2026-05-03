@@ -57,7 +57,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
               } else if (c.key === 'uses' && val) {
                 // If it's a numeric usage count without a unit, append "次/日"
                 if (/^\d+(\/\d+)?$/.test(val) && !val.includes(t('common.day') || '日') && !val.includes('day')) {
-                  val = val + (t('editor.spells.times_per_day') || '次/日');
+                  val = val + (t('editor.spells.times_per_day') || '次/日') + '——';
                 }
               }
               return `[td]${val}[/td]`;
@@ -186,7 +186,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
     vars['equipmentTable'] = '无';
   } else {
     vars['equipmentTable'] = data.equipmentBags.map((bag: any) => {
-      let bagResult = `[quote]\n[b]${bag.name}${bag.ignoreWeight ? ' (' + (t('editor.items.units.ignore_weight') || '不计重') + ')' : ''}[/b]\n`;
+      let bagResult = `[quote author=${bag.name}$]\n[b]{bag.ignoreWeight ? ' (' + (t('editor.items.units.ignore_weight') || '不计重') + ')' : ''}[/b]\n`;
       const items = bag.items || [];
       if (items.length === 0) {
         bagResult += (t('editor.items.no_items') || '此容器内无物品') + '\n';
@@ -203,7 +203,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
           itemsValue += c * q;
 
           const name = i.item + (q > 1 ? `(${q})` : '');
-          return `[tr][td]${name || ''}[/td][td]${(totalC === '0.0' || totalC === '0') ? '' : totalC + 'gp'}[/td][td]${(totalW === '0.0' || totalW === '0') ? '' : totalW + 'lbs'}[/td][td]${i.notes || ''}[/td][/tr]`;
+          return `[tr][td]${name || ''}[/td][td]${(totalC === '0.0' || totalC === '0') ? '' : totalC + 'gp'}[/td][td]${(totalW === '0.0' || totalW === '0') ? '' : totalW + '磅'}[/td][td]${i.notes || ''}[/td][/tr]`;
         }).join('\n');
         bagResult += '\n[/table]';
       }
@@ -259,7 +259,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
 
   vars['loadSummary'] = `[b]${t('editor.items.total_weight') || '负重'} ${statusKey} ${finalTotalWeight.toFixed(1)}磅 ${lightLimit}/${mediumLimit}/${heavyLimit}[/b]`;
 
-  vars['loadStatus'] = `${statusKey} (${finalTotalWeight.toFixed(1)} lbs)`;
+  vars['loadStatus'] = `${statusKey} (${finalTotalWeight.toFixed(1)} 磅)`;
   vars['loadLimits'] = `${lightLimit} / ${mediumLimit} / ${heavyLimit}`;
 
   vars['equipmentSection'] = vars['equipmentTable'] + '\n' + vars['currencyLine'] + '\n' + vars['loadSummary'];
