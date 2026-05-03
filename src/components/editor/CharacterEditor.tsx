@@ -589,44 +589,46 @@ export default function CharacterEditor({
               />
             </div>
           </div>
-          <DynamicTable
-            columns={[
-              { key: 'name', label: t('editor.skills.headers.skill'), width: '15%' },
-              { key: 'total', label: t('editor.skills.headers.total'), width: '5%', type: 'bonus' },
-              { key: 'rank', label: t('editor.skills.headers.rank'), width: '5%', type: 'level' },
-              {
-                key: 'cs', label: t('editor.skills.headers.cs'), width: '5%', type: 'checkbox',
-                displayFormatter: (val) => {
-                  return val === 'true' ? '+3' : '';
-                }
-              },
-              {
-                key: 'ability',
-                label: t('editor.skills.headers.ability'),
-                width: '10%',
-                type: 'attributeIndex',
-                displayFormatter: (val) => {
-                  if (!val || val === '0') return '';
-                  const idx = parseInt(val, 10) - 1;
-                  const localizedName = t('editor.attributes.' + ATTRIBUTE_NAMES[idx]);
-                  const modStr = getDisplayValue(data.attributes[idx].modifier, 'bonus', t);
-                  return `${modStr}${localizedName}`;
-                }
-              },
-              { key: 'others', label: t('editor.skills.headers.others'), width: '20%' },
-              { key: 'special', label: t('editor.skills.headers.special'), width: '35%' }
-            ]}
-            data={data.skills}
-            originalData={lastSavedData.skills}
-            onChange={v => setData({ ...data, skills: v })}
-            newItemGenerator={() => ({ name: '', total: '', source: '', special: '' })}
-            rowDraggable={true}
-            rowActionMode={tableActionMode}
-            onRowActionModeToggle={toggleTableActionMode}
-            onRowDragStart={(idx, e) => handleTableItemDragStart('skills', idx, e)}
-            onRowDragOver={(idx, e) => handleTableItemDragOver('skills', idx, e)}
-            onRowDrop={(idx, e) => handleTableItemDrop('skills', idx, e)}
-          />
+          <div className="mt-4">
+            <DynamicTable
+              columns={[
+                { key: 'name', label: t('editor.skills.headers.skill'), width: '15%' },
+                { key: 'total', label: t('editor.skills.headers.total'), width: '5%', type: 'bonus' },
+                { key: 'rank', label: t('editor.skills.headers.rank'), width: '5%', type: 'level' },
+                {
+                  key: 'cs', label: t('editor.skills.headers.cs'), width: '5%', type: 'checkbox',
+                  displayFormatter: (val) => {
+                    return val === 'true' ? '+3' : '';
+                  }
+                },
+                {
+                  key: 'ability',
+                  label: t('editor.skills.headers.ability'),
+                  width: '10%',
+                  type: 'attributeIndex',
+                  displayFormatter: (val) => {
+                    if (!val || val === '0') return '';
+                    const idx = parseInt(val, 10) - 1;
+                    const localizedName = t('editor.attributes.' + ATTRIBUTE_NAMES[idx]);
+                    const modStr = getDisplayValue(data.attributes[idx].modifier, 'bonus', t);
+                    return `${modStr}${localizedName}`;
+                  }
+                },
+                { key: 'others', label: t('editor.skills.headers.others'), width: '20%' },
+                { key: 'special', label: t('editor.skills.headers.special'), width: '35%' }
+              ]}
+              data={data.skills}
+              originalData={lastSavedData.skills}
+              onChange={v => setData({ ...data, skills: v })}
+              newItemGenerator={() => ({ name: '', total: '', source: '', special: '' })}
+              rowDraggable={true}
+              rowActionMode={tableActionMode}
+              onRowActionModeToggle={toggleTableActionMode}
+              onRowDragStart={(idx, e) => handleTableItemDragStart('skills', idx, e)}
+              onRowDragOver={(idx, e) => handleTableItemDragOver('skills', idx, e)}
+              onRowDrop={(idx, e) => handleTableItemDrop('skills', idx, e)}
+            />
+          </div>
         </Section>
 
         <Section id="equipment" title={t('editor.sections.equipment')}>
