@@ -29,7 +29,7 @@ BAB{bab}，CMB{cmb}，CMD{cmd}{combatManeuverNotes?；$}
 {specialAttacks?特殊攻击\n$\n}[hr]
 [b]防御[/b]
 [hr]
-AC {ac} {acSource?（$）}，措手不及 {acFlatFooted}，接触 {acTouch}{acNotes?；$}；
+AC {ac} {acSource?（$）}，措手不及 {acFlatFooted}，接触 {acTouch}{acNotes?；$}
 hp {hp} ({hd})
 强韧 {saveFort}，反射 {saveRef}，意志 {saveWill}{savesNotes?；$}
 {specialDefenses?特殊防御\n$\n}[hr]
@@ -45,7 +45,7 @@ hp {hp} ({hd})
 [hr]
 [b]天赋职业[/b] {favoredClass} ({favoredClassBonus})
 {classFeatures}
-{magicBlocks}
+{magicBlocks?$}
 [hr]
 [b]专长[/b]
 [hr]
