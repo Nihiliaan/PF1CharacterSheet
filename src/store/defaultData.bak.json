@@ -1,0 +1,72 @@
+{
+  "basic": {
+    "name": "新人物",
+    "classes": "",
+    "alignment": "",
+    "size": "",
+    "gender": "",
+    "race": "",
+    "age": "",
+    "height": "",
+    "weight": "",
+    "speed": "",
+    "senses": "",
+    "initiative": "0",
+    "perception": "0",
+    "languages": "",
+    "deity": "",
+    "avatars": []
+  },
+  "story": "",
+  "attributes": [
+    { "final": 10, "modifier": 0, "source": "", "status": "" },
+    { "final": 10, "modifier": 0, "source": "", "status": "" },
+    { "final": 10, "modifier": 0, "source": "", "status": "" },
+    { "final": 10, "modifier": 0, "source": "", "status": "" },
+    { "final": 10, "modifier": 0, "source": "", "status": "" },
+    { "final": 10, "modifier": 0, "source": "", "status": "" }
+  ],
+  "babTable": [
+    { "bab": "0", "cmb": "0", "cmd": 10 }
+  ],
+  "combatManeuverNotes": "",
+  "meleeAttacks": [],
+  "rangedAttacks": [],
+  "specialAttacks": "",
+  "defenses": {
+    "hp": "",
+    "hd": "",
+    "acTable": [
+      { "ac": 10, "source": "", "flatFooted": 10, "touch": 10 }
+    ],
+    "acNotes": "",
+    "savesTable": [
+      { "fort": 0, "ref": 0, "will": 0 }
+    ],
+    "savesNotes": "",
+    "defensiveAbilities": "",
+    "specialDefenses": ""
+  },
+  "racialTraits": [],
+  "backgroundTraits": [],
+  "favoredClass": "",
+  "favoredClassBonus": "",
+  "classFeatures": [],
+  "feats": [],
+  "skills": [],
+  "skillsTotal": "0",
+  "armorCheckPenalty": 0,
+  "skillsNotes": "",
+  "equipmentBags": [],
+  "encumbranceMultiplier": 1,
+  "equipmentNotes": "",
+  "currency": {
+    "pp": 0,
+    "gp": 0,
+    "sp": 0,
+    "cp": 0,
+    "coinWeight": 0
+  },
+  "magicBlocks": [],
+  "additionalData": []
+}
