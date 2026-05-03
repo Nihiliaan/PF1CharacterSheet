@@ -26,17 +26,13 @@ BAB{bab}，CMB{cmb}，CMD{cmd}{combatManeuverNotes?；$}
 {meleeAttackTable}
 远程攻击
 {rangedAttackTable}
-{specialAttacks?特殊攻击}
-{specialAttacks}
-[hr]
+{specialAttacks?特殊攻击\n$\n}[hr]
 [b]防御[/b]
 [hr]
 AC {ac} {acSource?（$）}，措手不及 {acFlatFooted}，接触 {acTouch}{acNotes?；$}；
 hp {hp} ({hd})
 强韧 {saveFort}，反射 {saveRef}，意志 {saveWill}{savesNotes?；$}
-{specialDefenses?特殊防御}
-{specialDefenses}
-[hr]
+{specialDefenses?特殊防御\n$\n}[hr]
 [b]背景特性[/b]
 [hr]
 {backgroundTraits}
