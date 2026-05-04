@@ -161,17 +161,19 @@
     "cp": 0,
     "coinWeight": 0
   },
-  "magicBlocks": {
-    "title": "",
-    "type": 0,
-    "casterLevel": 0,
-    "concentration": 0,
-    "spellTable": {
-      "level": [],
-      "uses": [],
-      "spells": []
-    },
-    "notes": ""
-  },
+  "magicBlocks": [
+    {
+      "title": "",
+      "type": 0,
+      "casterLevel": 0,
+      "concentration": 0,
+      "spellTable": {
+        "level": [],
+        "uses": [],
+        "spells": []
+      },
+      "notes": ""
+    }
+  ],
   "additionalData": []
 }
