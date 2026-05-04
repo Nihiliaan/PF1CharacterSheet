@@ -1,88 +1,92 @@
-import { 
-  TextHandler, 
-  IntegerHandler, 
-  BonusHandler, 
-  WeightHandler,
-  LevelHandler,
-  DistanceHandler,
-  BoolHandler,
-  FloatHandler
-} from './dataTypes';
 import { get } from 'lodash-es';
+import handlers from './dataTypes';
+
+const {
+  TextHandler, IntegerHandler, PosIntHandler, BonusHandler, LevelHandler,
+  FloatHandler, BoolHandler, AttributeIndexHandler, QuantityHandler,
+  CostHandler, WeightHandler, CritRangeHandler, CritMultiplierHandler,
+  DistanceHandler, AbilityTypeHandler, SpellTypeHandler, CompositeHandler,
+  SpellLevelHandler, DailyUsesHandler,
+  // 业务表格 Handler
+  AttributesTableHandler, AttackTableHandler, DefensesTableHandler,
+  SavesTableHandler, SkillsTableHandler, SimpleListHandler,
+  SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler
+} = handlers;
 
 /**
- * 复合节点与表格节点的默认占位逻辑（可选扩展）
- */
-const CompositeHandler = { update: (v: any) => v };
-const TableHandler = { update: (v: any) => v };
-
-/**
- * 人物卡处理器原型树 (The Blueprint)
- * 结构镜像 Data JSON，支持在字典节点通过 handler 属性定义整体逻辑
+ * 角色数据导航原型树 (Character Prototype Tree)
+ * 核心职责：将平面的 CharacterData 路径映射到复杂的业务逻辑 Handler
+ * 必须与 defaultData.json 的物理结构 100% 对齐
  */
 export const CharacterPrototype: any = {
+  // 1. 基础信息 (对应 defaultData.json 中的 "basic")
   basic: {
-    handler: CompositeHandler,
+    handler: handlers.BaseTable, // 复合展示
     name: TextHandler,
     classes: TextHandler,
-    alignment: IntegerHandler,
-    size: IntegerHandler,
-    gender: IntegerHandler,
+    alignment: handlers.AlignmentHandler,
+    size: handlers.SizeHandler,
+    gender: handlers.GenderHandler,
     race: TextHandler,
-    age: IntegerHandler,
-    height: FloatHandler,
-    weight: FloatHandler,
-    speed: IntegerHandler,
+    age: PosIntHandler,
+    height: handlers.HeightHandler,
+    weight: WeightHandler,
+    speed: {
+      handler: handlers.BaseTable,
+      base: IntegerHandler,
+      climb: IntegerHandler,
+      swim: IntegerHandler,
+      fly: IntegerHandler,
+      maneuverability: handlers.ManeuverabilityHandler
+    },
     senses: TextHandler,
     initiative: BonusHandler,
     perception: BonusHandler,
     languages: TextHandler,
-    deity: TextHandler,
-    avatars: {
-      handler: TableHandler,
-      url: TextHandler,
-      note: TextHandler
-    }
+    deity: TextHandler
   },
 
   story: TextHandler,
 
+  // 2. 核心属性 (SoA 数组结构)
   attributes: {
-    handler: TableHandler,
+    handler: AttributesTableHandler,
     final: IntegerHandler,
     modifier: BonusHandler,
     source: TextHandler,
     status: TextHandler
   },
 
+  // 3. 战斗统计表 (对应 "combatTable")
   combatTable: {
-    handler: CompositeHandler,
+    handler: handlers.BaseTable,
     bab: BonusHandler,
     cmb: BonusHandler,
     cmd: IntegerHandler,
     combatManeuverNotes: TextHandler
   },
 
+  // 4. 攻击系统 (SoA 数组结构)
   attacks: {
-    handler: CompositeHandler,
+    handler: handlers.BaseTable,
     meleeAttacks: {
-      handler: TableHandler,
+      handler: AttackTableHandler,
       weapon: TextHandler,
       hit: BonusHandler,
       damage: TextHandler,
-      critRange: TextHandler,
-      critMultiplier: TextHandler,
-      range: DistanceHandler,
+      critRange: CritRangeHandler,
+      critMultiplier: CritMultiplierHandler,
+      touch: DistanceHandler,
       damageType: TextHandler,
       special: TextHandler
     },
     rangedAttacks: {
-      handler: TableHandler,
+      handler: AttackTableHandler,
       weapon: TextHandler,
       hit: BonusHandler,
       damage: TextHandler,
-      critRange: TextHandler,
-      critMultiplier: TextHandler,
+      critRange: CritRangeHandler,
+      critMultiplier: CritMultiplierHandler,
       range: DistanceHandler,
       damageType: TextHandler,
       special: TextHandler
@@ -90,12 +94,13 @@ export const CharacterPrototype: any = {
     specialAttacks: TextHandler
   },
 
+  // 5. 防御系统
   defenses: {
-    handler: CompositeHandler,
-    hp: TextHandler,
+    handler: handlers.BaseTable,
+    hp: PosIntHandler,
     hd: TextHandler,
     acTable: {
-      handler: CompositeHandler,
+      handler: DefensesTableHandler,
       ac: IntegerHandler,
       source: TextHandler,
       flatFooted: IntegerHandler,
@@ -103,7 +108,7 @@ export const CharacterPrototype: any = {
       acNotes: TextHandler
     },
     savesTable: {
-      handler: CompositeHandler,
+      handler: SavesTableHandler,
       fort: BonusHandler,
       ref: BonusHandler,
       will: BonusHandler,
@@ -112,96 +117,103 @@ export const CharacterPrototype: any = {
     specialDefenses: TextHandler
   },
 
+  // 6. 特性与专长 (SoA)
   racialTraits: {
-    handler: TableHandler,
+    handler: SimpleListHandler,
     name: TextHandler,
     desc: TextHandler
   },
-
   backgroundTraits: {
-    handler: TableHandler,
+    handler: SimpleListHandler,
     name: TextHandler,
     type: TextHandler,
     desc: TextHandler
   },
-
   favoredClass: TextHandler,
   favoredClassBonus: TextHandler,
-
   classFeatures: {
-    handler: TableHandler,
+    handler: SimpleListHandler,
     level: LevelHandler,
     name: TextHandler,
-    type: TextHandler,
+    type: AbilityTypeHandler,
     desc: TextHandler
   },
-
   feats: {
-    handler: TableHandler,
+    handler: SimpleListHandler,
     level: LevelHandler,
-    source: TextHandler,
     name: TextHandler,
     type: TextHandler,
     desc: TextHandler
   },
 
+  // 7. 技能 (SoA)
   skills: {
-    handler: TableHandler,
+    handler: SkillsTableHandler,
     name: TextHandler,
     total: BonusHandler,
     rank: LevelHandler,
     cs: BoolHandler,
-    ability: TextHandler,
-    others: TextHandler,
+    ability: AttributeIndexHandler,
+    misc: IntegerHandler,
     special: TextHandler
   },
-
   skillsTotal: IntegerHandler,
   armorCheckPenalty: IntegerHandler,
 
+  // 8. 装备系统 (Array of Objects)
   equipmentBags: {
-    handler: TableHandler, // 处理包列表整体逻辑
+    handler: { ...handlers.BaseTable, view: 'EquipmentBags' },
     name: TextHandler,
     ignoreWeight: BoolHandler,
     items: {
-      handler: TableHandler, // 处理包内物品整表逻辑
+      handler: EquipmentItemsHandler,
       item: TextHandler,
-      quantity: TextHandler,
-      cost: TextHandler,
+      quantity: QuantityHandler,
+      cost: CostHandler,
       weight: WeightHandler,
       notes: TextHandler
     }
   },
-
   encumbranceMultiplier: FloatHandler,
-  equipmentNotes: TextHandler,
-
   currency: {
-    handler: CompositeHandler,
-    pp: IntegerHandler,
-    gp: IntegerHandler,
-    sp: IntegerHandler,
-    cp: IntegerHandler,
+    handler: handlers.BaseTable,
+    pp: QuantityHandler,
+    gp: QuantityHandler,
+    sp: QuantityHandler,
+    cp: QuantityHandler,
     coinWeight: WeightHandler
   },
 
-  magicBlocks: TextHandler,
-  additionalData: TextHandler
+  // 9. 施法系统 (Array Mode)
+  magicBlocks: {
+    handler: { ...MagicBlocksHandler, view: 'MagicBlocks' },
+    title: TextHandler,
+    type: SpellTypeHandler,
+    casterLevel: LevelHandler,
+    concentration: BonusHandler,
+    spellTable: {
+      handler: SpellTableHandler,
+      level: SpellLevelHandler,
+      uses: DailyUsesHandler,
+      spells: TextHandler
+    },
+    notes: TextHandler
+  },
+
+  additionalData: {
+    handler: { ...handlers.BaseTable, view: 'AdditionalData' },
+  }
 };
 
 /**
- * 路径归一化寻址：移除 [0] 和 .0 格式的索引
- * 自动识别并返回 handler 字段或节点本身
+ * 路径归一化寻址器
  */
 export function getHandlerByPath(path: string): any {
-  // 1. 归一化路径：移除所有 [数字] 或 .数字
   const normalizedPath = path
-    .replace(/\[\d+\]/g, '') // 处理 equipmentBags[0]
-    .replace(/\.\d+(\.|$)/g, (match) => match.endsWith('.') ? '.' : ''); // 处理 equipmentBags.0
+    .replace(/\[\d+\]/g, '')
+    .replace(/\.\d+(\.|$)/g, (match) => match.endsWith('.') ? '.' : '');
 
-  // 2. 寻址
   const node = get(CharacterPrototype, normalizedPath);
-
-  // 3. 返回逻辑：如果节点有 handler 则返回，否则节点本身即 Handler
-  return (node && node.handler) ? node.handler : node;
+  if (!node) return null;
+  return (node.handler) ? node.handler : node;
 }

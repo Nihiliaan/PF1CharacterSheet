@@ -13,7 +13,7 @@ import AccountSettings from './components/character/AccountSettings';
 import AppHeader from './components/layout/AppHeader';
 import AppFooter from './components/layout/AppFooter';
 import AppOverlays from './components/layout/AppOverlays';
-import CharacterEditor from './components/editor/CharacterEditor';
+import CharacterEditor from './components/layout/CharacterEditor';
 
 // Context
 import { CharacterProvider, useCharacter } from './contexts/CharacterContext';
@@ -29,10 +29,10 @@ export default function App() {
 
 function AppContent() {
   const { t } = useTranslation();
-  const { 
-    user, 
-    view, 
-    setView, 
+  const {
+    user,
+    view,
+    setView,
     isHeaderPinned,
     setIsHeaderPinned,
     isHeaderVisible,
@@ -45,7 +45,7 @@ function AppContent() {
     <div className="min-h-screen bg-stone-100 font-sans text-ink selection:bg-primary/20 flex flex-col h-screen overflow-hidden relative">
       <div className="fixed top-0 left-0 right-0 h-[36px] z-[60] pointer-events-auto" onMouseEnter={() => setIsHeaderVisible(true)} />
 
-      <AppHeader 
+      <AppHeader
         isHeaderVisible={isHeaderVisible}
         setIsHeaderVisible={setIsHeaderVisible}
         isHeaderPinned={isHeaderPinned}
@@ -54,7 +54,7 @@ function AppContent() {
 
       <AppOverlays />
 
-      <motion.div 
+      <motion.div
         animate={{ height: isHeaderPinned ? 56 : 0, opacity: isHeaderPinned ? 1 : 0 }}
         transition={{ type: 'spring', damping: 20, stiffness: 120 }}
         className="shrink-0 overflow-hidden"
@@ -111,10 +111,10 @@ function GlobalSavingOverlay() {
   if (!isSaving) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/20 backdrop-blur-[2px]">
-       <div className="bg-white p-4 rounded-xl shadow-2xl flex items-center gap-3 border border-stone-200">
-          <div className="w-5 h-5 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-bold text-stone-800 underline decoration-stone-200 underline-offset-4">{t('common.saving')}</span>
-       </div>
+      <div className="bg-white p-4 rounded-xl shadow-2xl flex items-center gap-3 border border-stone-200">
+        <div className="w-5 h-5 border-2 border-stone-800 border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm font-bold text-stone-800 underline decoration-stone-200 underline-offset-4">{t('common.saving')}</span>
+      </div>
     </div>
   );
 }

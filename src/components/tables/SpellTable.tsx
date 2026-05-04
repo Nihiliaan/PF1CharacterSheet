@@ -1,28 +1,51 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Column } from '../../types';
-import DynamicInput from './DynamicInput';
-interface SpellTableProps {
-  columns: Column[];
-  data: Record<string, string>[];
-  originalData?: Record<string, string>[];
-  baseLevel: 0 | 1;
-  onChange: (data: Record<string, string>[]) => void;
-  onBaseLevelChange: (level: 0 | 1) => void;
-  readOnly?: boolean;
-}
+import { useCharacterStore } from '../../store/characterStore';
+import { get } from 'lodash-es';
+import DynamicInput from '../../controls/DynamicInput';
 
-export default function SpellTable({
-  columns,
-  data,
-  originalData,
-  baseLevel,
-  onChange,
-  onBaseLevelChange,
-  readOnly = false
-}: SpellTableProps) {
+export default function SpellTable(props: any) {
+  const {
+    path,
+    columns: propColumns,
+    data: propData,
+    originalData: propOriginalData,
+    baseLevel,
+    onChange: propOnChange,
+    onBaseLevelChange: propOnBaseLevelChange,
+    readOnly = false
+  } = props;
+
   const { t } = useTranslation();
+
+  // 1. Store 链接
+  const storeData = useCharacterStore(s => path ? get(s.data, path) : undefined);
+  const storeOriginalData = useCharacterStore(s => path ? get(s.originalData, path) : undefined);
+  const updateField = useCharacterStore(s => s.updateField);
+
+  const data = path ? (storeData || []) : (propData || []);
+  const originalData = path ? storeOriginalData : propOriginalData;
+  const columns = propColumns || [];
+
+  const onChange = (newData: any) => {
+    if (path) {
+        updateField(path, newData);
+    } else if (propOnChange) {
+        propOnChange(newData);
+    }
+  };
+
+  const onBaseLevelChange = (newLevel: 0 | 1) => {
+    if (path) {
+        // 假设 baseLevel 在父级或同级，需要根据具体结构调整
+        // 这里暂时保留 props 传入，或在 SchemaRenderer 中适配
+        if (propOnBaseLevelChange) propOnBaseLevelChange(newLevel);
+    } else if (propOnBaseLevelChange) {
+        propOnBaseLevelChange(newLevel);
+    }
+  };
+
 
   const updateData = (index: number, key: string, value: string) => {
     if (readOnly) return;
@@ -118,14 +141,13 @@ export default function SpellTable({
                       </div>
                     ) : (
                       <DynamicInput
-                        value={row[c.key] || ''}
-                        originalValue={originalData?.[i]?.[c.key]}
-                        onChange={(val) => updateData(i, c.key, val)}
+                        path={path ? `${path}[${i}].${c.key}` : undefined}
+                        value={path ? undefined : (row[c.key] || '')}
+                        originalValue={path ? undefined : originalData?.[i]?.[c.key]}
+                        onChange={path ? undefined : (val) => updateData(i, c.key, val)}
                         readOnly={readOnly}
-                        columnKey={c.key}
                         type={c.type as any}
                         options={c.options}
-                        displayFormatter={c.displayFormatter}
                         align={c.align || (isDescriptionCol(c.key) ? 'left' : 'center')}
                         className={readOnly ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"}
                       />

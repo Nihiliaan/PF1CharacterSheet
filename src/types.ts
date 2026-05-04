@@ -25,7 +25,13 @@ export interface CharacterData {
     age: number;
     height: number;
     weight: number;
-    speed: number;
+    speed: {
+      base: number;
+      climb: number;
+      swim: number;
+      fly: number;
+      maneuverability: number;
+    };
     senses: string;
     initiative: number;
     perception: number;
@@ -51,8 +57,8 @@ export interface CharacterData {
       weapon: string[];
       hit: number[];
       damage: string[];
-      critRange: string[];
-      critMultiplier: string[];
+      critRange: number[];
+      critMultiplier: number[];
       range: string[];
       damageType: string[];
       special: string[];
@@ -61,8 +67,8 @@ export interface CharacterData {
       weapon: string[];
       hit: number[];
       damage: string[];
-      critRange: string[];
-      critMultiplier: string[];
+      critRange: number[];
+      critMultiplier: number[];
       range: string[];
       damageType: string[];
       special: string[];
@@ -70,7 +76,7 @@ export interface CharacterData {
     specialAttacks: string;
   };
   defenses: {
-    hp: string;
+    hp: number;
     hd: string;
     acTable: { 
       ac: number; 
@@ -91,9 +97,20 @@ export interface CharacterData {
   backgroundTraits: { name: string[]; type: string[]; desc: string[] };
   favoredClass: string;
   favoredClassBonus: string;
-  classFeatures: { level: string[]; name: string[]; type: string[]; desc: string[] };
-  feats: { level: string[]; source: string[]; name: string[]; type: string[]; desc: string[] };
-  magicBlocks: (MagicBlock | SpellBlock)[];
+  classFeatures: { level: number[]; name: string[]; type: number[]; desc: string[] };
+  feats: { level: number[]; source: string[]; name: string[]; type: string[]; desc: string[] };
+  magicBlocks: {
+    title: string[];
+    type: number[];
+    casterLevel: number[];
+    concentration: number[];
+    spellTable: {
+      level: number[];
+      uses: number[];
+      spells: string[];
+    }[];
+    notes: string[];
+  };
   skills: {
     name: string[];
     total: number[];
@@ -110,8 +127,8 @@ export interface CharacterData {
     ignoreWeight: boolean;
     items: {
       item: string[];
-      quantity: string[];
-      cost: string[];
+      quantity: number[];
+      cost: number[];
       weight: number[];
       notes: string[];
     };
