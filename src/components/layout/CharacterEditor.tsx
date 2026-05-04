@@ -5,17 +5,17 @@ import { useTranslation } from 'react-i18next';
 import { User as FirebaseUser } from 'firebase/auth';
 import { ATTRIBUTE_NAMES } from '../../types';
 import Section from '../common/Section';
-import InlineInput from '../common/InlineInput';
-import MultilineInput from '../common/MultilineInput';
+import DynamicInput from '../../controls/DynamicInput';
 import DynamicTable from '../common/DynamicTable';
 import TableOfContents from '../character/TableOfContents';
 import AvatarGallery from '../character/AvatarGallery';
 import MagicBlocks from '../character/MagicBlocks';
 import EquipmentBags from '../character/EquipmentBags';
 import AdditionalData from '../character/AdditionalData';
+import WeightSummary from '../character/WeightSummary';
 
 import { useCharacter } from '../../contexts/CharacterContext';
-import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../../utils/calculations';
+import { useCharacterStore } from '../../store/characterStore';
 import { getDisplayValue } from '../../utils/formatters';
 
 interface CharacterEditorProps {
@@ -28,18 +28,40 @@ export default function CharacterEditor({
   const { t } = useTranslation();
   const {
     isReadOnly,
-    data,
-    setData,
-    lastSavedData,
-    updateBasic,
-    updateDefenses,
-    tableActionMode,
-    toggleTableActionMode,
-    handleTableItemDragStart,
-    handleTableItemDragOver,
-    handleTableItemDrop,
     saveCharacter
   } = useCharacter();
+
+  // 性能优化：通过 granular selectors 获取状态，避免 CharacterEditor 整体重渲染
+  const attributes = useCharacterStore(s => s.data.attributes);
+  const originalAttributes = useCharacterStore(s => s.originalData.attributes);
+  const babTable = useCharacterStore(s => s.data.babTable);
+  const originalBabTable = useCharacterStore(s => s.originalData.babTable);
+  const meleeAttacks = useCharacterStore(s => s.data.meleeAttacks);
+  const originalMeleeAttacks = useCharacterStore(s => s.originalData.meleeAttacks);
+  const rangedAttacks = useCharacterStore(s => s.data.rangedAttacks);
+  const originalRangedAttacks = useCharacterStore(s => s.originalData.rangedAttacks);
+  const acTable = useCharacterStore(s => s.data.defenses.acTable);
+  const originalAcTable = useCharacterStore(s => s.originalData.defenses.acTable);
+  const savesTable = useCharacterStore(s => s.data.defenses.savesTable);
+  const originalSavesTable = useCharacterStore(s => s.originalData.defenses.savesTable);
+  const racialTraits = useCharacterStore(s => s.data.racialTraits);
+  const originalRacialTraits = useCharacterStore(s => s.originalData.racialTraits);
+  const backgroundTraits = useCharacterStore(s => s.data.backgroundTraits);
+  const originalBackgroundTraits = useCharacterStore(s => s.originalData.backgroundTraits);
+  const classFeatures = useCharacterStore(s => s.data.classFeatures);
+  const originalClassFeatures = useCharacterStore(s => s.originalData.classFeatures);
+  const feats = useCharacterStore(s => s.data.feats);
+  const originalFeats = useCharacterStore(s => s.originalData.feats);
+  const skills = useCharacterStore(s => s.data.skills);
+  const originalSkills = useCharacterStore(s => s.originalData.skills);
+  
+  const setData = useCharacterStore(s => s.setData); 
+  const updateField = useCharacterStore(s => s.updateField);
+  const tableActionMode = useCharacterStore(s => s.tableActionMode);
+  const toggleTableActionMode = useCharacterStore(s => s.toggleTableActionMode);
+  const handleTableItemDragStart = useCharacterStore(s => s.handleTableItemDragStart);
+  const handleTableItemDragOver = useCharacterStore(s => s.handleTableItemDragOver);
+  const handleTableItemDrop = useCharacterStore(s => s.handleTableItemDrop);
 
   return (
     <motion.div
@@ -57,6 +79,7 @@ export default function CharacterEditor({
           {user && (
             <button
               onClick={async () => {
+                const data = useCharacterStore.getState().data;
                 const id = await saveCharacter(data, null);
                 if (id) {
                   window.location.href = `?id=${id}`;
@@ -79,46 +102,40 @@ export default function CharacterEditor({
         <Section id="basic-info" title={t('editor.sections.basic')} className="max-w-[1200px] mx-auto">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-1 grid grid-cols-12 gap-y-4 gap-x-4">
-              <InlineInput className="col-span-12 sm:col-span-6 text-lg" label={t('editor.basic.name')} value={data.basic.name} originalValue={lastSavedData.basic.name} onChange={v => updateBasic('name', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6 text-lg" label={t('editor.basic.classes')} value={data.basic.classes} originalValue={lastSavedData.basic.classes} onChange={v => updateBasic('classes', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.alignment')} value={data.basic.alignment} originalValue={lastSavedData.basic.alignment} onChange={v => updateBasic('alignment', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.deity')} value={data.basic.deity || ''} originalValue={lastSavedData.basic.deity || ''} onChange={v => updateBasic('deity', v)} />
-              <InlineInput className="col-span-4" label={t('editor.basic.size')} value={data.basic.size} originalValue={lastSavedData.basic.size} onChange={v => updateBasic('size', v)} />
-              <InlineInput className="col-span-4" label={t('editor.basic.gender')} value={data.basic.gender} originalValue={lastSavedData.basic.gender} onChange={v => updateBasic('gender', v)} />
-              <InlineInput className="col-span-4" label={t('editor.basic.race')} value={data.basic.race} originalValue={lastSavedData.basic.race} onChange={v => updateBasic('race', v)} />
-              <InlineInput className="col-span-4" label={t('editor.basic.age')} value={data.basic.age} originalValue={lastSavedData.basic.age} onChange={v => updateBasic('age', v)} />
-              <InlineInput className="col-span-4" label={t('editor.basic.height')} value={data.basic.height} originalValue={lastSavedData.basic.height} onChange={v => updateBasic('height', v)} />
-              <InlineInput className="col-span-4" label={t('editor.basic.weight')} value={data.basic.weight} originalValue={lastSavedData.basic.weight} onChange={v => updateBasic('weight', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.speed')} value={data.basic.speed} originalValue={lastSavedData.basic.speed} onChange={v => updateBasic('speed', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.senses')} value={data.basic.senses} originalValue={lastSavedData.basic.senses} onChange={v => updateBasic('senses', v)} />
-              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.initiative')} value={data.basic.initiative} originalValue={lastSavedData.basic.initiative} onChange={v => updateBasic('initiative', v)} type="bonus" />
-              <InlineInput className="col-span-12 sm:col-span-6" label={t('editor.basic.perception')} value={data.basic.perception} originalValue={lastSavedData.basic.perception} onChange={v => updateBasic('perception', v)} type="bonus" />
-              <MultilineInput
+              <DynamicInput className="col-span-12 sm:col-span-6 text-lg" label={t('editor.basic.name')} path="basic.name" />
+              <DynamicInput className="col-span-12 sm:col-span-6 text-lg" label={t('editor.basic.classes')} path="basic.classes" />
+              <DynamicInput className="col-span-12 sm:col-span-6" label={t('editor.basic.alignment')} path="basic.alignment" />
+              <DynamicInput className="col-span-12 sm:col-span-6" label={t('editor.basic.deity')} path="basic.deity" />
+              <DynamicInput className="col-span-4" label={t('editor.basic.size')} path="basic.size" />
+              <DynamicInput className="col-span-4" label={t('editor.basic.gender')} path="basic.gender" />
+              <DynamicInput className="col-span-4" label={t('editor.basic.race')} path="basic.race" />
+              <DynamicInput className="col-span-4" label={t('editor.basic.age')} path="basic.age" />
+              <DynamicInput className="col-span-4" label={t('editor.basic.height')} path="basic.height" />
+              <DynamicInput className="col-span-4" label={t('editor.basic.weight')} path="basic.weight" />
+              <DynamicInput className="col-span-12 sm:col-span-6" label={t('editor.basic.speed')} path="basic.speed" />
+              <DynamicInput className="col-span-12 sm:col-span-6" label={t('editor.basic.senses')} path="basic.senses" />
+              <DynamicInput className="col-span-12 sm:col-span-6" label={t('editor.basic.initiative')} path="basic.initiative" />
+              <DynamicInput className="col-span-12 sm:col-span-6" label={t('editor.basic.perception')} path="basic.perception" />
+              <DynamicInput
                 className="col-span-12 mt-2"
                 label={t('editor.basic.languages')}
-                value={data.basic.languages}
-                originalValue={lastSavedData.basic.languages}
-                onChange={v => updateBasic('languages', v)}
-                isAutoHeight={true}
+                path="basic.languages"
               />
             </div>
             <div className="w-full md:w-64">
               <AvatarGallery
-                avatars={data.basic.avatars}
-                onUpdate={(newAvatars) => updateBasic('avatars', newAvatars)}
+                avatars={useCharacterStore.getState().data.basic.avatars}
+                onUpdate={(newAvatars) => updateField('basic.avatars', newAvatars)}
               />
             </div>
           </div>
         </Section>
 
         <Section id="story" title={t('editor.sections.story')}>
-          <MultilineInput
+          <DynamicInput
             label={t('editor.sections.story')}
             placeholder={t('editor.basic.story_placeholder')}
-            value={data.basic.story}
-            originalValue={lastSavedData.basic.story}
-            onChange={v => updateBasic('story', v)}
-            isAutoHeight={true}
+            path="basic.story"
             className="font-serif italic"
           />
         </Section>
@@ -133,10 +150,10 @@ export default function CharacterEditor({
                 { key: 'source', label: t('editor.attributes.headers.source'), width: '40%' },
                 { key: 'status', label: t('editor.attributes.headers.status'), width: '30%' }
               ]}
-              data={data.attributes.map((a: any, i: number) => ({ ...a, name: t('editor.attributes.' + ATTRIBUTE_NAMES[i]) }))}
-              originalData={lastSavedData.attributes.map((a: any, i: number) => ({ ...a, name: t('editor.attributes.' + ATTRIBUTE_NAMES[i]) }))}
+              data={attributes.map((a: any, i: number) => ({ ...a, name: t('editor.attributes.' + ATTRIBUTE_NAMES[i]) }))}
+              originalData={originalAttributes.map((a: any, i: number) => ({ ...a, name: t('editor.attributes.' + ATTRIBUTE_NAMES[i]) }))}
               onChange={(newAttrs: any) => setData({
-                ...data,
+                ...useCharacterStore.getState().data,
                 attributes: newAttrs.map(({ name, ...rest }: any) => rest)
               })}
               fixedRows={true}
@@ -157,21 +174,18 @@ export default function CharacterEditor({
                     { key: 'cmb', label: 'CMB', width: '33.33%', type: 'bonus' },
                     { key: 'cmd', label: 'CMD', width: '33.34%', type: 'int' }
                   ]}
-                  data={data.babTable || [{ bab: '', cmb: '', cmd: '' }]}
-                  originalData={lastSavedData.babTable || [{ bab: '', cmb: '', cmd: '' }]}
-                  onChange={(v: any) => setData({ ...data, babTable: v })}
+                  data={babTable || [{ bab: '', cmb: '', cmd: '' }]}
+                  originalData={originalBabTable || [{ bab: '', cmb: '', cmd: '' }]}
+                  onChange={(v: any) => updateField('babTable', v)}
                   fixedRows={true}
                 />
               </div>
             </div>
-            <MultilineInput
-              className="w-full md:w-1/2"
+            <DynamicInput
+              wrapperClassName="w-full md:w-1/2"
               label={t('editor.attributes.maneuver_notes')}
-              value={data.combatManeuverNotes || ''}
-              originalValue={lastSavedData.combatManeuverNotes}
-              onChange={(v: any) => setData({ ...data, combatManeuverNotes: v })}
+              path="combatManeuverNotes"
               placeholder={t('editor.attributes.maneuver_placeholder')}
-              height="100%"
             />
           </div>
         </Section>
@@ -191,9 +205,9 @@ export default function CharacterEditor({
                   { key: 'damageType', label: t('editor.attacks.damage_type'), width: '10%' },
                   { key: 'special', label: t('editor.attacks.special'), width: '22%' }
                 ]}
-                data={data.meleeAttacks?.map((a: any) => ({ ...a, critRange: a.critRange || a.crit, critMultiplier: a.critMultiplier || (a.crit?.includes('x') ? a.crit.split('x')[1] : '') })) || []}
-                originalData={lastSavedData.meleeAttacks || []}
-                onChange={(v: any) => setData({ ...data, meleeAttacks: v })}
+                data={meleeAttacks?.map((a: any) => ({ ...a, critRange: a.critRange || a.crit, critMultiplier: a.critMultiplier || (a.crit?.includes('x') ? a.crit.split('x')[1] : '') })) || []}
+                originalData={originalMeleeAttacks || []}
+                onChange={(v: any) => updateField('meleeAttacks', v)}
                 newItemGenerator={() => ({ weapon: '', hit: '', damage: '', critRange: '20', critMultiplier: '×2', range: '5', damageType: '', special: '' })}
                 rowDraggable={true}
                 rowActionMode={tableActionMode}
@@ -215,9 +229,9 @@ export default function CharacterEditor({
                 { key: 'damageType', label: t('editor.attacks.damage_type'), width: '10%' },
                 { key: 'special', label: t('editor.attacks.special'), width: '22%' }
               ]}
-              data={data.rangedAttacks?.map((a: any) => ({ ...a, critRange: a.critRange || a.crit, critMultiplier: a.critMultiplier || (a.crit?.includes('x') ? a.crit.split('x')[1] : '') })) || []}
-              originalData={lastSavedData.rangedAttacks || []}
-              onChange={(v: any) => setData({ ...data, rangedAttacks: v })}
+              data={rangedAttacks?.map((a: any) => ({ ...a, critRange: a.critRange || a.crit, critMultiplier: a.critMultiplier || (a.crit?.includes('x') ? a.crit.split('x')[1] : '') })) || []}
+              originalData={originalRangedAttacks || []}
+              onChange={(v: any) => updateField('rangedAttacks', v)}
               newItemGenerator={() => ({ weapon: '', hit: '', damage: '', critRange: '20', critMultiplier: '×2', range: '20', damageType: '', special: '' })}
               rowDraggable={true}
               rowActionMode={tableActionMode}
@@ -227,13 +241,10 @@ export default function CharacterEditor({
               onRowDrop={(idx, e) => handleTableItemDrop('rangedAttacks', idx, e)}
             />
           </div>
-          <MultilineInput
+          <DynamicInput
             className="mt-6"
             label={t('editor.attacks.special_attacks')}
-            value={data.specialAttacks || ''}
-            originalValue={lastSavedData.specialAttacks || ''}
-            onChange={(v: any) => setData({ ...data, specialAttacks: v })}
-            isAutoHeight={true}
+            path="specialAttacks"
           />
         </Section>
 
@@ -254,30 +265,27 @@ export default function CharacterEditor({
                       { key: 'touch', label: t('editor.defenses.touch'), width: '15%', type: 'int' },
                       { key: 'flatFooted', label: t('editor.defenses.flat_footed'), width: '15%', type: 'int' }
                     ]}
-                    data={data.defenses.acTable || [{ ac: '', source: '', flatFooted: '', touch: '' }]}
-                    originalData={lastSavedData.defenses.acTable || [{ ac: '', source: '', flatFooted: '', touch: '' }]}
-                    onChange={(v: any) => updateDefenses('acTable', v)}
+                    data={acTable || [{ ac: '', source: '', flatFooted: '', touch: '' }]}
+                    originalData={originalAcTable || [{ ac: '', source: '', flatFooted: '', touch: '' }]}
+                    onChange={(v: any) => updateField('defenses.acTable', v)}
                     fixedRows={true}
                   />
                 </div>
               </div>
-              <MultilineInput
-                className="w-full md:w-1/2"
+              <DynamicInput
+                wrapperClassName="w-full md:w-1/2"
                 label={t('editor.defenses.ac_notes')}
-                value={data.defenses.acNotes || ''}
-                originalValue={lastSavedData.defenses.acNotes}
-                onChange={(v: any) => updateDefenses('acNotes', v)}
+                path="defenses.acNotes"
                 placeholder={t('editor.defenses.ac_placeholder')}
-                height="100%"
               />
             </div>
 
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-1/2">
-                <InlineInput label={t('editor.defenses.hp')} value={data.defenses.hp} originalValue={lastSavedData.defenses.hp} onChange={v => updateDefenses('hp', v)} />
+                <DynamicInput label={t('editor.defenses.hp')} path="defenses.hp" />
               </div>
               <div className="w-full md:w-1/2">
-                <InlineInput label={t('editor.defenses.hd')} value={data.defenses.hd || ''} originalValue={lastSavedData.defenses.hd} onChange={v => updateDefenses('hd', v)} />
+                <DynamicInput label={t('editor.defenses.hd')} path="defenses.hd" />
               </div>
             </div>
 
@@ -295,29 +303,23 @@ export default function CharacterEditor({
                       { key: 'ref', label: t('editor.defenses.ref'), width: '33.33%', type: 'bonus' },
                       { key: 'will', label: t('editor.defenses.will'), width: '33.34%', type: 'bonus' }
                     ]}
-                    data={data.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
-                    originalData={lastSavedData.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
-                    onChange={(v: any) => updateDefenses('savesTable', v)}
+                    data={savesTable || [{ fort: '', ref: '', will: '' }]}
+                    originalData={originalSavesTable || [{ fort: '', ref: '', will: '' }]}
+                    onChange={(v: any) => updateField('defenses.savesTable', v)}
                     fixedRows={true}
                   />
                 </div>
               </div>
-              <MultilineInput
-                className="w-full md:w-1/2"
+              <DynamicInput
+                wrapperClassName="w-full md:w-1/2"
                 label={t('editor.defenses.saves_notes')}
-                value={data.defenses.savesNotes || ''}
-                originalValue={lastSavedData.defenses.savesNotes}
-                onChange={(v: any) => updateDefenses('savesNotes', v)}
-                height="100%"
+                path="defenses.savesNotes"
               />
             </div>
-            <MultilineInput
+            <DynamicInput
               className="mt-4"
               label={t('editor.defenses.special_defenses')}
-              value={data.defenses.specialDefenses || ''}
-              originalValue={lastSavedData.defenses.specialDefenses || ''}
-              onChange={(v: any) => setData({ ...data, defenses: { ...data.defenses, specialDefenses: v } })}
-              height="100%"
+              path="defenses.specialDefenses"
             />
           </div>
         </Section>
@@ -328,9 +330,9 @@ export default function CharacterEditor({
               { key: 'name', label: t('editor.lists.trait'), width: '10%' },
               { key: 'desc', label: t('editor.lists.description'), width: '90%' }
             ]}
-            data={data.racialTraits}
-            originalData={lastSavedData.racialTraits}
-            onChange={(v: any) => setData({ ...data, racialTraits: v })}
+            data={racialTraits}
+            originalData={originalRacialTraits}
+            onChange={(v: any) => updateField('racialTraits', v)}
             newItemGenerator={() => ({ name: '', desc: '' })}
             rowDraggable={true}
             rowActionMode={tableActionMode}
@@ -349,9 +351,9 @@ export default function CharacterEditor({
                 { key: 'type', label: t('editor.lists.category'), width: '5%' },
                 { key: 'desc', label: t('editor.lists.description'), width: '70%' }
               ]}
-              data={data.backgroundTraits}
-              originalData={lastSavedData.backgroundTraits}
-              onChange={(v: any) => setData({ ...data, backgroundTraits: v })}
+              data={backgroundTraits}
+              originalData={originalBackgroundTraits}
+              onChange={(v: any) => updateField('backgroundTraits', v)}
               newItemGenerator={() => ({ name: '', type: '', desc: '' })}
               rowDraggable={true}
               rowActionMode={tableActionMode}
@@ -361,8 +363,8 @@ export default function CharacterEditor({
               onRowDrop={(idx, e) => handleTableItemDrop('backgroundTraits', idx, e)}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <InlineInput label={t('editor.lists.favored_class')} value={data.favoredClass} onChange={v => setData(p => ({ ...p, favoredClass: v }))} />
-              <InlineInput label={t('editor.lists.favored_class_bonus')} value={data.favoredClassBonus} onChange={v => setData(p => ({ ...p, favoredClassBonus: v }))} />
+              <DynamicInput label={t('editor.lists.favored_class')} path="favoredClass" />
+              <DynamicInput label={t('editor.lists.favored_class_bonus')} path="favoredClassBonus" />
             </div>
           </div>
         </Section>
@@ -375,9 +377,9 @@ export default function CharacterEditor({
               { key: 'type', label: t('editor.lists.ability_type'), width: '5%', type: 'select', options: ['', 'Sp', 'Su', 'Ex'] },
               { key: 'desc', label: t('editor.lists.description'), width: '65%' }
             ]}
-            data={data.classFeatures}
-            originalData={lastSavedData.classFeatures}
-            onChange={(v: any) => setData({ ...data, classFeatures: v })}
+            data={classFeatures}
+            originalData={originalClassFeatures}
+            onChange={(v: any) => updateField('classFeatures', v)}
             newItemGenerator={() => ({ level: '', name: '', type: '', desc: '' })}
             rowDraggable={true}
             rowActionMode={tableActionMode}
@@ -397,9 +399,9 @@ export default function CharacterEditor({
               { key: 'type', label: t('editor.lists.feat_type'), width: '5%' },
               { key: 'desc', label: t('editor.lists.description'), width: '55%' }
             ]}
-            data={data.feats}
-            originalData={lastSavedData.feats}
-            onChange={(v: any) => setData({ ...data, feats: v })}
+            data={feats}
+            originalData={originalFeats}
+            onChange={(v: any) => updateField('feats', v)}
             newItemGenerator={() => ({ level: '', name: '', type: '', source: '', desc: '' })}
             rowDraggable={true}
             rowActionMode={tableActionMode}
@@ -417,10 +419,10 @@ export default function CharacterEditor({
         <Section id="skills" title={t('editor.sections.skills')}>
           <div className="flex flex-col md:flex-row gap-6 items-stretch">
             <div className="w-full md:w-1/6">
-              <InlineInput label={t('editor.skills.total_points')} type="posInt" value={data.skillsTotal || ''} originalValue={lastSavedData.skillsTotal || ''} onChange={v => setData({ ...data, skillsTotal: v })} />
+              <DynamicInput label={t('editor.skills.total_points')} path="skillsTotal" />
             </div>
             <div className="w-full md:w-1/6">
-              <InlineInput label={t('editor.skills.acp')} type="posInt" value={data.armorCheckPenalty || '0'} originalValue={lastSavedData.armorCheckPenalty || '0'} onChange={v => setData({ ...data, armorCheckPenalty: v || '0' })} displayFormatter={(v, f) => (!v || v === '0' || f) ? v : `-${v}`} />
+              <DynamicInput label={t('editor.skills.acp')} path="armorCheckPenalty" />
             </div>
           </div>
           <div className="mt-4">
@@ -439,16 +441,16 @@ export default function CharacterEditor({
                     if (!val || val === '0') return '';
                     const idx = parseInt(val, 10) - 1;
                     const localizedName = t('editor.attributes.' + ATTRIBUTE_NAMES[idx]);
-                    const modStr = getDisplayValue(data.attributes[idx].modifier, 'bonus', t);
+                    const modStr = getDisplayValue(attributes[idx].modifier, 'bonus', t);
                     return `${modStr}${localizedName}`;
                   }
                 },
                 { key: 'others', label: t('editor.skills.headers.others'), width: '20%' },
                 { key: 'special', label: t('editor.skills.headers.special'), width: '35%' }
               ]}
-              data={data.skills}
-              originalData={lastSavedData.skills}
-              onChange={(v: any) => setData({ ...data, skills: v })}
+              data={skills}
+              originalData={originalSkills}
+              onChange={(v: any) => updateField('skills', v)}
               newItemGenerator={() => ({ name: '', total: '', source: '', special: '' })}
               rowDraggable={true}
               rowActionMode={tableActionMode}
@@ -464,94 +466,14 @@ export default function CharacterEditor({
           <EquipmentBags path="equipmentBags" />
           
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
-            <InlineInput label={t('editor.items.pp')} type="posInt" value={data.currency.pp} originalValue={lastSavedData.currency?.pp} onChange={v => setData((p:any) => ({ ...p, currency: { ...p.currency, pp: v } }))} />
-            <InlineInput label={t('editor.items.gp')} type="posInt" value={data.currency.gp} originalValue={lastSavedData.currency?.gp} onChange={v => setData((p:any) => ({ ...p, currency: { ...p.currency, gp: v } }))} />
-            <InlineInput label={t('editor.items.sp')} type="posInt" value={data.currency.sp} originalValue={lastSavedData.currency?.sp} onChange={v => setData((p:any) => ({ ...p, currency: { ...p.currency, sp: v } }))} />
-            <InlineInput label={t('editor.items.cp')} type="posInt" value={data.currency.cp} originalValue={lastSavedData.currency?.cp} onChange={v => setData((p:any) => ({ ...p, currency: { ...p.currency, cp: v } }))} />
-            <InlineInput label={t('editor.items.coin_weight')} type="float" value={data.currency.coinWeight} originalValue={lastSavedData.currency?.coinWeight} onChange={v => setData((p:any) => ({ ...p, currency: { ...p.currency, coinWeight: v } }))} />
+            <DynamicInput label={t('editor.items.pp')} path="currency.pp" />
+            <DynamicInput label={t('editor.items.gp')} path="currency.gp" />
+            <DynamicInput label={t('editor.items.sp')} path="currency.sp" />
+            <DynamicInput label={t('editor.items.cp')} path="currency.cp" />
+            <DynamicInput label={t('editor.items.coin_weight')} path="currency.coinWeight" />
           </div>
 
-          <div className="flex flex-col md:flex-row gap-3 mt-4 items-stretch">
-            <div className="flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 w-24 shrink-0 justify-center">
-              <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">{t('editor.items.total_assets')}</label>
-              <div className="text-sm font-medium text-ink px-0.5">{calculateTotalCost(data)}<span className="text-xs font-normal text-stone-500 ml-1">gp</span></div>
-            </div>
-            <div className={`flex flex-col gap-0 border rounded p-1.5 focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-colors w-24 shrink-0 justify-center ${data.encumbranceMultiplier !== lastSavedData.encumbranceMultiplier ? 'bg-amber-50 border-amber-300' : 'bg-stone-50 border-stone-200'}`}>
-              <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none flex justify-between items-center text-nowrap">
-                {t('editor.items.encumbrance_multiplier')}
-                {data.encumbranceMultiplier !== lastSavedData.encumbranceMultiplier && <span className="text-amber-600 animate-pulse text-[8px]">●</span>}
-              </label>
-              <input className="text-sm font-medium text-ink bg-transparent outline-none px-0.5 w-full"
-                value={data.encumbranceMultiplier} onChange={e => {
-                  const val = e.target.value;
-                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                    setData((p:any) => ({ ...p, encumbranceMultiplier: val }));
-                  }
-                }}
-              />
-            </div>
-
-            <div className="flex-1 flex flex-col border border-stone-200 bg-stone-50 rounded px-3 py-2 min-h-[50px] justify-center overflow-visible">
-              {(() => {
-                const encumbrance = getComputedEncumbrance(data);
-                const maxWeight = encumbrance.heavy;
-                const currentWeight = calculateTotalWeightNum(data);
-                const MathMax = Math.max;
-                const percentage = Math.min((currentWeight / MathMax(maxWeight, 1)) * 100, 100);
-                const isOverloaded = currentWeight > maxWeight;
-                const isHeavy = currentWeight > encumbrance.medium && currentWeight <= maxWeight;
-                const isMedium = currentWeight > encumbrance.light && currentWeight <= encumbrance.medium;
-                const isLight = currentWeight <= encumbrance.light;
-
-                let barColor = 'bg-stone-300';
-                if (isOverloaded) barColor = 'bg-red-500';
-                else if (isHeavy) barColor = 'bg-orange-500';
-                else if (isMedium) barColor = 'bg-yellow-400';
-                else if (isLight) barColor = 'bg-green-400';
-
-                const lightPct = (encumbrance.light / MathMax(maxWeight, 1)) * 100;
-                const medPct = (encumbrance.medium / MathMax(maxWeight, 1)) * 100;
-                const heavyPct = 100;
-
-                return (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
-                    <div className="flex flex-col sm:items-center shrink-0 w-20">
-                      <span className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">{t('editor.items.total_weight')}</span>
-                      <span className="text-lg font-bold font-serif text-ink leading-tight">{currentWeight.toLocaleString('en-US', { maximumFractionDigits: 2 })} <span className="text-xs font-normal text-stone-500">lbs</span></span>
-                    </div>
-
-                    <div className="flex-1 relative flex flex-col justify-center min-h-[20px] mt-1 mb-1 w-full mx-2">
-                      <div className="absolute -top-3.5 left-0 right-0 h-3">
-                        <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${lightPct}%` }}>{encumbrance.light} lbs</span>
-                        <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${medPct}%` }}>{encumbrance.medium} lbs</span>
-                        <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${heavyPct}%` }}>{encumbrance.heavy} lbs</span>
-                      </div>
-                      <div className="h-2 w-full bg-stone-200 rounded-full relative overflow-hidden">
-                        <div className={`h-full rounded-full transition-all duration-300 ${barColor}`} style={{ width: `${percentage}%` }} />
-                        <div className="absolute top-0 bottom-0 w-0.5 bg-stone-400/50 z-10" style={{ left: `${lightPct}%` }} />
-                        <div className="absolute top-0 bottom-0 w-0.5 bg-stone-400/50 z-10" style={{ left: `${medPct}%` }} />
-                      </div>
-                      <div className="absolute -bottom-3.5 left-0 right-0 h-3">
-                        <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${lightPct / 2}%` }}>
-                          <span>{t('editor.items.light')}</span>
-                        </span>
-                        <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${(lightPct + medPct) / 2}%` }}>
-                          <span>{t('editor.items.medium')}</span>
-                        </span>
-                        <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${(medPct + heavyPct) / 2}%` }}>
-                          <span>{t('editor.items.heavy')}</span>
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 w-10 flex items-center justify-center">
-                      {isOverloaded && <span className="text-[10px] font-bold text-white bg-red-600 px-1 py-0.5 rounded shadow-inner rotate-[-5deg]">{t('editor.items.overload')}</span>}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
+          <WeightSummary />
         </Section>
 
         <Section id="additional-data" title={t('editor.sections.additional')}>

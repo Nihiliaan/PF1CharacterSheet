@@ -60,7 +60,7 @@ const DynamicInput: React.FC<DynamicInputProps> = (props) => {
     ...rest
   } = props;
 
-  const data = useCharacterStore(s => s.data);
+  const value = useCharacterStore(s => (path && overrideValue === undefined) ? get(s.data, path) : overrideValue);
   const updateField = useCharacterStore(s => s.updateField);
 
   // 1. 获取处理逻辑 (Handler)
@@ -71,7 +71,6 @@ const DynamicInput: React.FC<DynamicInputProps> = (props) => {
   }
 
   // 2. 确定当前值
-  const value = overrideValue !== undefined ? overrideValue : (path ? get(data, path) : '');
   const originalValue = overrideOriginal; 
 
   // 3. 处理变更回调

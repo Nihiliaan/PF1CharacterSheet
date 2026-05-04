@@ -101,27 +101,12 @@ export default function SpellTable(props: any) {
                 {c.label}
               </th>
             ))}
-            <th className="w-28 border-b border-stone-100 bg-stone-100/50 px-1">
-              <div className="flex items-center gap-1 justify-end pr-1">
-                {!readOnly && (
-                  <select
-                    value={spellTemplate}
-                    onChange={(e) => typePath && updateField(typePath, e.target.value)}
-                    className="text-[9px] bg-white border border-stone-200 rounded px-1 py-0.5 font-bold text-stone-400 hover:text-stone-600 outline-none cursor-pointer w-16"
-                  >
-                    <option value="prepared_0">0-環准</option>
-                    <option value="prepared_1">無0環准</option>
-                    <option value="spontaneous_0">0-環自</option>
-                    <option value="spontaneous_1">無0環自</option>
-                    <option value="sla">类法</option>
-                  </select>
-                )}
-                {!readOnly && (
-                  <button onClick={addRow} className="shrink-0 w-6 h-6 flex items-center justify-center text-stone-400 hover:text-stone-900 transition-colors" title={t('common.add_row')}>
-                    <Plus size={14} />
-                  </button>
-                )}
-              </div>
+            <th className="w-10 border-b border-stone-100 bg-stone-100/50">
+              {!readOnly && (
+                <button onClick={addRow} className="w-full h-full flex items-center justify-center text-stone-400 hover:text-stone-900 transition-colors" title={t('common.add_row')}>
+                  <Plus size={16} />
+                </button>
+              )}
             </th>
           </tr>
         </thead>

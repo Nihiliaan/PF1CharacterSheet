@@ -42,6 +42,18 @@ export default function MagicBlocks({ path }: { path: string }) {
              </div>
              <DynamicInput path={`${path}[${index}].title`} className="flex-1 font-bold uppercase tracking-wider text-stone-600 text-[11px]" />
              
+             <select
+                value={block.spellTemplate}
+                onChange={(e) => updateField(`${path}[${index}].spellTemplate`, e.target.value)}
+                className="text-[9px] bg-stone-50 border border-stone-200 rounded px-2 py-1 font-bold text-stone-500 uppercase tracking-widest outline-none focus:border-stone-400 cursor-pointer"
+             >
+                <option value="prepared_0">0-環准备</option>
+                <option value="prepared_1">無0環准备</option>
+                <option value="spontaneous_0">0-環自发</option>
+                <option value="spontaneous_1">無0環自发</option>
+                <option value="sla">类法术</option>
+             </select>
+
              <button onClick={() => removeMagicBlock(block.id)} className="text-stone-300 hover:text-red-500 transition-colors">
                 <Trash2 size={16} />
              </button>
