@@ -32,6 +32,14 @@ export interface DynamicInputProps {
   [key: string]: any;
 }
 
+// 默认处理器，防止 handler 为空时崩溃
+const DefaultHandler = {
+  ui: 'text',
+  validate: () => true,
+  formatDisplay: (v: any) => v || '—',
+  formatInteractive: (v: any) => v || '',
+};
+
 /**
  * 统一输入分发组件
  * 核心职责：根据 path 或 handler 自动选择合适的 UI 模板进行渲染
@@ -52,15 +60,14 @@ const DynamicInput: React.FC<DynamicInputProps> = (props) => {
   } = props;
 
   const data = useCharacterStore(s => s.data);
-  const lastSavedData = useCharacterStore(s => s.lastSavedData);
   const updateField = useCharacterStore(s => s.updateField);
 
   // 1. 获取处理逻辑 (Handler)
-  const handler = path ? getHandlerByPath(path) : null;
+  const handler = (path ? getHandlerByPath(path) : null) || DefaultHandler;
   
-  // 2. 确定当前值和原始值
+  // 2. 确定当前值
   const value = overrideValue !== undefined ? overrideValue : (path ? get(data, path) : '');
-  const originalValue = overrideOriginal !== undefined ? overrideOriginal : (path ? get(lastSavedData, path) : '');
+  const originalValue = overrideOriginal; // 暂时不支持从 store 获取原始值进行对比
 
   // 3. 处理变更回调
   const handleChange = (v: string) => {
@@ -72,13 +79,14 @@ const DynamicInput: React.FC<DynamicInputProps> = (props) => {
   };
 
   // 4. 选择渲染模板
-  const templateName = handler?.ui || 'text';
+  const templateName = handler.ui || 'text';
   const Template = TEMPLATE_MAP[templateName] || TextControl;
 
   return (
     <div className={`flex flex-col gap-1 ${wrapperClassName || ''}`}>
       {label && <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">{label}</label>}
       <Template
+        handler={handler}
         value={value}
         originalValue={originalValue}
         onChange={handleChange}

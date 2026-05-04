@@ -43,7 +43,6 @@ export default function DynamicTable(props: DynamicTableProps) {
   const fixedRows = tableHandler?.fixedRows || false;
 
   const data = useCharacterStore(s => (path ? get(s.data, path) : overrideData) || []);
-  const originalData = useCharacterStore(s => (path ? get(s.lastSavedData, path) : overrideOriginal) || []);
   const updateField = useCharacterStore(s => s.updateField);
 
   const handleChange = (newData: any[]) => {
@@ -105,7 +104,7 @@ export default function DynamicTable(props: DynamicTableProps) {
                   <DynamicInput
                     path={path ? `${path}[${i}].${c.key}` : undefined}
                     value={path ? undefined : row[c.key]}
-                    originalValue={path ? undefined : (originalData[i]?.[c.key])}
+                    originalValue={undefined}
                     onChange={path ? undefined : (val) => {
                       const newData = [...data];
                       newData[i] = { ...row, [c.key]: val };
