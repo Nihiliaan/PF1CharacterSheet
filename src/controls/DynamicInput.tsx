@@ -65,9 +65,13 @@ const DynamicInput: React.FC<DynamicInputProps> = (props) => {
   // 1. 获取处理逻辑 (Handler)
   const handler = (path ? getHandlerByPath(path) : null) || DefaultHandler;
   
+  if (!handler.formatDisplay && !handler.view) {
+    console.error(`[DynamicInput] CRITICAL: Path "${path}" resolved to handler without formatDisplay:`, handler);
+  }
+
   // 2. 确定当前值
   const value = overrideValue !== undefined ? overrideValue : (path ? get(data, path) : '');
-  const originalValue = overrideOriginal; // 暂时不支持从 store 获取原始值进行对比
+  const originalValue = overrideOriginal; 
 
   // 3. 处理变更回调
   const handleChange = (v: string) => {
@@ -81,6 +85,10 @@ const DynamicInput: React.FC<DynamicInputProps> = (props) => {
   // 4. 选择渲染模板
   const templateName = handler.ui || 'text';
   const Template = TEMPLATE_MAP[templateName] || TextControl;
+
+  if (Template === TextControl && templateName !== 'text') {
+    console.warn(`[DynamicInput] Path "${path}" using fallback TextControl for template "${templateName}"`);
+  }
 
   return (
     <div className={`flex flex-col gap-1 ${wrapperClassName || ''}`}>

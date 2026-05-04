@@ -216,6 +216,17 @@ export function getHandlerByPath(path: string): any {
     .replace(/\.\d+(\.|$)/g, (match) => match.endsWith('.') ? '.' : '');
 
   const node = get(CharacterPrototype, normalizedPath);
-  if (!node) return null;
-  return (node.handler) ? node.handler : node;
+  
+  if (!node) {
+    console.warn(`[Schema] No prototype node found for path: ${path} (normalized: ${normalizedPath})`);
+    return null;
+  }
+
+  const handler = node.handler ? node.handler : node;
+  
+  if (handler && typeof handler.formatDisplay !== 'function' && !handler.view) {
+    console.error(`[Schema] Invalid handler for path ${path}. Missing formatDisplay and no view specified!`, handler);
+  }
+
+  return handler;
 }
