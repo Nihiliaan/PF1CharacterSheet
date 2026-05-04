@@ -1,21 +1,20 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, GripVertical, Trash2, Plus } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { User as FirebaseUser } from 'firebase/auth';
 
 import Section from '../common/Section';
-import DynamicInput from '../../controls/DynamicInput';
-import DynamicTable from '../tables/DynamicTable';
-import SpellTable from '../tables/SpellTable';
-import MagicBlocks from '../character/MagicBlocks';
-import AdditionalData from '../character/AdditionalData';
 import TableOfContents from '../character/TableOfContents';
 import AvatarGallery from '../character/AvatarGallery';
+import MagicBlocks from '../character/MagicBlocks';
+import EquipmentBags from '../character/EquipmentBags';
+import AdditionalData from '../character/AdditionalData';
+import DynamicInput from '../../controls/DynamicInput';
+import DynamicTable from '../tables/DynamicTable';
 
 import { useCharacterStore } from '../../store/characterStore';
 import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../../utils/calculations';
-import { get } from 'lodash-es';
 
 interface CharacterEditorProps {
   user: FirebaseUser | null;
@@ -23,16 +22,13 @@ interface CharacterEditorProps {
 
 export default function CharacterEditor({ user }: CharacterEditorProps) {
   const { t } = useTranslation();
-  
-  // 1. 获取核心状态与操作
   const data = useCharacterStore(s => s.data);
   const isReadOnly = useCharacterStore(s => s.isReadOnly);
   const updateField = useCharacterStore(s => s.updateField);
-  const setData = useCharacterStore(s => s.setData); // 注意：这里需要确保存储层支持全量覆盖
 
-  // 2. 模拟旧版的业务辅助函数
-  const updateBasic = (field: string, val: any) => updateField(`basic.${field}`, val);
-  const updateDefenses = (field: string, val: any) => updateField(`defenses.${field}`, val);
+  const f = (path: string, label?: string, className?: string, props?: any) => (
+    <DynamicInput path={path} label={label} className={className} {...props} />
+  );
 
   return (
     <motion.div
@@ -40,7 +36,7 @@ export default function CharacterEditor({ user }: CharacterEditorProps) {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="h-full overflow-y-auto bg-stone-100/30"
+      className="h-full overflow-y-auto"
     >
       {isReadOnly && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-center gap-3 text-amber-800 text-sm font-medium sticky top-0 z-[55]">
@@ -53,242 +49,263 @@ export default function CharacterEditor({ user }: CharacterEditorProps) {
 
       <main className={`max-w-5xl mx-auto py-12 px-4 sm:px-8 pb-32 transition-all duration-300 ${isReadOnly ? 'pointer-events-none opacity-90' : ''}`}>
         <header className="mb-8 text-center flex flex-col items-center">
-          <h1 className="text-4xl font-serif font-bold mb-2 tracking-tight text-stone-800">{t('editor.title')}</h1>
-          <div className="w-24 h-1 bg-amber-500/20 rounded-full mt-2"></div>
+          <h1 className="text-4xl font-serif font-bold mb-2 tracking-tight text-stone-800">
+            {t('editor.title')}
+          </h1>
+          <div className="w-24 h-1 bg-primary/20 rounded-full mt-2"></div>
         </header>
 
-        {/* 基础信息 */}
         <Section id="basic-info" title={t('editor.sections.basic')}>
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="flex-1 grid grid-cols-12 gap-y-5 gap-x-6">
-              <DynamicInput className="col-span-12 sm:col-span-6" label={t('editor.basic.name')} path="basic.name" />
-              <DynamicInput className="col-span-12 sm:col-span-6" label={t('editor.basic.classes')} path="basic.classes" />
-              <DynamicInput className="col-span-4" label={t('editor.basic.alignment')} path="basic.alignment" />
-              <DynamicInput className="col-span-4" label={t('editor.basic.gender')} path="basic.gender" />
-              <DynamicInput className="col-span-4" label={t('editor.basic.race')} path="basic.race" />
-              <DynamicInput className="col-span-4" label={t('editor.basic.age')} path="basic.age" />
-              <DynamicInput className="col-span-4" label={t('editor.basic.height')} path="basic.height" />
-              <DynamicInput className="col-span-4" label={t('editor.basic.weight')} path="basic.weight" />
-              <DynamicInput className="col-span-12 sm:col-span-6" label={t('editor.basic.speed')} path="basic.speed.base" />
-              <DynamicInput className="col-span-12 sm:col-span-6" label={t('editor.basic.senses')} path="basic.senses" />
-              <DynamicInput className="col-span-6 sm:col-span-3" label={t('editor.basic.initiative')} path="basic.initiative" />
-              <DynamicInput className="col-span-6 sm:col-span-3" label={t('editor.basic.perception')} path="basic.perception" />
-              <DynamicInput className="col-span-12" label={t('editor.basic.languages')} path="basic.languages" />
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex-1 grid grid-cols-12 gap-y-4 gap-x-4">
+              {f('basic.name', t('editor.basic.name'), "col-span-12 sm:col-span-6 text-lg")}
+              {f('basic.classes', t('editor.basic.classes'), "col-span-12 sm:col-span-6 text-lg")}
+              {f('basic.alignment', t('editor.basic.alignment'), "col-span-12 sm:col-span-6")}
+              {f('basic.deity', t('editor.basic.deity'), "col-span-12 sm:col-span-6")}
+              {f('basic.size', t('editor.basic.size'), "col-span-4")}
+              {f('basic.gender', t('editor.basic.gender'), "col-span-4")}
+              {f('basic.race', t('editor.basic.race'), "col-span-4")}
+              {f('basic.age', t('editor.basic.age'), "col-span-4")}
+              {f('basic.height', t('editor.basic.height'), "col-span-4")}
+              {f('basic.weight', t('editor.basic.weight'), "col-span-4")}
+              {f('basic.speed', t('editor.basic.speed'), "col-span-12 sm:col-span-6")}
+              {f('basic.senses', t('editor.basic.senses'), "col-span-12 sm:col-span-6")}
+              {f('basic.initiative', t('editor.basic.initiative'), "col-span-12 sm:col-span-6")}
+              {f('basic.perception', t('editor.basic.perception'), "col-span-12 sm:col-span-6")}
+              {f('basic.languages', t('editor.basic.languages'), "col-span-12 mt-2", { singleLine: false })}
             </div>
             <div className="w-full md:w-64 shrink-0">
               <AvatarGallery
                 avatars={data.basic.avatars || []}
-                onUpdate={(newAvatars) => updateBasic('avatars', newAvatars)}
+                onUpdate={(newAvatars) => updateField('basic.avatars', newAvatars)}
               />
             </div>
           </div>
         </Section>
 
-        {/* 故事 */}
         <Section id="story" title={t('editor.sections.story')}>
-           <DynamicInput path="story" />
+           {f('basic.story', t('editor.sections.story'), "italic font-serif", { singleLine: false })}
         </Section>
 
-        {/* 属性与战斗 */}
         <Section id="attributes" title={t('editor.sections.attributes')}>
-           <div className="mb-8">
-             <DynamicTable
+           <div className="flex flex-col gap-8">
+              <DynamicTable
                 path="attributes"
-                minWidth="0"
                 columns={[
-                  { key: 'name', label: t('editor.attributes.headers.attr'), width: '15%' },
+                  { key: 'name', label: t('editor.attributes.headers.attr'), width: '10%' },
                   { key: 'final', label: t('editor.attributes.headers.final'), width: '10%' },
                   { key: 'modifier', label: t('editor.attributes.headers.mod'), width: '10%' },
-                  { key: 'source', label: t('editor.attributes.headers.source'), width: '35%' },
+                  { key: 'source', label: t('editor.attributes.headers.source'), width: '40%' },
                   { key: 'status', label: t('editor.attributes.headers.status'), width: '30%' }
                 ]}
-             />
-           </div>
-           
-           <div className="flex flex-col md:flex-row gap-8 items-stretch pt-4 border-t border-stone-200">
-              <div className="w-full md:w-1/2 flex flex-col">
-                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 flex justify-between">
-                   {t('editor.attributes.combat_stats')}
-                   <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
-                </label>
-                <DynamicTable
-                   path="combatTable"
-                   columns={[
-                      { key: 'bab', label: 'BAB', width: '33.33%' },
-                      { key: 'cmb', label: 'CMB', width: '33.33%' },
-                      { key: 'cmd', label: 'CMD', width: '33.34%' }
-                   ]}
-                />
-              </div>
-              <div className="w-full md:w-1/2 flex flex-col">
-                <DynamicInput 
-                   label={t('editor.attributes.maneuver_notes')} 
-                   path="combatTable.combatManeuverNotes" 
-                   wrapperClassName="h-full"
-                />
-              </div>
-           </div>
-        </Section>
-
-        {/* 攻击 */}
-        <Section id="attacks" title={t('editor.sections.attacks')}>
-          <div className="flex flex-col gap-8">
-             <DynamicTable 
-                path="attacks.meleeAttacks" 
-                columns={[
-                   { key: 'weapon', label: t('editor.attacks.melee'), width: '25%' },
-                   { key: 'hit', label: '命中', width: '10%' },
-                   { key: 'damage', label: '伤害', width: '15%' },
-                   { key: 'critRange', label: '暴击阈值', width: '10%' },
-                   { key: 'critMultiplier', label: '倍率', width: '10%' },
-                   { key: 'touch', label: '触及', width: '10%' },
-                   { key: 'damageType', label: '类型', width: '20%' }
-                ]}
-             />
-             <DynamicTable 
-                path="attacks.rangedAttacks" 
-                columns={[
-                   { key: 'weapon', label: t('editor.attacks.ranged'), width: '25%' },
-                   { key: 'hit', label: '命中', width: '10%' },
-                   { key: 'damage', label: '伤害', width: '15%' },
-                   { key: 'critRange', label: '暴击阈值', width: '10%' },
-                   { key: 'critMultiplier', label: '倍率', width: '10%' },
-                   { key: 'range', label: '射程', width: '10%' },
-                   { key: 'damageType', label: '类型', width: '20%' }
-                ]}
-             />
-             <DynamicInput path="attacks.specialAttacks" label={t('editor.attacks.special_attacks')} />
-          </div>
-        </Section>
-
-        {/* 防御 */}
-        <Section id="defenses" title={t('editor.sections.defenses')}>
-           <div className="flex flex-col gap-6">
-              <div className="flex flex-col md:flex-row gap-8 items-stretch">
+                readonlyColumns={['name']}
+              />
+              <div className="flex flex-col md:flex-row gap-8 items-start">
                  <div className="w-full md:w-1/2">
-                   <DynamicTable 
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 flex justify-between">
+                      {t('editor.attributes.combat_stats')}
+                      <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
+                    </label>
+                    <DynamicTable
+                      path="combatTable"
+                      columns={[
+                        { key: 'bab', label: 'BAB', width: '33.33%' },
+                        { key: 'cmb', label: 'CMB', width: '33.33%' },
+                        { key: 'cmd', label: 'CMD', width: '33.34%' }
+                      ]}
+                    />
+                 </div>
+                 {f('combatTable.combatManeuverNotes', t('editor.attributes.maneuver_notes'), "w-full md:w-1/2", { singleLine: false })}
+              </div>
+           </div>
+        </Section>
+
+        <Section id="attacks" title={t('editor.sections.attacks')}>
+           <div className="flex flex-col gap-0 border border-stone-200 rounded-lg overflow-hidden shadow-sm">
+              <DynamicTable
+                path="attacks.meleeAttacks"
+                columns={[
+                  { key: 'weapon', label: t('editor.attacks.melee'), width: '20%' },
+                  { key: 'hit', label: t('editor.attacks.hit'), width: '12%' },
+                  { key: 'damage', label: t('editor.attacks.damage'), width: '12%' },
+                  { key: 'critRange', label: t('editor.attacks.crit_range'), width: '8%' },
+                  { key: 'critMultiplier', label: t('editor.attacks.crit_multiplier'), width: '8%' },
+                  { key: 'reach', label: t('editor.attacks.reach'), width: '8%' },
+                  { key: 'damageType', label: t('editor.attacks.damage_type'), width: '10%' },
+                  { key: 'special', label: t('editor.attacks.special'), width: '22%' }
+                ]}
+              />
+              <div className="border-t border-stone-100">
+                <DynamicTable
+                  path="attacks.rangedAttacks"
+                  columns={[
+                    { key: 'weapon', label: t('editor.attacks.ranged'), width: '20%' },
+                    { key: 'hit', label: t('editor.attacks.hit'), width: '12%' },
+                    { key: 'damage', label: t('editor.attacks.damage'), width: '12%' },
+                    { key: 'critRange', label: t('editor.attacks.crit_range'), width: '8%' },
+                    { key: 'critMultiplier', label: t('editor.attacks.crit_multiplier'), width: '8%' },
+                    { key: 'range', label: t('editor.attacks.range'), width: '8%' },
+                    { key: 'damageType', label: t('editor.attacks.damage_type'), width: '10%' },
+                    { key: 'special', label: t('editor.attacks.special'), width: '22%' }
+                  ]}
+                />
+              </div>
+           </div>
+           {f('attacks.specialAttacks', t('editor.attacks.special_attacks'), "mt-6", { singleLine: false })}
+        </Section>
+
+        <Section id="defenses" title={t('editor.sections.defenses')}>
+           <div className="flex flex-col gap-8">
+              <div className="flex flex-col md:flex-row gap-8 items-start">
+                 <div className="w-full md:w-1/2">
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 flex justify-between">
+                      {t('editor.defenses.ac_details')}
+                      <span className="text-stone-400 font-normal">AC / {t('editor.defenses.touch')} / {t('editor.defenses.flat_footed')}</span>
+                    </label>
+                    <DynamicTable
                       path="defenses.acTable"
                       columns={[
                         { key: 'ac', label: 'AC', width: '20%' },
-                        { key: 'source', label: '来源', width: '50%' },
-                        { key: 'touch', label: '接触', width: '15%' },
-                        { key: 'flatFooted', label: '措手不及', width: '15%' }
+                        { key: 'source', label: t('editor.attributes.headers.source'), width: '50%' },
+                        { key: 'touch', label: t('editor.defenses.touch'), width: '15%' },
+                        { key: 'flatFooted', label: t('editor.defenses.flat_footed'), width: '15%' }
                       ]}
-                   />
+                    />
                  </div>
-                 <DynamicInput label="AC 笔记" path="defenses.acTable.acNotes" className="flex-1" />
+                 {f('defenses.acNotes', t('editor.defenses.ac_notes'), "w-full md:w-1/2", { singleLine: false })}
               </div>
               <div className="grid grid-cols-2 gap-8">
-                 <DynamicInput label="HP" path="defenses.hp" />
-                 <DynamicInput label="HD" path="defenses.hd" />
+                 {f('defenses.hp', t('editor.defenses.hp'))}
+                 {f('defenses.hd', t('editor.defenses.hd'))}
               </div>
-              <div className="flex flex-col md:flex-row gap-8 items-stretch">
+              <div className="flex flex-col md:flex-row gap-8 items-start">
                  <div className="w-full md:w-1/2">
-                   <DynamicTable 
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-2 flex justify-between">
+                      {t('editor.defenses.saves')}
+                      <span className="text-stone-400 font-normal">{t('editor.defenses.fort')} / {t('editor.defenses.ref')} / {t('editor.defenses.will')}</span>
+                    </label>
+                    <DynamicTable
                       path="defenses.savesTable"
                       columns={[
-                        { key: 'fort', label: '强韧', width: '33.33%' },
-                        { key: 'ref', label: '反射', width: '33.33%' },
-                        { key: 'will', label: '意志', width: '33.34%' }
+                        { key: 'fort', label: t('editor.defenses.fort'), width: '33.33%' },
+                        { key: 'ref', label: t('editor.defenses.ref'), width: '33.33%' },
+                        { key: 'will', label: t('editor.defenses.will'), width: '33.34%' }
                       ]}
-                   />
+                    />
                  </div>
-                 <DynamicInput label="豁免笔记" path="defenses.savesTable.savesNotes" className="flex-1" />
+                 {f('defenses.savesNotes', t('editor.defenses.saves_notes'), "w-full md:w-1/2", { singleLine: false })}
               </div>
-              <DynamicInput label="特殊防御" path="defenses.specialDefenses" />
+              {f('defenses.specialDefenses', t('editor.defenses.special_defenses'), "mt-2", { singleLine: false })}
            </div>
         </Section>
 
-        {/* 技能 */}
-        <Section id="skills" title={t('editor.sections.skills')}>
-           <div className="flex gap-8 mb-4">
-              <DynamicInput label="技能点总计" path="skillsTotal" className="w-24" />
-              <DynamicInput label="ACP" path="armorCheckPenalty" className="w-24" />
-           </div>
-           <DynamicTable 
-              path="skills"
-              columns={[
-                 { key: 'name', label: '技能', width: '20%' },
-                 { key: 'total', label: '总值', width: '8%' },
-                 { key: 'rank', label: '等级', width: '8%' },
-                 { key: 'cs', label: '本职', width: '8%' },
-                 { key: 'ability', label: '关键属性', width: '12%' },
-                 { key: 'others', label: '其它修正', width: '12%' },
-                 { key: 'special', label: '特定备注', width: '32%' }
-              ]}
+        {/* 顺序修正：背景特性 -> 种族特性 -> 职业能力 -> 专长 -> 技能 */}
+        <Section id="racial-traits" title={t('editor.sections.racial_traits')}>
+           <DynamicTable
+             path="racialTraits"
+             columns={[
+               { key: 'name', label: t('editor.lists.trait'), width: '15%' },
+               { key: 'desc', label: t('editor.lists.description'), width: '85%' }
+             ]}
            />
         </Section>
 
-        {/* 施法系统 */}
+        <Section id="traits" title={t('editor.sections.traits')}>
+           <div className="flex flex-col gap-6">
+              <DynamicTable
+                path="backgroundTraits"
+                columns={[
+                  { key: 'name', label: t('editor.lists.trait_name'), width: '25%' },
+                  { key: 'type', label: t('editor.lists.category'), width: '10%' },
+                  { key: 'desc', label: t('editor.lists.description'), width: '65%' }
+                ]}
+              />
+              <div className="grid grid-cols-2 gap-8">
+                 {f('favoredClass', t('editor.lists.favored_class'))}
+                 {f('favoredClassBonus', t('editor.lists.favored_class_bonus'))}
+              </div>
+           </div>
+        </Section>
+
+        <Section id="class-features" title={t('editor.sections.class_features')}>
+           <DynamicTable
+             path="classFeatures"
+             columns={[
+               { key: 'level', label: t('editor.lists.level'), width: '8%' },
+               { key: 'name', label: t('editor.sections.class_features'), width: '22%' },
+               { key: 'type', label: t('editor.lists.ability_type'), width: '8%' },
+               { key: 'desc', label: t('editor.lists.description'), width: '62%' }
+             ]}
+           />
+        </Section>
+
+        <Section id="feats" title={t('editor.sections.feats')}>
+           <DynamicTable
+             path="feats"
+             columns={[
+               { key: 'level', label: t('editor.lists.level'), width: '8%' },
+               { key: 'source', label: t('editor.lists.source'), width: '15%' },
+               { key: 'name', label: t('editor.lists.feat_name'), width: '20%' },
+               { key: 'type', label: t('editor.lists.feat_type'), width: '10%' },
+               { key: 'desc', label: t('editor.lists.description'), width: '47%' }
+             ]}
+           />
+        </Section>
+
+        <Section id="skills" title={t('editor.sections.skills')}>
+           <div className="flex gap-8 mb-6">
+              {f('skillsTotal', t('editor.skills.total_points'), "w-24")}
+              {f('armorCheckPenalty', t('editor.skills.acp'), "w-24")}
+           </div>
+           <DynamicTable
+             path="skills"
+             columns={[
+               { key: 'name', label: t('editor.skills.headers.skill'), width: '15%' },
+               { key: 'total', label: t('editor.skills.headers.total'), width: '8%' },
+               { key: 'rank', label: t('editor.skills.headers.rank'), width: '8%' },
+               { key: 'cs', label: t('editor.skills.headers.cs'), width: '8%' },
+               { key: 'ability', label: t('editor.skills.headers.ability'), width: '12%' },
+               { key: 'others', label: t('editor.skills.headers.others'), width: '15%' },
+               { key: 'special', label: t('editor.skills.headers.special'), width: '34%' }
+             ]}
+           />
+        </Section>
+
         <Section id="spells" title={t('editor.sections.spells')}>
            <MagicBlocks path="magicBlocks" />
         </Section>
 
-        {/* 装备 & 负重 */}
         <Section id="equipment" title={t('editor.sections.equipment')}>
-           <div className="flex flex-col gap-10">
-              <div className="p-1">
-                 {data.equipmentBags.map((bag, bagIdx) => (
-                    <div key={bag.id} className="mb-8 border border-stone-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                       <div className="bg-stone-50 px-4 py-2 border-b border-stone-200 flex justify-between items-center">
-                          <input 
-                             className="font-bold text-stone-700 bg-transparent outline-none focus:border-b focus:border-primary" 
-                             value={bag.name} 
-                             onChange={e => updateField(`equipmentBags[${bagIdx}].name`, e.target.value)}
-                          />
-                          <label className="flex items-center gap-2 text-[11px] font-medium text-stone-400">
-                             <input type="checkbox" checked={bag.ignoreWeight} onChange={e => updateField(`equipmentBags[${bagIdx}].ignoreWeight`, e.target.checked)} />
-                             {t('editor.items.ignore_weight')}
-                          </label>
-                       </div>
-                       <DynamicTable 
-                          path={`equipmentBags[${bagIdx}].items`}
-                          columns={[
-                             { key: 'item', label: '物品', width: '40%' },
-                             { key: 'quantity', label: '数量', width: '10%' },
-                             { key: 'cost', label: '单价', width: '15%' },
-                             { key: 'weight', label: '重量', width: '15%' },
-                             { key: 'notes', label: '备注', width: '20%' }
-                          ]}
-                       />
-                    </div>
-                 ))}
-                 <button onClick={() => updateField('equipmentBags', [...data.equipmentBags, { id: Date.now().toString(), name: '新容器', items: { item: [], quantity: [], cost: [], weight: [], notes: [] }, ignoreWeight: false }])} className="w-full py-4 border-2 border-dashed border-stone-200 text-stone-400 hover:text-stone-600 hover:border-stone-400 rounded-lg transition-all flex items-center justify-center gap-2">
-                    <Plus size={18} /> {t('editor.items.add_container')}
-                 </button>
+           <EquipmentBags path="equipmentBags" />
+           <div className="mt-8 pt-8 border-t border-stone-200">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
+                 {f('currency.pp', 'PP')}
+                 {f('currency.gp', 'GP')}
+                 {f('currency.sp', 'SP')}
+                 {f('currency.cp', 'CP')}
+                 {f('currency.coinWeight', t('editor.items.coin_weight'))}
               </div>
-
-              {/* 钱币与负重预览 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-stone-300">
-                 <div className="flex flex-col gap-4">
-                    <label className="text-xs font-bold text-stone-500 uppercase tracking-widest">{t('editor.items.currency')}</label>
-                    <div className="grid grid-cols-5 gap-3">
-                       <DynamicInput path="currency.pp" label="PP" />
-                       <DynamicInput path="currency.gp" label="GP" />
-                       <DynamicInput path="currency.sp" label="SP" />
-                       <DynamicInput path="currency.cp" label="CP" />
-                       <DynamicInput path="currency.coinWeight" label="钱币总重" />
-                    </div>
+           </div>
+           <div className="flex flex-col md:flex-row gap-6 mt-8 items-center bg-stone-50 p-6 rounded-xl">
+              <div className="flex gap-8 flex-1">
+                 <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest leading-none mb-2">{t('editor.items.total_assets')}</span>
+                    <span className="text-2xl font-serif font-bold text-stone-800">{calculateTotalCost(data)} <span className="text-sm font-normal text-stone-400 italic">gp</span></span>
                  </div>
-                 <div className="bg-stone-50 p-4 rounded-lg flex flex-col justify-center">
-                    <div className="flex justify-between items-center mb-2">
-                       <span className="text-xs font-bold text-stone-500 uppercase">{t('editor.items.total_assets')}</span>
-                       <span className="font-serif font-bold text-xl">{calculateTotalCost(data)} gp</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                       <span className="text-xs font-bold text-stone-500 uppercase">{t('editor.items.total_weight')}</span>
-                       <span className="font-serif font-bold text-xl">{calculateTotalWeightNum(data).toFixed(1)} lbs</span>
-                    </div>
+                 <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest leading-none mb-2">{t('editor.items.total_weight')}</span>
+                    <span className="text-2xl font-serif font-bold text-stone-800">{calculateTotalWeightNum(data).toFixed(1)} <span className="text-sm font-normal text-stone-400 italic">lbs</span></span>
                  </div>
+              </div>
+              <div className="w-full md:w-32">
+                 {f('encumbranceMultiplier', t('editor.items.encumbrance_multiplier'))}
               </div>
            </div>
         </Section>
 
-        {/* 更多资料 */}
         <Section id="additional-data" title={t('editor.sections.additional')}>
            <AdditionalData path="additionalData" />
         </Section>
-
       </main>
     </motion.div>
   );
