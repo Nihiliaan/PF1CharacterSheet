@@ -13,13 +13,12 @@ import AccountSettings from './components/character/AccountSettings';
 import AppHeader from './components/layout/AppHeader';
 import AppFooter from './components/layout/AppFooter';
 import AppOverlays from './components/layout/AppOverlays';
-import CharacterEditor from './components/layout/CharacterEditor';
+import CharacterEditor from './components/layout/CharacterEditor_bak';
 
 // Context
 import { CharacterProvider, useCharacter } from './contexts/CharacterContext';
 
 export default function App() {
-  console.log('>>> [APP] HELLO WORLD - VERSION 0.1 <<<');
   return (
     <CharacterProvider>
       <AppContent />
