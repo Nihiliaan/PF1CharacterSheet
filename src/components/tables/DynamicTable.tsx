@@ -37,6 +37,8 @@ export interface DynamicTableProps {
   data?: any;
   onChange?: (data: any) => void;
   readOnly?: boolean;
+  fixedRows?: boolean;
+  readonlyColumns?: string[];
   rowDraggable?: boolean;
   minWidth?: string;
 }
@@ -49,6 +51,7 @@ function SortableRow({
   path, 
   rawData, 
   readOnly, 
+  readonlyColumns,
   fixedRows, 
   rowDraggable, 
   onRemove,
@@ -85,7 +88,7 @@ function SortableRow({
             path={path ? `${path}.${c.key}[${index}]` : undefined}
             value={path ? undefined : rawData[c.key]?.[index]}
             type={getCellHandlerType(c.key, index) as any}
-            readOnly={readOnly}
+            readOnly={readOnly || readonlyColumns.includes(c.key)}
             className="hover:bg-primary/5 focus:bg-white"
           />
         </td>
@@ -135,7 +138,8 @@ export default function DynamicTable(props: DynamicTableProps) {
 
   const tableHandler = path ? getHandlerByPath(path) : null;
   const columns: ColumnConfig[] = overrideColumns || tableHandler?.columns || [];
-  const fixedRows = tableHandler?.fixedRows || false;
+  const fixedRows = props.fixedRows ?? tableHandler?.fixedRows ?? false;
+  const readonlyColumns = props.readonlyColumns || [];
 
   const rawData = useCharacterStore(s => (path ? get(s.data, path) : overrideData) || {});
   const updateField = useCharacterStore(s => s.updateField);
@@ -247,6 +251,7 @@ export default function DynamicTable(props: DynamicTableProps) {
                   path={path}
                   rawData={rawData}
                   readOnly={readOnly}
+                  readonlyColumns={readonlyColumns}
                   fixedRows={fixedRows}
                   rowDraggable={rowDraggable}
                   onRemove={removeRow}
