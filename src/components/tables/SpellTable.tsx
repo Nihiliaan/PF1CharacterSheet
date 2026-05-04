@@ -24,13 +24,43 @@ export default function SpellTable(props: any) {
   const storeOriginalData = useCharacterStore(s => path ? get(s.originalData, path) : undefined);
   const updateField = useCharacterStore(s => s.updateField);
 
-  const data = path ? (storeData || []) : (propData || []);
-  const originalData = path ? storeOriginalData : propOriginalData;
+  /**
+   * SoA 适配层：将对象数组结构转换为组件熟悉的行数组结构
+   * 如果 path 存在，说明数据是 { level: [], spells: [] } 格式
+   */
+  const { data, originalData } = React.useMemo(() => {
+    const raw = path ? (storeData || {}) : (propData || []);
+    const rawOrig = path ? (storeOriginalData || {}) : (propOriginalData || []);
+
+    if (!path && Array.isArray(raw)) return { data: raw, originalData: rawOrig };
+
+    // 执行 SoA 转行转换
+    const keys = Object.keys(raw).filter(k => Array.isArray(raw[k]));
+    const rowCount = keys.length > 0 ? raw[keys[0]].length : 0;
+    
+    const rows = Array.from({ length: rowCount }, (_, i) => {
+      const row: any = {};
+      keys.forEach(k => { row[k] = raw[k][i]; });
+      return row;
+    });
+
+    const origRows = Array.from({ length: rowCount }, (_, i) => {
+      const row: any = {};
+      keys.forEach(k => { row[k] = rawOrig[k]?.[i]; });
+      return row;
+    });
+
+    return { data: rows, originalData: origRows };
+  }, [path, storeData, propData, storeOriginalData, propOriginalData]);
+
   const columns = propColumns || [];
 
-  const onChange = (newData: any) => {
+  const onChange = (newData: any[]) => {
     if (path) {
-        updateField(path, newData);
+        // 行转 SoA
+        const soaData: any = {};
+        columns.forEach(c => { soaData[c.key] = newData.map(r => r[c.key]); });
+        updateField(path, soaData);
     } else if (propOnChange) {
         propOnChange(newData);
     }
@@ -38,14 +68,11 @@ export default function SpellTable(props: any) {
 
   const onBaseLevelChange = (newLevel: 0 | 1) => {
     if (path) {
-        // 假设 baseLevel 在父级或同级，需要根据具体结构调整
-        // 这里暂时保留 props 传入，或在 SchemaRenderer 中适配
         if (propOnBaseLevelChange) propOnBaseLevelChange(newLevel);
     } else if (propOnBaseLevelChange) {
         propOnBaseLevelChange(newLevel);
     }
   };
-
 
   const updateData = (index: number, key: string, value: string) => {
     if (readOnly) return;
@@ -56,11 +83,6 @@ export default function SpellTable(props: any) {
 
   const addRowTop = () => {
     if (readOnly) return;
-    const maxAllowedRows = 10 - baseLevel; // If baseLevel=0, 9-0+0 = 9 max index -> 10 rows. If baseLevel=1, 9-1+1 = 9 max level... Wait.
-    // user said: "最高到9环". If the max level would exceed 9, do not allow adding.
-    // Current max level is: data.length - 1 + baseLevel
-    // If we add a row, it becomes data.length + baseLevel.
-    // So if data.length + baseLevel > 9, we shouldn't add.
     if (data.length + baseLevel > 9) return;
 
     const newObj: Record<string, string> = {};
@@ -90,13 +112,13 @@ export default function SpellTable(props: any) {
       <table className="w-full border-collapse text-sm table-auto">
         <thead>
           <tr className="bg-stone-200 text-stone-700">
-            {columns.map((c) => (
+            {columns.map((c: any) => (
               <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
                 {c.label}
               </th>
             ))}
             <th className="w-8 p-0 align-middle border-stone-300">
-              {canAdd && (
+              {canAdd && !readOnly && (
                 <button
                   type="button"
                   onClick={addRowTop}
@@ -110,7 +132,7 @@ export default function SpellTable(props: any) {
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-300">
-          {data.map((row, i) => {
+          {data.map((row: any, i: number) => {
             const isLastRow = i === data.length - 1;
             const computedLevelNumber = data.length - 1 - i + baseLevel;
             const computedLevelDisplay = isLastRow ? '' : t('editor.spells.computed_level', { n: computedLevelNumber });
@@ -121,7 +143,7 @@ export default function SpellTable(props: any) {
                 key={i}
                 className={`transition-colors group ${isRowDirty ? 'bg-amber-100/30' : 'hover:bg-stone-50'}`}
               >
-                {columns.map((c) => (
+                {columns.map((c: any) => (
                   <td key={c.key} className={`p-0 relative border-stone-300 align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
                     {c.key === 'level' ? (
                       <div className="w-full h-full flex items-center justify-center font-bold px-2 text-stone-700 bg-stone-100/50 min-h-[32px]">
@@ -141,7 +163,7 @@ export default function SpellTable(props: any) {
                       </div>
                     ) : (
                       <DynamicInput
-                        path={path ? `${path}[${i}].${c.key}` : undefined}
+                        path={path ? `${path}.${c.key}[${i}]` : undefined}
                         value={path ? undefined : (row[c.key] || '')}
                         originalValue={path ? undefined : originalData?.[i]?.[c.key]}
                         onChange={path ? undefined : (val) => updateData(i, c.key, val)}
@@ -156,7 +178,7 @@ export default function SpellTable(props: any) {
                 ))}
                 <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors">
                   <div className="flex items-center justify-center w-full h-[32px] opacity-0 group-hover:opacity-100 transition-opacity">
-                    {!isLastRow && (
+                    {!isLastRow && !readOnly && (
                       <button
                         type="button"
                         onClick={() => removeRow(i)}

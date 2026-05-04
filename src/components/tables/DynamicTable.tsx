@@ -14,10 +14,10 @@ export interface ColumnConfig {
 }
 
 export interface DynamicTableProps {
-  path?: string; // 必须由 SchemaRenderer 传入
-  data?: any[];
-  originalData?: any[];
-  onChange?: (data: any[]) => void;
+  path?: string;
+  data?: any; // SoA 模式下，这是一个包含多个数组的对象
+  originalData?: any;
+  onChange?: (data: any) => void;
   newItemGenerator?: () => any;
   readOnly?: boolean;
   rowDraggable?: boolean;
@@ -37,15 +37,29 @@ export default function DynamicTable(props: DynamicTableProps) {
     minWidth
   } = props;
 
-  // 1. 从路径解析 Handler 及其携带的配置
+  // 1. 获取配置
   const tableHandler = path ? getHandlerByPath(path) : null;
   const columns: ColumnConfig[] = tableHandler?.columns || [];
   const fixedRows = tableHandler?.fixedRows || false;
 
-  const data = useCharacterStore(s => (path ? get(s.data, path) : overrideData) || []);
+  // 2. 从 Store 获取 SoA 数据对象
+  const rawData = useCharacterStore(s => (path ? get(s.data, path) : overrideData) || {});
   const updateField = useCharacterStore(s => s.updateField);
 
-  const handleChange = (newData: any[]) => {
+  /**
+   * SoA 核心逻辑：计算行数
+   * 找数据对象中第一个是数组的 key，取其长度
+   */
+  const rowCount = React.useMemo(() => {
+    const values = Object.values(rawData);
+    const firstArray = values.find(v => Array.isArray(v)) as any[];
+    return firstArray ? firstArray.length : 0;
+  }, [rawData]);
+
+  // 生成一个用于遍历的虚数组 [0, 1, 2... rowCount-1]
+  const rowIndices = Array.from({ length: rowCount }, (_, i) => i);
+
+  const handleChange = (newData: any) => {
     if (overrideOnChange) {
       overrideOnChange(newData);
     } else if (path) {
@@ -54,22 +68,32 @@ export default function DynamicTable(props: DynamicTableProps) {
   };
 
   const addRow = () => {
-    const newItem = newItemGenerator ? newItemGenerator() : {};
-    handleChange([...data, newItem]);
-  };
-
-  const removeRow = (index: number) => {
-    const newData = [...data];
-    newData.splice(index, 1);
+    const newData = { ...rawData };
+    columns.forEach(col => {
+      if (!Array.isArray(newData[col.key])) {
+        newData[col.key] = [];
+      }
+      // 这里的默认值可以根据 Handler 进一步细化，暂时统一给空
+      newData[col.key] = [...newData[col.key], ""];
+    });
     handleChange(newData);
   };
 
-  /**
-   * 自动探测单元格的 Handler 类型
-   */
+  const removeRow = (index: number) => {
+    const newData = { ...rawData };
+    columns.forEach(col => {
+      if (Array.isArray(newData[col.key])) {
+        const newCol = [...newData[col.key]];
+        newCol.splice(index, 1);
+        newData[col.key] = newCol;
+      }
+    });
+    handleChange(newData);
+  };
+
   const getCellHandlerType = (columnKey: string, index: number) => {
     if (!path) return 'text';
-    const cellPath = `${path}[${index}].${columnKey}`;
+    const cellPath = `${path}.${columnKey}[${index}]`; // 注意 SoA 下路径是 key[index]
     const handler = getHandlerByPath(cellPath);
     return handler?.ui || 'text';
   };
@@ -94,7 +118,7 @@ export default function DynamicTable(props: DynamicTableProps) {
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-200">
-          {data.map((row: any, i: number) => (
+          {rowIndices.map((i) => (
             <tr key={i} className="group hover:bg-stone-50/50 transition-colors">
               {columns.map((c) => (
                 <td
@@ -102,15 +126,9 @@ export default function DynamicTable(props: DynamicTableProps) {
                   className={`p-0 relative ${c.hideRightBorder ? '' : 'border-r border-stone-100'} last:border-r-0 align-top`}
                 >
                   <DynamicInput
-                    path={path ? `${path}[${i}].${c.key}` : undefined}
-                    value={path ? undefined : row[c.key]}
-                    originalValue={undefined}
-                    onChange={path ? undefined : (val) => {
-                      const newData = [...data];
-                      newData[i] = { ...row, [c.key]: val };
-                      handleChange(newData);
-                    }}
-                    // 核心变更：不再依赖列配置中的 type，而是实时查询对应的 Handler 类型
+                    // SoA 寻址：path.columnName[index]
+                    path={path ? `${path}.${c.key}[${i}]` : undefined}
+                    value={path ? undefined : rawData[c.key]?.[i]}
                     type={getCellHandlerType(c.key, i) as any}
                     readOnly={readOnly}
                     className="hover:bg-primary/5 focus:bg-white"
@@ -129,7 +147,6 @@ export default function DynamicTable(props: DynamicTableProps) {
                       type="button"
                       onClick={() => removeRow(i)}
                       className="text-stone-300 hover:text-red-500 rounded p-1"
-                      title="删除行"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -140,7 +157,7 @@ export default function DynamicTable(props: DynamicTableProps) {
           ))}
           {!fixedRows && !readOnly && (
             <tr>
-              <td colSpan={columns.length + (fixedRows ? 0 : 1)} className="p-0 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer">
+              <td colSpan={columns.length + 1} className="p-0 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer">
                 <button
                   type="button"
                   onClick={addRow}
