@@ -4,6 +4,7 @@ import SpellTable from '../components/tables/SpellTable';
 import MagicBlocks from '../components/character/MagicBlocks';
 import EquipmentBags from '../components/character/EquipmentBags';
 import AdditionalData from '../components/character/AdditionalData';
+import CompositeView from './CompositeView';
 
 /**
  * 业务视图注册表
@@ -15,4 +16,5 @@ export const VIEW_REGISTRY: Record<string, React.ComponentType<any>> = {
   MagicBlocks: MagicBlocks,
   EquipmentBags: EquipmentBags,
   AdditionalData: AdditionalData,
+  CompositeView: CompositeView,
 };

@@ -27,11 +27,12 @@ export interface TemplateProps {
 /**
  * 1. 文本/Markdown模板
  */
+// 1. TextControl
 export const TextControl = ({ 
   value, isFocused, isReadOnly, placeholder, 
   className, handler, onChange, onFocus, onBlur, singleLine 
 }: TemplateProps) => {
-  const displayValue = isFocused ? value : handler.formatDisplay(value);
+  const displayValue = isFocused ? value : (handler?.formatDisplay?.(value) ?? (value || '—'));
   
   return (
     <div className="flex items-center w-full h-full">
@@ -49,23 +50,20 @@ export const TextControl = ({
   );
 };
 
-/**
- * 2. 数值模板 (包含独占的步进器Hook)
- */
+// 2. NumericControl
 export const NumericControl = ({ 
   value, tempValue, isFocused, isReadOnly, isChanged, 
   className, handler, onChange, onTriggerChange, onFocus, onBlur, placeholder
 }: TemplateProps) => {
   
-  // 步进器逻辑仅在此处生效
   const containerRef = useNumericStepper({
-    value: isFocused ? tempValue : handler.formatInteractive(value),
+    value: isFocused ? tempValue : (handler?.formatInteractive?.(value) ?? (value || '0')),
     onChange: onTriggerChange,
-    type: 'int', // 基础数字类型
+    type: 'int', 
     readOnly: isReadOnly,
   });
 
-  const displayValue = isFocused ? tempValue : handler.formatDisplay(value);
+  const displayValue = isFocused ? tempValue : (handler?.formatDisplay?.(value) ?? (value || '—'));
   
   return (
     <div ref={containerRef} className="grid h-full w-full">
@@ -86,15 +84,13 @@ export const NumericControl = ({
   );
 };
 
-/**
- * 3. 选择器模板
- */
+// 3. SelectControl
 export const SelectControl = ({ 
   value, isReadOnly, isChanged, className, handler, 
   onTriggerChange, onFocus, onBlur, options, placeholder 
 }: TemplateProps) => {
-  const displayValue = handler.formatDisplay(value);
-  const opts = options || handler.options || [];
+  const displayValue = handler?.formatDisplay?.(value) ?? (value || '—');
+  const opts = options || handler?.options || [];
 
   return (
     <div className="relative w-full h-full">
@@ -119,9 +115,7 @@ export const SelectControl = ({
   );
 };
 
-/**
- * 4. 勾选框模板
- */
+// 4. CheckboxControl
 export const CheckboxControl = ({ 
   value, isReadOnly, isChanged, className, handler, onTriggerChange 
 }: TemplateProps) => {
@@ -135,7 +129,7 @@ export const CheckboxControl = ({
       onClick={toggle}
       className={`w-full h-full flex items-center justify-center cursor-pointer hover:bg-stone-100/50 font-medium px-2 py-1 ${isChanged ? 'text-amber-900' : 'text-ink'} ${className}`}
     >
-      {handler.formatDisplay(value)}
+      {handler?.formatDisplay?.(value) ?? (value ? '是' : '否')}
     </div>
   );
 };

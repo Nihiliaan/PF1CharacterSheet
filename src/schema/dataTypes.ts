@@ -43,7 +43,7 @@ const BaseTable = {
   view: 'DynamicTable',
   validate: () => true,
   update: (v: any) => v,
-  formatDisplay: (v: any) => `Table (${v?.length || 0} rows)`,
+  formatDisplay: (v: any) => (Array.isArray(v) ? `Table (${v.length} rows)` : 'Object'),
   formatInteractive: (v: any) => v,
   formatExport: (v: any) => v
 };
@@ -244,9 +244,13 @@ const DailyUsesHandler = {
   formatInteractive: (v: any) => v?.toString() || '0'
 };
 
-/**
- * 业务表现层处理器 (Table Handler Extensions)
- */
+// 复合容器基类 (用于非表格的多列布局)
+const CompositeHandler = {
+  ui: 'composite',
+  view: 'CompositeView', // 稍后我们将创建一个通用的 CompositeView
+  formatDisplay: (v: any) => 'Composite Object',
+  update: (v: any) => v
+};
 
 const AttributesTableHandler = {
   ...BaseTable,
@@ -263,13 +267,14 @@ const AttributesTableHandler = {
 const AttackTableHandler = {
   ...BaseTable,
   columns: [
-    { key: 'weapon', label: '武器名称', width: '30%' },
+    { key: 'weapon', label: '武器名称', width: '25%' },
     { key: 'hit', label: '攻击', width: '15%' },
     { key: 'damage', label: '伤害', width: '15%' },
     { key: 'critRange', label: '暴击', width: '10%' },
     { key: 'critMultiplier', label: '倍率', width: '10%' },
+    { key: 'touch', label: '触及', width: '10%' },
     { key: 'range', label: '射程', width: '10%' },
-    { key: 'special', label: '备注', width: '10%' }
+    { key: 'special', label: '备注', width: '15%' }
   ]
 };
 
@@ -302,7 +307,8 @@ const SkillsTableHandler = {
     { key: 'ability', label: '属性', width: '10%' },
     { key: 'total', label: '总分', width: '5%' },
     { key: 'rank', label: '等级', width: '5%' },
-    { key: 'special', label: '备注', width: '60%' }
+    { key: 'misc', label: '杂项', width: '5%' },
+    { key: 'special', label: '备注', width: '50%' }
   ]
 };
 
@@ -337,6 +343,13 @@ const EquipmentItemsHandler = {
 };
 
 /**
+ * 业务专用复合处理器 (Composite Handlers)
+ */
+const BasicInfoHandler = { ...CompositeHandler };
+const CombatInfoHandler = { ...CompositeHandler };
+const CurrencyHandler = { ...CompositeHandler };
+
+/**
  * 导出与挂载
  */
 const handlers: any = {
@@ -347,7 +360,7 @@ const handlers: any = {
   FloatHandler, BoolHandler, AbilityTypeHandler, SpellTypeHandler,
   SpellLevelHandler, DailyUsesHandler,
   // 业务层
-  BaseTable,
+  CompositeHandler,
   AttributesTableHandler,
   AttackTableHandler,
   DefensesTableHandler,
@@ -356,7 +369,11 @@ const handlers: any = {
   SimpleListHandler,
   SpellTableHandler,
   MagicBlocksHandler,
-  EquipmentItemsHandler
+  EquipmentItemsHandler,
+  // 复合型
+  BasicInfoHandler,
+  CombatInfoHandler,
+  CurrencyHandler
 };
 
 if (typeof window !== 'undefined') {

@@ -10,7 +10,9 @@ const {
   // 业务表格 Handler
   AttributesTableHandler, AttackTableHandler, DefensesTableHandler,
   SavesTableHandler, SkillsTableHandler, SimpleListHandler,
-  SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler
+  SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler,
+  // 复合业务 Handler
+  BasicInfoHandler, CombatInfoHandler, CurrencyHandler
 } = handlers;
 
 /**
@@ -21,7 +23,7 @@ const {
 export const CharacterPrototype: any = {
   // 1. 基础信息 (对应 defaultData.json 中的 "basic")
   basic: {
-    handler: handlers.BaseTable, // 复合展示
+    handler: BasicInfoHandler, // 复合展示
     name: TextHandler,
     classes: TextHandler,
     alignment: handlers.AlignmentHandler,
@@ -32,7 +34,7 @@ export const CharacterPrototype: any = {
     height: handlers.HeightHandler,
     weight: WeightHandler,
     speed: {
-      handler: handlers.BaseTable,
+      handler: CompositeHandler,
       base: IntegerHandler,
       climb: IntegerHandler,
       swim: IntegerHandler,
@@ -59,7 +61,7 @@ export const CharacterPrototype: any = {
 
   // 3. 战斗统计表 (对应 "combatTable")
   combatTable: {
-    handler: handlers.BaseTable,
+    handler: CombatInfoHandler,
     bab: BonusHandler,
     cmb: BonusHandler,
     cmd: IntegerHandler,
@@ -68,7 +70,7 @@ export const CharacterPrototype: any = {
 
   // 4. 攻击系统 (SoA 数组结构)
   attacks: {
-    handler: handlers.BaseTable,
+    handler: CompositeHandler,
     meleeAttacks: {
       handler: AttackTableHandler,
       weapon: TextHandler,
@@ -96,7 +98,7 @@ export const CharacterPrototype: any = {
 
   // 5. 防御系统
   defenses: {
-    handler: handlers.BaseTable,
+    handler: CompositeHandler,
     hp: PosIntHandler,
     hd: TextHandler,
     acTable: {
