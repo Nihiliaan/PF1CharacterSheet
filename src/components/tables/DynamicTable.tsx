@@ -41,6 +41,9 @@ export interface DynamicTableProps {
   readonlyColumns?: string[];
   rowDraggable?: boolean;
   minWidth?: string;
+  onColumnLabelChange?: (index: number, label: string) => void;
+  onRemoveColumn?: (index: number) => void;
+  onAddColumn?: () => void;
 }
 
 // 可排序行组件
@@ -128,7 +131,10 @@ export default function DynamicTable(props: DynamicTableProps) {
     onChange: overrideOnChange,
     readOnly,
     rowDraggable = true,
-    minWidth
+    minWidth,
+    onColumnLabelChange,
+    onRemoveColumn,
+    onAddColumn
   } = props;
 
   const sensors = useSensors(
@@ -241,6 +247,21 @@ export default function DynamicTable(props: DynamicTableProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-200">
+            {/* Column labels for dynamic tables */}
+            {onColumnLabelChange && !readOnly && (
+              <tr className="bg-stone-50/30">
+                {columns.map((c, idx) => (
+                  <td key={`col-label-${idx}`} className="px-2 py-1 border-r border-stone-200 last:border-r-0">
+                    <input 
+                      className="text-[10px] w-full bg-transparent border-none focus:ring-0 font-medium text-stone-400 hover:text-stone-600 transition-colors"
+                      value={c.label}
+                      onChange={(e) => onColumnLabelChange(idx, e.target.value)}
+                    />
+                  </td>
+                ))}
+                <td className="p-0"></td>
+              </tr>
+            )}
             <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
               {rowIds.map((id, index) => (
                 <SortableRow
@@ -269,6 +290,19 @@ export default function DynamicTable(props: DynamicTableProps) {
                   >
                     <Plus size={12} /> {t('common.add_row')}
                   </button>
+                </td>
+              </tr>
+            )}
+            {onAddColumn && !readOnly && (
+              <tr>
+                <td colSpan={columns.length + 1} className="p-0 bg-stone-50/20">
+                   <button
+                      type="button"
+                      onClick={onAddColumn}
+                      className="flex items-center gap-1 text-[10px] text-stone-300 hover:text-stone-500 px-3 py-1 w-full justify-center font-bold uppercase tracking-widest transition-colors border-t border-stone-100"
+                    >
+                      <Plus size={10} /> {t('common.add_column')}
+                    </button>
                 </td>
               </tr>
             )}

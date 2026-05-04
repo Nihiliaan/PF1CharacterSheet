@@ -195,7 +195,6 @@ export const CharacterPrototype: any = {
     concentration: BonusHandler,
     spellTable: {
       handler: SpellTableHandler,
-      level: SpellLevelHandler,
       uses: DailyUsesHandler,
       spells: TextHandler
     },
@@ -213,20 +212,20 @@ export const CharacterPrototype: any = {
 export function getHandlerByPath(path: string): any {
   try {
     if (!path) return null;
-    
+
     const normalizedPath = path
       .replace(/\[\d+\]/g, '')
       .replace(/\.\d+(\.|$)/g, (match) => match.endsWith('.') ? '.' : '');
 
     const node = get(CharacterPrototype, normalizedPath);
-    
+
     if (!node) {
       return null;
     }
 
     // 显式确保如果 handler 属性不存在，则返回 node 本身，如果两者都无则返回 null
     const handler = node.handler ? node.handler : node;
-    return handler || null; 
+    return handler || null;
   } catch (e) {
     console.error(`[Schema ERROR] Fatal error resolving path: "${path}"`, e);
     return null;

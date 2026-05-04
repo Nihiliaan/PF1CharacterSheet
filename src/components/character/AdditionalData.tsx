@@ -3,7 +3,8 @@ import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCharacterStore } from '../../store/characterStore';
 import { get } from 'lodash-es';
-import SchemaRenderer from '../../controls/SchemaRenderer';
+import DynamicInput from '../../controls/DynamicInput';
+import DynamicTable from '../tables/DynamicTable';
 
 export default function AdditionalData({ path }: { path: string }) {
   const { t } = useTranslation();
@@ -34,15 +35,34 @@ export default function AdditionalData({ path }: { path: string }) {
         <div key={block.id} className="border border-stone-200 rounded p-4 bg-stone-50/50">
           <div className="flex items-center gap-4 mb-3">
             <div className="cursor-move text-stone-400 px-1"><GripVertical size={20} /></div>
-            <SchemaRenderer path={`${path}[${index}].title`} className="text-lg font-bold font-serif bg-transparent outline-none flex-1" placeholder={t('editor.lists.block_title')} />
+            <DynamicInput path={`${path}[${index}].title`} className="text-lg font-bold font-serif bg-transparent outline-none flex-1" placeholder={t('editor.lists.block_title')} />
             <button onClick={() => removeBlock(block.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1 transition-colors">
               <Trash2 size={14} /> {t('common.delete')}
             </button>
           </div>
 
-          {block.type === 'text' && <SchemaRenderer path={`${path}[${index}].content`} />}
-          {block.type === 'image' && <SchemaRenderer path={`${path}[${index}].url`} placeholder={t('editor.lists.image_url')} />}
-          {block.type === 'table' && <SchemaRenderer path={`${path}[${index}].tableData`} />}
+          {block.type === 'text' && <DynamicInput path={`${path}[${index}].content`} />}
+          {block.type === 'image' && <DynamicInput path={`${path}[${index}].url`} placeholder={t('editor.lists.image_url')} />}
+          {block.type === 'table' && (
+            <DynamicTable 
+              path={`${path}[${index}].tableData`} 
+              columns={block.columns || []}
+              onColumnLabelChange={(colIdx, val) => {
+                const newCols = [...(block.columns || [])];
+                newCols[colIdx] = { ...newCols[colIdx], label: val };
+                updateField(`${path}[${index}].columns`, newCols);
+              }}
+              onRemoveColumn={(colIdx) => {
+                const newCols = [...(block.columns || [])];
+                newCols.splice(colIdx, 1);
+                updateField(`${path}[${index}].columns`, newCols);
+              }}
+              onAddColumn={() => {
+                const newCols = [...(block.columns || []), { key: 'col' + Math.random().toString(36).substr(2, 5), label: 'New Column' }];
+                updateField(`${path}[${index}].columns`, newCols);
+              }}
+            />
+          )}
         </div>
       ))}
       <div className="flex flex-wrap items-center gap-3">

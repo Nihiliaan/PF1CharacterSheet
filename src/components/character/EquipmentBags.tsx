@@ -3,7 +3,8 @@ import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCharacterStore } from '../../store/characterStore';
 import { get } from 'lodash-es';
-import SchemaRenderer from '../../controls/SchemaRenderer';
+import DynamicInput from '../../controls/DynamicInput';
+import DynamicTable from '../tables/DynamicTable';
 import Section from '../common/Section';
 
 export default function EquipmentBags({ path }: { path: string }) {
@@ -42,7 +43,7 @@ export default function EquipmentBags({ path }: { path: string }) {
               <div className="cursor-grab text-stone-300 hover:text-stone-600 active:cursor-grabbing p-1">
                  <GripVertical size={18} />
               </div>
-              <SchemaRenderer path={`${path}[${index}].name`} className="text-lg font-bold font-serif flex-1 border-none" />
+              <DynamicInput path={`${path}[${index}].name`} className="text-lg font-bold font-serif flex-1 border-none" />
               <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-stone-400 hover:text-stone-600 transition-colors shrink-0 ml-2">
                 <input
                   type="checkbox"
@@ -58,7 +59,7 @@ export default function EquipmentBags({ path }: { path: string }) {
             </button>
           </div>
           
-          <SchemaRenderer 
+          <DynamicTable 
             path={`${path}[${index}].items`} 
             columns={[
               { key: 'item', label: t('editor.items.headers.item'), width: '35%', hideRightBorder: true },
