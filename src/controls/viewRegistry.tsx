@@ -1,6 +1,6 @@
 import React from 'react';
 import DynamicTable from '../components/tables/DynamicTable';
-import SpellTable from '../tables/SpellTable';
+import SpellTable from '../components/tables/SpellTable';
 import MagicBlocks from '../components/character/MagicBlocks';
 import EquipmentBags from '../components/character/EquipmentBags';
 import AdditionalData from '../components/character/AdditionalData';
