@@ -1,16 +1,18 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, GripVertical, Trash2, Plus } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { User as FirebaseUser } from 'firebase/auth';
-import { CharacterData, ATTRIBUTE_NAMES } from '../../types';
+import { ATTRIBUTE_NAMES } from '../../types';
 import Section from '../common/Section';
 import InlineInput from '../common/InlineInput';
 import MultilineInput from '../common/MultilineInput';
 import DynamicTable from '../common/DynamicTable';
-import SpellTable from '../common/SpellTable';
 import TableOfContents from '../character/TableOfContents';
 import AvatarGallery from '../character/AvatarGallery';
+import MagicBlocks from '../character/MagicBlocks';
+import EquipmentBags from '../character/EquipmentBags';
+import AdditionalData from '../character/AdditionalData';
 
 import { useCharacter } from '../../contexts/CharacterContext';
 import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../../utils/calculations';
@@ -23,7 +25,7 @@ interface CharacterEditorProps {
 export default function CharacterEditor({
   user
 }: CharacterEditorProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const {
     isReadOnly,
     data,
@@ -36,30 +38,9 @@ export default function CharacterEditor({
     handleTableItemDragStart,
     handleTableItemDragOver,
     handleTableItemDrop,
-    addBag,
-    removeBag,
-    updateBagName,
-    toggleBagWeight,
-    updateBagItems,
-    handleBagDragStart,
-    handleBagDragOver,
-    handleBagDrop,
-    handleItemDragStart,
-    handleItemDragOver,
-    handleItemDrop,
-    dragEnabledFor,
-    setDragEnabledFor,
-    handleDragStart,
-    handleDragOver,
-    handleDrop,
-    addMagicBlock,
-    updateMagicBlock,
-    removeMagicBlock,
-    addAdditionalBlock,
-    updateAdditionalBlock,
-    removeAdditionalBlock,
     saveCharacter
   } = useCharacter();
+
   return (
     <motion.div
       key="editor"
@@ -152,9 +133,9 @@ export default function CharacterEditor({
                 { key: 'source', label: t('editor.attributes.headers.source'), width: '40%' },
                 { key: 'status', label: t('editor.attributes.headers.status'), width: '30%' }
               ]}
-              data={data.attributes.map((a, i) => ({ ...a, name: t('editor.attributes.' + ATTRIBUTE_NAMES[i]) }))}
-              originalData={lastSavedData.attributes.map((a, i) => ({ ...a, name: t('editor.attributes.' + ATTRIBUTE_NAMES[i]) }))}
-              onChange={newAttrs => setData({
+              data={data.attributes.map((a: any, i: number) => ({ ...a, name: t('editor.attributes.' + ATTRIBUTE_NAMES[i]) }))}
+              originalData={lastSavedData.attributes.map((a: any, i: number) => ({ ...a, name: t('editor.attributes.' + ATTRIBUTE_NAMES[i]) }))}
+              onChange={(newAttrs: any) => setData({
                 ...data,
                 attributes: newAttrs.map(({ name, ...rest }: any) => rest)
               })}
@@ -178,7 +159,7 @@ export default function CharacterEditor({
                   ]}
                   data={data.babTable || [{ bab: '', cmb: '', cmd: '' }]}
                   originalData={lastSavedData.babTable || [{ bab: '', cmb: '', cmd: '' }]}
-                  onChange={v => setData({ ...data, babTable: v })}
+                  onChange={(v: any) => setData({ ...data, babTable: v })}
                   fixedRows={true}
                 />
               </div>
@@ -188,7 +169,7 @@ export default function CharacterEditor({
               label={t('editor.attributes.maneuver_notes')}
               value={data.combatManeuverNotes || ''}
               originalValue={lastSavedData.combatManeuverNotes}
-              onChange={v => setData({ ...data, combatManeuverNotes: v })}
+              onChange={(v: any) => setData({ ...data, combatManeuverNotes: v })}
               placeholder={t('editor.attributes.maneuver_placeholder')}
               height="100%"
             />
@@ -212,7 +193,7 @@ export default function CharacterEditor({
                 ]}
                 data={data.meleeAttacks?.map((a: any) => ({ ...a, critRange: a.critRange || a.crit, critMultiplier: a.critMultiplier || (a.crit?.includes('x') ? a.crit.split('x')[1] : '') })) || []}
                 originalData={lastSavedData.meleeAttacks || []}
-                onChange={v => setData({ ...data, meleeAttacks: v })}
+                onChange={(v: any) => setData({ ...data, meleeAttacks: v })}
                 newItemGenerator={() => ({ weapon: '', hit: '', damage: '', critRange: '20', critMultiplier: '×2', range: '5', damageType: '', special: '' })}
                 rowDraggable={true}
                 rowActionMode={tableActionMode}
@@ -236,7 +217,7 @@ export default function CharacterEditor({
               ]}
               data={data.rangedAttacks?.map((a: any) => ({ ...a, critRange: a.critRange || a.crit, critMultiplier: a.critMultiplier || (a.crit?.includes('x') ? a.crit.split('x')[1] : '') })) || []}
               originalData={lastSavedData.rangedAttacks || []}
-              onChange={v => setData({ ...data, rangedAttacks: v })}
+              onChange={(v: any) => setData({ ...data, rangedAttacks: v })}
               newItemGenerator={() => ({ weapon: '', hit: '', damage: '', critRange: '20', critMultiplier: '×2', range: '20', damageType: '', special: '' })}
               rowDraggable={true}
               rowActionMode={tableActionMode}
@@ -251,14 +232,13 @@ export default function CharacterEditor({
             label={t('editor.attacks.special_attacks')}
             value={data.specialAttacks || ''}
             originalValue={lastSavedData.specialAttacks || ''}
-            onChange={v => setData({ ...data, specialAttacks: v })}
+            onChange={(v: any) => setData({ ...data, specialAttacks: v })}
             isAutoHeight={true}
           />
         </Section>
 
         <Section id="defenses" title={t('editor.sections.defenses')}>
           <div className="flex flex-col gap-6">
-            {/* AC Row */}
             <div className="flex flex-col md:flex-row gap-6 items-stretch">
               <div className="w-full md:w-1/2 flex flex-col">
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
@@ -276,7 +256,7 @@ export default function CharacterEditor({
                     ]}
                     data={data.defenses.acTable || [{ ac: '', source: '', flatFooted: '', touch: '' }]}
                     originalData={lastSavedData.defenses.acTable || [{ ac: '', source: '', flatFooted: '', touch: '' }]}
-                    onChange={v => updateDefenses('acTable', v)}
+                    onChange={(v: any) => updateDefenses('acTable', v)}
                     fixedRows={true}
                   />
                 </div>
@@ -286,35 +266,21 @@ export default function CharacterEditor({
                 label={t('editor.defenses.ac_notes')}
                 value={data.defenses.acNotes || ''}
                 originalValue={lastSavedData.defenses.acNotes}
-                onChange={v => updateDefenses('acNotes', v)}
+                onChange={(v: any) => updateDefenses('acNotes', v)}
                 placeholder={t('editor.defenses.ac_placeholder')}
                 height="100%"
               />
             </div>
 
-            {/* HP & HD Row */}
             <div className="flex flex-col md:flex-row gap-6">
               <div className="w-full md:w-1/2">
-                <InlineInput
-                  label={t('editor.defenses.hp')}
-                  value={data.defenses.hp}
-                  originalValue={lastSavedData.defenses.hp}
-                  onChange={v => updateDefenses('hp', v)}
-                  placeholder="例如：20"
-                />
+                <InlineInput label={t('editor.defenses.hp')} value={data.defenses.hp} originalValue={lastSavedData.defenses.hp} onChange={v => updateDefenses('hp', v)} />
               </div>
               <div className="w-full md:w-1/2">
-                <InlineInput
-                  label={t('editor.defenses.hd')}
-                  value={data.defenses.hd || ''}
-                  originalValue={lastSavedData.defenses.hd}
-                  onChange={v => updateDefenses('hd', v)}
-                  placeholder="例如：3d8+3"
-                />
+                <InlineInput label={t('editor.defenses.hd')} value={data.defenses.hd || ''} originalValue={lastSavedData.defenses.hd} onChange={v => updateDefenses('hd', v)} />
               </div>
             </div>
 
-            {/* Saves Row */}
             <div className="flex flex-col md:flex-row gap-6 items-stretch">
               <div className="w-full md:w-1/2 flex flex-col">
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
@@ -331,7 +297,7 @@ export default function CharacterEditor({
                     ]}
                     data={data.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
                     originalData={lastSavedData.defenses.savesTable || [{ fort: '', ref: '', will: '' }]}
-                    onChange={v => updateDefenses('savesTable', v)}
+                    onChange={(v: any) => updateDefenses('savesTable', v)}
                     fixedRows={true}
                   />
                 </div>
@@ -341,8 +307,7 @@ export default function CharacterEditor({
                 label={t('editor.defenses.saves_notes')}
                 value={data.defenses.savesNotes || ''}
                 originalValue={lastSavedData.defenses.savesNotes}
-                onChange={v => updateDefenses('savesNotes', v)}
-                placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
+                onChange={(v: any) => updateDefenses('savesNotes', v)}
                 height="100%"
               />
             </div>
@@ -351,8 +316,7 @@ export default function CharacterEditor({
               label={t('editor.defenses.special_defenses')}
               value={data.defenses.specialDefenses || ''}
               originalValue={lastSavedData.defenses.specialDefenses || ''}
-              onChange={v => setData({ ...data, defenses: { ...data.defenses, specialDefenses: v } })}
-              placeholder={t('editor.defenses.special_defenses_placeholder')}
+              onChange={(v: any) => setData({ ...data, defenses: { ...data.defenses, specialDefenses: v } })}
               height="100%"
             />
           </div>
@@ -366,7 +330,7 @@ export default function CharacterEditor({
             ]}
             data={data.racialTraits}
             originalData={lastSavedData.racialTraits}
-            onChange={v => setData({ ...data, racialTraits: v })}
+            onChange={(v: any) => setData({ ...data, racialTraits: v })}
             newItemGenerator={() => ({ name: '', desc: '' })}
             rowDraggable={true}
             rowActionMode={tableActionMode}
@@ -387,7 +351,7 @@ export default function CharacterEditor({
               ]}
               data={data.backgroundTraits}
               originalData={lastSavedData.backgroundTraits}
-              onChange={v => setData({ ...data, backgroundTraits: v })}
+              onChange={(v: any) => setData({ ...data, backgroundTraits: v })}
               newItemGenerator={() => ({ name: '', type: '', desc: '' })}
               rowDraggable={true}
               rowActionMode={tableActionMode}
@@ -413,7 +377,7 @@ export default function CharacterEditor({
             ]}
             data={data.classFeatures}
             originalData={lastSavedData.classFeatures}
-            onChange={v => setData({ ...data, classFeatures: v })}
+            onChange={(v: any) => setData({ ...data, classFeatures: v })}
             newItemGenerator={() => ({ level: '', name: '', type: '', desc: '' })}
             rowDraggable={true}
             rowActionMode={tableActionMode}
@@ -435,7 +399,7 @@ export default function CharacterEditor({
             ]}
             data={data.feats}
             originalData={lastSavedData.feats}
-            onChange={v => setData({ ...data, feats: v })}
+            onChange={(v: any) => setData({ ...data, feats: v })}
             newItemGenerator={() => ({ level: '', name: '', type: '', source: '', desc: '' })}
             rowDraggable={true}
             rowActionMode={tableActionMode}
@@ -447,146 +411,16 @@ export default function CharacterEditor({
         </Section>
 
         <Section id="spells" title={t('editor.sections.spells')}>
-          <div className="flex flex-col gap-6 w-full">
-            {data.magicBlocks.map(block => {
-              const originalBlock = lastSavedData.magicBlocks?.find(b => b.id === block.id);
-              const isTitleChanged = originalBlock && block.title !== originalBlock.title;
-              return (
-                <div
-                  key={block.id}
-                  className="relative group/magic flex flex-col gap-1 -mx-2 px-2 py-1 rounded transition-colors hover:bg-stone-50"
-                  draggable={dragEnabledFor === block.id}
-                  onDragStart={(e) => handleDragStart(e, block.id)}
-                  onDragOver={(e) => handleDragOver(e, block.id, 'magicBlocks')}
-                  onDrop={(e) => handleDrop(e, block.id, 'magicBlocks')}
-                >
-                  <div className="flex items-center gap-2 mb-1 group/title relative">
-                    <div onMouseEnter={() => setDragEnabledFor(block.id)} onMouseLeave={() => setDragEnabledFor(null)} className="cursor-move text-stone-300 hover:text-stone-500 transition-colors opacity-0 group-hover/magic:opacity-100 absolute -left-6">
-                      <GripVertical size={16} />
-                    </div>
-                    <input
-                      className={`text-[10px] font-bold uppercase tracking-wider bg-transparent border-b outline-none transition-colors max-w-sm ${isTitleChanged ? 'text-amber-600 border-amber-300' : 'text-stone-500 border-transparent focus:border-stone-400'}`}
-                      value={block.title}
-                      onChange={e => updateMagicBlock(block.id, { title: e.target.value })}
-                      placeholder={t('editor.lists.block_title')}
-                    />
-                    {isTitleChanged && <span className="text-amber-500 text-[8px] animate-pulse">●</span>}
-                    <button onClick={() => removeMagicBlock(block.id)} className="text-stone-300 hover:text-red-500 opacity-0 group-hover/title:opacity-100 transition-opacity p-0.5 rounded">
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                  {block.type === 'spell' && (
-                    <div className="flex gap-4 mb-2 mt-1">
-                      <InlineInput
-                        className="flex-1"
-                        label={t('editor.spells.caster_level')}
-                        value={block.casterLevel || ''}
-                        originalValue={originalBlock?.casterLevel}
-                        onChange={v => updateMagicBlock(block.id, { casterLevel: v })}
-                        type="level"
-                      />
-                      <InlineInput
-                        className="flex-1"
-                        label={t('editor.spells.concentration')}
-                        value={block.concentration || ''}
-                        originalValue={originalBlock?.concentration}
-                        onChange={v => updateMagicBlock(block.id, { concentration: v })}
-                        type="bonus"
-                      />
-                    </div>
-                  )}
-                  {block.type === 'text' ? (
-                    <MultilineInput
-                      label={t('editor.lists.content')}
-                      value={block.content || ''}
-                      originalValue={originalBlock?.content}
-                      onChange={v => updateMagicBlock(block.id, { content: v })}
-                      height="120px"
-                    />
-                  ) : block.type === 'spell' && block.spellTemplate !== 'sla' ? (
-                    <SpellTable
-                      columns={block.columns || []}
-                      data={block.tableData || []}
-                      originalData={originalBlock?.tableData || []}
-                      baseLevel={block.baseLevel || 0}
-                      onChange={v => updateMagicBlock(block.id, { tableData: v })}
-                      onBaseLevelChange={v => updateMagicBlock(block.id, { baseLevel: v })}
-                    />
-                  ) : (
-                    <DynamicTable
-                      columns={block.columns || []}
-                      data={block.tableData || []}
-                      originalData={originalBlock?.tableData || []}
-                      onChange={v => updateMagicBlock(block.id, { tableData: v })}
-                      newItemGenerator={block.type === 'spell' ? () => {
-                        const obj: any = {};
-                        (block.columns || []).forEach((c: any) => obj[c.key] = '');
-                        return obj;
-                      } : undefined}
-                      rowDraggable={block.type !== 'spell' || block.spellTemplate === 'sla'}
-                      rowActionMode={tableActionMode}
-                      onRowActionModeToggle={toggleTableActionMode}
-                      // For normal tables, allow dynamic columns. For SLA, don't allow modifying columns.
-                      onColumnLabelChange={block.type === 'table' ? (index, val) => {
-                        const newCols = [...(block.columns || [])];
-                        newCols[index] = { ...newCols[index], label: val };
-                        updateMagicBlock(block.id, { columns: newCols });
-                      } : undefined}
-                      onRemoveColumn={block.type === 'table' ? (index) => {
-                        const newCols = [...(block.columns || [])];
-                        newCols.splice(index, 1);
-                        updateMagicBlock(block.id, { columns: newCols });
-                      } : undefined}
-                      onAddColumn={block.type === 'table' ? () => {
-                        updateMagicBlock(block.id, { columns: [...(block.columns || []), { key: 'col' + Math.random(), label: 'New Column' }] });
-                      } : undefined}
-                    />
-                  )}
-                  {block.type === 'spell' && (
-                    <div className="mt-2">
-                      <MultilineInput
-                        label={t('editor.spells.notes')}
-                        value={block.notes || ''}
-                        originalValue={originalBlock?.notes}
-                        onChange={v => updateMagicBlock(block.id, { notes: v })}
-                        placeholder={t('editor.spells.notes_placeholder')}
-                        isAutoHeight={true}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            <div className="flex flex-wrap items-center gap-3">
-              <button onClick={() => addMagicBlock('spell', 'sla')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> {t('editor.spells.add_sla_template')}</button>
-              <button onClick={() => addMagicBlock('spell', 'spontaneous')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> {t('editor.spells.add_spontaneous_template')}</button>
-              <button onClick={() => addMagicBlock('spell', 'prepared')} className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"><Plus size={14} /> {t('editor.spells.add_prepared_template')}</button>
-            </div>
-          </div>
+          <MagicBlocks path="magicBlocks" />
         </Section>
 
         <Section id="skills" title={t('editor.sections.skills')}>
           <div className="flex flex-col md:flex-row gap-6 items-stretch">
             <div className="w-full md:w-1/6">
-              <InlineInput
-                label={t('editor.skills.total_points')}
-                type="posInt"
-                value={data.skillsTotal || ''}
-                originalValue={lastSavedData.skillsTotal || ''}
-                onChange={v => setData({ ...data, skillsTotal: v })}
-                placeholder="0"
-              />
+              <InlineInput label={t('editor.skills.total_points')} type="posInt" value={data.skillsTotal || ''} originalValue={lastSavedData.skillsTotal || ''} onChange={v => setData({ ...data, skillsTotal: v })} />
             </div>
             <div className="w-full md:w-1/6">
-              <InlineInput
-                label={t('editor.skills.acp')}
-                type="posInt"
-                value={data.armorCheckPenalty || '0'}
-                originalValue={lastSavedData.armorCheckPenalty || '0'}
-                onChange={v => setData({ ...data, armorCheckPenalty: v || '0' })}
-                displayFormatter={(v, isFocused) => (!v || v === '0' || isFocused) ? v : `-${v}`}
-                placeholder="0"
-              />
+              <InlineInput label={t('editor.skills.acp')} type="posInt" value={data.armorCheckPenalty || '0'} originalValue={lastSavedData.armorCheckPenalty || '0'} onChange={v => setData({ ...data, armorCheckPenalty: v || '0' })} displayFormatter={(v, f) => (!v || v === '0' || f) ? v : `-${v}`} />
             </div>
           </div>
           <div className="mt-4">
@@ -595,12 +429,7 @@ export default function CharacterEditor({
                 { key: 'name', label: t('editor.skills.headers.skill'), width: '15%' },
                 { key: 'total', label: t('editor.skills.headers.total'), width: '5%', type: 'bonus' },
                 { key: 'rank', label: t('editor.skills.headers.rank'), width: '5%', type: 'level' },
-                {
-                  key: 'cs', label: t('editor.skills.headers.cs'), width: '5%', type: 'checkbox',
-                  displayFormatter: (val) => {
-                    return val === 'true' ? '+3' : '';
-                  }
-                },
+                { key: 'cs', label: t('editor.skills.headers.cs'), width: '5%', type: 'checkbox', displayFormatter: (val) => val === 'true' ? '+3' : '' },
                 {
                   key: 'ability',
                   label: t('editor.skills.headers.ability'),
@@ -619,7 +448,7 @@ export default function CharacterEditor({
               ]}
               data={data.skills}
               originalData={lastSavedData.skills}
-              onChange={v => setData({ ...data, skills: v })}
+              onChange={(v: any) => setData({ ...data, skills: v })}
               newItemGenerator={() => ({ name: '', total: '', source: '', special: '' })}
               rowDraggable={true}
               rowActionMode={tableActionMode}
@@ -632,204 +461,101 @@ export default function CharacterEditor({
         </Section>
 
         <Section id="equipment" title={t('editor.sections.equipment')}>
-          <div className="flex flex-col gap-8">
-            {data.equipmentBags.map((bag, bagIndex) => (
-              <div key={bag.id} className="border rounded p-4 bg-stone-50/50 border-stone-200" onDragOver={(e) => handleBagDragOver(e, bagIndex)} onDrop={(e) => handleBagDrop(e, bagIndex)}>
-                <div className="flex items-center justify-between gap-4 mb-3">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="cursor-grab text-stone-300 hover:text-stone-600 active:cursor-grabbing p-1" draggable onDragStart={(e) => handleBagDragStart(e, bagIndex)}><GripVertical size={18} /></div>
-                    <input className="text-lg font-bold font-serif bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 max-w-sm w-full" value={bag.name} onChange={e => updateBagName(bag.id, e.target.value)} />
-                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-stone-400 hover:text-stone-600 transition-colors shrink-0 ml-2">
-                      <input
-                        type="checkbox"
-                        checked={bag.ignoreWeight}
-                        onChange={e => toggleBagWeight(bag.id, e.target.checked)}
-                        className="rounded border-stone-300 text-primary focus:ring-primary h-3 w-3"
-                      />
-                      {t('editor.items.ignore_weight')}
-                    </label>
-                  </div>
-                  <button onClick={() => removeBag(bag.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1 transition-colors"><Trash2 size={14} /> {t('common.delete_container')}</button>
-                </div>
-                <DynamicTable
-                  columns={[
-                    { key: 'item', label: t('editor.items.headers.item'), width: '35%', hideRightBorder: true },
-                    { key: 'quantity', label: '', width: '5%', type: 'quantity' },
-                    { key: 'cost', label: t('editor.items.headers.cost'), width: '15%', type: 'cost' },
-                    { key: 'weight', label: t('editor.items.headers.weight'), width: '15%', type: 'weight' },
-                    { key: 'notes', label: t('editor.items.headers.notes'), width: '30%' },
-                  ]}
-                  data={bag.items}
-                  originalData={lastSavedData.equipmentBags?.find((b: any) => b.id === bag.id)?.items || []}
-                  onChange={v => updateBagItems(bag.id, v)}
-                  newItemGenerator={() => ({ item: '', quantity: '1', cost: '', weight: '', notes: '' })}
-                  rowDraggable={true}
-                  rowActionMode={tableActionMode}
-                  onRowActionModeToggle={toggleTableActionMode}
-                  onRowDragStart={(idx, e) => handleItemDragStart(bag.id, idx, e)}
-                  onRowDragOver={(idx, e) => handleItemDragOver(bag.id, idx, e)}
-                  onRowDrop={(idx, e) => handleItemDrop(bag.id, idx, e)}
-                />
-              </div>
-            ))}
-            <button onClick={addBag} className="flex items-center gap-1 text-sm text-stone-600 border border-dashed border-stone-300 hover:border-stone-500 hover:text-stone-900 rounded p-3 justify-center transition-colors">
-              <Plus size={16} /> {t('editor.items.add_container')}
-            </button>
+          <EquipmentBags path="equipmentBags" />
+          
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+            <InlineInput label={t('editor.items.pp')} type="posInt" value={data.currency.pp} originalValue={lastSavedData.currency?.pp} onChange={v => setData((p:any) => ({ ...p, currency: { ...p.currency, pp: v } }))} />
+            <InlineInput label={t('editor.items.gp')} type="posInt" value={data.currency.gp} originalValue={lastSavedData.currency?.gp} onChange={v => setData((p:any) => ({ ...p, currency: { ...p.currency, gp: v } }))} />
+            <InlineInput label={t('editor.items.sp')} type="posInt" value={data.currency.sp} originalValue={lastSavedData.currency?.sp} onChange={v => setData((p:any) => ({ ...p, currency: { ...p.currency, sp: v } }))} />
+            <InlineInput label={t('editor.items.cp')} type="posInt" value={data.currency.cp} originalValue={lastSavedData.currency?.cp} onChange={v => setData((p:any) => ({ ...p, currency: { ...p.currency, cp: v } }))} />
+            <InlineInput label={t('editor.items.coin_weight')} type="float" value={data.currency.coinWeight} originalValue={lastSavedData.currency?.coinWeight} onChange={v => setData((p:any) => ({ ...p, currency: { ...p.currency, coinWeight: v } }))} />
+          </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
-              <InlineInput label={t('editor.items.pp')} type="posInt" value={data.currency.pp} originalValue={lastSavedData.currency?.pp} onChange={v => setData(p => ({ ...p, currency: { ...p.currency, pp: v } }))} placeholder="0" />
-              <InlineInput label={t('editor.items.gp')} type="posInt" value={data.currency.gp} originalValue={lastSavedData.currency?.gp} onChange={v => setData(p => ({ ...p, currency: { ...p.currency, gp: v } }))} placeholder="0" />
-              <InlineInput label={t('editor.items.sp')} type="posInt" value={data.currency.sp} originalValue={lastSavedData.currency?.sp} onChange={v => setData(p => ({ ...p, currency: { ...p.currency, sp: v } }))} placeholder="0" />
-              <InlineInput label={t('editor.items.cp')} type="posInt" value={data.currency.cp} originalValue={lastSavedData.currency?.cp} onChange={v => setData(p => ({ ...p, currency: { ...p.currency, cp: v } }))} placeholder="0" />
-              <InlineInput label={t('editor.items.coin_weight')} type="float" value={data.currency.coinWeight} originalValue={lastSavedData.currency?.coinWeight} onChange={v => setData(p => ({ ...p, currency: { ...p.currency, coinWeight: v } }))} placeholder="0" />
+          <div className="flex flex-col md:flex-row gap-3 mt-4 items-stretch">
+            <div className="flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 w-24 shrink-0 justify-center">
+              <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">{t('editor.items.total_assets')}</label>
+              <div className="text-sm font-medium text-ink px-0.5">{calculateTotalCost(data)}<span className="text-xs font-normal text-stone-500 ml-1">gp</span></div>
+            </div>
+            <div className={`flex flex-col gap-0 border rounded p-1.5 focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-colors w-24 shrink-0 justify-center ${data.encumbranceMultiplier !== lastSavedData.encumbranceMultiplier ? 'bg-amber-50 border-amber-300' : 'bg-stone-50 border-stone-200'}`}>
+              <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none flex justify-between items-center text-nowrap">
+                {t('editor.items.encumbrance_multiplier')}
+                {data.encumbranceMultiplier !== lastSavedData.encumbranceMultiplier && <span className="text-amber-600 animate-pulse text-[8px]">●</span>}
+              </label>
+              <input className="text-sm font-medium text-ink bg-transparent outline-none px-0.5 w-full"
+                value={data.encumbranceMultiplier} onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                    setData((p:any) => ({ ...p, encumbranceMultiplier: val }));
+                  }
+                }}
+              />
             </div>
 
-            <div className="flex flex-col md:flex-row gap-3 mt-4 items-stretch">
-              <div className="flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 w-24 shrink-0 justify-center">
-                <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">{t('editor.items.total_assets')}</label>
-                <div className="text-sm font-medium text-ink px-0.5">{calculateTotalCost(data)}<span className="text-xs font-normal text-stone-500 ml-1">gp</span></div>
-              </div>
-              <div className={`flex flex-col gap-0 border rounded p-1.5 focus-within:ring-1 focus-within:ring-primary focus-within:border-transparent transition-colors w-24 shrink-0 justify-center ${data.encumbranceMultiplier !== lastSavedData.encumbranceMultiplier ? 'bg-amber-50 border-amber-300' : 'bg-stone-50 border-stone-200'}`}>
-                <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none flex justify-between items-center">
-                  {t('editor.items.encumbrance_multiplier')}
-                  {data.encumbranceMultiplier !== lastSavedData.encumbranceMultiplier && <span className="text-amber-600 animate-pulse text-[8px]">●</span>}
-                </label>
-                <input className="text-sm font-medium text-ink bg-transparent outline-none px-0.5 w-full"
-                  value={data.encumbranceMultiplier} onChange={e => {
-                    const val = e.target.value;
-                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                      setData(p => ({ ...p, encumbranceMultiplier: val }));
-                    }
-                  }}
-                />
-              </div>
+            <div className="flex-1 flex flex-col border border-stone-200 bg-stone-50 rounded px-3 py-2 min-h-[50px] justify-center overflow-visible">
+              {(() => {
+                const encumbrance = getComputedEncumbrance(data);
+                const maxWeight = encumbrance.heavy;
+                const currentWeight = calculateTotalWeightNum(data);
+                const MathMax = Math.max;
+                const percentage = Math.min((currentWeight / MathMax(maxWeight, 1)) * 100, 100);
+                const isOverloaded = currentWeight > maxWeight;
+                const isHeavy = currentWeight > encumbrance.medium && currentWeight <= maxWeight;
+                const isMedium = currentWeight > encumbrance.light && currentWeight <= encumbrance.medium;
+                const isLight = currentWeight <= encumbrance.light;
 
-              <div className="flex-1 flex flex-col border border-stone-200 bg-stone-50 rounded px-3 py-2 min-h-[50px] justify-center overflow-visible">
-                {(() => {
-                  const encumbrance = getComputedEncumbrance(data);
-                  const maxWeight = encumbrance.heavy;
-                  const currentWeight = calculateTotalWeightNum(data);
-                  const MathMax = Math.max;
-                  const percentage = Math.min((currentWeight / MathMax(maxWeight, 1)) * 100, 100);
-                  const isOverloaded = currentWeight > maxWeight;
-                  const isHeavy = currentWeight > encumbrance.medium && currentWeight <= maxWeight;
-                  const isMedium = currentWeight > encumbrance.light && currentWeight <= encumbrance.medium;
-                  const isLight = currentWeight <= encumbrance.light;
+                let barColor = 'bg-stone-300';
+                if (isOverloaded) barColor = 'bg-red-500';
+                else if (isHeavy) barColor = 'bg-orange-500';
+                else if (isMedium) barColor = 'bg-yellow-400';
+                else if (isLight) barColor = 'bg-green-400';
 
-                  let barColor = 'bg-stone-300';
-                  if (isOverloaded) barColor = 'bg-red-500';
-                  else if (isHeavy) barColor = 'bg-orange-500';
-                  else if (isMedium) barColor = 'bg-yellow-400';
-                  else if (isLight) barColor = 'bg-green-400';
+                const lightPct = (encumbrance.light / MathMax(maxWeight, 1)) * 100;
+                const medPct = (encumbrance.medium / MathMax(maxWeight, 1)) * 100;
+                const heavyPct = 100;
 
-                  const lightPct = (encumbrance.light / MathMax(maxWeight, 1)) * 100;
-                  const medPct = (encumbrance.medium / MathMax(maxWeight, 1)) * 100;
-                  const heavyPct = 100;
+                return (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+                    <div className="flex flex-col sm:items-center shrink-0 w-20">
+                      <span className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">{t('editor.items.total_weight')}</span>
+                      <span className="text-lg font-bold font-serif text-ink leading-tight">{currentWeight.toLocaleString('en-US', { maximumFractionDigits: 2 })} <span className="text-xs font-normal text-stone-500">lbs</span></span>
+                    </div>
 
-                  return (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
-                      <div className="flex flex-col sm:items-center shrink-0 w-20">
-                        <span className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">{t('editor.items.total_weight')}</span>
-                        <span className="text-lg font-bold font-serif text-ink leading-tight">{currentWeight.toLocaleString('en-US', { maximumFractionDigits: 2 })} <span className="text-xs font-normal text-stone-500">lbs</span></span>
+                    <div className="flex-1 relative flex flex-col justify-center min-h-[20px] mt-1 mb-1 w-full mx-2">
+                      <div className="absolute -top-3.5 left-0 right-0 h-3">
+                        <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${lightPct}%` }}>{encumbrance.light} lbs</span>
+                        <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${medPct}%` }}>{encumbrance.medium} lbs</span>
+                        <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${heavyPct}%` }}>{encumbrance.heavy} lbs</span>
                       </div>
-
-                      <div className="flex-1 relative flex flex-col justify-center min-h-[20px] mt-1 mb-1 w-full mx-2">
-                        {/* Top labels */}
-                        <div className="absolute -top-3.5 left-0 right-0 h-3">
-                          <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${lightPct}%` }}>{encumbrance.light} lbs</span>
-                          <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${medPct}%` }}>{encumbrance.medium} lbs</span>
-                          <span className="absolute text-[9px] font-bold text-stone-500 -translate-x-1/2 whitespace-nowrap leading-none" style={{ left: `${heavyPct}%` }}>{encumbrance.heavy} lbs</span>
-                        </div>
-                        {/* Bar */}
-                        <div className="h-2 w-full bg-stone-200 rounded-full relative overflow-hidden">
-                          <div className={`h-full rounded-full transition-all duration-300 ${barColor}`} style={{ width: `${percentage}%` }} />
-                          {/* Markers */}
-                          <div className="absolute top-0 bottom-0 w-0.5 bg-stone-400/50 z-10" style={{ left: `${lightPct}%` }} />
-                          <div className="absolute top-0 bottom-0 w-0.5 bg-stone-400/50 z-10" style={{ left: `${medPct}%` }} />
-                        </div>
-                        {/* Bottom labels with arrows */}
-                        <div className="absolute -bottom-3.5 left-0 right-0 h-3">
-                          <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${lightPct / 2}%` }}>
-                            <span>{t('editor.items.light')}</span>
-                          </span>
-                          <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${(lightPct + medPct) / 2}%` }}>
-                            <span>{t('editor.items.medium')}</span>
-                          </span>
-                          <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${(medPct + heavyPct) / 2}%` }}>
-                            <span>{t('editor.items.heavy')}</span>
-                          </span>
-                        </div>
+                      <div className="h-2 w-full bg-stone-200 rounded-full relative overflow-hidden">
+                        <div className={`h-full rounded-full transition-all duration-300 ${barColor}`} style={{ width: `${percentage}%` }} />
+                        <div className="absolute top-0 bottom-0 w-0.5 bg-stone-400/50 z-10" style={{ left: `${lightPct}%` }} />
+                        <div className="absolute top-0 bottom-0 w-0.5 bg-stone-400/50 z-10" style={{ left: `${medPct}%` }} />
                       </div>
-
-                      {/* Overload label */}
-                      <div className="shrink-0 w-10 flex items-center justify-center">
-                        {isOverloaded && <span className="text-[10px] font-bold text-white bg-red-600 px-1 py-0.5 rounded shadow-inner rotate-[-5deg]">{t('editor.items.overload')}</span>}
+                      <div className="absolute -bottom-3.5 left-0 right-0 h-3">
+                        <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${lightPct / 2}%` }}>
+                          <span>{t('editor.items.light')}</span>
+                        </span>
+                        <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${(lightPct + medPct) / 2}%` }}>
+                          <span>{t('editor.items.medium')}</span>
+                        </span>
+                        <span className="absolute text-[9px] font-bold text-stone-500 flex flex-col items-center -translate-x-1/2 min-w-max leading-none" style={{ left: `${(medPct + heavyPct) / 2}%` }}>
+                          <span>{t('editor.items.heavy')}</span>
+                        </span>
                       </div>
                     </div>
-                  );
-                })()}
-              </div>
+
+                    <div className="shrink-0 w-10 flex items-center justify-center">
+                      {isOverloaded && <span className="text-[10px] font-bold text-white bg-red-600 px-1 py-0.5 rounded shadow-inner rotate-[-5deg]">{t('editor.items.overload')}</span>}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </Section>
 
         <Section id="additional-data" title={t('editor.sections.additional')}>
-          <div className="flex flex-col gap-8">
-            {data.additionalData.map(block => {
-              const originalBlock = lastSavedData.additionalData?.find(b => b.id === block.id);
-              const isTitleChanged = originalBlock && block.title !== originalBlock.title;
-              const isUrlChanged = originalBlock && block.url !== originalBlock.url;
-
-              return (
-                <div key={block.id} draggable={dragEnabledFor === block.id} onDragStart={(e) => handleDragStart(e, block.id)} onDragOver={(e) => handleDragOver(e, block.id, 'additionalData')} onDrop={(e) => handleDrop(e, block.id, 'additionalData')} className="border border-stone-200 rounded p-4 bg-stone-50/50">
-                  <div className="flex items-center gap-4 mb-3">
-                    <div onMouseEnter={() => setDragEnabledFor(block.id)} onMouseLeave={() => setDragEnabledFor(null)} className="cursor-move text-stone-400 px-1"><GripVertical size={20} /></div>
-                    <div className="flex-1 flex items-center gap-2">
-                      <input
-                        className={`text-lg font-bold font-serif bg-transparent border-b outline-none px-1 py-0.5 flex-1 ${isTitleChanged ? 'text-amber-600 border-amber-300' : 'text-primary border-transparent focus:border-primary'}`}
-                        value={block.title}
-                        onChange={e => updateAdditionalBlock(block.id, { title: e.target.value })}
-                        placeholder={t('editor.lists.block_title')}
-                      />
-                      {isTitleChanged && <span className="text-amber-500 animate-pulse">●</span>}
-                    </div>
-                    <button onClick={() => removeAdditionalBlock(block.id)} className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1"><Trash2 size={14} /> {t('common.delete')}</button>
-                  </div>
-                  {block.type === 'text' ? (
-                    <MultilineInput
-                      label={t('editor.lists.content')}
-                      value={block.content || ''}
-                      originalValue={originalBlock?.content}
-                      onChange={v => updateAdditionalBlock(block.id, { content: v })}
-                      height="120px"
-                    />
-                  ) : block.type === 'image' ? (
-                    <div className="relative">
-                      <input
-                        className={`w-full border rounded px-3 py-2 text-sm outline-none transition-colors ${isUrlChanged ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-white border-stone-200 focus:border-stone-400'}`}
-                        value={block.url || ''}
-                        onChange={e => updateAdditionalBlock(block.id, { url: e.target.value })}
-                        placeholder={t('editor.lists.image_url')}
-                      />
-                      {isUrlChanged && <div className="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />}
-                    </div>
-                  ) : (
-                    <DynamicTable
-                      columns={block.columns || []}
-                      data={block.tableData || []}
-                      originalData={originalBlock?.tableData || []}
-                      onChange={v => updateAdditionalBlock(block.id, { tableData: v })}
-                    />
-                  )}
-                </div>
-              );
-            })}
-            <div className="flex flex-wrap items-center gap-3">
-              <button onClick={() => addAdditionalBlock('text')} className="flex items-center gap-1 text-sm bg-white text-stone-600 border border-stone-300 rounded px-4 py-2"><Plus size={16} /> {t('common.add_text')}</button>
-              <button onClick={() => addAdditionalBlock('table')} className="flex items-center gap-1 text-sm bg-white text-stone-600 border border-stone-300 rounded px-4 py-2"><Plus size={16} /> {t('common.add_table')}</button>
-              <button onClick={() => addAdditionalBlock('image')} className="flex items-center gap-1 text-sm bg-white text-stone-600 border border-stone-300 rounded px-4 py-2"><Plus size={16} /> {t('common.add_image')}</button>
-            </div>
-          </div>
+          <AdditionalData path="additionalData" />
         </Section>
       </main>
     </motion.div>

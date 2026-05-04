@@ -15,8 +15,8 @@ const SPELL_TYPES = ['有0环自发', '无0环自发', '有0环准备', '无0环
 const BaseText = {
   ui: 'text',
   validate: () => true,
-  formatDisplay: (v: any) => v || '—',
-  formatInteractive: (v: any) => v || '',
+  formatDisplay: (v: any) => v,
+  formatInteractive: (v: any) => v,
   get formatExport() { return this.formatDisplay; }
 };
 
