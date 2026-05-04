@@ -178,12 +178,12 @@ export const CharacterPrototype: any = {
   },
   encumbranceMultiplier: FloatHandler,
   currency: {
-    handler: handlers.BaseTable,
-    pp: QuantityHandler,
-    gp: QuantityHandler,
-    sp: QuantityHandler,
-    cp: QuantityHandler,
-    coinWeight: WeightHandler
+    handler: CurrencyHandler,
+    pp: IntegerHandler,
+    gp: IntegerHandler,
+    sp: IntegerHandler,
+    cp: IntegerHandler,
+    coinWeight: FloatHandler
   },
 
   // 9. 施法系统 (Array Mode)
