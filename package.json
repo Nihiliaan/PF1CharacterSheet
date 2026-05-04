@@ -32,7 +32,8 @@
     "vite": "^6.2.0",
     "zustand": "^5.0.3",
     "lodash-es": "^4.17.21",
-    "immer": "^10.1.1"
+    "immer": "^10.1.1",
+    "@uiw/react-codemirror": "^4.23.8"
   },
   "devDependencies": {
     "@firebase/eslint-plugin-security-rules": "^0.0.2",
