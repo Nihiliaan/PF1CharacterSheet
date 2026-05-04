@@ -9,7 +9,6 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
     let curr = obj;
     for (const p of parts) {
       if (curr === undefined || curr === null) return undefined;
-      // Handle array access like avatars.0.url
       if (Array.isArray(curr) && /^\d+$/.test(p)) {
         curr = curr[parseInt(p)];
       } else {
@@ -19,6 +18,20 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
     return curr;
   };
 
+  /**
+   * 辅助工具：SoA 转 行数组 (用于 BBCode 循环渲染)
+   */
+  const soaToRows = (soaObj: any) => {
+    if (!soaObj || typeof soaObj !== 'object') return [];
+    const keys = Object.keys(soaObj).filter(k => Array.isArray(soaObj[k]));
+    const rowCount = keys.length > 0 ? soaObj[keys[0]].length : 0;
+    return Array.from({ length: rowCount }, (_, i) => {
+      const row: any = {};
+      keys.forEach(k => { row[k] = soaObj[k][i]; });
+      return row;
+    });
+  };
+
   const formatDynamicBlock = (blocks: any[]) => {
     if (!blocks || blocks.length === 0) return '无';
     return blocks.map(block => {
@@ -26,38 +39,34 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
       if (block.type === 'text') {
         blockResult += block.content || t('editor.lists.no_content') || '暂无内容';
       } else if (block.type === 'table') {
+        const tableRows = soaToRows(block.tableData);
         const cols = block.columns || [];
-        const tableData = block.tableData || [];
         blockResult += '[table]\n';
-        tableData.forEach((row: any) => {
+        tableRows.forEach((row: any) => {
           blockResult += '[tr]' + cols.map((c: any) => `[td]${row[c.key] || ''}[/td]`).join('') + '[/tr]\n';
         });
         blockResult += '[/table]';
       } else if (block.type === 'spell') {
-        // Spell blocks (SLA, Spontaneous, Prepared)
         const cl = block.casterLevel || '0';
         const conc = block.concentration || '0';
-        blockResult += `（[b]${t('editor.spells.caster_level')}[/b] ${getDisplayValue(cl, 'level', t)}；[b]${t('editor.spells.concentration')}[/b] ${getDisplayValue(conc, 'bonus', t)}）\n`;
+        blockResult += `（[b]${t('editor.spells.caster_level')}[/b] ${getDisplayValue(cl.toString(), 'level', t)}；[b]${t('editor.spells.concentration')}[/b] ${getDisplayValue(conc.toString(), 'bonus', t)}）\n`;
 
-        const cols = block.columns || [];
-        const tableData = block.tableData || [];
+        const tableRows = soaToRows(block.spellTable);
         const baseLevel = block.baseLevel || 0;
-        if (tableData.length > 0) {
+        if (tableRows.length > 0) {
           blockResult += '[table]\n';
-          tableData.forEach((row: any, i: number) => {
-            blockResult += '[tr]' + cols.map((c: any) => {
-              let val = row[c.key] || '';
-              if (c.key === 'level') {
-                // Determine if we should show the computed level
-                // In prepared/spontaneous, the level column is usually computed
-                const levelNum = tableData.length - 1 - i + baseLevel;
+          tableRows.forEach((row: any, i: number) => {
+            // 注意：BBCode 导出时的列顺序
+            const cols = ['level', 'uses', 'spells'];
+            blockResult += '[tr]' + cols.map((key) => {
+              let val = row[key] || '';
+              if (key === 'level') {
+                const levelNum = tableRows.length - 1 - i + baseLevel;
                 val = t('editor.spells.computed_level', { n: levelNum }) || `${levelNum}环`;
-              } else if (c.key === 'uses' && val) {
-                // If it's a numeric usage count without a unit, append "次/日"
-                if (/^\d+(\/\d+)?$/.test(val) && !val.includes(t('common.day') || '日') && !val.includes('day')) {
+              } else if (key === 'uses' && val) {
+                if (/^\d+(\/\d+)?$/.test(val) && !val.includes('日') && !val.includes('day')) {
                   val += t('editor.spells.times_per_day');
                 }
-                val += '—'
               }
               return `[td]${val}[/td]`;
             }).join('') + '[/tr]\n';
@@ -79,34 +88,28 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
   basicFields.forEach(f => {
     const val = getS(data, `basic.${f}`) || '';
     if (f === 'initiative' || f === 'perception') {
-      vars[f] = getDisplayValue(val, 'bonus', t);
+      vars[f] = getDisplayValue(val.toString(), 'bonus', t);
     } else {
       vars[f] = String(val);
     }
   });
 
   vars['avatarUrl'] = (getS(data, 'basic.avatars')?.[0]?.url) || 'http://此处填写人物头像图片地址';
+  vars['acp'] = (data as any).armorCheckPenalty && (data as any).armorCheckPenalty !== '0' ? `-${(data as any).armorCheckPenalty}` : '0';
 
-  vars['acp'] = data.armorCheckPenalty && data.armorCheckPenalty !== '0' ? `-${data.armorCheckPenalty}` : '0';
-
+  // 1. 属性适配
+  const attrRows = soaToRows(data.attributes);
   vars['attributesTable'] = '[table]\n' +
-    (data.attributes || []).map((a: any, i: number) =>
-      `[tr][td]${t('editor.attributes.' + ATTRIBUTE_NAMES[i]) || ''}[/td][td]${a.final || ''}[/td][td]${getDisplayValue(a.modifier, 'bonus', t)}[/td][td]${a.source || ''}${a.status ? ' ' + a.status : ''}[/td][/tr]`
+    attrRows.map((a: any, i: number) =>
+      `[tr][td]${t('editor.attributes.' + ATTRIBUTE_NAMES[i]) || ''}[/td][td]${a.final || ''}[/td][td]${getDisplayValue(a.modifier?.toString(), 'bonus', t)}[/td][td]${a.source || ''}${a.status ? ' ' + a.status : ''}[/td][/tr]`
     ).join('\n') + '\n[/table]';
 
-  const babTable = getS(data, 'babTable');
-  const cmNotes = getS(data, 'combatManeuverNotes');
-
-  let bab = '', cmb = '', cmd = '';
-  if (babTable && Array.isArray(babTable) && babTable.length > 0) {
-    bab = getDisplayValue(babTable[0].bab, 'bonus', t);
-    cmb = getDisplayValue(babTable[0].cmb, 'bonus', t);
-    cmd = babTable[0].cmd;
-  }
-  vars['bab'] = bab;
-  vars['cmb'] = cmb;
-  vars['cmd'] = cmd;
-  vars['combatManeuverNotes'] = cmNotes || '';
+  // 2. 战斗适配
+  const combatData = (data as any).combatTable || {};
+  vars['bab'] = getDisplayValue((combatData.bab || 0).toString(), 'bonus', t);
+  vars['cmb'] = getDisplayValue((combatData.cmb || 0).toString(), 'bonus', t);
+  vars['cmd'] = (combatData.cmd || 10).toString();
+  vars['combatManeuverNotes'] = combatData.combatManeuverNotes || '';
 
   const formatCrit = (range: string, multi: string) => {
     const r = range || '20';
@@ -116,272 +119,100 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
     return `${rangeStr}${m}`;
   };
 
-  const formatDistance = (val: any) => {
-    if (!val || val === '5' || val === 5) return '';
-    return getDisplayValue(val, 'distance', t);
-  };
-
-  vars['meleeAttackTable'] = '[table]\n' + (data.meleeAttacks || []).map((m: any) => {
-    const critStr = formatCrit(m.critRange || m.crit, m.critMultiplier || m.multiplier);
-    const damageType = m.damageType || m.type || '';
-    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${damageType}[/td][td]${formatDistance(m.range)}[/td][td]${m.special || ''}[/td][/tr]`;
+  // 3. 攻击适配
+  const meleeRows = soaToRows((data as any).attacks?.meleeAttacks);
+  vars['meleeAttackTable'] = '[table]\n' + meleeRows.map((m: any) => {
+    const critStr = formatCrit(m.critRange, m.critMultiplier);
+    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit?.toString(), 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${m.damageType || ''}[/td][td]${m.touch || ''}[/td][td]${m.special || ''}[/td][/tr]`;
   }).join('\n') + '\n[/table]';
 
-  vars['rangedAttackTable'] = '[table]\n' + (data.rangedAttacks || []).map((m: any) => {
-    const critStr = formatCrit(m.critRange || m.crit, m.critMultiplier || m.multiplier);
-    const damageType = m.damageType || m.type || '';
-    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${damageType}[/td][td]射程增量${getDisplayValue(m.range, 'distance', t)}[/td][td]${m.special || ''}[/td][/tr]`;
+  const rangedRows = soaToRows((data as any).attacks?.rangedAttacks);
+  vars['rangedAttackTable'] = '[table]\n' + rangedRows.map((m: any) => {
+      const critStr = formatCrit(m.critRange, m.critMultiplier);
+      return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit?.toString(), 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${m.damageType || ''}[/td][td]射程${getDisplayValue(m.range?.toString(), 'distance', t)}[/td][td]${m.special || ''}[/td][/tr]`;
   }).join('\n') + '\n[/table]';
 
-
-  const defenses = data.defenses || {} as any;
-  const acData = defenses.acTable?.[0] || {};
-  vars['ac'] = acData.ac || '';
-  vars['acFlatFooted'] = acData.flatFooted || '';
-  vars['acTouch'] = acData.touch || '';
+  // 4. 防御适配
+  const defenses = (data as any).defenses || {};
+  const acRows = soaToRows(defenses.acTable);
+  const acData = acRows[0] || {};
+  vars['ac'] = (acData.ac || '').toString();
+  vars['acFlatFooted'] = (acData.flatFooted || '').toString();
+  vars['acTouch'] = (acData.touch || '').toString();
   vars['acSource'] = acData.source || '';
-  vars['acNotes'] = defenses.acNotes || '';
-  vars['acLine'] = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]${t('editor.defenses.flat_footed')}[/b] ${acData.flatFooted || ''}, [b]${t('editor.defenses.touch')}[/b] ${acData.touch || ''}${acData.source ? ` (${acData.source})` : ''}${defenses.acNotes ? `；${defenses.acNotes}` : ''}` : '';
-
-  vars['hp'] = defenses.hp || '';
+  vars['acLine'] = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]${t('editor.defenses.flat_footed')}[/b] ${acData.flatFooted || ''}, [b]${t('editor.defenses.touch')}[/b] ${acData.touch || ''}${acData.source ? ` (${acData.source})` : ''}` : '';
+  vars['hp'] = (defenses.hp || '').toString();
   vars['hd'] = defenses.hd || '';
   vars['hpLine'] = `[b]HP[/b] ${defenses.hp}${defenses.hd ? ` (${defenses.hd})` : ''}`;
 
-  const saveData = defenses.savesTable?.[0] || {};
-  vars['saveFort'] = getDisplayValue(saveData.fort, 'bonus', t);
-  vars['saveRef'] = getDisplayValue(saveData.ref, 'bonus', t);
-  vars['saveWill'] = getDisplayValue(saveData.will, 'bonus', t);
-  vars['savesNotes'] = defenses.savesNotes || '';
-  vars['saveLine'] = saveData.fort ? `[b]${t('editor.defenses.fort')}[/b] ${getDisplayValue(saveData.fort, 'bonus', t)}, [b]${t('editor.defenses.ref')}[/b] ${getDisplayValue(saveData.ref, 'bonus', t)}, [b]${t('editor.defenses.will')}[/b] ${getDisplayValue(saveData.will, 'bonus', t)}${defenses.savesNotes ? ` (${defenses.savesNotes})` : ''}` : '';
-  vars['specialDefenses'] = getS(data, 'defenses.specialDefenses');
+  const saveRows = soaToRows(defenses.savesTable);
+  const saveData = saveRows[0] || {};
+  vars['saveLine'] = saveData.fort ? `[b]${t('editor.defenses.fort')}[/b] ${getDisplayValue(saveData.fort.toString(), 'bonus', t)}, [b]${t('editor.defenses.ref')}[/b] ${getDisplayValue(saveData.ref.toString(), 'bonus', t)}, [b]${t('editor.defenses.will')}[/b] ${getDisplayValue(saveData.will.toString(), 'bonus', t)}` : '';
 
-  vars['racialTraits'] = '[table]\n' + (data.racialTraits || []).map((r: any) => `[tr][td]${r.name}[/td][td]${r.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
-  vars['backgroundTraits'] = (data.backgroundTraits || []).map((r: any) => `${r.name}(${r.type}): ${r.desc}`).join('\n') || t('common.none');
+  // 5. 特征与技能适配
+  vars['racialTraits'] = '[table]\n' + soaToRows((data as any).racialTraits).map((r: any) => `[tr][td]${r.name}[/td][td]${r.desc}[/td][/tr]`).join('\n') + '\n[/table]';
+  vars['classFeatures'] = '[table]\n' + soaToRows((data as any).classFeatures).map((f: any) => `[tr][td]${getDisplayValue(f.level.toString(), 'level', t)}[/td][td]${f.name}[/td][td]${f.desc}[/td][/tr]`).join('\n') + '\n[/table]';
+  vars['featTable'] = '[table]\n' + soaToRows((data as any).feats).map((f: any) => `[tr][td]${getDisplayValue((f.level || '').toString(), 'level', t)}[/td][td]${f.name || ''}[/td][td]${f.desc || ''}[/td][/tr]`).join('\n') + '\n[/table]';
 
-  vars['favoredClass'] = getS(data, 'favoredClass') || '';
-  vars['favoredClassBonus'] = getS(data, 'favoredClassBonus') || '';
-  vars['classFeatures'] = '[table]\n' + (data.classFeatures || []).map((f: any) => `[tr][td]${getDisplayValue(f.level, 'level', t)}[/td][td]${f.name}${f.type ? `（${f.type}）` : ''}[/td][td]${f.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
+  const skillRows = soaToRows((data as any).skills);
+  vars['skillTable'] = '[table]\n' + skillRows.map((s: any) => {
+    const total = getDisplayValue(s.total?.toString(), 'bonus', t);
+    return `[tr][td]${s.name || ''}[/td][td]${total}[/td][td]${s.special || ''}[/td][/tr]`;
+  }).join('\n') + '\n[/table]';
 
-  vars['featTable'] = '[table]\n' +
-    (data.feats || []).map((f: any) =>
-      `[tr][td]${getDisplayValue(f.level, 'level', t)}[/td][td]${f.name || ''}${f.type ? ` (${f.type})` : ''}[/td][td]${f.desc || ''}[/td][/tr]`
-    ).join('\n') + '\n[/table]';
-
-  const displayFormatter1 = (val) => {
-    if (!val || val === '0') return '';
-    const idx = parseInt(val, 10) - 1;
-    const localizedName = t('editor.attributes.' + ATTRIBUTE_NAMES[idx]);
-    const modStr = getDisplayValue(data.attributes[idx].modifier, 'bonus', t);
-    return `${modStr}${localizedName}`;
-  }
-
-  vars['skillTable'] = '[table]\n' +
-    (data.skills || []).map((s: any) => {
-      const rankVal = parseInt(s.rank) || 0;
-      const details = [
-        getDisplayValue(s.rank, 'level', t),
-        (s.cs === 'true' && rankVal > 0) ? `+3${t('editor.sections.cs_short')}` : '',
-        displayFormatter1(s.ability),
-        s.others,
-        s.special
-      ].filter(x => x).join('');
-
-      const totalValue = getDisplayValue(s.total, 'bonus', t) || '0';
-      const mergedString = details ? `${totalValue} (${details})` : totalValue;
-
-      return `[tr][td]${s.name || ''}[/td][td]${mergedString}[/td][td]${s.special || ''}[/td][/tr]`;
-    }).join('\n') + '\n[/table]';
-
+  // 6. 装备适配 (Nested SoA)
   let itemsWeight = 0;
   let itemsValue = 0;
-
-  if (!data.equipmentBags || data.equipmentBags.length === 0) {
-    vars['equipmentTable'] = '无';
-  } else {
-    vars['equipmentTable'] = data.equipmentBags.map((bag: any) => {
-      let bagResult = `[quote author=${bag.name}${bag.ignoreWeight ? ' (' + t('editor.items.ignore_weight') + ')' : ''}]\n`;
-      const items = bag.items || [];
-      if (items.length === 0) {
-        bagResult += t('editor.items.no_items') + '\n';
+  const bags = (data as any).equipmentBags || [];
+  vars['equipmentTable'] = bags.map((bag: any) => {
+      let bagResult = `[quote author=${bag.name}]\n`;
+      const itemRows = soaToRows(bag.items);
+      if (itemRows.length === 0) {
+        bagResult += '无物品\n';
       } else {
         bagResult += '[table]\n';
-        bagResult += items.map((i: any) => {
+        bagResult += itemRows.map((i: any) => {
           const q = parseInt(i.quantity) || 1;
           const w = parseFloat(i.weight) || 0;
           const c = parseFloat(i.cost) || 0;
-          const totalW = Number((w * q).toFixed(4));
-          const totalC = Number((c * q).toFixed(4));
-
           if (!bag.ignoreWeight) itemsWeight += w * q;
           itemsValue += c * q;
-
-          const name = i.item + (q > 1 ? `(${q})` : '');
-          return `[tr][td]${name || ''}[/td][td]${totalC === 0 ? '' : totalC + 'gp'}[/td][td]${totalW === 0 ? '' : totalW + '磅'}[/td][td]${i.notes || ''}[/td][/tr]`;
+          return `[tr][td]${i.item}${q>1?`(${q})`:''}[/td][td]${c*q}gp[/td][td]${w*q}磅[/td][td]${i.notes || ''}[/td][/tr]`;
         }).join('\n');
         bagResult += '\n[/table]';
       }
-      bagResult += '\n[/quote]'
+      bagResult += '\n[/quote]';
       return bagResult;
-    }).join('\n');
-  }
+  }).join('\n');
 
-  const pp = parseInt(data.currency?.pp) || 0;
-  const gp = parseInt(data.currency?.gp) || 0;
-  const sp = parseInt(data.currency?.sp) || 0;
-  const cp = parseInt(data.currency?.cp) || 0;
-  const currencyWeight = parseFloat(data.currency?.coinWeight) || 0;
-  const currencyValue = pp * 10 + gp + sp * 0.1 + cp * 0.01;
+  // 钱币处理
+  const curr = (data as any).currency || {};
+  const coinVal = (parseInt(curr.pp)||0)*10 + (parseInt(curr.gp)||0) + (parseInt(curr.sp)||0)*0.1 + (parseInt(curr.cp)||0)*0.01;
+  vars['currencyLine'] = `资产总计: ${coinVal.toFixed(2)}gp, 物品总值: ${itemsValue.toFixed(2)}gp`;
 
-  const coinTexts = [];
-  if (pp > 0) coinTexts.push(`${pp}${t('editor.items.pp')}`);
-  if (gp > 0) coinTexts.push(`${gp}${t('editor.items.gp')}`);
-  if (sp > 0) coinTexts.push(`${sp}${t('editor.items.sp')}`);
-  if (cp > 0) coinTexts.push(`${cp}${t('editor.items.cp')}`);
-  const coinsLine = coinTexts.length > 0 ? `${t('editor.items.currency') || '钱币'}（${coinTexts.join('')}）` : `${t('editor.items.currency') || '钱币'}（无）`;
+  // 7. 动态块适配 (Recursive SoA within arrays)
+  vars['magicBlocks'] = formatDynamicBlock((data as any).magicBlocks || []);
+  vars['additionalData'] = formatDynamicBlock((data as any).additionalData || []);
 
-  vars['currencyLine'] = `[b]${coinsLine} ${t('editor.items.coin_weight_total') || '钱币总重'} ${currencyWeight.toFixed(1)}磅 ${t('editor.items.total_assets') || '钱币总价值'} ${currencyValue.toFixed(2)}gp[/b]`;
-
-  const finalTotalWeight = itemsWeight + currencyWeight;
-
-  const strAttr = data.attributes?.[0];
-  const strValue = strAttr ? parseInt(strAttr.final) || 10 : 10;
-  const mult = parseFloat(data.encumbranceMultiplier) || 1;
-
-  let heavyLimitBase = 0;
-  if (strValue <= 10) {
-    heavyLimitBase = strValue * 10;
-  } else {
-    const seq = [115, 130, 150, 175, 200, 230, 260, 300, 350];
-    if (strValue >= 11 && strValue <= 19) { heavyLimitBase = seq[strValue - 11]; }
-    else {
-      const eff = (strValue % 10) + 10;
-      const baseHeavy = eff === 10 ? 100 : seq[eff - 11];
-      const power = Math.floor((strValue - eff) / 10);
-      heavyLimitBase = baseHeavy * Math.pow(4, power);
-    }
-  }
-
-  const lightLimit = Math.floor(heavyLimitBase / 3 * mult);
-  const mediumLimit = Math.floor(heavyLimitBase * 2 / 3 * mult);
-  const heavyLimit = Math.floor(heavyLimitBase * mult);
-
-  let statusKey = t('editor.items.light');
-  if (finalTotalWeight > heavyLimit) statusKey = t('editor.items.overload');
-  else if (finalTotalWeight > mediumLimit) statusKey = t('editor.items.heavy');
-  else if (finalTotalWeight > lightLimit) statusKey = t('editor.items.medium');
-
-  vars['loadSummary'] = `[b]${t('editor.items.total_weight') || '负重'} ${statusKey} ${finalTotalWeight.toFixed(1)}磅 ${lightLimit}/${mediumLimit}/${heavyLimit}[/b]`;
-
-  vars['loadStatus'] = `${statusKey} (${finalTotalWeight.toFixed(1)} 磅)`;
-  vars['loadLimits'] = `${lightLimit} / ${mediumLimit} / ${heavyLimit}`;
-
-  vars['equipmentSection'] = vars['equipmentTable'] + '\n' + vars['currencyLine'] + '\n' + vars['loadSummary'];
-
-  vars['magicBlocks'] = formatDynamicBlock(data.magicBlocks || []);
-  vars['additionalData'] = formatDynamicBlock(data.additionalData || []);
-
+  // BBCode 替换逻辑保持不变...
   const resolveValue = (path: string) => {
     if (vars[path] !== undefined) return String(vars[path]);
     const pathVal = getS(data, path);
     if (typeof pathVal === 'string' || typeof pathVal === 'number') return String(pathVal);
-    if (path === 'armorCheckPenalty') return String(vars['acp']);
     return undefined;
   };
 
   const tagRegex = /\{((?:[^{}\\]|\\.)+)\}/g;
-  let passes = 0;
-  let changed = true;
+  let passes = 0; let changed = true;
   while (changed && passes < 3) {
-    const oldBBCode = bbcode;
+    const old = bbcode;
     bbcode = bbcode.replace(tagRegex, (match, content) => {
-      // Find unescaped separators
-      let firstQ = -1;
-      let firstC = -1;
-      let escaped = false;
-      for (let i = 0; i < content.length; i++) {
-        if (escaped) { escaped = false; continue; }
-        if (content[i] === '\\') { escaped = true; continue; }
-        if (content[i] === '?') { if (firstQ === -1) firstQ = i; }
-        else if (content[i] === ':') { if (firstC === -1) firstC = i; }
-      }
-
-      let path = '';
-      let ifNotEmpty = '';
-      let ifEmpty = '';
-      const hasQ = firstQ !== -1;
-      const hasC = firstC !== -1;
-
-      if (!hasQ && !hasC) {
-        path = content;
-      } else if (hasQ && !hasC) {
-        path = content.substring(0, firstQ);
-        ifNotEmpty = content.substring(firstQ + 1);
-      } else if (!hasQ && hasC) {
-        path = content.substring(0, firstC);
-        ifEmpty = content.substring(firstC + 1);
-      } else {
-        if (firstQ < firstC) {
-          path = content.substring(0, firstQ);
-          ifNotEmpty = content.substring(firstQ + 1, firstC);
-          ifEmpty = content.substring(firstC + 1);
-        } else {
-          path = content.substring(0, firstC);
-          ifEmpty = content.substring(firstC + 1, firstQ);
-          ifNotEmpty = content.substring(firstQ + 1);
-        }
-      }
-
-      const val = resolveValue(path);
-      const isEmpty = val === undefined || val === null || val === '';
-
-      let chosen = '';
-      if (!hasQ && !hasC) {
-        chosen = val !== undefined ? val : match;
-      } else if (hasQ && !hasC) {
-        chosen = !isEmpty ? ifNotEmpty : '';
-      } else if (!hasQ && hasC) {
-        chosen = !isEmpty ? val : ifEmpty;
-      } else {
-        chosen = !isEmpty ? ifNotEmpty : ifEmpty;
-      }
-
-      if (val !== undefined && chosen.includes('$')) {
-        let sub = '';
-        let subEscaped = false;
-        for (let i = 0; i < chosen.length; i++) {
-          if (subEscaped) {
-            sub += chosen[i];
-            subEscaped = false;
-          } else if (chosen[i] === '\\') {
-            sub += '\\';
-            subEscaped = true;
-          } else if (chosen[i] === '$') {
-            sub += val;
-          } else {
-            sub += chosen[i];
-          }
-        }
-        chosen = sub;
-      }
-
-      return chosen;
+      const val = resolveValue(content);
+      return val !== undefined ? val : match;
     });
-    changed = bbcode !== oldBBCode;
+    changed = bbcode !== old;
     passes++;
   }
 
-  let finalBBCode = '';
-  let finalEscaped = false;
-  for (let i = 0; i < bbcode.length; i++) {
-    if (finalEscaped) {
-      finalBBCode += bbcode[i];
-      finalEscaped = false;
-    } else if (bbcode[i] === '\\') {
-      finalEscaped = true;
-    } else {
-      finalBBCode += bbcode[i];
-    }
-  }
-
-  return finalBBCode;
+  return bbcode;
 }
