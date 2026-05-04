@@ -211,22 +211,24 @@ export const CharacterPrototype: any = {
  * 路径归一化寻址器
  */
 export function getHandlerByPath(path: string): any {
-  const normalizedPath = path
-    .replace(/\[\d+\]/g, '')
-    .replace(/\.\d+(\.|$)/g, (match) => match.endsWith('.') ? '.' : '');
+  try {
+    if (!path) return null;
+    
+    const normalizedPath = path
+      .replace(/\[\d+\]/g, '')
+      .replace(/\.\d+(\.|$)/g, (match) => match.endsWith('.') ? '.' : '');
 
-  const node = get(CharacterPrototype, normalizedPath);
-  
-  if (!node) {
-    console.warn(`[Schema] No prototype node found for path: ${path} (normalized: ${normalizedPath})`);
+    const node = get(CharacterPrototype, normalizedPath);
+    
+    if (!node) {
+      return null;
+    }
+
+    // 显式确保如果 handler 属性不存在，则返回 node 本身，如果两者都无则返回 null
+    const handler = node.handler ? node.handler : node;
+    return handler || null; 
+  } catch (e) {
+    console.error(`[Schema ERROR] Fatal error resolving path: "${path}"`, e);
     return null;
   }
-
-  const handler = node.handler ? node.handler : node;
-  
-  if (handler && typeof handler.formatDisplay !== 'function' && !handler.view) {
-    console.error(`[Schema] Invalid handler for path ${path}. Missing formatDisplay and no view specified!`, handler);
-  }
-
-  return handler;
 }

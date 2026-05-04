@@ -2,6 +2,7 @@ import React from 'react';
 import { getHandlerByPath } from '../schema/fieldRegistry';
 import { useCharacterStore } from '../store/characterStore';
 import { get } from 'lodash-es';
+console.log("[DynamicInput] Module Loaded and Ready");
 import { 
   TextControl, 
   NumericControl, 
@@ -86,8 +87,9 @@ const DynamicInput: React.FC<DynamicInputProps> = (props) => {
   const templateName = handler.ui || 'text';
   const Template = TEMPLATE_MAP[templateName] || TextControl;
 
-  if (Template === TextControl && templateName !== 'text') {
-    console.warn(`[DynamicInput] Path "${path}" using fallback TextControl for template "${templateName}"`);
+  // 【终极防线】如果到这一步 handler 竟然还是空的，说明整个寻址链路出了严重问题
+  if (!handler) {
+    return <div className="text-red-500 text-[10px]">Handler Lost: {path}</div>;
   }
 
   return (
