@@ -1,5 +1,28 @@
 import { CharacterData } from '../types';
 
+export const getModifier = (value: number | string): number => {
+  const val = typeof value === 'string' ? parseInt(value) || 10 : value;
+  return Math.floor((val - 10) / 2);
+};
+
+export const formatModifier = (mod: number): string => {
+  return mod >= 0 ? `+${mod}` : `${mod}`;
+};
+
+export const getSizeModifier = (size: string): number => {
+  const s = size.toLowerCase();
+  if (s.includes('超微') || s.includes('fine')) return 8;
+  if (s.includes('极小') || s.includes('diminutive')) return 4;
+  if (s.includes('微型') || s.includes('tiny')) return 2;
+  if (s.includes('小型') || s.includes('small')) return 1;
+  if (s.includes('中型') || s.includes('medium')) return 0;
+  if (s.includes('大型') || s.includes('large')) return -1;
+  if (s.includes('超大') || s.includes('huge')) return -2;
+  if (s.includes('极巨') || s.includes('gargantuan')) return -4;
+  if (s.includes('超巨') || s.includes('colossal')) return -8;
+  return 0;
+};
+
 export const calculateTotalCost = (data: CharacterData): string => {
   let total = 0;
   data.equipmentBags.forEach(bag => {
@@ -68,3 +91,18 @@ export const getComputedEncumbrance = (data: CharacterData): EncumbranceThreshol
     heavy: Math.floor(heavy * mult)
   };
 };
+
+/**
+ * 获取属性调整值对象，方便快速查找
+ */
+export const getAttributeModifiers = (data: CharacterData) => {
+  return {
+    str: getModifier(data.attributes[0]?.final),
+    dex: getModifier(data.attributes[1]?.final),
+    con: getModifier(data.attributes[2]?.final),
+    int: getModifier(data.attributes[3]?.final),
+    wis: getModifier(data.attributes[4]?.final),
+    cha: getModifier(data.attributes[5]?.final),
+  };
+};
+

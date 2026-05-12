@@ -16,30 +16,36 @@ import AppOverlays from './components/layout/AppOverlays';
 import CharacterEditor from './components/editor/CharacterEditor';
 
 // Context
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CharacterProvider, useCharacter } from './contexts/CharacterContext';
 
 export default function App() {
   console.log('>>> [APP] HELLO WORLD - VERSION 0.1 <<<');
   return (
-    <CharacterProvider>
-      <AppContent />
-    </CharacterProvider>
+    <AuthProvider>
+      <CharacterProvider>
+        <AppContent />
+      </CharacterProvider>
+    </AuthProvider>
   );
 }
 
 function AppContent() {
   const { t } = useTranslation();
-  const { 
-    user, 
-    view, 
-    setView, 
+  const {
+    view,
+    setView,
     isHeaderPinned,
     setIsHeaderPinned,
     isHeaderVisible,
     setIsHeaderVisible,
-    handleLogin,
     handleNew
   } = useCharacter();
+
+  const {
+    user,
+    handleLogin
+  } = useAuth();
 
   return (
     <div className="min-h-screen bg-stone-100 font-sans text-ink selection:bg-primary/20 flex flex-col h-screen overflow-hidden relative">

@@ -36,6 +36,7 @@ export default function CharacterEditor({
     handleTableItemDragStart,
     handleTableItemDragOver,
     handleTableItemDrop,
+    computed,
     addBag,
     removeBag,
     updateBagName,

@@ -1,4 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { DEFAULT_DATA } from "../constants";
+
 
 export const characterSchema = {
   type: Type.OBJECT,
@@ -245,6 +247,69 @@ export const characterSchema = {
   },
   required: ["basic", "attributes"]
 };
+
+/**
+ * 将 AI 提取的原始数据转换为符合 CharacterData 结构的格式，并与默认数据合并
+ */
+export function transformAIData(extracted: any) {
+  const mergedData = {
+    ...DEFAULT_DATA,
+    ...extracted,
+    basic: { ...DEFAULT_DATA.basic, ...(extracted.basic || {}) },
+    defenses: { ...DEFAULT_DATA.defenses, ...(extracted.defenses || {}) }
+  };
+
+  // 1. 处理属性 (Attributes)
+  if (extracted.attributes && Array.isArray(extracted.attributes)) {
+    const newAttributes = JSON.parse(JSON.stringify(DEFAULT_DATA.attributes));
+    extracted.attributes.forEach((extAttr: any) => {
+      const idx = newAttributes.findIndex((a: any) => a.name === extAttr.name || (extAttr.name && extAttr.name.includes(a.name)));
+      if (idx !== -1) {
+        newAttributes[idx] = { ...newAttributes[idx], ...extAttr };
+      }
+    });
+    mergedData.attributes = newAttributes;
+  }
+
+  // 2. 处理列表字段
+  const listFields = ['meleeAttacks', 'rangedAttacks', 'skills', 'feats', 'classFeatures', 'racialTraits', 'backgroundTraits'];
+  listFields.forEach(field => {
+    if (extracted[field] && Array.isArray(extracted[field])) {
+      mergedData[field] = extracted[field];
+    } else {
+      mergedData[field] = (DEFAULT_DATA as any)[field] || [];
+    }
+  });
+
+  // 3. 处理魔法/特殊能力块
+  if (extracted.magicBlocks && Array.isArray(extracted.magicBlocks)) {
+    mergedData.magicBlocks = extracted.magicBlocks.map((block: any) => ({
+      id: 'mb-' + Math.random().toString(36).substr(2, 9),
+      title: block.title || '特殊能力',
+      type: block.type || 'text',
+      content: block.content || '',
+      columns: block.columns || [{ key: 'col1', label: '信息' }],
+      tableData: block.tableData || []
+    }));
+  }
+
+  // 4. 处理装备容器
+  if (extracted.equipmentBags && Array.isArray(extracted.equipmentBags)) {
+    mergedData.equipmentBags = extracted.equipmentBags.map((bag: any) => ({
+      id: 'bag-' + Math.random().toString(36).substr(2, 9),
+      name: bag.name || '身上',
+      ignoreWeight: false,
+      items: (bag.items || []).map((item: any) => ({
+        item: item.item || '',
+        quantity: item.quantity || '1',
+        cost: item.cost || '',
+        weight: item.weight || '',
+      }))
+    }));
+  }
+
+  return mergedData;
+}
 
 export async function extractCharacterFromText(text: string, apiKey: string) {
   try {

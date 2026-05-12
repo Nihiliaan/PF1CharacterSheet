@@ -1,20 +1,25 @@
-import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
+import { produce } from 'immer';
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { User as FirebaseUser } from 'firebase/auth';
+import { useAuth } from './AuthContext';
 import { auth, googleProvider, githubProvider, discordProvider } from '../lib/firebase';
-import { loginWithProvider, logout as authLogout, linkAccount, unlinkProvider } from '../services/authService';
 import { CharacterData, FolderMetadata, CharacterMetadata } from '../types';
 import { DEFAULT_DATA } from '../constants';
-import { getDriveAccessToken, ensureFolder as ensureFolderDrive, uploadOrUpdateFile, listDriveFiles, getFileContent, findPF1Root } from '../services/googleDriveService';
 import { getMyCharacters, getFolders, saveCharacter as saveCharacterService, getCharacterById, deleteCharacter as deleteCharacterService, deleteFolder as deleteFolderService, renameItem as renameItemService, moveCharacter as moveCharacterService, moveFolder as moveFolderService, createFolder as createFolderService, copyCharacter as copyCharacterService, ensureLocalFolder as ensureLocalFolderService, saveLink } from '../services/characterService';
-import { extractCharacterFromText } from '../services/aiService';
+import { driveSyncService } from '../services/driveSyncService';
+import { extractCharacterFromText, transformAIData } from '../services/aiService';
+import { dataUpdateService } from '../services/dataUpdateService';
+import { useCharacterDnD } from '../hooks/useCharacterDnD';
 import { generateBBCode } from '../utils/bbcodeExporter';
 import { DEFAULT_BBCODE_TEMPLATE } from '../components/BBCodeTemplateEditor';
+import { getAttributeModifiers, calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../utils/calculations';
 
 interface CharacterContextType {
   // State
   data: CharacterData;
   setData: React.Dispatch<React.SetStateAction<CharacterData>>;
+  computed: any; // Derived/Calculated data
   lastSavedData: CharacterData;
   isReadOnly: boolean;
   setIsReadOnly: (val: boolean) => void;
@@ -53,13 +58,6 @@ interface CharacterContextType {
   addAdditionalBlock: (type: 'text' | 'table' | 'image') => void;
   updateAdditionalBlock: (id: string, updates: any) => void;
   removeAdditionalBlock: (id: string) => void;
-
-  // Auth State
-  user: FirebaseUser | null;
-  handleLogin: (provider: any) => Promise<void>;
-  handleLogout: () => Promise<void>;
-  handleLinkAccount: (provider: any) => Promise<void>;
-  handleUnlinkProvider: (providerId: string) => Promise<void>;
 
   // View & Navigation
   view: 'editor' | 'vault' | 'settings' | 'bbcode-template';
@@ -176,7 +174,7 @@ const mergeWithDefault = (data: any, defaults: any): any => {
 
 export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t } = useTranslation();
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const { user } = useAuth();
   const [view, setViewState] = useState<'editor' | 'vault' | 'settings' | 'bbcode-template'>('editor');
 
   // Header UI State
@@ -196,14 +194,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Initial Sync Logic
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-
+    // Initial Character Load from URL
+    const loadInitial = async () => {
       try {
-        // 1. Initial Character Load from URL
         const urlParams = new URLSearchParams(window.location.search);
         let charId = urlParams.get('id');
-        
+
         // If no ID in URL, try to get the most recent one from local storage
         if (!charId) {
           const saved = localStorage.getItem('recent_characters');
@@ -227,14 +223,14 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             if (char.isLink && char.targetId) {
               const targetChar = await getCharacterById(char.targetId);
               if (!targetChar || !targetChar.data) throw new Error("Linked target character not found or data is missing");
-              
+
               // Validate and merge with defaults
               const merged = mergeWithDefault(targetChar.data, DEFAULT_DATA);
-              
+
               setData(merged);
               setLastSavedData(JSON.parse(JSON.stringify(merged)));
               setCurrentDocumentId(targetChar.id);
-              setIsReadOnly(targetChar.ownerId !== u?.uid);
+              setIsReadOnly(targetChar.ownerId !== user?.uid);
               setViewState('editor');
               addToRecent(targetChar);
 
@@ -246,7 +242,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setBbcodeTemplate(char.data.content);
               setViewState('bbcode-template');
               setCurrentDocumentId(char.id);
-              setIsReadOnly(char.ownerId !== u?.uid);
+              setIsReadOnly(char.ownerId !== user?.uid);
               addToRecent(char);
             } else {
               // Validate and merge with defaults
@@ -255,7 +251,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               setData(merged);
               setLastSavedData(JSON.parse(JSON.stringify(merged)));
               setCurrentDocumentId(char.id);
-              setIsReadOnly(char.ownerId !== u?.uid);
+              setIsReadOnly(char.ownerId !== user?.uid);
               setViewState('editor');
               addToRecent(char);
 
@@ -263,9 +259,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               url.searchParams.set('id', char.id);
               window.history.replaceState({}, '', url.toString());
 
-              if (u && char.ownerId !== u.uid) {
+              if (user && char.ownerId !== user.uid) {
                 try {
-                  const folderId = await ensureLocalFolderService('来自分享', null, u.uid);
+                  const folderId = await ensureLocalFolderService('来自分享', null, user.uid);
                   const existingChars = await getMyCharacters();
                   const existingLink = existingChars?.find(c => c.isLink && c.targetId === char.id);
                   if (!existingLink) {
@@ -283,9 +279,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
         }
 
-        // 2. Initial List Refresh (if logged in)
-        if (u) {
-          await ensureLocalFolderService('来自分享', null, u.uid);
+        // Initial List Refresh (if logged in)
+        if (user) {
+          await ensureLocalFolderService('来自分享', null, user.uid);
           refreshCharacterList();
         }
       } catch (error) {
@@ -293,10 +289,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } finally {
         setIsSyncing(false);
       }
-    });
+    };
 
-    return () => unsubscribe();
-  }, []);
+    loadInitial();
+  }, [user]); // Re-run when user changes to handle shared links and list refresh
 
   useEffect(() => {
     if (user) {
@@ -304,45 +300,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [user]);
 
-  const handleLogin = async (provider: any) => {
-    try {
-      await loginWithProvider(provider);
-      setToast({ message: "登录成功！", type: 'success' });
-    } catch (e: any) {
-      setToast({ message: "登录失败: " + e.message, type: 'error' });
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await authLogout();
-      setToast({ message: "已退出登录" });
-    } catch (e: any) {
-      setToast({ message: "退出失败", type: 'error' });
-    }
-  };
-
-  const handleLinkAccount = async (provider: any) => {
-    try {
-      await linkAccount(provider);
-      setToast({ message: "账号绑定成功" });
-    } catch (e: any) {
-      if (e.code === 'auth/credential-already-in-use') {
-        setToast({ message: "该账号已被其他用户绑定", type: 'error' });
-      } else {
-        setToast({ message: "绑定失败: " + e.message, type: 'error' });
-      }
-    }
-  };
-
-  const handleUnlinkProvider = async (providerId: string) => {
-    try {
-      await unlinkProvider(providerId);
-      setToast({ message: "账号解绑成功" });
-    } catch (e: any) {
-      setToast({ message: "解绑失败: " + e.message, type: 'error' });
-    }
-  };
+  // Auth logic moved to AuthContext
 
   // View & Recent logic
   useEffect(() => {
@@ -415,11 +373,25 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [showAIModal, setShowAIModal] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
 
-  // Refs for Drag & Drop
-  const draggedTableItem = useRef<{ listKey: string, itemIndex: number } | null>(null);
-  const draggedBagIndex = useRef<number | null>(null);
-  const draggedItem = useRef<{ bagId: string, itemIndex: number } | null>(null);
-  const draggedBlockId = useRef<string | null>(null);
+  // Computed / Derived State
+  const computed = useMemo(() => {
+    const modifiers = getAttributeModifiers(data);
+    return {
+      modifiers,
+      totalCost: calculateTotalCost(data),
+      totalWeight: calculateTotalWeightNum(data),
+      encumbrance: getComputedEncumbrance(data),
+      // Future derived stats can be added here
+    };
+  }, [data]);
+
+  // Drag & Drop Logic via Custom Hook
+  const {
+    handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
+    handleBagDragStart, handleBagDragOver, handleBagDrop,
+    handleItemDragStart, handleItemDragOver, handleItemDrop,
+    handleDragStart, handleDragOver, handleDrop
+  } = useCharacterDnD(data, setData);
 
   const isEqual = (a: any, b: any): boolean => {
     if (a === b) return true;
@@ -454,45 +426,23 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const updateBasic = useCallback((key: string, val: any) => {
     if (isReadOnly) return;
-    setData(p => ({ ...p, basic: { ...p.basic, [key]: val } }));
+    setData(p => dataUpdateService.updateField(p, 'basic', key, val));
   }, [isReadOnly]);
 
   const updateDefenses = useCallback((key: string, val: any) => {
     if (isReadOnly) return;
-    setData(p => ({ ...p, defenses: { ...p.defenses, [key]: val } }));
+    setData(p => dataUpdateService.updateField(p, 'defenses', key, val));
   }, [isReadOnly]);
 
-  const addBag = () => {
-    setData(p => ({
-      ...p,
-      equipmentBags: [...p.equipmentBags, { id: 'bag-' + Math.random(), name: '新背包 (New Bag)', ignoreWeight: false, items: [] }]
-    }));
-  };
+  const addBag = () => setData(p => dataUpdateService.addBag(p));
 
-  const removeBag = (id: string) => {
-    setData(p => ({ ...p, equipmentBags: p.equipmentBags.filter(b => b.id !== id) }));
-  };
+  const removeBag = (id: string) => setData(p => dataUpdateService.removeBag(p, id));
 
-  const updateBagName = (id: string, name: string) => {
-    setData(p => ({
-      ...p,
-      equipmentBags: p.equipmentBags.map(b => b.id === id ? { ...b, name } : b)
-    }));
-  };
+  const updateBagName = (id: string, name: string) => setData(p => dataUpdateService.updateBag(p, id, { name }));
 
-  const toggleBagWeight = (id: string, ignoreWeight: boolean) => {
-    setData(p => ({
-      ...p,
-      equipmentBags: p.equipmentBags.map(b => b.id === id ? { ...b, ignoreWeight } : b)
-    }));
-  };
+  const toggleBagWeight = (id: string, ignoreWeight: boolean) => setData(p => dataUpdateService.updateBag(p, id, { ignoreWeight }));
 
-  const updateBagItems = (id: string, items: any[]) => {
-    setData(p => ({
-      ...p,
-      equipmentBags: p.equipmentBags.map(b => b.id === id ? { ...b, items } : b)
-    }));
-  };
+  const updateBagItems = (id: string, items: any[]) => setData(p => dataUpdateService.updateBag(p, id, { items }));
 
   const handleSaveInternal = async (saveData: CharacterData, id?: string | null, folderId?: string | null) => {
     if (!user) {
@@ -676,11 +626,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setCurrentDocumentId(char.id);
           setViewState('editor');
         }
-        
+
         const url = new URL(window.location.href);
         url.searchParams.set('id', char.id);
         window.history.replaceState({}, '', url.toString());
-        
+
         addToRecent(char);
         if (user && char.ownerId === user.uid) {
           setIsReadOnly(false);
@@ -703,131 +653,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  // Drag & Drop Handlers (Ported from App.tsx)
-  const handleTableItemDragStart = (listKey: string, itemIndex: number, e: React.DragEvent) => {
-    e.dataTransfer.effectAllowed = 'move';
-    draggedTableItem.current = { listKey, itemIndex };
-    e.stopPropagation();
-  };
-
-  const handleTableItemDragOver = (listKey: string, targetItemIndex: number, e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const currentDrag = draggedTableItem.current;
-    if (currentDrag !== null && currentDrag.listKey === listKey) {
-      const sourceItemIndex = currentDrag.itemIndex;
-      if (sourceItemIndex !== targetItemIndex) {
-        setData(p => {
-          const newList = [...(p as any)[listKey]];
-          const [item] = newList.splice(sourceItemIndex, 1);
-          if (item !== undefined) {
-            newList.splice(targetItemIndex, 0, item);
-          }
-          return { ...p, [listKey]: newList };
-        });
-        draggedTableItem.current = { listKey, itemIndex: targetItemIndex };
-      }
-    }
-  };
-
-  const handleTableItemDrop = (listKey: string, targetItemIndex: number, e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    draggedTableItem.current = null;
-  };
-
-  const handleBagDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.effectAllowed = 'move';
-    draggedBagIndex.current = index;
-  };
-
-  const handleBagDragOver = (e: React.DragEvent, targetIndex: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const sourceIndex = draggedBagIndex.current;
-    if (sourceIndex !== null && sourceIndex !== targetIndex) {
-      setData(p => {
-        const newBags = [...p.equipmentBags];
-        const [moved] = newBags.splice(sourceIndex, 1);
-        if (moved !== undefined) {
-          newBags.splice(targetIndex, 0, moved);
-        }
-        return { ...p, equipmentBags: newBags };
-      });
-      draggedBagIndex.current = targetIndex;
-    }
-  };
-
-  const handleBagDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (draggedItem.current !== null) {
-      const currentDrag = draggedItem.current;
-      const sourceBag = data.equipmentBags.find(b => b.id === currentDrag.bagId);
-      if (sourceBag) {
-        const targetBag = data.equipmentBags[dropIndex];
-        if (sourceBag.id !== targetBag.id) {
-          const item = sourceBag.items[currentDrag.itemIndex];
-          if (item !== undefined) {
-            const newBags = data.equipmentBags.map(b => {
-              if (b.id === sourceBag.id) {
-                return { ...b, items: b.items.filter((_, i) => i !== currentDrag.itemIndex) };
-              }
-              if (b.id === targetBag.id) {
-                return { ...b, items: [...b.items, item] };
-              }
-              return b;
-            });
-            setData(p => ({ ...p, equipmentBags: newBags }));
-          }
-        }
-      }
-    }
-    draggedBagIndex.current = null;
-    draggedItem.current = null;
-  };
-
-  const handleItemDragStart = (bagId: string, itemIndex: number, e: React.DragEvent) => {
-    e.dataTransfer.effectAllowed = 'move';
-    draggedItem.current = { bagId, itemIndex };
-    e.stopPropagation();
-  };
-
-  const handleItemDragOver = (targetBagId: string, targetItemIndex: number, e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const currentDrag = draggedItem.current;
-    if (currentDrag !== null) {
-      const { bagId: sourceBagId, itemIndex: sourceItemIndex } = currentDrag;
-      if (sourceBagId !== targetBagId || sourceItemIndex !== targetItemIndex) {
-        setData(p => {
-          const newBags = [...p.equipmentBags];
-          const sBagIdx = newBags.findIndex(b => b.id === sourceBagId);
-          const tBagIdx = newBags.findIndex(b => b.id === targetBagId);
-          if (sBagIdx !== -1 && tBagIdx !== -1) {
-            newBags[sBagIdx] = { ...newBags[sBagIdx], items: [...newBags[sBagIdx].items] };
-            if (sBagIdx !== tBagIdx) {
-              newBags[tBagIdx] = { ...newBags[tBagIdx], items: [...newBags[tBagIdx].items] };
-            }
-            const [item] = newBags[sBagIdx].items.splice(sourceItemIndex, 1);
-            if (item !== undefined) {
-              newBags[tBagIdx].items.splice(targetItemIndex, 0, item);
-            }
-            return { ...p, equipmentBags: newBags };
-          }
-          return p;
-        });
-        draggedItem.current = { bagId: targetBagId, itemIndex: targetItemIndex };
-      }
-    }
-  };
-
-  const handleItemDrop = (targetBagId: string, targetItemIndex: number, e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    draggedBagIndex.current = null;
-    draggedItem.current = null;
-  };
+  // Drag & Drop Handlers removed - now in useCharacterDnD hook
 
   const addAdditionalBlock = (type: 'text' | 'table' | 'image') => {
     const newBlock = {
@@ -911,34 +737,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setData(p => ({ ...p, magicBlocks: p.magicBlocks.filter(b => b.id !== id) }));
   };
 
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    draggedBlockId.current = id;
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent, targetId: string, listName: 'additionalData' | 'magicBlocks') => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const sourceId = draggedBlockId.current;
-    if (sourceId && sourceId !== targetId) {
-      setData(p => {
-        const arr = [...p[listName]];
-        const fromIndex = arr.findIndex(b => b.id === sourceId);
-        const toIndex = arr.findIndex(b => b.id === targetId);
-        if (fromIndex === -1 || toIndex === -1) return p;
-        const [movedBlock] = arr.splice(fromIndex, 1);
-        if (movedBlock !== undefined) {
-          arr.splice(toIndex, 0, movedBlock);
-        }
-        return { ...p, [listName]: arr };
-      });
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent, targetId: string, listName: 'additionalData' | 'magicBlocks') => {
-    e.preventDefault();
-    draggedBlockId.current = null;
-  };
+  // Drag & Drop Handlers for blocks removed - now in useCharacterDnD hook
 
   const saveAsTemplate = async (name: string, content: string) => {
     if (!user) {
@@ -1024,76 +823,19 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIsAILoading(true);
     setAiStatusMsg('正在启动神识扫描...');
     try {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("AI 响应超时，请检查网络连接或 API Key 是否正确。如果是初次使用，可能由于网络环境需要较长时间，或请确保您可以正常访问 Google 服务。")), 90000)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("AI 响应超时，请检查网络连接或 API Key 是否正确。")), 90000)
       );
-      
-      setAiStatusMsg('正在传输数据至 Gemini...');
-      const extractionPromise = (async () => {
-        const result = await extractCharacterFromText(textToProcess, keyToUse);
-        setAiStatusMsg('接收到神识反馈，正在解析结构...');
-        return result;
-      })();
 
-      const extracted = await Promise.race([
-        extractionPromise,
-        timeoutPromise
-      ]) as any;
+      setAiStatusMsg('正在传输数据至 Gemini...');
+      const extractionPromise = extractCharacterFromText(textToProcess, keyToUse);
+
+      const extracted = await Promise.race([extractionPromise, timeoutPromise]) as any;
 
       if (!showAIModalRef.current) return;
 
       setAiStatusMsg('正在同步至跑团卡系统...');
-      const mergedData = {
-        ...DEFAULT_DATA,
-        ...extracted,
-        basic: { ...DEFAULT_DATA.basic, ...(extracted.basic || {}) },
-        defenses: { ...DEFAULT_DATA.defenses, ...(extracted.defenses || {}) }
-      };
-
-      if (extracted.attributes && Array.isArray(extracted.attributes)) {
-        const newAttributes = JSON.parse(JSON.stringify(DEFAULT_DATA.attributes));
-        extracted.attributes.forEach((extAttr: any) => {
-          const idx = newAttributes.findIndex((a: any) => a.name === extAttr.name || (extAttr.name && extAttr.name.includes(a.name)));
-          if (idx !== -1) {
-            newAttributes[idx] = { ...newAttributes[idx], ...extAttr };
-          }
-        });
-        mergedData.attributes = newAttributes;
-      }
-
-      const listFields = ['meleeAttacks', 'rangedAttacks', 'skills', 'feats', 'classFeatures', 'racialTraits', 'backgroundTraits'];
-      listFields.forEach(field => {
-        if (extracted[field] && Array.isArray(extracted[field])) {
-          mergedData[field] = extracted[field];
-        } else {
-          mergedData[field] = (DEFAULT_DATA as any)[field] || [];
-        }
-      });
-
-      if (extracted.magicBlocks && Array.isArray(extracted.magicBlocks)) {
-        mergedData.magicBlocks = extracted.magicBlocks.map((block: any) => ({
-          id: 'mb-' + Math.random().toString(36).substr(2, 9),
-          title: block.title || '特殊能力',
-          type: block.type || 'text',
-          content: block.content || '',
-          columns: block.columns || [{ key: 'col1', label: '信息' }],
-          tableData: block.tableData || []
-        }));
-      }
-
-      if (extracted.equipmentBags && Array.isArray(extracted.equipmentBags)) {
-        mergedData.equipmentBags = extracted.equipmentBags.map((bag: any) => ({
-          id: 'bag-' + Math.random().toString(36).substr(2, 9),
-          name: bag.name || '身上',
-          ignoreWeight: false,
-          items: (bag.items || []).map((item: any) => ({
-            item: item.item || '',
-            quantity: item.quantity || '1',
-            cost: item.cost || '',
-            weight: item.weight || '',
-          }))
-        }));
-      }
+      const mergedData = transformAIData(extracted);
 
       setData(mergedData);
       setToast({ message: "AI 识别并填写成功！" });
@@ -1104,7 +846,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } catch (e: any) {
       console.error("AI Extraction Error:", e);
       if (showAIModalRef.current) {
-        setToast({ message: "AI 识别失败: " + (e.message || "未能从回复中提取有效数据"), type: 'error' });
+        setToast({ message: "AI 识别失败: " + (e.message || "未能提取有效数据"), type: 'error' });
       }
     } finally {
       setIsAILoading(false);
@@ -1116,27 +858,14 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isSyncingDrive, setIsSyncingDrive] = useState(false);
 
   const handleBrowseDrive = async () => {
-    if (!user) return;
-    const isGoogleUser = user.providerData.some(p => p.providerId === 'google.com');
-    if (!isGoogleUser) {
-      setToast({ message: "请通过 Google 账号登录以使用此功能", type: 'error' });
-      return;
-    }
     setToast({ message: "正在连接 Google 云端硬盘..." });
     try {
-      const token = await getDriveAccessToken();
-      if (!token) throw new Error("No token");
-      const pf1RootId = await findPF1Root(token);
-      if (!pf1RootId) {
+      const result = await driveSyncService.browseDrive(user);
+      if (result.needsFolder) {
         setToast({ message: "未找到备份文件夹 (PF1CharacterSheet)", type: 'info' });
         return;
       }
-      const items = await listDriveFiles(token, pf1RootId);
-      setDriveModal({
-        isOpen: true,
-        currentPath: [{ id: pf1RootId, name: 'PF1CharacterSheet' }],
-        items
-      });
+      setDriveModal({ isOpen: true, currentPath: result.currentPath!, items: result.items! });
     } catch (e: any) {
       setToast({ message: "连接失败: " + e.message, type: 'error' });
     }
@@ -1145,13 +874,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const navigateDrive = async (folderId: string, folderName: string) => {
     if (!driveModal) return;
     try {
-      const token = await getDriveAccessToken();
-      const items = await listDriveFiles(token, folderId);
-      setDriveModal({
-        ...driveModal,
-        currentPath: [...driveModal.currentPath, { id: folderId, name: folderName }],
-        items
-      });
+      const result = await driveSyncService.navigate(folderId, folderName, driveModal.currentPath);
+      setDriveModal({ ...driveModal, currentPath: result.currentPath, items: result.items });
     } catch (e: any) {
       setToast({ message: "跳转失败: " + e.message, type: 'error' });
     }
@@ -1160,49 +884,19 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const navigateToPathIndex = async (index: number) => {
     if (!driveModal) return;
     try {
-      const token = await getDriveAccessToken();
       const target = driveModal.currentPath[index];
-      const items = await listDriveFiles(token, target.id);
-      setDriveModal({
-        ...driveModal,
-        currentPath: driveModal.currentPath.slice(0, index + 1),
-        items
-      });
+      const result = await driveSyncService.navigate(target.id, target.name, driveModal.currentPath.slice(0, index));
+      setDriveModal({ ...driveModal, currentPath: result.currentPath, items: result.items });
     } catch (e: any) {
       setToast({ message: "跳转失败: " + e.message, type: 'error' });
     }
   };
 
   const importFromDrive = async (item: any) => {
-    if (!item || !driveModal) return;
+    if (!item || !driveModal || !user) return;
     setToast({ message: `正在从云端读取: ${item.name}...` });
     try {
-      const token = await getDriveAccessToken();
-      let count = 0;
-      const targetFolderId = currentFolderId;
-
-      const processItem = async (driveItem: any, targetId: string | null) => {
-        if (driveItem.mimeType === 'application/vnd.google-apps.folder') {
-          const newLocalId = await ensureLocalFolderService(driveItem.name, targetId, user!.uid);
-          const children = await listDriveFiles(token, driveItem.id);
-          for (const child of children) {
-            await processItem(child, newLocalId);
-          }
-        } else if (driveItem.name.endsWith('.json')) {
-          const content = await getFileContent(token, driveItem.id);
-          if (content._isLink && content._targetId) {
-             const fakeTargetChar = { id: content._targetId, data: content };
-             await saveLink(fakeTargetChar, targetId);
-             count++;
-          } else if (content.basic && content.attributes) {
-            const finalData = { ...content, basic: { ...content.basic, name: content.basic.name || driveItem.name.replace('.json', '') } };
-            await handleSaveInternal(finalData, undefined, targetId);
-            count++;
-          }
-        }
-      };
-
-      await processItem(item, targetFolderId);
+      const count = await driveSyncService.importItems(item, user, currentFolderId);
       await refreshCharacterList();
       setToast({ message: `导入成功！共导入 ${count} 个人物卡` });
       setDriveModal(null);
@@ -1213,47 +907,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleCloudBackup = async () => {
     if (!user) return;
-    const isGoogleUser = user.providerData.some(p => p.providerId === 'google.com');
-    if (!isGoogleUser) {
-      setToast({ message: "请通过 Google 账号登录以使用同步功能", type: 'error' });
-      return;
-    }
-
     setIsSyncingDrive(true);
     setToast({ message: "正在备份到 Google 云端硬盘..." });
     try {
-      const token = await getDriveAccessToken();
-      if (!token) throw new Error("No token");
-      const rootFolderId = await ensureFolderDrive(token, "PF1CharacterSheet");
-      const driveFolderMap: Record<string, string> = { 'root': rootFolderId };
-
-      const sortedFoldersList = [...folders].sort((a, b) => {
-        const getDepth = (id: string | null): number => {
-          if (!id) return 0;
-          const f = folders.find(f => f.id === id);
-          return 1 + getDepth(f?.parentId || null);
-        };
-        return getDepth(a.parentId) - getDepth(b.parentId);
-      });
-
-      for (const folder of sortedFoldersList) {
-        const parentDriveId = driveFolderMap[folder.parentId || 'root'];
-        const driveId = await ensureFolderDrive(token, folder.name, parentDriveId);
-        driveFolderMap[folder.id] = driveId;
-      }
-
-      await Promise.all(myCharacters.map(async char => {
-        const parentDriveId = driveFolderMap[char.folderId || 'root'] || rootFolderId;
-        const rawName = char.name || '未命名角色';
-        const rawClasses = char.data?.basic?.classes || '人物卡';
-        const fileName = `${rawName.replace(/[\\/:*?"<>|]/g, '_')}_${String(rawClasses).replace(/[\\/:*?"<>|]/g, '_').slice(0, 30)}_${char.id.slice(-6)}.json`;
-        let dataToSave = char.data;
-        if (char.isLink) {
-          dataToSave = { ...char.data, _isLink: true, _targetId: char.targetId };
-        }
-        await uploadOrUpdateFile(token, fileName, dataToSave, parentDriveId);
-      }));
-
+      await driveSyncService.backupToCloud(user, myCharacters, folders);
       setToast({ message: "备份成功！所有数据已同步至 PF1CharacterSheet 文件夹" });
     } catch (e: any) {
       console.error(e);
@@ -1265,51 +922,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleCloudRestore = async () => {
     if (!user) return;
-    const isGoogleUser = user.providerData.some(p => p.providerId === 'google.com');
-    if (!isGoogleUser) {
-      setToast({ message: "请通过 Google 账号登录以使用此功能", type: 'error' });
-      return;
-    }
-
     setToast({ message: "正在从云端备份还原数据..." });
     try {
-      const token = await getDriveAccessToken();
-      if (!token) throw new Error("No token");
-      const pf1RootId = await findPF1Root(token);
-      if (!pf1RootId) {
-        setToast({ message: "未找到备份文件夹 (PF1CharacterSheet)", type: 'info' });
-        return;
-      }
-
-      let importCount = 0;
-      const processDriveFolder = async (driveFolderId: string, localParentId: string | null) => {
-        const items = await listDriveFiles(token, driveFolderId);
-        for (const item of items) {
-          if (item.mimeType === 'application/vnd.google-apps.folder') {
-            const newLocalFolderId = await ensureLocalFolderService(item.name, localParentId, user!.uid);
-            await processDriveFolder(item.id, newLocalFolderId);
-          } else if (item.name.endsWith('.json')) {
-            try {
-              const content = await getFileContent(token, item.id);
-              if (content._isLink && content._targetId) {
-                const fakeTargetChar = { id: content._targetId, data: content };
-                await saveLink(fakeTargetChar, localParentId);
-                importCount++;
-              } else if (content.basic && content.attributes) {
-                const finalData = { ...content, basic: { ...content.basic, name: content.basic.name || item.name.split('_')[0].replace('.json', '') } };
-                await handleSaveInternal(finalData, undefined, localParentId);
-                importCount++;
-              }
-            } catch (e) {
-              console.warn(`Failed to restore file ${item.name}`, e);
-            }
-          }
-        }
-      };
-
-      await processDriveFolder(pf1RootId, currentFolderId);
+      const count = await driveSyncService.restoreFromCloud(user, currentFolderId);
       await refreshCharacterList();
-      setToast({ message: `还原成功！共恢复 ${importCount} 个人物卡` });
+      setToast({ message: `还原成功！共恢复 ${count} 个人物卡` });
     } catch (e: any) {
       setToast({ message: "还原失败: " + e.message, type: 'error' });
     }
@@ -1374,7 +991,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const value: CharacterContextType = {
-    data, setData, lastSavedData, isReadOnly, setIsReadOnly, currentDocumentId, setCurrentDocumentId, isSaving,
+    data, setData, computed, lastSavedData, isReadOnly, setIsReadOnly, currentDocumentId, setCurrentDocumentId, isSaving,
     isSyncing, setIsSyncing, confirmModal, setConfirmModal,
     tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor,
     myCharacters, folders, currentFolderId, setCurrentFolderId, refreshCharacterList,
@@ -1394,8 +1011,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     userApiKey, setUserApiKey, showApiKeyInput, setShowApiKeyInput, aiInputText, setAiInputText,
     // AI
     showAIModal, setShowAIModal, isAILoading, aiStatusMsg,
-    // Auth & View
-    user, handleLogin, handleLogout, handleLinkAccount, handleUnlinkProvider,
+    // View
     view, setView, recentCharacters, addToRecent, removeFromRecent,
     bbcodeTemplate, setBbcodeTemplate, saveAsTemplate, updateExistingTemplate,
     getItemPath,
