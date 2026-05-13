@@ -237,12 +237,16 @@ export async function getMyCharacters() {
       return {
         ...d,
         id: doc.id,
+        isLink: !!d.targetId,
+        isTemplate: !!d.isTemplate,
         data: {
           ...d.data,
           id: doc.id,
           ownerId: d.ownerId,
           folderId: d.folderId,
-          targetId: d.targetId || ''
+          targetId: d.targetId || '',
+          isLink: !!d.targetId,
+          isTemplate: !!d.isTemplate
         }
       };
     });
@@ -261,12 +265,16 @@ export async function getCharacterById(id: string) {
       return {
         ...d,
         id: docSnap.id,
+        isLink: !!d.targetId,
+        isTemplate: !!d.isTemplate,
         data: {
           ...d.data,
           id: docSnap.id,
           ownerId: d.ownerId,
           folderId: d.folderId,
-          targetId: d.targetId || ''
+          targetId: d.targetId || '',
+          isLink: !!d.targetId,
+          isTemplate: !!d.isTemplate
         }
       };
     }

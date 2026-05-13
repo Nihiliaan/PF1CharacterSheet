@@ -18,6 +18,11 @@
     "add_text": "添加文本框",
     "add_table": "添加表格",
     "add_image": "添加图片",
+    "add_row": "添加行",
+    "confirm_delete_container": "确定要删除这个容器吗？其中的所有内容都将丢失。",
+    "common": {
+      "add_row": "添加行"
+    },
     "delete": "删除",
     "delete_container": "删除容器",
     "none": "无"
@@ -111,9 +116,13 @@
       },
       "combat_stats": "战斗数值",
       "maneuver_notes": "战技备注",
-      "maneuver_placeholder": "在此输入战技相关的特殊加值或备注..."
+      "maneuver_placeholder": "在此输入战技相关的特殊加值或备注...",
+      "bab": "基础攻击加值 (BAB)",
+      "cmb": "战技加值 (CMB)",
+      "cmd": "战技防御 (CMD)"
     },
     "attacks": {
+      "weapon": "攻击/武器",
       "melee": "近战武器",
       "ranged": "远程武器",
       "hit": "命中",
@@ -128,7 +137,8 @@
     },
     "defenses": {
       "ac_details": "防御等级",
-      "ac": "AC",
+      "ac": "防御等级 (AC)",
+      "ac_source": "来源",
       "touch": "接触",
       "flat_footed": "措手不及",
       "ac_notes": "AC 备注",
@@ -206,6 +216,15 @@
       "no_items": "此容器内无物品"
     },
     "lists": {
+      "name": "名称",
+      "type": "类型",
+      "headers": {
+        "name": "名称",
+        "type": "类型",
+        "level": "等级",
+        "source": "来源",
+        "description": "描述"
+      },
       "trait": "背景特性",
       "trait_name": "背景名称",
       "description": "描述",
@@ -221,6 +240,9 @@
       "block_title": "区块标题",
       "image_url": "图片链接",
       "level_format": "{{n}}级",
+      "age_format": "{{n}}岁",
+      "height_format": "{{ft}}英尺{{in}}英寸",
+      "height_format_ft": "{{ft}}英尺",
       "distance_format": "{{v}}英尺"
     },
     "bbcode": {

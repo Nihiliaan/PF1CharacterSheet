@@ -36,8 +36,9 @@ export function useNumericStepper({
   useEffect(() => {
     const container = containerRef.current;
 
-    // 只要提供了 step，我们就认为这是一个数值调整组件
-    if (!container || readOnly || propStep === undefined) return;
+    // 只要提供了 step，且类型不是排除列表中的，我们就认为这是一个数值调整组件
+    const excludedTypes = ['attributeIndex', 'select', 'attributeindex'];
+    if (!container || readOnly || propStep === undefined || excludedTypes.includes(type.toLowerCase())) return;
 
     // Determine defaults
     const step = propStep;

@@ -9,29 +9,27 @@ import AccountMenu from '../character/AccountMenu';
 import { googleProvider } from '../../lib/firebase';
 import { logout } from '../../services/authService';
 
+import { useUI } from '../../contexts/UIContext';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCharacterAI } from '../../hooks/useCharacterAI';
 
-interface AppHeaderProps {
-  isHeaderVisible: boolean;
-  setIsHeaderVisible: (visible: boolean) => void;
-  isHeaderPinned: boolean;
-  setIsHeaderPinned: (pinned: boolean) => void;
-}
-
-export default function AppHeader({
-  isHeaderVisible,
-  setIsHeaderVisible,
-  isHeaderPinned,
-  setIsHeaderPinned
-}: AppHeaderProps) {
+export default function AppHeader() {
   const { t, i18n } = useTranslation();
   const { user, handleLogin, handleLogout } = useAuth();
+
   const {
     view,
     setView,
     recentCharacters,
     removeFromRecent,
+    isHeaderVisible,
+    setIsHeaderVisible,
+    isHeaderPinned,
+    setIsHeaderPinned
+  } = useUI();
+
+  const {
     isReadOnly,
     isSaving,
     handleSave,
@@ -41,8 +39,11 @@ export default function AppHeader({
     handleNew,
     currentDocumentId,
     selectCharacter,
-    setShowAIModal
+    setData,
+    setCurrentDocumentId
   } = useCharacter();
+
+  const { setShowAIModal } = useCharacterAI(setData, setCurrentDocumentId);
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';

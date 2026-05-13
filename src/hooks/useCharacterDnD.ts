@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import React, { useRef } from 'react';
 import { produce } from 'immer';
 import { dataUpdateService } from '../services/dataUpdateService';
 import { CharacterData } from '../types';
@@ -62,7 +62,9 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
       const currentDrag = draggedItem.current;
       const targetBag = data.equipmentBags[dropIndex];
       if (currentDrag.bagId !== targetBag.id) {
-        setData(p => dataUpdateService.moveItemBetweenBags(p, currentDrag.bagId, currentDrag.itemIndex, targetBag.id, targetBag.items.length));
+        const targetItems = targetBag.items as any;
+        const targetLength = Array.isArray(targetItems) ? targetItems.length : (Object.values(targetItems)[0] as any[])?.length || 0;
+        setData(p => dataUpdateService.moveItemBetweenBags(p, currentDrag.bagId, currentDrag.itemIndex, targetBag.id, targetLength));
       }
     }
     draggedBagIndex.current = null;
@@ -88,8 +90,13 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
             return produce(p, draft => {
               const bag = draft.equipmentBags.find(b => b.id === sourceBagId);
               if (bag) {
-                const [item] = bag.items.splice(sourceItemIndex, 1);
-                bag.items.splice(targetItemIndex, 0, item);
+                const items = bag.items as any;
+                Object.keys(items).forEach(key => {
+                  if (Array.isArray(items[key])) {
+                    const [val] = items[key].splice(sourceItemIndex, 1);
+                    items[key].splice(targetItemIndex, 0, val);
+                  }
+                });
               }
             });
           }

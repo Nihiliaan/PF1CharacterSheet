@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { DynamicTableProps } from '../../types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
@@ -24,6 +25,8 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     minWidth = '600px'
   } = props;
 
+  const { t } = useTranslation();
+
   // 从 Schema 获取 Handler
   const tableHandler = path ? getHandlerByPath(path) : null;
 
@@ -31,17 +34,17 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
   const columns = propsColumns || tableHandler?.columns || [];
   const fixedRows = propsFixedRows !== undefined ? propsFixedRows : tableHandler?.fixedRows;
 
-  // SoA 模式下的行数计算：取第一个定义了的列数组的长度
+  // SoA 模式下的行数计算
   const rowCount = React.useMemo(() => {
-    if (!data || typeof data !== 'object') return 0;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return 0;
     const firstKey = columns[0]?.key;
-    return (data[firstKey] && Array.isArray(data[firstKey])) ? data[firstKey].length : 0;
+    if (!firstKey) return 0;
+    const colData = (data as Record<string, any>)[firstKey];
+    return Array.isArray(colData) ? colData.length : 0;
   }, [data, columns]);
 
   const updateData = (index: number, key: string, value: any) => {
     if (readOnly) return;
-
-    // SoA 更新逻辑：更新对应 key 的数组在 index 处的值
     const newData = { ...data };
     if (!newData[key]) newData[key] = [];
     const newColArray = [...newData[key]];
@@ -60,7 +63,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     const newData = { ...data };
 
     if (newItemGenerator) {
-      const newItem = newItemGenerator(); // SoA 模式下 generator 应该返回一个对象
+      const newItem = newItemGenerator();
       Object.keys(newItem).forEach(key => {
         if (!newData[key]) newData[key] = new Array(rowCount).fill('');
         newData[key] = [...newData[key], newItem[key]];
@@ -95,7 +98,20 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     return columns.some(c => {
       const val = data[c.key]?.[index];
       const origVal = originalData[c.key]?.[index];
-      return JSON.stringify(val) !== JSON.stringify(origVal);
+      if (val === origVal) return false;
+
+      // 获取该列的处理器
+      const cellPath = getCellPath(path || '', index, c.key);
+      const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
+
+      const v1 = cellHandler?.update ? cellHandler.update(String(val ?? '')) : val;
+      const v2 = cellHandler?.update ? cellHandler.update(String(origVal ?? '')) : origVal;
+
+      if (typeof v1 === 'object' || typeof v2 === 'object') {
+        return JSON.stringify(v1) !== JSON.stringify(v2);
+      }
+
+      return v1 !== v2;
     });
   };
 
@@ -105,7 +121,6 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     return ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => k.includes(word));
   };
 
-  // 生成行视图的辅助函数
   const getRowData = (index: number) => {
     const row: Record<string, any> = {};
     columns.forEach(c => {
@@ -120,8 +135,8 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
         <thead>
           <tr className="bg-stone-200 text-stone-700">
             {columns.map((c: any) => (
-              <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold group/th relative whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
-                {c.label}
+              <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold relative whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+                {t(c.label)}
               </th>
             ))}
             {!fixedRows && (
@@ -203,7 +218,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                   onClick={addRow}
                   className="flex items-center gap-1 text-xs text-stone-600 hover:text-stone-900 px-3 py-2 w-full justify-center font-medium uppercase tracking-wider"
                 >
-                  <Plus size={14} /> 添加行 Add Row
+                  <Plus size={14} /> {t('common.add_row')}
                 </button>
               </td>
             </tr>

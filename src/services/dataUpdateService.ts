@@ -26,7 +26,13 @@ export const dataUpdateService = {
         id: 'bag-' + Math.random().toString(36).substr(2, 9),
         name: '新背包',
         ignoreWeight: false,
-        items: []
+        items: {
+          item: [],
+          quantity: [],
+          cost: [],
+          weight: [],
+          notes: []
+        }
       });
     });
   },
@@ -80,11 +86,25 @@ export const dataUpdateService = {
     return produce(data, draft => {
       const parts = path.split('.');
       let list = draft as any;
-      for (const part of parts) {
-        list = list[part];
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        const match = part.match(/(.+)\[(\d+)\]/);
+        if (match) {
+          list = list[match[1]][parseInt(match[2], 10)];
+        } else {
+          list = list[part];
+        }
       }
 
-      if (Array.isArray(list)) {
+      if (list && typeof list === 'object' && !Array.isArray(list)) {
+        // SoA 模式：对所有列进行同步排序
+        Object.keys(list).forEach(key => {
+          if (Array.isArray(list[key])) {
+            const [removed] = list[key].splice(sourceIndex, 1);
+            list[key].splice(targetIndex, 0, removed);
+          }
+        });
+      } else if (Array.isArray(list)) {
         const [removed] = list.splice(sourceIndex, 1);
         list.splice(targetIndex, 0, removed);
       }
@@ -99,10 +119,22 @@ export const dataUpdateService = {
       const sourceBag = draft.equipmentBags.find(b => b.id === sourceBagId);
       const targetBag = draft.equipmentBags.find(b => b.id === targetBagId);
       if (sourceBag && targetBag) {
-        const [item] = sourceBag.items.splice(sourceIndex, 1);
-        if (item) {
-          targetBag.items.splice(targetIndex, 0, item);
-        }
+        const sourceItems = sourceBag.items as any;
+        const targetItems = targetBag.items as any;
+
+        const removedItem: Record<string, any> = {};
+        Object.keys(sourceItems).forEach(key => {
+          if (Array.isArray(sourceItems[key])) {
+            const [val] = sourceItems[key].splice(sourceIndex, 1);
+            removedItem[key] = val;
+          }
+        });
+
+        Object.keys(targetItems).forEach(key => {
+          if (Array.isArray(targetItems[key])) {
+            targetItems[key].splice(targetIndex, 0, removedItem[key] ?? '');
+          }
+        });
       }
     });
   }

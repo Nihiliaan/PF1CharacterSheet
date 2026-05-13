@@ -18,6 +18,11 @@
     "add_text": "Add Textbox",
     "add_table": "Add Table",
     "add_image": "Add Image",
+    "add_row": "Add Row",
+    "confirm_delete_container": "Are you sure you want to delete this container? All contents will be lost.",
+    "common": {
+      "add_row": "Add Row"
+    },
     "delete": "Delete",
     "delete_container": "Delete Container",
     "none": "none"
@@ -111,7 +116,10 @@
       },
       "combat_stats": "Combat Stats",
       "maneuver_notes": "Combat Maneuver Notes",
-      "maneuver_placeholder": "Enter bonuses or notes for combat maneuvers..."
+      "maneuver_placeholder": "Enter bonuses or notes for combat maneuvers...",
+      "bab": "Base Attack Bonus (BAB)",
+      "cmb": "Combat Maneuver Bonus (CMB)",
+      "cmd": "Combat Maneuver Defense (CMD)"
     },
     "attacks": {
       "melee": "Melee Weapons",
@@ -128,7 +136,8 @@
     },
     "defenses": {
       "ac_details": "AC Details",
-      "ac": "AC",
+      "ac": "Armor Class (AC)",
+      "ac_source": "Source",
       "touch": "Touch AC",
       "flat_footed": "Flat-Footed AC",
       "ac_notes": "AC Notes",
@@ -206,6 +215,15 @@
       "no_items": "This container is empty"
     },
     "lists": {
+      "name": "Name",
+      "type": "Type",
+      "headers": {
+        "name": "Name",
+        "type": "Type",
+        "level": "Level",
+        "source": "Source",
+        "description": "Description"
+      },
       "trait": "Trait",
       "trait_name": "Trait Name",
       "description": "Description",
@@ -221,6 +239,9 @@
       "block_title": "Block Title",
       "image_url": "Image URL",
       "level_format": "Lv. {{n}}",
+      "age_format": "{{n}} yrs",
+      "height_format": "{{ft}}' {{in}}\"",
+      "height_format_ft": "{{ft}}'",
       "distance_format": "{{v}} ft"
     },
     "bbcode": {

@@ -7,10 +7,10 @@ import { getHandlerByPath } from '../../schema/fieldRegistry';
 
 interface SpellTableProps {
   spellType: number;
-  data: Record<string, any>[];
-  originalData?: Record<string, any>[];
+  data: Record<string, any>;
+  originalData?: Record<string, any>;
   baseLevel: 0 | 1;
-  onChange: (data: Record<string, any>[]) => void;
+  onChange: (data: Record<string, any>) => void;
   readOnly?: boolean;
   path?: string;
 }
@@ -30,20 +30,21 @@ export default function SpellTable({
   const columns = React.useMemo(() => {
     const cols: Column[] = [];
     if (spellType !== 4) {
-      cols.push({ key: 'level', label: '环位', width: '10%' });
+      cols.push({ key: 'level', label: t('editor.spells.headers.level'), width: '10%' });
     }
     if (spellType !== 0 && spellType !== 1) {
-      cols.push({ key: 'uses', label: '每日次数', width: '20%' });
+      cols.push({ key: 'uses', label: t('editor.spells.headers.uses'), width: '20%' });
     }
-    cols.push({ key: 'spells', label: '法术', width: 'auto' });
+    cols.push({ key: 'spells', label: t('editor.spells.headers.spells'), width: 'auto' });
     return cols;
-  }, [spellType]);
+  }, [spellType, t]);
 
   // SoA 模式下的行数计算
   const rowCount = React.useMemo(() => {
-    if (!data || typeof data !== 'object') return 0;
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return 0;
     const firstKey = columns.find(c => c.key !== 'level')?.key || 'spells';
-    return (data[firstKey] && Array.isArray(data[firstKey])) ? data[firstKey].length : 0;
+    const colData = (data as Record<string, any>)[firstKey];
+    return Array.isArray(colData) ? colData.length : 0;
   }, [data, columns]);
 
   const getCellPath = (basePath: string, index: number, key: string) => {

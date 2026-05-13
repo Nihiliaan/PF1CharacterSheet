@@ -13,24 +13,26 @@ import ContextMenu from '../common/ContextMenu';
 import DriveBrowser from './DriveBrowser';
 
 import { useCharacter } from '../../contexts/CharacterContext';
+import { useUI } from '../../contexts/UIContext';
+import { useVault } from '../../contexts/VaultContext';
+import { useDriveSync } from '../../hooks/useDriveSync';
+import { useCharacterAI } from '../../hooks/useCharacterAI';
 
-const VaultContent = ({ 
-  user, 
+const VaultContent = ({
+  user,
   onAdd
-}: { 
-  user: FirebaseUser, 
-  onAdd: () => void 
+}: {
+  user: FirebaseUser,
+  onAdd: () => void
 }) => {
   const {
-    myCharacters: characters, 
-    folders, 
-    currentFolderId, 
-    setCurrentFolderId,
-    selectCharacter: onSelect, 
-    refreshCharacterList: onRefresh, 
-    // toast/setToast are usually global, but we use them from context too? 
-    // Wait, setToast is in the character context provider props.
-    // Actually, I'll just use the one from context if available, but for now I'll stick to what I have.
+    selectCharacter: onSelect,
+    saveCharacter,
+    setData,
+    setCurrentDocumentId
+  } = useCharacter();
+
+  const {
     driveModal,
     setDriveModal,
     handleBrowseDrive,
@@ -39,8 +41,22 @@ const VaultContent = ({
     handleCloudBackup,
     handleCloudRestore,
     isSyncingDrive,
-    navigateToPathIndex,
-    setShowAIModal,
+    navigateToPathIndex
+  } = useDriveSync();
+
+  const { setShowAIModal } = useCharacterAI(setData, setCurrentDocumentId);
+
+  const {
+    toast,
+    setToast
+  } = useUI();
+
+  const {
+    myCharacters: characters,
+    folders,
+    currentFolderId,
+    setCurrentFolderId,
+    refreshCharacterList: onRefresh,
     moveCharacter,
     moveFolder,
     createFolder,
@@ -48,11 +64,8 @@ const VaultContent = ({
     deleteCharacter,
     renameItem,
     copyCharacter,
-    ensureLocalFolder,
-    saveCharacter,
-    toast,
-    setToast
-  } = useCharacter();
+    ensureLocalFolder
+  } = useVault();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: any; isFolder: boolean } | null>(null);

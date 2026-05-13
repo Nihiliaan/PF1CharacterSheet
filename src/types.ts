@@ -1,5 +1,14 @@
 export type { User as FirebaseUser } from 'firebase/auth';
 
+export interface FolderMetadata {
+  id: string;
+  name: string;
+  ownerId: string;
+  parentId: string | null;
+  createdAt: any;
+  updatedAt: any;
+}
+
 export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight' | 'markdown' | 'dailyUses';
 
 export interface Column {
@@ -16,15 +25,18 @@ export interface Column {
 
 export interface DynamicTableProps {
   columns?: Column[];
-  data: Record<string, any>[];
-  originalData?: Record<string, any>[];
-  onChange: (data: Record<string, any>[]) => void;
+  data: Record<string, any>;
+  originalData?: Record<string, any>;
+  onChange: (data: Record<string, any>) => void;
   newItemGenerator?: () => Record<string, any>;
   fixedRows?: boolean;
   readonlyColumns?: string[];
   rowDraggable?: boolean;
   rowActionMode?: 'drag' | 'delete';
   onRowActionModeToggle?: () => void;
+  onRowDragStart?: (index: number, e: any) => void;
+  onRowDragOver?: (index: number, e: any) => void;
+  onRowDrop?: (index: number, e: any) => void;
   readOnly?: boolean;
   path?: string;
 }
@@ -36,10 +48,10 @@ export interface AttributesSoA {
   status: string[];
 }
 
-export interface CombatSoA {
-  bab: number[];
-  cmb: number[];
-  cmd: number[];
+export interface CombatData {
+  bab: number;
+  cmb: number;
+  cmd: number;
 }
 
 export interface AttacksSoA {
@@ -53,17 +65,17 @@ export interface AttacksSoA {
   special: string[];
 }
 
-export interface ACSoA {
-  ac: number[];
-  source: string[];
-  flatFooted: number[];
-  touch: number[];
+export interface ACData {
+  ac: number;
+  source: string;
+  flatFooted: number;
+  touch: number;
 }
 
-export interface SavesSoA {
-  fort: number[];
-  ref: number[];
-  will: number[];
+export interface SavesData {
+  fort: number;
+  ref: number;
+  will: number;
 }
 
 export interface TraitsSoA {
@@ -115,12 +127,28 @@ export interface AvatarsSoA {
   note: string[];
 }
 
+export interface CharacterDocument {
+  id: string;
+  name: string;
+  data: CharacterData;
+  ownerId: string;
+  folderId: string | null;
+  targetId?: string;
+  isLink?: boolean;
+  isTemplate?: boolean;
+  updatedAt?: any;
+  createdAt?: any;
+}
+
 export interface CharacterData {
   // 元数据 (从 CharacterMetadata 迁移并精简)
   id: string;
   folderId?: string | null;
   ownerId?: string;
   targetId?: string; // 存在且不为空即为 isLink
+  isLink?: boolean;
+  isTemplate?: boolean;
+  content?: string; // 用于 BBCode 模板
 
   basic: {
     name: string;
@@ -149,7 +177,7 @@ export interface CharacterData {
   };
   story: string;
   attributes: AttributesSoA;
-  combatTable: CombatSoA;
+  combatTable: CombatData;
   combatManeuverNotes: string;
   attacks: {
     meleeAttacks: AttacksSoA;
@@ -159,9 +187,9 @@ export interface CharacterData {
   defenses: {
     hp: number;
     hd: string;
-    acTable: ACSoA;
+    acTable: ACData;
     acNotes: string;
-    savesTable: SavesSoA;
+    savesTable: SavesData;
     savesNotes: string;
     defensiveAbilities: string;
     specialDefenses: string;

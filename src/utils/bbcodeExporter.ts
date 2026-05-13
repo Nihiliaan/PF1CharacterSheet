@@ -220,7 +220,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
     data.currency.gp > 0 && `${data.currency.gp}${t('editor.items.gp')}`,
     data.currency.sp > 0 && `${data.currency.sp}${t('editor.items.sp')}`,
     data.currency.cp > 0 && `${data.currency.cp}${t('editor.items.cp')}`
-  ].filter(Boolean).join('') || '无'}) ${t('editor.items.coin_weight_total')} ${parseFloat(data.currency.coinWeight).toFixed(1)}lbs ${t('editor.items.total_assets')} ${calculateTotalCost(data)}gp[/b]`;
+  ].filter(Boolean).join('') || '无'}) ${t('editor.items.coin_weight_total')} ${parseFloat(String(data.currency.coinWeight)).toFixed(1)}lbs ${t('editor.items.total_assets')} ${calculateTotalCost(data)}gp[/b]`;
 
   const totalW = calculateTotalWeightNum(data);
   const enc = getComputedEncumbrance(data);

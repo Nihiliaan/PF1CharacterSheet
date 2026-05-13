@@ -36,13 +36,13 @@ const BaseInt = {
   step: 1,
   min: -Infinity,
   max: Infinity,
-  validate: function(v: string) {
+  validate: function (v: string) {
     if (v === '') return true;
     if (!REGEX_PATTERNS.int.test(v)) return false;
     const num = parseInt(v, 10);
     return num >= this.min && num <= this.max;
   },
-  update: function(v: string) {
+  update: function (v: string) {
     if (v === '') return this.min === -Infinity ? 0 : this.min;
     const num = parseInt(v, 10);
     if (isNaN(num)) return this.min === -Infinity ? 0 : this.min;
@@ -68,11 +68,11 @@ const BaseSelect = {
 const BaseIndexSelect = Object.assign(Object.create(BaseSelect), {
   options: [] as string[],
   i18nPrefix: '',
-  update: function(v: string) {
+  update: function (v: string) {
     const idx = this.options.indexOf(v);
     return idx === -1 ? 0 : idx;
   },
-  formatDisplay: function(v: any, context?: any) {
+  formatDisplay: function (v: any, context?: any) {
     // 兼容索引和字符串 Key
     let key = v;
     if (typeof v === 'number' || /^\d+$/.test(String(v))) {
@@ -83,7 +83,7 @@ const BaseIndexSelect = Object.assign(Object.create(BaseSelect), {
     const t = context?.t;
     return t ? t(`${this.i18nPrefix}${key}`) : key;
   },
-  formatInteractive: function(v: any, context?: any) {
+  formatInteractive: function (v: any, context?: any) {
     return this.formatDisplay(v, context);
   }
 });
@@ -99,7 +99,7 @@ const IntegerHandler = Object.create(BaseInt);
 const PosIntHandler = Object.assign(Object.create(BaseInt), {
   ui: 'posInt',
   min: 1,
-  validate: function(v: string) {
+  validate: function (v: string) {
     if (v === '') return true;
     return REGEX_PATTERNS.posInt.test(v) && parseInt(v, 10) >= this.min;
   }
@@ -108,7 +108,7 @@ const PosIntHandler = Object.assign(Object.create(BaseInt), {
 const NonNegativeIntHandler = Object.assign(Object.create(BaseInt), {
   ui: 'int',
   min: 0,
-  validate: function(v: string) {
+  validate: function (v: string) {
     if (v === '') return true;
     return REGEX_PATTERNS.posInt.test(v) && parseInt(v, 10) >= this.min;
   }
@@ -130,12 +130,15 @@ const QuantityHandler = Object.assign(Object.create(PosIntHandler), {
 const LevelHandler = Object.assign(Object.create(PosIntHandler), {
   ui: 'level',
   max: 20,
-  update: function(v: string) {
+  update: function (v: string) {
     if (v === '' || v === '0') return 0; // 等级特例：允许 0 但 UI 显示为空
     const num = parseInt(v, 10);
     return isNaN(num) ? 0 : Math.min(this.max, Math.max(0, num));
   },
-  formatDisplay: (v: any) => (v === 0 || v === '0' || !v) ? '' : `${v}级`,
+  formatDisplay: (v: any, context?: any) => {
+    if (v === 0 || v === '0' || !v) return '';
+    return context?.t ? context.t('editor.lists.level_format', { n: v }) : `${v}级`;
+  },
   formatInteractive: (v: any) => (v === 0 || v === '0' || !v) ? '' : v.toString()
 });
 
@@ -152,9 +155,9 @@ const DistanceHandler = Object.assign(Object.create(BaseInt), {
     const num = parseInt(String(v).replace(/[^\d]/g, ''), 10);
     return isNaN(num) ? 0 : num;
   },
-  formatDisplay: (v: any) => {
-    if (v === '' || v === undefined || v === null) return '';
-    return `${v} ft`;
+  formatDisplay: (v: any, context?: any) => {
+    if (v === '' || v === undefined || v === null || v === 0) return '';
+    return context?.t ? context.t('editor.lists.distance_format', { v }) : `${v} ft`;
   }
 });
 
@@ -181,13 +184,13 @@ const BonusHandler = Object.assign(Object.create(BaseInt), {
 
 const FloatHandler = Object.assign(Object.create(BaseInt), {
   ui: 'float',
-  validate: function(v: string) {
+  validate: function (v: string) {
     if (v === '') return true;
     if (!REGEX_PATTERNS.float.test(v)) return false;
     const num = parseFloat(v);
     return num >= this.min && num <= this.max;
   },
-  update: function(v: string) {
+  update: function (v: string) {
     if (v === '') return this.min === -Infinity ? 0 : this.min;
     let num = parseFloat(v);
     if (isNaN(num)) return this.min === -Infinity ? 0 : this.min;
@@ -203,13 +206,21 @@ const FloatHandler = Object.assign(Object.create(BaseInt), {
 const CostHandler = Object.assign(Object.create(FloatHandler), {
   ui: 'cost',
   min: 0,
-  formatDisplay: (v: any) => (v === 0 ? '—' : `${v} gp`)
+  formatDisplay: (v: any, context?: any) => {
+    if (v === 0) return '—';
+    const unit = context?.t ? context.t('editor.items.units.gp') : 'gp';
+    return `${v} ${unit}`;
+  }
 });
 
 const WeightHandler = Object.assign(Object.create(FloatHandler), {
   ui: 'weight',
   min: 0,
-  formatDisplay: (v: any) => (v === 0 ? '—' : `${v} lbs`)
+  formatDisplay: (v: any, context?: any) => {
+    if (v === 0) return '—';
+    const unit = context?.t ? context.t('editor.items.units.lbs') : 'lbs';
+    return `${v} ${unit}`;
+  }
 });
 
 const BoolHandler = Object.assign(Object.create(BaseText), {
@@ -258,7 +269,7 @@ const SkillAttributeHandler = Object.assign(Object.create(BaseInt), {
     return name;
   },
   // 确保聚焦时也显示格式化文本，并接收上下文
-  formatInteractive: function(v: any, context?: any) { return this.formatDisplay(v, context); },
+  formatInteractive: function (v: any, context?: any) { return this.formatDisplay(v, context); },
   options: ['1', '2', '4', '5', '6'] // 排除 3 (体质)
 });
 
@@ -283,26 +294,39 @@ const GenderHandler = Object.assign(Object.create(BaseIndexSelect), {
 });
 
 const AgeHandler = Object.assign(Object.create(NonNegativeIntHandler), {
-  formatDisplay: (v: any) => (v !== undefined && v !== null && v !== '') ? `${v}岁` : ''
+  formatDisplay: (v: any, context?: any) => {
+    if (v === undefined || v === null || v === '') return '';
+    return context?.t ? context.t('editor.lists.age_format', { n: v }) : `${v}岁`;
+  }
 });
+export { AgeHandler };
 
 const HeightHandler = Object.assign(Object.create(PosIntHandler), {
-  formatDisplay: (v: any) => {
+  formatDisplay: (v: any, context?: any) => {
     const totalInches = parseInt(v, 10);
     if (!totalInches || totalInches <= 0) return '';
     const feet = Math.floor(totalInches / 12);
     const inches = totalInches % 12;
+
+    const t = context?.t;
+    if (t) {
+      return inches > 0
+        ? t('editor.lists.height_format', { ft: feet, in: inches })
+        : t('editor.lists.height_format_ft', { ft: feet });
+    }
+
     return inches > 0 ? `${feet}' ${inches}"` : `${feet}'`;
   }
 });
+export { HeightHandler };
 
 const CritRangeHandler = Object.assign(Object.create(BaseSelect), {
   options: ['20', '19', '18', '17', '16', '15'],
   update: (v: string | number) => {
     const s = String(v);
     if (s.includes('-')) {
-       const match = s.match(/^(\d+)-20$/);
-       return match ? parseInt(match[1], 10) : 20;
+      const match = s.match(/^(\d+)-20$/);
+      return match ? parseInt(match[1], 10) : 20;
     }
     return parseInt(s, 10) || 20;
   },
@@ -359,11 +383,11 @@ const BaseTable = {
 const AttributesTableHandler = {
   ...BaseTable,
   columns: [
-    { key: 'name', label: '属性', width: '20%' },
-    { key: 'final', label: '最终值', width: '20%' },
-    { key: 'modifier', label: '调整值', width: '20%' },
-    { key: 'source', label: '来源', width: '20%' },
-    { key: 'status', label: '状态值', width: '20%' }
+    { key: 'name', label: 'editor.attributes.headers.attr', width: '10%' },
+    { key: 'final', label: 'editor.attributes.headers.final', width: '10%', type: 'int' },
+    { key: 'modifier', label: 'editor.attributes.headers.mod', width: '10%', type: 'bonus' },
+    { key: 'source', label: 'editor.attributes.headers.source', width: '50%' },
+    { key: 'status', label: 'editor.attributes.headers.status', width: '20%' }
   ],
   fixedRows: true
 };
@@ -371,24 +395,24 @@ const AttributesTableHandler = {
 const AttackTableHandler = {
   ...BaseTable,
   columns: [
-    { key: 'weapon', label: '武器', width: '20%' },
-    { key: 'hit', label: '攻击', width: '12%' },
-    { key: 'damage', label: '伤害', width: '12%' },
-    { key: 'critRange', label: '暴击', width: '8%' },
-    { key: 'critMultiplier', label: '倍率', width: '8%' },
-    { key: 'range', label: '距离', width: '8%' },
-    { key: 'damageType', label: '类型', width: '10%' },
-    { key: 'special', label: '备注', width: '22%' }
+    { key: 'weapon', label: 'editor.attacks.weapon', width: '20%' }, // 修正 Key
+    { key: 'hit', label: 'editor.attacks.hit', width: '8%', type: 'bonus' },
+    { key: 'damage', label: 'editor.attacks.damage', width: '12%' },
+    { key: 'critRange', label: 'editor.attacks.crit_range', width: '8%', type: 'critRange' },
+    { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '8%', type: 'critMultiplier' },
+    { key: 'range', label: 'editor.attacks.range', width: '8%', type: 'distance' },
+    { key: 'damageType', label: 'editor.attacks.damage_type', width: '10%' },
+    { key: 'special', label: 'editor.attacks.special', width: '26%' }
   ]
 };
 
 const DefensesTableHandler = {
   ...BaseTable,
   columns: [
-    { key: 'ac', label: 'AC', width: '15%' },
-    { key: 'source', label: '来源', width: '55%' },
-    { key: 'touch', label: '接触', width: '15%' },
-    { key: 'flatFooted', label: '措手不及', width: '15%' }
+    { key: 'ac', label: 'editor.defenses.ac', width: '15%', type: 'int' },
+    { key: 'source', label: 'editor.attributes.headers.source', width: '55%' }, // 使用 attributes 里的 source
+    { key: 'touch', label: 'editor.defenses.touch', width: '15%', type: 'int' },
+    { key: 'flatFooted', label: 'editor.defenses.flat_footed', width: '15%', type: 'int' }
   ],
   fixedRows: true
 };
@@ -396,9 +420,9 @@ const DefensesTableHandler = {
 const SavesTableHandler = {
   ...BaseTable,
   columns: [
-    { key: 'fort', label: '强韧', width: '33.33%' },
-    { key: 'ref', label: '反射', width: '33.33%' },
-    { key: 'will', label: '意志', width: '33.34%' }
+    { key: 'fort', label: 'editor.defenses.fort', width: '33.33%', type: 'bonus' },
+    { key: 'ref', label: 'editor.defenses.ref', width: '33.33%', type: 'bonus' },
+    { key: 'will', label: 'editor.defenses.will', width: '33.34%', type: 'bonus' }
   ],
   fixedRows: true
 };
@@ -406,21 +430,51 @@ const SavesTableHandler = {
 const SkillsTableHandler = {
   ...BaseTable,
   columns: [
-    { key: 'cs', label: '本职', width: '5%' },
-    { key: 'name', label: '技能', width: '15%' },
-    { key: 'ability', label: '属性', width: '10%' },
-    { key: 'total', label: '总分', width: '5%' },
-    { key: 'rank', label: '等级', width: '5%' },
-    { key: 'misc', label: '杂项', width: '5%' },
-    { key: 'special', label: '备注', width: '50%' }
+    { key: 'name', label: 'editor.skills.headers.skill', width: '15%' },
+    { key: 'total', label: 'editor.skills.headers.total', width: '5%', type: 'bonus' },
+    { key: 'rank', label: 'editor.skills.headers.rank', width: '5%', type: 'level' },
+    { key: 'cs', label: 'editor.skills.headers.cs', width: '5%', type: 'checkbox', displayFormatter: (val: any) => String(val) === 'true' ? '+3' : '' },
+    { key: 'ability', label: 'editor.skills.headers.ability', width: '10%', type: 'attributeIndex' },
+    { key: 'others', label: 'editor.skills.headers.others', width: '20%' },
+    { key: 'special', label: 'editor.skills.headers.special', width: '35%' }
   ]
 };
 
 const SimpleListHandler = {
   ...BaseTable,
   columns: [
-    { key: 'name', label: '名称', width: '25%' },
-    { key: 'desc', label: '描述', width: '75%' }
+    { key: 'name', label: 'editor.lists.name', width: '25%' },
+    { key: 'desc', label: 'editor.lists.description', width: '75%' }
+  ]
+};
+
+const BackgroundTraitsTableHandler = {
+  ...BaseTable,
+  columns: [
+    { key: 'name', label: 'editor.lists.name', width: '20%' },
+    { key: 'type', label: 'editor.lists.type', width: '10%' },
+    { key: 'desc', label: 'editor.lists.description', width: '70%' }
+  ]
+};
+
+const ClassFeaturesTableHandler = {
+  ...BaseTable,
+  columns: [
+    { key: 'level', label: 'editor.lists.level', width: '5%', type: 'level' },
+    { key: 'name', label: 'editor.lists.name', width: '20%' },
+    { key: 'type', label: 'editor.lists.type', width: '5%', type: 'abilityType' },
+    { key: 'desc', label: 'editor.lists.description', width: '70%' }
+  ]
+};
+
+const FeatsTableHandler = {
+  ...BaseTable,
+  columns: [
+    { key: 'level', label: 'editor.lists.level', width: '5%', type: 'level' },
+    { key: 'source', label: 'editor.lists.source', width: '10%' },
+    { key: 'name', label: 'editor.lists.name', width: '20%' },
+    { key: 'type', label: 'editor.lists.type', width: '10%' },
+    { key: 'desc', label: 'editor.lists.description', width: '55%' }
   ]
 };
 
@@ -438,11 +492,11 @@ const MagicBlocksHandler = {
 const EquipmentItemsHandler = {
   ...BaseTable,
   columns: [
-    { key: 'item', label: '物品', width: '40%' },
-    { key: 'quantity', label: '数量', width: '10%' },
-    { key: 'cost', label: '价格', width: '15%' },
-    { key: 'weight', label: '重量', width: '15%' },
-    { key: 'notes', label: '备注', width: '20%' }
+    { key: 'item', label: 'editor.items.headers.item', width: '35%', hideRightBorder: true },
+    { key: 'quantity', label: '', width: '5%', type: 'quantity' },
+    { key: 'cost', label: 'editor.items.headers.cost', width: '10%', type: 'cost' },
+    { key: 'weight', label: 'editor.items.headers.weight', width: '10%', type: 'weight' },
+    { key: 'notes', label: 'editor.items.headers.notes', width: '40%' }
   ]
 };
 
@@ -496,16 +550,16 @@ const handlers: any = {
   CompositeHandler,
   AttributesTableHandler,
   AttackTableHandler,
-  DefensesTableHandler,
-  SavesTableHandler,
   SkillsTableHandler,
   SimpleListHandler,
+  BackgroundTraitsTableHandler,
+  ClassFeaturesTableHandler,
+  FeatsTableHandler,
   SpellTableHandler,
   MagicBlocksHandler,
   EquipmentItemsHandler,
   // 复合型
   BasicInfoHandler,
-  CombatInfoHandler,
   CurrencyHandler
 };
 

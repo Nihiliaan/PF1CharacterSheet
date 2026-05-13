@@ -6,10 +6,11 @@ const {
   FloatHandler, BoolHandler, SkillAttributeHandler, QuantityHandler,
   CostHandler, WeightHandler, CritRangeHandler, CritMultiplierHandler,
   DistanceHandler, AbilityTypeHandler, SpellTypeHandler, CompositeHandler,
-  SpellLevelHandler, DailyUsesHandler,
+  SpellLevelHandler, DailyUsesHandler, AgeHandler, HeightHandler,
   // 业务表格 Handler
   AttributesTableHandler, AttackTableHandler, DefensesTableHandler,
   SavesTableHandler, SkillsTableHandler, SimpleListHandler,
+  BackgroundTraitsTableHandler, ClassFeaturesTableHandler, FeatsTableHandler,
   SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler,
   // 复合业务 Handler
   BasicInfoHandler, CombatInfoHandler, CurrencyHandler
@@ -71,7 +72,7 @@ export const CharacterPrototype: any = {
 
   // 3. 战斗统计表 (对应 "combatTable")
   combatTable: {
-    handler: CombatInfoHandler,
+    handler: CompositeHandler,
     bab: BonusHandler,
     cmb: BonusHandler,
     cmd: IntegerHandler
@@ -112,7 +113,7 @@ export const CharacterPrototype: any = {
     hp: PosIntHandler,
     hd: TextHandler,
     acTable: {
-      handler: DefensesTableHandler,
+      handler: CompositeHandler,
       ac: IntegerHandler,
       source: TextHandler,
       flatFooted: IntegerHandler,
@@ -120,7 +121,7 @@ export const CharacterPrototype: any = {
     },
     acNotes: TextHandler,
     savesTable: {
-      handler: SavesTableHandler,
+      handler: CompositeHandler,
       fort: BonusHandler,
       ref: BonusHandler,
       will: BonusHandler
@@ -137,7 +138,7 @@ export const CharacterPrototype: any = {
     desc: TextHandler
   },
   backgroundTraits: {
-    handler: SimpleListHandler,
+    handler: BackgroundTraitsTableHandler,
     name: TextHandler,
     type: TextHandler,
     desc: TextHandler
@@ -145,15 +146,16 @@ export const CharacterPrototype: any = {
   favoredClass: TextHandler,
   favoredClassBonus: TextHandler,
   classFeatures: {
-    handler: SimpleListHandler,
+    handler: ClassFeaturesTableHandler,
     level: LevelHandler,
     name: TextHandler,
     type: AbilityTypeHandler,
     desc: TextHandler
   },
   feats: {
-    handler: SimpleListHandler,
+    handler: FeatsTableHandler,
     level: LevelHandler,
+    source: TextHandler,
     name: TextHandler,
     type: TextHandler,
     desc: TextHandler

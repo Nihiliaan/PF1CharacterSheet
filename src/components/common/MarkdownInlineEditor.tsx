@@ -76,69 +76,67 @@ const externalLinkHandler = EditorView.domEventHandlers({
   }
 });
 
-const MarkdownInlineEditor = ({ 
-  value, 
-  onChange, 
-  readOnly = false, 
-  className = '', 
-  placeholder = '', 
-  height = 'auto', 
+const MarkdownInlineEditor = ({
+  value,
+  onChange,
+  readOnly = false,
+  className = '',
+  placeholder = '',
+  height = 'auto',
   minHeight = '24px',
   singleLine = false,
   transactionFilter
 }: MarkdownInlineEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  
+
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
   const transactionFilterRef = useRef(transactionFilter);
   useEffect(() => { transactionFilterRef.current = transactionFilter; }, [transactionFilter]);
 
+  // Initial mount
   useEffect(() => {
     if (!editorRef.current) return;
-    if (editorRef.current.querySelector('.cm-editor')) {
-      editorRef.current.innerHTML = '';
-    }
+
+    // Helper to get safe string
+    const getSafeValue = (v: any) => {
+        if (typeof v === 'string') return v;
+        if (v === null || v === undefined) return '';
+        return String(v);
+    };
 
     const state = EditorState.create({
-      doc: value || '',
+      doc: getSafeValue(value),
       extensions: [
         markdown({ base: markdownLanguage }),
         markdownConcealPlugin,
         externalLinkHandler,
-        // Transaction filtering using Ref to avoid re-creating extensions
         EditorState.transactionFilter.of(tr => {
             if (tr.docChanged) {
-                // Bypass validation for programmatic updates (e.g., displayFormatter results)
                 if (tr.annotation(programmaticUpdate)) return tr;
-
-                // If singleLine is enabled, prevent any change that adds a newline
-                if (singleLine && tr.newDoc.toString().includes('\n')) {
-                    return [];
-                }
-                // Custom external filter
-                if (transactionFilterRef.current && !transactionFilterRef.current(tr)) {
-                    return [];
-                }
+                const newDocString = tr.newDoc.toString();
+                if (singleLine && newDocString.includes('\n')) return [];
+                if (transactionFilterRef.current && !transactionFilterRef.current(tr)) return [];
             }
             return tr;
         }),
-        // Single line logic: Disable wrapping
         singleLine ? [] : EditorView.lineWrapping,
         EditorState.readOnly.of(readOnly),
         EditorView.theme({
-          "&": { height, minHeight, fontSize: "14px", backgroundColor: "transparent" },
+          "&": { height, minHeight, fontSize: "inherit", backgroundColor: "transparent" },
           "&.cm-focused": { outline: "none" },
-          ".cm-content": { 
-              padding: "0px", 
+          ".cm-content": {
+              padding: "0px",
               fontFamily: "inherit",
+              lineHeight: "inherit",
               whiteSpace: singleLine ? "nowrap" : "pre-wrap"
           },
           ".cm-line": { padding: "0" },
-          ".cm-scroller": { 
-              fontFamily: "inherit", 
+          ".cm-scroller": {
+              fontFamily: "inherit",
+              lineHeight: "inherit",
               overflowX: singleLine ? "auto" : "hidden",
               overflowY: height === 'auto' ? 'hidden' : 'auto',
               scrollbarWidth: "none",
@@ -149,7 +147,7 @@ const MarkdownInlineEditor = ({
           "&.cm-focused .cm-placeholder": { display: "none" }
         }),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
+          if (update.docChanged && !update.transactions.some(tr => tr.annotation(programmaticUpdate))) {
             onChangeRef.current(update.state.doc.toString());
           }
         }),
@@ -159,15 +157,39 @@ const MarkdownInlineEditor = ({
 
     const view = new EditorView({ state, parent: editorRef.current });
     viewRef.current = view;
-    return () => { view.destroy(); };
+
+    return () => {
+        view.destroy();
+        viewRef.current = null;
+    };
   }, [readOnly, placeholder, singleLine]);
 
+  // Sync value from props
   useEffect(() => {
     const view = viewRef.current;
-    if (view && value !== view.state.doc.toString()) {
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: value || '' },
+    if (!view) return;
+
+    const safeValue = typeof value === 'string' ? value : String(value ?? '');
+    const currentValue = view.state.doc.toString();
+
+    if (safeValue !== currentValue) {
+      // Defer the dispatch to avoid conflicts with ongoing transactions
+      const transaction = view.state.update({
+        changes: { from: 0, to: view.state.doc.length, insert: safeValue },
         annotations: [programmaticUpdate.of(true)]
+      });
+
+      // Use requestAnimationFrame to ensure we are outside of the update listener cycle
+      requestAnimationFrame(() => {
+          if (viewRef.current && !viewRef.current.contentDOM.isConnected) return;
+          try {
+            view.dispatch(transaction);
+          } catch (e) {
+            // If the dispatch still fails with decompose, it's a core CodeMirror issue
+            // potentially related to document state corruption.
+            // In that case, we fall back to a full view recreation if necessary,
+            // but let's try this deferral first.
+          }
       });
     }
   }, [value]);
@@ -179,9 +201,9 @@ const MarkdownInlineEditor = ({
   };
 
   return (
-    <div 
-        ref={editorRef} 
-        className={`w-full h-full cursor-text ${className}`} 
+    <div
+        ref={editorRef}
+        className={`w-full h-full cursor-text ${className}`}
         onClick={handleContainerClick}
     />
   );

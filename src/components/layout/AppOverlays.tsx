@@ -5,28 +5,41 @@ import Dialog from '../common/Dialog';
 import Toast from '../common/Toast';
 import AIExtractionModal from '../character/AIExtractionModal';
 
+import { useUI } from '../../contexts/UIContext';
 import { useCharacter } from '../../contexts/CharacterContext';
+import { useCharacterAI } from '../../hooks/useCharacterAI';
 
 export default function AppOverlays() {
   const { t } = useTranslation();
-  const { 
-    handleAIExtract, 
-    isSyncing, 
-    confirmModal, 
+  const {
+    confirmModal,
     setConfirmModal,
     toast,
     setToast,
+  } = useUI();
+
+  const {
+    isSyncing,
+  } = useCharacter();
+
+  const {
+    setData,
+    setCurrentDocumentId
+  } = useCharacter();
+
+  const {
+    handleAIExtract,
     showAIModal,
     setShowAIModal,
     isAILoading,
-    userApiKey, 
-    setUserApiKey, 
-    showApiKeyInput, 
+    userApiKey,
+    setUserApiKey,
+    showApiKeyInput,
     setShowApiKeyInput,
-    aiInputText, 
+    aiInputText,
     setAiInputText,
     aiStatusMsg
-  } = useCharacter();
+  } = useCharacterAI(setData, setCurrentDocumentId);
 
   return (
     <>

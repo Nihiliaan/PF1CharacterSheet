@@ -17,15 +17,21 @@ import CharacterEditor from './components/editor/CharacterEditor';
 
 // Context
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { UIProvider, useUI } from './contexts/UIContext';
+import { VaultProvider, useVault } from './contexts/VaultContext';
 import { CharacterProvider, useCharacter } from './contexts/CharacterContext';
 
 export default function App() {
   console.log('>>> [APP] HELLO WORLD - VERSION 0.1 <<<');
   return (
     <AuthProvider>
-      <CharacterProvider>
-        <AppContent />
-      </CharacterProvider>
+      <UIProvider>
+        <VaultProvider>
+          <CharacterProvider>
+            <AppContent />
+          </CharacterProvider>
+        </VaultProvider>
+      </UIProvider>
     </AuthProvider>
   );
 }
@@ -34,13 +40,11 @@ function AppContent() {
   const { t } = useTranslation();
   const {
     view,
-    setView,
     isHeaderPinned,
-    setIsHeaderPinned,
-    isHeaderVisible,
     setIsHeaderVisible,
-    handleNew
-  } = useCharacter();
+  } = useUI();
+
+  const { handleNew } = useCharacter();
 
   const {
     user,
@@ -51,12 +55,7 @@ function AppContent() {
     <div className="min-h-screen bg-stone-100 font-sans text-ink selection:bg-primary/20 flex flex-col h-screen overflow-hidden relative">
       <div className="fixed top-0 left-0 right-0 h-[36px] z-[60] pointer-events-auto" onMouseEnter={() => setIsHeaderVisible(true)} />
 
-      <AppHeader 
-        isHeaderVisible={isHeaderVisible}
-        setIsHeaderVisible={setIsHeaderVisible}
-        isHeaderPinned={isHeaderPinned}
-        setIsHeaderPinned={setIsHeaderPinned}
-      />
+      <AppHeader />
 
       <AppOverlays />
 

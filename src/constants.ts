@@ -42,9 +42,9 @@ export const DEFAULT_DATA: CharacterData = {
     status: ['', '', '', '', '', '']
   },
   combatTable: {
-    bab: [0],
-    cmb: [0],
-    cmd: [10]
+    bab: 0,
+    cmb: 0,
+    cmd: 10
   },
   combatManeuverNotes: '',
   attacks: {
@@ -74,16 +74,16 @@ export const DEFAULT_DATA: CharacterData = {
     hp: 0,
     hd: '',
     acTable: {
-      ac: [10],
-      source: ['10'],
-      flatFooted: [10],
-      touch: [10]
+      ac: 10,
+      source: '10',
+      flatFooted: 10,
+      touch: 10
     },
     acNotes: '',
     savesTable: {
-      fort: [0],
-      ref: [0],
-      will: [0]
+      fort: 0,
+      ref: 0,
+      will: 0
     },
     savesNotes: '',
     defensiveAbilities: '',
