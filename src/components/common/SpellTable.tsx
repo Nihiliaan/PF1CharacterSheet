@@ -3,67 +3,122 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Column } from '../../types';
 import DynamicInput from './DynamicInput';
+import { getHandlerByPath } from '../../schema/fieldRegistry';
+
 interface SpellTableProps {
-  columns: Column[];
-  data: Record<string, string>[];
-  originalData?: Record<string, string>[];
+  spellType: number;
+  data: Record<string, any>[];
+  originalData?: Record<string, any>[];
   baseLevel: 0 | 1;
-  onChange: (data: Record<string, string>[]) => void;
-  onBaseLevelChange: (level: 0 | 1) => void;
+  onChange: (data: Record<string, any>[]) => void;
   readOnly?: boolean;
+  path?: string;
 }
 
 export default function SpellTable({
-  columns,
+  spellType,
   data,
   originalData,
   baseLevel,
   onChange,
-  onBaseLevelChange,
-  readOnly = false
+  readOnly = false,
+  path
 }: SpellTableProps) {
   const { t } = useTranslation();
 
-  const updateData = (index: number, key: string, value: string) => {
+  // 根据 spellType 过滤列
+  const columns = React.useMemo(() => {
+    const cols: Column[] = [];
+    if (spellType !== 4) {
+      cols.push({ key: 'level', label: '环位', width: '10%' });
+    }
+    if (spellType !== 0 && spellType !== 1) {
+      cols.push({ key: 'uses', label: '每日次数', width: '20%' });
+    }
+    cols.push({ key: 'spells', label: '法术', width: 'auto' });
+    return cols;
+  }, [spellType]);
+
+  // SoA 模式下的行数计算
+  const rowCount = React.useMemo(() => {
+    if (!data || typeof data !== 'object') return 0;
+    const firstKey = columns.find(c => c.key !== 'level')?.key || 'spells';
+    return (data[firstKey] && Array.isArray(data[firstKey])) ? data[firstKey].length : 0;
+  }, [data, columns]);
+
+  const getCellPath = (basePath: string, index: number, key: string) => {
+    if (!basePath) return undefined;
+    return `${basePath}.${key}[${index}]`;
+  };
+
+  const updateData = (index: number, key: string, value: any) => {
     if (readOnly) return;
-    const newData = [...data];
-    newData[index] = { ...newData[index], [key]: value };
+    const newData = { ...data };
+    if (!newData[key]) newData[key] = [];
+    const newColArray = [...newData[key]];
+
+    const cellPath = getCellPath(path || '', index, key);
+    const cellHandler = getHandlerByPath(cellPath);
+    const finalValue = cellHandler?.update ? cellHandler.update(value) : value;
+
+    newColArray[index] = finalValue;
+    newData[key] = newColArray;
     onChange(newData);
   };
 
+  const canAdd = React.useMemo(() => {
+    if (spellType === 4) return true; // 类法术无限制
+    const maxRows = baseLevel === 0 ? 10 : 6;
+    return rowCount < maxRows;
+  }, [rowCount, baseLevel, spellType]);
+
   const addRowTop = () => {
     if (readOnly) return;
-    const maxAllowedRows = 10 - baseLevel; // If baseLevel=0, 9-0+0 = 9 max index -> 10 rows. If baseLevel=1, 9-1+1 = 9 max level... Wait.
-    // user said: "最高到9环". If the max level would exceed 9, do not allow adding.
-    // Current max level is: data.length - 1 + baseLevel
-    // If we add a row, it becomes data.length + baseLevel.
-    // So if data.length + baseLevel > 9, we shouldn't add.
-    if (data.length + baseLevel > 9) return;
+    if (!canAdd) return;
 
-    const newObj: Record<string, string> = {};
-    columns.forEach(c => { newObj[c.key] = ''; });
-    onChange([newObj, ...data]);
+    const newData = { ...data };
+    columns.forEach(c => {
+      if (c.key === 'level') return;
+      if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill('');
+      newData[c.key] = ['', ...newData[c.key]];
+    });
+    onChange(newData);
   };
 
   const removeRow = (index: number) => {
     if (readOnly) return;
-    onChange(data.filter((_, i) => i !== index));
+    const newData = { ...data };
+    Object.keys(newData).forEach(key => {
+      if (Array.isArray(newData[key])) {
+        newData[key] = newData[key].filter((_, i) => i !== index);
+      }
+    });
+    onChange(newData);
   };
 
-  const isTableDirty = React.useMemo(() => {
-    return JSON.stringify(data) !== JSON.stringify(originalData);
-  }, [data, originalData]);
-
-  const isDescriptionCol = (key?: string) => {
-    if (!key) return false;
-    const k = key.toLowerCase();
-    return ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => k.includes(word));
+  const isRowDirty = (index: number) => {
+    if (!originalData) return true;
+    return columns.some(c => {
+      if (c.key === 'level') return false;
+      const val = data[c.key]?.[index];
+      const origVal = originalData[c.key]?.[index];
+      return JSON.stringify(val) !== JSON.stringify(origVal);
+    });
   };
 
-  const canAdd = data.length + baseLevel <= 9;
+  // 生成行视图的辅助函数
+  const getRowData = (index: number) => {
+    const row: Record<string, any> = {};
+    columns.forEach(c => {
+      if (c.key !== 'level') {
+        row[c.key] = data[c.key]?.[index];
+      }
+    });
+    return row;
+  };
 
   return (
-    <div className={`w-full overflow-x-auto rounded border transition-colors ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
+    <div className={`w-full overflow-x-auto rounded border transition-colors ${JSON.stringify(data) !== JSON.stringify(originalData) ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'}`}>
       <table className="w-full border-collapse text-sm table-auto">
         <thead>
           <tr className="bg-stone-200 text-stone-700">
@@ -87,54 +142,46 @@ export default function SpellTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-300">
-          {data.map((row, i) => {
-            const isLastRow = i === data.length - 1;
-            const computedLevelNumber = data.length - 1 - i + baseLevel;
-            const computedLevelDisplay = isLastRow ? '' : t('editor.spells.computed_level', { n: computedLevelNumber });
-            const isRowDirty = JSON.stringify(row) !== JSON.stringify(originalData?.[i]);
+          {Array.from({ length: rowCount }).map((_, i) => {
+            const row = getRowData(i);
+            const isLastRow = i === rowCount - 1;
+            const computedLevelNumber = rowCount - 1 - i + baseLevel;
 
             return (
               <tr
                 key={i}
-                className={`transition-colors group ${isRowDirty ? 'bg-amber-100/30' : 'hover:bg-stone-50'}`}
+                className={`transition-colors group ${isRowDirty(i) ? 'bg-amber-100/30' : 'hover:bg-stone-50'}`}
               >
-                {columns.map((c) => (
-                  <td key={c.key} className={`p-0 relative border-stone-300 align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
-                    {c.key === 'level' ? (
-                      <div className="w-full h-full flex items-center justify-center font-bold px-2 text-stone-700 bg-stone-100/50 min-h-[32px]">
-                        {isLastRow ? (
-                          <select
-                            value={baseLevel}
-                            onChange={(e) => onBaseLevelChange(Number(e.target.value) as 0 | 1)}
-                            className="bg-transparent font-bold outline-none border-b border-transparent focus:border-stone-400 cursor-pointer text-center text-stone-700 hover:bg-stone-200"
-                            disabled={readOnly}
-                          >
-                            <option value={0}>{t('editor.spells.base_level_0')}</option>
-                            <option value={1}>{t('editor.spells.base_level_1')}</option>
-                          </select>
-                        ) : (
-                          computedLevelDisplay
-                        )}
-                      </div>
-                    ) : (
-                      <DynamicInput
-                        value={row[c.key] || ''}
-                        originalValue={originalData?.[i]?.[c.key]}
-                        onChange={(val) => updateData(i, c.key, val)}
-                        readOnly={readOnly}
-                        columnKey={c.key}
-                        type={c.type as any}
-                        options={c.options}
-                        displayFormatter={c.displayFormatter}
-                        align={c.align || (isDescriptionCol(c.key) ? 'left' : 'center')}
-                        className={readOnly ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"}
-                      />
-                    )}
-                  </td>
-                ))}
+                {columns.map((c) => {
+                  const cellPath = getCellPath(path || '', i, c.key);
+                  const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
+
+                  return (
+                    <td key={c.key} className={`p-0 relative border-stone-300 align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+                      {c.key === 'level' ? (
+                        <div className="w-full h-full flex items-center justify-center font-bold px-2 text-stone-700 bg-stone-100/50 min-h-[32px]">
+                          {isLastRow ? `${baseLevel}环` : `${computedLevelNumber}环`}
+                        </div>
+                      ) : (
+                        <DynamicInput
+                          value={String(row[c.key] || '')}
+                          originalValue={originalData?.[c.key]?.[i]}
+                          onChange={(val) => updateData(i, c.key, val)}
+                          path={cellPath}
+                          readOnly={readOnly}
+                          columnKey={c.key}
+                          type={cellHandler?.ui || (c.key === 'uses' ? 'dailyUses' : 'text')}
+                          displayFormatter={c.displayFormatter}
+                          align={c.key === 'spells' ? 'left' : 'center'}
+                          className={readOnly ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"}
+                        />
+                      )}
+                    </td>
+                  );
+                })}
                 <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors">
                   <div className="flex items-center justify-center w-full h-[32px] opacity-0 group-hover:opacity-100 transition-opacity">
-                    {!isLastRow && (
+                    {(spellType === 4 ? !isLastRow : i === 0 && rowCount > 1) && (
                       <button
                         type="button"
                         onClick={() => removeRow(i)}

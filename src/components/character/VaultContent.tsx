@@ -6,7 +6,7 @@ import {
   Copy, Move, Settings, Cloud, Link, FileText
 } from 'lucide-react';
 import { getCharacterById } from '../../services/characterService';
-import { FirebaseUser, FolderMetadata, CharacterMetadata } from '../../types';
+import { FirebaseUser, FolderMetadata } from '../../types';
 import Toast from '../common/Toast';
 import Dialog from '../common/Dialog';
 import ContextMenu from '../common/ContextMenu';
@@ -64,7 +64,7 @@ const VaultContent = ({
   const getDeepAvatars = (folderId: string): { url: string; isTemplate?: boolean }[] => {
     const directChars = characters.filter(c => c.folderId === folderId);
     let items = directChars.map(c => ({
-      url: c.data?.basic?.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + (c.name || ''),
+      url: c.data?.basic?.avatars?.url?.[0] || 'https://ui-avatars.com/api/?name=' + (c.name || ''),
       isTemplate: !!c.isTemplate
     }));
     
@@ -236,11 +236,23 @@ const VaultContent = ({
           }
         }
 
-        const finalData = {
-          ...content,
-          basic: { ...content.basic, name: content.basic?.name || file.name.replace('.json', '') }
+        const processImportedData = (content: any) => {
+          const finalData = { ...content };
+          // Migrate avatars to SoA if needed
+          if (finalData.basic?.avatars && Array.isArray(finalData.basic.avatars)) {
+            finalData.basic.avatars = {
+              url: finalData.basic.avatars.map((a: any) => a.url || ''),
+              note: finalData.basic.avatars.map((a: any) => a.note || '')
+            };
+          }
+          finalData.basic = {
+            ...finalData.basic,
+            name: finalData.basic?.name || file.name.replace('.json', '')
+          };
+          return finalData;
         };
 
+        const finalData = processImportedData(content);
         await saveCharacter(finalData, undefined, folderId);
         importCount++;
       } catch (e) {
@@ -256,13 +268,23 @@ const VaultContent = ({
       const text = await navigator.clipboard.readText();
       const content = JSON.parse(text);
       if (!content.basic || !content.attributes) throw new Error("无效的人物卡格式");
-      
-      const finalData = {
-        ...content,
-        basic: { ...content.basic, name: content.basic?.name || "剪贴板导入" }
+
+      const processImportedData = (data: any) => {
+        const finalData = { ...data };
+        if (finalData.basic?.avatars && Array.isArray(finalData.basic.avatars)) {
+          finalData.basic.avatars = {
+            url: finalData.basic.avatars.map((a: any) => a.url || ''),
+            note: finalData.basic.avatars.map((a: any) => a.note || '')
+          };
+        }
+        finalData.basic = {
+          ...finalData.basic,
+          name: finalData.basic?.name || "剪贴板导入"
+        };
+        return finalData;
       };
-      
-      await saveCharacter(finalData, undefined, currentFolderId);
+
+      await saveCharacter(processImportedData(content), undefined, currentFolderId);
       onRefresh();
       setToast({ message: "剪贴板导入成功！" });
     } catch (e: any) {
@@ -717,14 +739,14 @@ const VaultContent = ({
                           <FileText size={viewMode === 'grid' ? 48 : 24} />
                         </div>
                       ) : (
-                        <img 
-                          src={char.data?.basic?.avatars?.[0]?.url || 'https://ui-avatars.com/api/?name=' + char.name} 
+                        <img
+                          src={char.data?.basic?.avatars?.url?.[0] || 'https://ui-avatars.com/api/?name=' + char.name}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                           referrerPolicy="no-referrer"
                           draggable={false}
                         />
                       )}
-                      {char.isLink && (
+                      {char.data?.targetId && (
                         <div className="absolute top-1 right-1 bg-white/90 backdrop-blur text-blue-600 p-1 rounded border border-blue-100 shadow-sm" title="分享链接">
                           <Link size={12} strokeWidth={2.5} />
                         </div>
@@ -763,7 +785,7 @@ const VaultContent = ({
                   } 
                 },
                 { label: '重命名', icon: Settings, onClick: () => handleAction('rename', contextMenu.item, contextMenu.isFolder) },
-                ...(contextMenu.item.isLink && !contextMenu.isFolder ? [
+                ...(contextMenu.item.data?.targetId && !contextMenu.isFolder ? [
                    { label: '创建可编辑副本', icon: Copy, onClick: () => handleAction('create_from_link', contextMenu.item, false) }
                 ] : [
                    { label: '复制', icon: Copy, onClick: () => handleAction('copy', contextMenu.item, contextMenu.isFolder) }

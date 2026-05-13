@@ -74,11 +74,16 @@ export const dataUpdateService = {
   },
 
   /**
-   * 拖拽排序逻辑 (通用的列表内排序)
+   * 拖拽排序逻辑 (支持嵌套路径)
    */
-  reorderList(data: CharacterData, listKey: keyof CharacterData, sourceIndex: number, targetIndex: number): CharacterData {
+  reorderList(data: CharacterData, path: string, sourceIndex: number, targetIndex: number): CharacterData {
     return produce(data, draft => {
-      const list = draft[listKey] as any[];
+      const parts = path.split('.');
+      let list = draft as any;
+      for (const part of parts) {
+        list = list[part];
+      }
+
       if (Array.isArray(list)) {
         const [removed] = list.splice(sourceIndex, 1);
         list.splice(targetIndex, 0, removed);

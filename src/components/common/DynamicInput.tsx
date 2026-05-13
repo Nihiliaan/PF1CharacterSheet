@@ -2,14 +2,20 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ATTRIBUTE_NAMES, InputType } from '../../types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
-import { validateInput, normalizeValue } from '../../utils/validation';
 import { useNumericStepper } from '../../hooks/useNumericStepper';
 import { getDisplayValue } from '../../utils/formatters';
+import { getHandlerByPath } from '../../schema/fieldRegistry';
+import handlers from '../../schema/dataTypes';
+
+const { getHandlerByType } = handlers;
+
+import { useCharacter } from '../../contexts/CharacterContext';
 
 export interface DynamicInputProps {
   value: string;
   originalValue?: string;
   onChange: (v: string) => void;
+  path?: string;
   className?: string; // Applied to inner element
   wrapperClassName?: string; // Applied to outermost div
   readOnly?: boolean;
@@ -17,7 +23,7 @@ export interface DynamicInputProps {
   type?: InputType;
   options?: string[];
   displayFormatter?: (v: string, isFocused: boolean) => string;
-  
+
   // Extended props for broader use
   placeholder?: string;
   singleLine?: boolean;
@@ -33,6 +39,7 @@ export const DynamicInput = ({
   value,
   originalValue,
   onChange,
+  path,
   className = '',
   wrapperClassName = '',
   readOnly = false,
@@ -50,8 +57,20 @@ export const DynamicInput = ({
   row
 }: DynamicInputProps) => {
   const { t } = useTranslation();
+  const characterContext = useCharacter();
   const [isFocused, setIsFocused] = React.useState(false);
   const isChanged = !readOnly && originalValue !== undefined && value !== originalValue;
+
+  const context = React.useMemo(() => ({
+    modifiers: characterContext?.computed?.modifiers,
+    t
+  }), [characterContext?.computed?.modifiers, t]);
+
+  // 优先级：Path 获取的 Handler > Type 获取的兜底 Handler
+  const handler = React.useMemo(() => {
+    const h = path ? getHandlerByPath(path) : null;
+    return h || getHandlerByType(type);
+  }, [path, type]);
 
   const [tempValue, setTempValue] = React.useState(value);
   React.useEffect(() => {
@@ -59,8 +78,9 @@ export const DynamicInput = ({
   }, [value, isFocused]);
 
   const handleStepperChange = (v: string) => {
+    const finalValue = handler?.update ? handler.update(v) : v;
     setTempValue(v);
-    onChange(v);
+    onChange(finalValue);
   };
 
   const containerRef = useNumericStepper({
@@ -68,49 +88,45 @@ export const DynamicInput = ({
     onChange: handleStepperChange,
     type: type || 'text',
     readOnly: readOnly,
+    min: handler?.min,
+    max: handler?.max,
+    step: handler?.step,
   });
 
-  const isDescriptionCol = (key?: string) => {
-    if (!key) return false;
-    const k = key.toLowerCase();
-    return ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => k.includes(word));
-  };
-
-  const displayValue = () => {
-    return getDisplayValue(value, type || 'text', t, { isFocused, columnKey, row, displayFormatter });
+  const displayValue = (val: string = value) => {
+    return getDisplayValue(val, type || 'text', t, { isFocused, path, columnKey, row, displayFormatter, context });
   };
 
   const handleChange = (val: string) => {
     setTempValue(val);
-    // Real-time for most types now, ensuring bonus/int can handle signs
-    if (type === 'text' || type === 'checkbox' || type === 'select' || type === 'attributeIndex' || type === 'markdown' || type === 'bonus' || type === 'int' || type === 'posInt') {
-       if (validateInput(val, type || 'text')) {
-         const normalized = normalizeValue(val, type || 'text');
-         onChange(normalized);
-       }
+
+    // 优先使用传入的拦截器（CodeMirror 场景）
+    if (transactionFilter) {
+      if (!transactionFilter({ docChanged: true, nextEvents: [{ text: val }] })) {
+        return;
+      }
     }
+
+    // 使用 Handler 进行实时拦截
+    if (handler?.validate) {
+      if (!handler.validate(val)) return;
+    }
+
+    // 更新数据 (使用 update 进行存储格式化)
+    const finalValue = handler?.update ? handler.update(val) : val;
+    onChange(finalValue);
   };
 
   const handleBlur = () => {
     setIsFocused(false);
-    // Final normalization pass across all types
-    let blurValue = tempValue;
-    if (blurValue === '+' || blurValue === '-') blurValue = '0';
-    
-    if (validateInput(blurValue, type || 'text')) {
-      let normalized = normalizeValue(blurValue, type || 'text');
-      if (type === 'level' && normalized === '0') normalized = '1';
-      onChange(normalized);
-    } else {
-      setTempValue(value);
-    }
+    const finalValue = handler?.update ? handler.update(tempValue) : tempValue;
+    onChange(finalValue);
   };
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
-    if (validateInput(val, type || 'text')) {
-      onChange(normalizeValue(val, type || 'text'));
-    }
+    const finalValue = handler?.update ? handler.update(val) : val;
+    onChange(finalValue);
   };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -146,28 +162,23 @@ export const DynamicInput = ({
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={`grid h-full w-full relative group transition-colors ${defaultHeightClass} ${isChanged && !hideIndicator ? 'bg-amber-100/40' : ''} ${wrapperClassName}`}
     >
-      {(type === 'select' && options) || type === 'attributeIndex' ? (
+      {(type === 'select' || type === 'attributeIndex' || handler?.ui === 'select' || handler?.ui === 'attributeIndex') ? (
         <div className="relative w-full h-full">
           <select
-            value={value || (type === 'attributeIndex' ? '0' : '')}
+            value={value || (type === 'attributeIndex' ? '4' : '')}
             onChange={handleSelectChange}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
-            {type === 'attributeIndex' ? (
-              <>
-                <option value="0">—</option>
-                {ATTRIBUTE_NAMES.map((attr, idx) => (
-                  <option key={attr} value={String(idx + 1)}>{t('editor.attributes.' + attr)}</option>
-                ))}
-              </>
-            ) : options?.map(opt => (
-              <option key={opt} value={opt}>{opt || '—'}</option>
+            {(options || handler?.options || []).map((opt: string) => (
+              <option key={opt} value={opt}>
+                {handler?.formatDisplay ? handler.formatDisplay(opt, context) : opt}
+              </option>
             ))}
           </select>
           <div className={`${paddingClass} ${innerClass} flex items-center justify-center ${isChanged ? 'text-amber-700' : 'text-ink'}`}>

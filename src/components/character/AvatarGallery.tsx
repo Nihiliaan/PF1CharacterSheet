@@ -2,11 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Image as ImageIcon, ChevronDown, Settings, X, Plus, Trash2 } from 'lucide-react';
 
-const AvatarGallery = ({ avatars, onUpdate }: { avatars: { url: string; note: string }[], onUpdate: (a: { url: string; note: string }[]) => void }) => {
+import { AvatarsSoA } from '../../types';
+
+const AvatarGallery = ({ avatars, onUpdate }: { avatars: AvatarsSoA, onUpdate: (a: AvatarsSoA) => void }) => {
   const [index, setIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const total = avatars.length;
+
+  const urls = avatars?.url || [];
+  const notes = avatars?.note || [];
+  const total = urls.length;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -26,7 +31,10 @@ const AvatarGallery = ({ avatars, onUpdate }: { avatars: { url: string; note: st
     return () => el.removeEventListener('wheel', handleWheel);
   }, [total]);
 
-  const current = avatars[index] || { url: '', note: '' };
+  const current = {
+    url: urls[index] || '',
+    note: notes[index] || ''
+  };
 
   return (
     <div className="w-full flex flex-col gap-2 shrink-0 relative">
@@ -92,42 +100,43 @@ const AvatarGallery = ({ avatars, onUpdate }: { avatars: { url: string; note: st
            </div>
            
            <div className="max-h-[280px] overflow-y-auto pr-1 flex flex-col gap-3 custom-scrollbar">
-             {avatars.map((a, i) => (
+             {urls.map((url, i) => (
                <div key={i} className="flex flex-col gap-2 p-2 bg-white rounded border border-stone-200 group/item relative">
                  <div className="flex gap-2">
                    <div className="flex-1 flex flex-col gap-1.5">
                       <div className="flex items-center gap-1.5">
                         <ImageIcon size={12} className="text-stone-400" />
-                        <input 
-                          className="flex-1 text-[11px] p-1 border-b border-stone-100 focus:border-primary outline-none transition-colors" 
-                          value={a.url} 
+                        <input
+                          className="flex-1 text-[11px] p-1 border-b border-stone-100 focus:border-primary outline-none transition-colors"
+                          value={url}
                           onChange={(e) => {
-                            const next = [...avatars];
-                            next[i] = { ...a, url: e.target.value };
-                            onUpdate(next);
+                            const newUrls = [...urls];
+                            newUrls[i] = e.target.value;
+                            onUpdate({ ...avatars, url: newUrls });
                           }}
                           placeholder="图片 URL"
                         />
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Plus size={12} className="text-stone-400" />
-                        <input 
-                          className="flex-1 text-[11px] p-1 border-b border-stone-100 focus:border-primary outline-none transition-colors" 
-                          value={a.note} 
+                        <input
+                          className="flex-1 text-[11px] p-1 border-b border-stone-100 focus:border-primary outline-none transition-colors"
+                          value={notes[i] || ''}
                           onChange={(e) => {
-                            const next = [...avatars];
-                            next[i] = { ...a, note: e.target.value };
-                            onUpdate(next);
+                            const newNotes = [...notes];
+                            newNotes[i] = e.target.value;
+                            onUpdate({ ...avatars, note: newNotes });
                           }}
                           placeholder="添加注释..."
                         />
                       </div>
                    </div>
-                   <button 
+                   <button
                      onClick={() => {
-                       const next = avatars.filter((_, idx) => idx !== i);
-                       onUpdate(next);
-                       if (index >= next.length && next.length > 0) setIndex(Math.max(0, next.length - 1));
+                       const newUrls = urls.filter((_, idx) => idx !== i);
+                       const newNotes = notes.filter((_, idx) => idx !== i);
+                       onUpdate({ url: newUrls, note: newNotes });
+                       if (index >= newUrls.length && newUrls.length > 0) setIndex(Math.max(0, newUrls.length - 1));
                      }}
                      className="p-2 text-stone-300 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all self-start"
                    >
@@ -138,8 +147,8 @@ const AvatarGallery = ({ avatars, onUpdate }: { avatars: { url: string; note: st
              ))}
            </div>
 
-           <button 
-             onClick={() => onUpdate([...avatars, { url: '', note: '' }])}
+           <button
+             onClick={() => onUpdate({ url: [...urls, ''], note: [...notes, ''] })}
              className="w-full py-2 border border-dashed border-stone-300 rounded-md text-[10px] font-bold text-stone-500 hover:bg-white hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2"
            >
              <Plus size={14}/> 新增图片

@@ -26,29 +26,33 @@ export const getSizeModifier = (size: string): number => {
 export const calculateTotalCost = (data: CharacterData): string => {
   let total = 0;
   data.equipmentBags.forEach(bag => {
-    bag.items.forEach(item => {
-      const cost = parseFloat(item.cost) || 0;
-      const qty = parseInt(item.quantity) || 1;
+    const items = bag.items;
+    if (!items || !items.item) return;
+    items.item.forEach((_, i) => {
+      const cost = parseFloat(items.cost[i] as any) || 0;
+      const qty = parseInt(items.quantity[i] as any) || 1;
       total += cost * qty;
     });
   });
 
-  const pp = parseInt(data.currency?.pp) || 0;
-  const gp = parseInt(data.currency?.gp) || 0;
-  const sp = parseInt(data.currency?.sp) || 0;
-  const cp = parseInt(data.currency?.cp) || 0;
+  const pp = parseInt(data.currency?.pp as any) || 0;
+  const gp = parseInt(data.currency?.gp as any) || 0;
+  const sp = parseInt(data.currency?.sp as any) || 0;
+  const cp = parseInt(data.currency?.cp as any) || 0;
   total += pp * 10 + gp + sp * 0.1 + cp * 0.01;
 
   return total.toLocaleString('en-US', { maximumFractionDigits: 2 });
 };
 
 export const calculateTotalWeightNum = (data: CharacterData): number => {
-  let total = parseFloat(data.currency?.coinWeight) || 0;
+  let total = parseFloat(data.currency?.coinWeight as any) || 0;
   data.equipmentBags.forEach(bag => {
     if (!bag.ignoreWeight) {
-      bag.items.forEach(item => {
-        const weight = parseFloat(item.weight) || 0;
-        const qty = parseInt(item.quantity) || 1;
+      const items = bag.items;
+      if (!items || !items.item) return;
+      items.item.forEach((_, i) => {
+        const weight = parseFloat(items.weight[i] as any) || 0;
+        const qty = parseInt(items.quantity[i] as any) || 1;
         total += weight * qty;
       });
     }
@@ -63,9 +67,8 @@ export interface EncumbranceThresholds {
 }
 
 export const getComputedEncumbrance = (data: CharacterData): EncumbranceThresholds => {
-  const strAttr = data.attributes[0];
-  const strValue = strAttr ? parseInt(strAttr.final) || 10 : 10;
-  const mult = parseFloat(data.encumbranceMultiplier) > 0 ? parseFloat(data.encumbranceMultiplier) : 1;
+  const strValue = data.attributes?.final?.[0] ?? 10;
+  const mult = parseFloat(data.encumbranceMultiplier as any) > 0 ? parseFloat(data.encumbranceMultiplier as any) : 1;
 
   let heavy = 0;
   if (strValue <= 10) {
@@ -97,12 +100,12 @@ export const getComputedEncumbrance = (data: CharacterData): EncumbranceThreshol
  */
 export const getAttributeModifiers = (data: CharacterData) => {
   return {
-    str: getModifier(data.attributes[0]?.final),
-    dex: getModifier(data.attributes[1]?.final),
-    con: getModifier(data.attributes[2]?.final),
-    int: getModifier(data.attributes[3]?.final),
-    wis: getModifier(data.attributes[4]?.final),
-    cha: getModifier(data.attributes[5]?.final),
+    str: getModifier(data.attributes?.final?.[0] ?? 10),
+    dex: getModifier(data.attributes?.final?.[1] ?? 10),
+    con: getModifier(data.attributes?.final?.[2] ?? 10),
+    int: getModifier(data.attributes?.final?.[3] ?? 10),
+    wis: getModifier(data.attributes?.final?.[4] ?? 10),
+    cha: getModifier(data.attributes?.final?.[5] ?? 10),
   };
 };
 

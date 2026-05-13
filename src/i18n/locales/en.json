@@ -59,7 +59,41 @@
       "initiative": "Initiative",
       "perception": "Perception",
       "languages": "Languages",
-      "story_placeholder": "Write your character's legends here..."
+      "story_placeholder": "Write your character's legends here...",
+      "alignment_options": {
+        "LG": "Lawful Good",
+        "NG": "Neutral Good",
+        "CG": "Chaotic Good",
+        "LN": "Lawful Neutral",
+        "N": "True Neutral",
+        "CN": "Chaotic Neutral",
+        "LE": "Lawful Evil",
+        "NE": "Neutral Evil",
+        "CE": "Chaotic Evil"
+      },
+      "size_options": {
+        "Fine": "Fine",
+        "Diminutive": "Diminutive",
+        "Tiny": "Tiny",
+        "Small": "Small",
+        "Medium": "Medium",
+        "Large": "Large",
+        "Huge": "Huge",
+        "Gargantuan": "Gargantuan",
+        "Colossal": "Colossal"
+      },
+      "gender_options": {
+        "Male": "Male",
+        "Female": "Female",
+        "Other": "Other"
+      },
+      "maneuverability_options": {
+        "Clumsy": "Clumsy",
+        "Poor": "Poor",
+        "Average": "Average",
+        "Good": "Good",
+        "Perfect": "Perfect"
+      }
     },
     "attributes": {
       "STR": "STR",
@@ -124,6 +158,22 @@
       "notes": "Notes",
       "notes_placeholder": "Skill specialization notes..."
     },
+    "spells": {
+      "add_sla_template": "Add SLA Template",
+      "add_spontaneous_template": "Add Spontaneous Template",
+      "add_prepared_template": "Add Prepared Template",
+      "caster_level": "Caster Level",
+      "concentration": "Concentration",
+      "level": "Level",
+      "uses": "Daily Uses",
+      "spell_name": "Spell",
+      "notes": "Notes",
+      "notes_placeholder": "Special notes for spells or abilities...",
+      "base_level_0": "Level 0",
+      "base_level_1": "Level 1",
+      "computed_level": "Level {{n}}",
+      "times_per_day": "/ day"
+    },
     "items": {
       "headers": {
         "item": "Item",
@@ -175,7 +225,7 @@
     },
     "bbcode": {
       "title": "BBCode Export Template Settings",
-      "desc": "Customize the template used for BBCode export. Use {variable_name} to insert data.",
+      "desc": "Customize the template used for BBCode generation. Use {variable_name} to insert data.",
       "reset": "Reset Default",
       "save_as": "Save As",
       "content_label": "Template Content",
@@ -183,7 +233,13 @@
       "prompt_name": "Enter template name",
       "default_name": "New BBCode Template",
       "confirm_reset": "Are you sure you want to reset to the default template? This will overwrite your current changes.",
-      "reset_success": "Restored default template"
+      "reset_success": "Restored default template",
+      "syntax_title": "Advanced Syntax: Conditionals",
+      "syntax_cond": "If not empty show Branch 1, else show Branch 2",
+      "syntax_simple_not_empty": "Show only if not empty",
+      "syntax_simple_empty": "Show only if empty",
+      "syntax_placeholder": "Refers to the field value within branches",
+      "syntax_escape": "Escape symbols ? : $ \\"
     },
     "overlays": {
       "syncing": "Connecting to the other world...",

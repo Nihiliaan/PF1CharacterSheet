@@ -1,10 +1,12 @@
 import React from 'react';
 import DynamicInput from './DynamicInput';
 import { InputType } from '../../types';
+import { getHandlerByPath } from '../../schema/fieldRegistry';
 
 interface MultilineInputProps {
   label: string;
   value: string;
+  path?: string;
   originalValue?: string;
   onChange: (v: string) => void;
   placeholder?: string;
@@ -18,6 +20,7 @@ interface MultilineInputProps {
 const MultilineInput = ({
   label,
   value,
+  path,
   originalValue,
   onChange,
   placeholder = '',
@@ -27,7 +30,15 @@ const MultilineInput = ({
   isAutoHeight = false,
   type = 'text'
 }: MultilineInputProps) => {
+  // 从 Schema 获取逻辑
+  const handler = path ? getHandlerByPath(path) : null;
+
   const isChanged = originalValue !== undefined && value !== originalValue;
+
+  const handleChange = (v: string) => {
+    const finalValue = handler?.update ? handler.update(v) : v;
+    onChange(finalValue);
+  };
 
   return (
     <div className={`flex flex-col gap-1.5 p-3 rounded-xl transition-all border group
@@ -50,9 +61,9 @@ const MultilineInput = ({
       <div className="flex-1 min-h-[24px] flex flex-col relative w-full h-full">
         <DynamicInput
           value={value}
-          onChange={onChange}
+          onChange={handleChange}
           originalValue={originalValue}
-          type={type}
+          type={handler?.ui || type}
           readOnly={readOnly}
           placeholder={placeholder}
           singleLine={false}

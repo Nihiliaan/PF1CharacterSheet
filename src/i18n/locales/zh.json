@@ -59,7 +59,41 @@
       "initiative": "先攻",
       "perception": "察觉",
       "languages": "语言",
-      "story_placeholder": "在此书写角色的过往与传说..."
+      "story_placeholder": "在此书写角色的过往与传说...",
+      "alignment_options": {
+        "LG": "守序善良",
+        "NG": "中立善良",
+        "CG": "混乱善良",
+        "LN": "守序中立",
+        "N": "绝对中立",
+        "CN": "混乱中立",
+        "LE": "守序邪恶",
+        "NE": "中立邪恶",
+        "CE": "混乱邪恶"
+      },
+      "size_options": {
+        "Fine": "超微型",
+        "Diminutive": "微型",
+        "Tiny": "超小型",
+        "Small": "小型",
+        "Medium": "中型",
+        "Large": "大型",
+        "Huge": "超大型",
+        "Gargantuan": "巨型",
+        "Colossal": "超巨型"
+      },
+      "gender_options": {
+        "Male": "男",
+        "Female": "女",
+        "Other": "其它"
+      },
+      "maneuverability_options": {
+        "Clumsy": "笨拙",
+        "Poor": "机动性差",
+        "Average": "机动性一般",
+        "Good": "机动性好",
+        "Perfect": "机动性完美"
+      }
     },
     "attributes": {
       "STR": "力量",

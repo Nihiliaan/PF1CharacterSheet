@@ -27,7 +27,7 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
     if (currentDrag !== null && currentDrag.listKey === listKey) {
       const sourceItemIndex = currentDrag.itemIndex;
       if (sourceItemIndex !== targetItemIndex) {
-        setData(p => dataUpdateService.reorderList(p, listKey as any, sourceItemIndex, targetItemIndex));
+        setData(p => dataUpdateService.reorderList(p, listKey, sourceItemIndex, targetItemIndex));
         draggedTableItem.current = { listKey, itemIndex: targetItemIndex };
       }
     }

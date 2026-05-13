@@ -1,5 +1,6 @@
 import { ATTRIBUTE_NAMES, CharacterData } from '../types';
 import { getDisplayValue } from './formatters';
+import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from './calculations';
 
 export function generateBBCode(data: CharacterData, template: string, t: any): string {
   let bbcode = template;
@@ -9,8 +10,13 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
     let curr = obj;
     for (const p of parts) {
       if (curr === undefined || curr === null) return undefined;
-      // Handle array access like avatars.0.url
-      if (Array.isArray(curr) && /^\d+$/.test(p)) {
+      // Handle array access like avatars[0].url
+      const arrayMatch = p.match(/^(.+)\[(\d+)\]$/);
+      if (arrayMatch) {
+        const key = arrayMatch[1];
+        const idx = parseInt(arrayMatch[2]);
+        curr = curr[key]?.[idx];
+      } else if (Array.isArray(curr) && /^\d+$/.test(p)) {
         curr = curr[parseInt(p)];
       } else {
         curr = curr[p];
@@ -19,55 +25,62 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
     return curr;
   };
 
-  const formatDynamicBlock = (blocks: any[]) => {
-    if (!blocks || blocks.length === 0) return '无';
-    return blocks.map(block => {
+  const formatDynamicBlock = (blocks: any[], parentPath: string) => {
+    if (!blocks || blocks.length === 0) return t('common.none') || '无';
+    return blocks.map((block, index) => {
       let blockResult = `[b]${block.title}[/b]`;
+      const blockPath = `${parentPath}[${index}]`;
+
       if (block.type === 'text') {
-        blockResult += block.content || t('editor.lists.no_content') || '暂无内容';
+        blockResult += `\n${block.content || t('editor.lists.no_content') || '暂无内容'}`;
       } else if (block.type === 'table') {
         const cols = block.columns || [];
         const tableData = block.tableData || [];
-        blockResult += '[table]\n';
-        tableData.forEach((row: any) => {
-          blockResult += '[tr]' + cols.map((c: any) => `[td]${row[c.key] || ''}[/td]`).join('') + '[/tr]\n';
-        });
-        blockResult += '[/table]';
+        if (tableData.length > 0) {
+          blockResult += '\n[table]\n';
+          tableData.forEach((row: any, rowIndex: number) => {
+            blockResult += '[tr]' + cols.map((c: any) => {
+              const val = row[c.key] || '';
+              // 按照 SoA 寻址：parentPath[index].tableData.key[rowIndex]
+              const cellPath = `${blockPath}.tableData.${c.key}[${rowIndex}]`;
+              return `[td]${getDisplayValue(val, c.type || 'text', t, { path: cellPath })}[/td]`;
+            }).join('') + '[/tr]\n';
+          });
+          blockResult += '[/table]';
+        }
       } else if (block.type === 'spell') {
-        // Spell blocks (SLA, Spontaneous, Prepared)
         const cl = block.casterLevel || '0';
         const conc = block.concentration || '0';
-        blockResult += `（[b]${t('editor.spells.caster_level')}[/b] ${getDisplayValue(cl, 'level', t)}；[b]${t('editor.spells.concentration')}[/b] ${getDisplayValue(conc, 'bonus', t)}）\n`;
+        const clStr = getDisplayValue(cl, 'level', t, { path: `${blockPath}.casterLevel` });
+        const concStr = getDisplayValue(conc, 'bonus', t, { path: `${blockPath}.concentration` });
 
-        const cols = block.columns || [];
+        blockResult += `（[b]${t('editor.spells.caster_level')}[/b] ${clStr}；[b]${t('editor.spells.concentration')}[/b] ${concStr}）\n`;
+
         const tableData = block.tableData || [];
-        const baseLevel = block.baseLevel || 0;
+        const baseLevel = block.baseLevel ?? ((block.spellType === 0 || block.spellType === 2) ? 0 : 1);
+        const spellType = block.spellType ?? 2;
+
         if (tableData.length > 0) {
           blockResult += '[table]\n';
-          tableData.forEach((row: any, i: number) => {
-            blockResult += '[tr]' + cols.map((c: any) => {
-              let val = row[c.key] || '';
-              if (c.key === 'level') {
-                // Determine if we should show the computed level
-                // In prepared/spontaneous, the level column is usually computed
-                const levelNum = tableData.length - 1 - i + baseLevel;
-                val = t('editor.spells.computed_level', { n: levelNum }) || `${levelNum}环`;
-              } else if (c.key === 'uses' && val) {
-                // If it's a numeric usage count without a unit, append "次/日"
-                if (/^\d+(\/\d+)?$/.test(val) && !val.includes(t('common.day') || '日') && !val.includes('day')) {
-                  val += t('editor.spells.times_per_day');
-                }
-                val += '—'
-              }
-              return `[td]${val}[/td]`;
-            }).join('') + '[/tr]\n';
+          [...tableData].reverse().forEach((row: any, i: number) => {
+            const rowIndex = tableData.length - 1 - i;
+            const levelNum = rowIndex + baseLevel;
+            const levelStr = t('editor.spells.computed_level', { n: levelNum }) || `${levelNum}环`;
+
+            blockResult += '[tr]';
+            if (spellType !== 4) blockResult += `[td]${levelStr}[/td]`;
+            if (spellType !== 0 && spellType !== 1) {
+              const usesVal = getDisplayValue(row.uses, 'dailyUses', t, { path: `${blockPath}.spellTable.uses[${rowIndex}]` });
+              blockResult += `[td]${usesVal}[/td]`;
+            }
+            const spellsVal = row.spells || '';
+            blockResult += `[td]${spellsVal}[/td]`;
+            blockResult += '[/tr]\n';
           });
           blockResult += '[/table]\n';
         }
 
-        if (block.notes) {
-          blockResult += `${block.notes}`;
-        }
+        if (block.notes) blockResult += `${block.notes}`;
       }
       return blockResult;
     }).join('\n[hr]\n');
@@ -75,313 +88,203 @@ export function generateBBCode(data: CharacterData, template: string, t: any): s
 
   const vars: Record<string, string> = {};
 
-  const basicFields = ['name', 'classes', 'alignment', 'deity', 'size', 'gender', 'race', 'age', 'height', 'weight', 'speed', 'senses', 'initiative', 'perception', 'languages'];
+  // 1. Basic Info
+  const basicFields = ['name', 'classes', 'alignment', 'deity', 'size', 'gender', 'race', 'age', 'height', 'weight', 'senses', 'initiative', 'perception', 'languages'];
   basicFields.forEach(f => {
-    const val = getS(data, `basic.${f}`) || '';
-    if (f === 'initiative' || f === 'perception') {
-      vars[f] = getDisplayValue(val, 'bonus', t);
-    } else {
-      vars[f] = String(val);
-    }
+    vars[f] = getDisplayValue(getS(data, `basic.${f}`) || '', 'text', t, { path: `basic.${f}` });
   });
 
-  vars['avatarUrl'] = (getS(data, 'basic.avatars')?.[0]?.url) || 'http://此处填写人物头像图片地址';
+  vars['speed'] = getDisplayValue(data.basic.speed.land, 'distance', t, { path: 'basic.speed.land' });
 
-  vars['acp'] = data.armorCheckPenalty && data.armorCheckPenalty !== '0' ? `-${data.armorCheckPenalty}` : '0';
+  vars['avatarUrl'] = (data.basic.avatars?.url?.[0]) || 'http://此处填写人物头像图片地址';
+  vars['acp'] = getDisplayValue(data.armorCheckPenalty, 'int', t, { path: 'armorCheckPenalty' });
 
+  // 2. Attributes
   vars['attributesTable'] = '[table]\n' +
-    (data.attributes || []).map((a: any, i: number) =>
-      `[tr][td]${t('editor.attributes.' + ATTRIBUTE_NAMES[i]) || ''}[/td][td]${a.final || ''}[/td][td]${getDisplayValue(a.modifier, 'bonus', t)}[/td][td]${a.source || ''}${a.status ? ' ' + a.status : ''}[/td][/tr]`
-    ).join('\n') + '\n[/table]';
-
-  const babTable = getS(data, 'babTable');
-  const cmNotes = getS(data, 'combatManeuverNotes');
-
-  let bab = '', cmb = '', cmd = '';
-  if (babTable && Array.isArray(babTable) && babTable.length > 0) {
-    bab = getDisplayValue(babTable[0].bab, 'bonus', t);
-    cmb = getDisplayValue(babTable[0].cmb, 'bonus', t);
-    cmd = babTable[0].cmd;
-  }
-  vars['bab'] = bab;
-  vars['cmb'] = cmb;
-  vars['cmd'] = cmd;
-  vars['combatManeuverNotes'] = cmNotes || '';
-
-  const formatCrit = (range: string, multi: string) => {
-    const r = range || '20';
-    const m = multi || '×2';
-    if (r === '20' && (m === '×2' || m === 'x2')) return '';
-    const rangeStr = r === '20' ? '20' : `${r}-20`;
-    return `${rangeStr}${m}`;
-  };
-
-  const formatDistance = (val: any) => {
-    if (!val || val === '5' || val === 5) return '';
-    return getDisplayValue(val, 'distance', t);
-  };
-
-  vars['meleeAttackTable'] = '[table]\n' + (data.meleeAttacks || []).map((m: any) => {
-    const critStr = formatCrit(m.critRange || m.crit, m.critMultiplier || m.multiplier);
-    const damageType = m.damageType || m.type || '';
-    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${damageType}[/td][td]${formatDistance(m.range)}[/td][td]${m.special || ''}[/td][/tr]`;
-  }).join('\n') + '\n[/table]';
-
-  vars['rangedAttackTable'] = '[table]\n' + (data.rangedAttacks || []).map((m: any) => {
-    const critStr = formatCrit(m.critRange || m.crit, m.critMultiplier || m.multiplier);
-    const damageType = m.damageType || m.type || '';
-    return `[tr][td]${m.weapon || ''}[/td][td]${getDisplayValue(m.hit, 'bonus', t)}[/td][td]${m.damage || ''}[/td][td]${critStr}[/td][td]${damageType}[/td][td]射程增量${getDisplayValue(m.range, 'distance', t)}[/td][td]${m.special || ''}[/td][/tr]`;
-  }).join('\n') + '\n[/table]';
-
-
-  const defenses = data.defenses || {} as any;
-  const acData = defenses.acTable?.[0] || {};
-  vars['ac'] = acData.ac || '';
-  vars['acFlatFooted'] = acData.flatFooted || '';
-  vars['acTouch'] = acData.touch || '';
-  vars['acSource'] = acData.source || '';
-  vars['acNotes'] = defenses.acNotes || '';
-  vars['acLine'] = acData.ac ? `[b]AC[/b] ${acData.ac}, [b]${t('editor.defenses.flat_footed')}[/b] ${acData.flatFooted || ''}, [b]${t('editor.defenses.touch')}[/b] ${acData.touch || ''}${acData.source ? ` (${acData.source})` : ''}${defenses.acNotes ? `；${defenses.acNotes}` : ''}` : '';
-
-  vars['hp'] = defenses.hp || '';
-  vars['hd'] = defenses.hd || '';
-  vars['hpLine'] = `[b]HP[/b] ${defenses.hp}${defenses.hd ? ` (${defenses.hd})` : ''}`;
-
-  const saveData = defenses.savesTable?.[0] || {};
-  vars['saveFort'] = getDisplayValue(saveData.fort, 'bonus', t);
-  vars['saveRef'] = getDisplayValue(saveData.ref, 'bonus', t);
-  vars['saveWill'] = getDisplayValue(saveData.will, 'bonus', t);
-  vars['savesNotes'] = defenses.savesNotes || '';
-  vars['saveLine'] = saveData.fort ? `[b]${t('editor.defenses.fort')}[/b] ${getDisplayValue(saveData.fort, 'bonus', t)}, [b]${t('editor.defenses.ref')}[/b] ${getDisplayValue(saveData.ref, 'bonus', t)}, [b]${t('editor.defenses.will')}[/b] ${getDisplayValue(saveData.will, 'bonus', t)}${defenses.savesNotes ? ` (${defenses.savesNotes})` : ''}` : '';
-  vars['specialDefenses'] = getS(data, 'defenses.specialDefenses');
-
-  vars['racialTraits'] = '[table]\n' + (data.racialTraits || []).map((r: any) => `[tr][td]${r.name}[/td][td]${r.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
-  vars['backgroundTraits'] = (data.backgroundTraits || []).map((r: any) => `${r.name}(${r.type}): ${r.desc}`).join('\n') || t('common.none');
-
-  vars['favoredClass'] = getS(data, 'favoredClass') || '';
-  vars['favoredClassBonus'] = getS(data, 'favoredClassBonus') || '';
-  vars['classFeatures'] = '[table]\n' + (data.classFeatures || []).map((f: any) => `[tr][td]${getDisplayValue(f.level, 'level', t)}[/td][td]${f.name}${f.type ? `（${f.type}）` : ''}[/td][td]${f.desc}[/td][/tr]`).join('\n') + '\n[/table]' || t('common.none');
-
-  vars['featTable'] = '[table]\n' +
-    (data.feats || []).map((f: any) =>
-      `[tr][td]${getDisplayValue(f.level, 'level', t)}[/td][td]${f.name || ''}${f.type ? ` (${f.type})` : ''}[/td][td]${f.desc || ''}[/td][/tr]`
-    ).join('\n') + '\n[/table]';
-
-  const displayFormatter1 = (val) => {
-    if (!val || val === '0') return '';
-    const idx = parseInt(val, 10) - 1;
-    const localizedName = t('editor.attributes.' + ATTRIBUTE_NAMES[idx]);
-    const modStr = getDisplayValue(data.attributes[idx].modifier, 'bonus', t);
-    return `${modStr}${localizedName}`;
-  }
-
-  vars['skillTable'] = '[table]\n' +
-    (data.skills || []).map((s: any) => {
-      const rankVal = parseInt(s.rank) || 0;
-      const details = [
-        getDisplayValue(s.rank, 'level', t),
-        (s.cs === 'true' && rankVal > 0) ? `+3${t('editor.sections.cs_short')}` : '',
-        displayFormatter1(s.ability),
-        s.others,
-        s.special
-      ].filter(x => x).join('');
-
-      const totalValue = getDisplayValue(s.total, 'bonus', t) || '0';
-      const mergedString = details ? `${totalValue} (${details})` : totalValue;
-
-      return `[tr][td]${s.name || ''}[/td][td]${mergedString}[/td][td]${s.special || ''}[/td][/tr]`;
+    (data.attributes?.final || []).map((_, i: number) => {
+      const name = t('editor.attributes.' + ATTRIBUTE_NAMES[i]) || '';
+      const final = getDisplayValue(data.attributes.final[i], 'int', t, { path: `attributes.final[${i}]` });
+      const mod = getDisplayValue(data.attributes.modifier[i], 'bonus', t, { path: `attributes.modifier[${i}]` });
+      const source = data.attributes.source[i] || '';
+      const status = data.attributes.status[i] ? ' ' + data.attributes.status[i] : '';
+      return `[tr][td]${name}[/td][td]${final}[/td][td]${mod}[/td][td]${source}${status}[/td][/tr]`;
     }).join('\n') + '\n[/table]';
 
-  let itemsWeight = 0;
-  let itemsValue = 0;
+  // 3. Combat Table (Correct path: combatTable.key[0])
+  vars['bab'] = getDisplayValue(data.combatTable?.bab?.[0], 'bonus', t, { path: 'combatTable.bab[0]' });
+  vars['cmb'] = getDisplayValue(data.combatTable?.cmb?.[0], 'bonus', t, { path: 'combatTable.cmb[0]' });
+  vars['cmd'] = getDisplayValue(data.combatTable?.cmd?.[0], 'int', t, { path: 'combatTable.cmd[0]' });
+  vars['combatManeuverNotes'] = data.combatManeuverNotes || '';
 
+  // 4. Attacks
+  const formatAttackTable = (attacks: any, path: string) => {
+    if (!attacks || !attacks.weapon || attacks.weapon.length === 0) return '';
+    return '[table]\n' + attacks.weapon.map((_: any, i: number) => {
+      const weapon = attacks.weapon[i] || '';
+      const hit = getDisplayValue(attacks.hit[i], 'bonus', t, { path: `${path}.hit[${i}]` });
+      const damage = attacks.damage[i] || '';
+      const critRange = getDisplayValue(attacks.critRange[i], 'critRange', t, { path: `${path}.critRange[${i}]` });
+      const critMult = getDisplayValue(attacks.critMultiplier[i], 'critMultiplier', t, { path: `${path}.critMultiplier[${i}]` });
+      const critStr = (critRange === '20' && (critMult === '×2' || critMult === '2')) ? '' : `${critRange}${critMult}`;
+      const range = getDisplayValue(attacks.range[i], 'distance', t, { path: `${path}.range[${i}]` });
+      return `[tr][td]${weapon}[/td][td]${hit}[/td][td]${damage}[/td][td]${critStr}[/td][td]${attacks.damageType[i] || ''}[/td][td]${range}[/td][td]${attacks.special[i] || ''}[/td][/tr]`;
+    }).join('\n') + '\n[/table]';
+  };
+
+  vars['meleeAttackTable'] = formatAttackTable(data.attacks.meleeAttacks, 'attacks.meleeAttacks');
+  vars['rangedAttackTable'] = formatAttackTable(data.attacks.rangedAttacks, 'attacks.rangedAttacks');
+  vars['specialAttacks'] = data.attacks.specialAttacks || '';
+
+  // 5. Defenses
+  vars['ac'] = getDisplayValue(data.defenses.acTable?.ac?.[0], 'int', t, { path: 'defenses.acTable.ac[0]' });
+  vars['acTouch'] = getDisplayValue(data.defenses.acTable?.touch?.[0], 'int', t, { path: 'defenses.acTable.touch[0]' });
+  vars['acFlatFooted'] = getDisplayValue(data.defenses.acTable?.flatFooted?.[0], 'int', t, { path: 'defenses.acTable.flatFooted[0]' });
+  vars['acSource'] = data.defenses.acTable?.source?.[0] || '';
+  vars['acNotes'] = data.defenses.acNotes || '';
+  vars['acLine'] = vars['ac'] ? `[b]AC[/b] ${vars['ac']}, [b]${t('editor.defenses.flat_footed')}[/b] ${vars['acFlatFooted']}, [b]${t('editor.defenses.touch')}[/b] ${vars['acTouch']}${vars['acSource'] ? ` (${vars['acSource']})` : ''}${vars['acNotes'] ? `；${vars['acNotes']}` : ''}` : '';
+
+  vars['hp'] = getDisplayValue(data.defenses.hp, 'posInt', t, { path: 'defenses.hp' });
+  vars['hd'] = data.defenses.hd || '';
+  vars['hpLine'] = `[b]HP[/b] ${vars['hp']}${vars['hd'] ? ` (${vars['hd']})` : ''}`;
+
+  vars['saveFort'] = getDisplayValue(data.defenses.savesTable?.fort?.[0], 'bonus', t, { path: 'defenses.savesTable.fort[0]' });
+  vars['saveRef'] = getDisplayValue(data.defenses.savesTable?.ref?.[0], 'bonus', t, { path: 'defenses.savesTable.ref[0]' });
+  vars['saveWill'] = getDisplayValue(data.defenses.savesTable?.will?.[0], 'bonus', t, { path: 'defenses.savesTable.will[0]' });
+  vars['savesNotes'] = data.defenses.savesNotes || '';
+  vars['saveLine'] = vars['saveFort'] ? `[b]${t('editor.defenses.fort')}[/b] ${vars['saveFort']}, [b]${t('editor.defenses.ref')}[/b] ${vars['saveRef']}, [b]${t('editor.defenses.will')}[/b] ${vars['saveWill']}${vars['savesNotes'] ? ` (${vars['savesNotes']})` : ''}` : '';
+  vars['specialDefenses'] = data.defenses.specialDefenses || '';
+
+  // 6. Traits & Features
+  vars['racialTraits'] = (data.racialTraits?.name?.length > 0)
+    ? '[table]\n' + data.racialTraits.name.map((_, i: number) => `[tr][td]${getDisplayValue(data.racialTraits.name[i], 'text', t, { path: `racialTraits.name[${i}]` })}[/td][td]${getDisplayValue(data.racialTraits.desc[i], 'text', t, { path: `racialTraits.desc[${i}]` })}[/td][/tr]`).join('\n') + '\n[/table]'
+    : t('common.none');
+
+  vars['backgroundTraits'] = (data.backgroundTraits?.name?.length > 0)
+    ? data.backgroundTraits.name.map((_, i: number) => `${data.backgroundTraits.name[i]}(${data.backgroundTraits.type[i]}): ${data.backgroundTraits.desc[i]}`).join('\n')
+    : t('common.none');
+
+  vars['favoredClass'] = data.favoredClass || '';
+  vars['favoredClassBonus'] = data.favoredClassBonus || '';
+
+  vars['classFeatures'] = (data.classFeatures?.name?.length > 0)
+    ? '[table]\n' + data.classFeatures.name.map((_, i: number) => `[tr][td]${getDisplayValue(data.classFeatures.level[i], 'level', t, { path: `classFeatures.level[${i}]` })}[/td][td]${data.classFeatures.name[i]}${data.classFeatures.type[i] ? `（${t('editor.class_features.types.' + data.classFeatures.type[i]) || ''}）` : ''}[/td][td]${data.classFeatures.desc[i]}[/td][/tr]`).join('\n') + '\n[/table]'
+    : t('common.none');
+
+  vars['featTable'] = (data.feats?.name?.length > 0)
+    ? '[table]\n' + data.feats.name.map((_, i: number) => `[tr][td]${getDisplayValue(data.feats.level[i], 'level', t, { path: `feats.level[${i}]` })}[/td][td]${data.feats.name[i] || ''}${data.feats.type[i] ? ` (${data.feats.type[i]})` : ''}[/td][td]${data.feats.desc[i] || ''}[/td][/tr]`).join('\n') + '\n[/table]'
+    : t('common.none');
+
+  // 7. Skills
+  vars['skillTable'] = (data.skills?.name?.length > 0)
+    ? '[table]\n' + data.skills.name.map((_, i: number) => {
+        const total = getDisplayValue(data.skills.total[i], 'bonus', t, { path: `skills.total[${i}]` });
+        const rank = getDisplayValue(data.skills.rank[i], 'level', t, { path: `skills.rank[${i}]` });
+        const cs = (data.skills.cs[i] && (data.skills.rank[i] || 0) > 0) ? `+3${t('editor.sections.cs_short')}` : '';
+        let attrStr = '';
+        if (data.skills.ability[i] && data.skills.ability[i] !== 0) {
+          const idx = data.skills.ability[i] - 1;
+          attrStr = `${getDisplayValue(data.attributes.modifier[idx], 'bonus', t, { path: `attributes.modifier[${idx}]` })}${t('editor.attributes.' + ATTRIBUTE_NAMES[idx])}`;
+        }
+        const det = [rank, cs, attrStr, data.skills.others?.[i]].filter(x => x).join(' ');
+        return `[tr][td]${data.skills.name[i] || ''}[/td][td]${det ? `${total} (${det})` : total}[/td][td]${data.skills.special?.[i] || ''}[/td][/tr]`;
+      }).join('\n') + '\n[/table]'
+    : t('common.none');
+
+  // 8. Equipment & Currency
   if (!data.equipmentBags || data.equipmentBags.length === 0) {
-    vars['equipmentTable'] = '无';
+    vars['equipmentTable'] = t('common.none');
   } else {
-    vars['equipmentTable'] = data.equipmentBags.map((bag: any) => {
-      let bagResult = `[quote author=${bag.name}${bag.ignoreWeight ? ' (' + t('editor.items.ignore_weight') + ')' : ''}]\n`;
-      const items = bag.items || [];
-      if (items.length === 0) {
-        bagResult += t('editor.items.no_items') + '\n';
+    vars['equipmentTable'] = data.equipmentBags.map((bag, bIdx) => {
+      let res = `[quote author=${bag.name}${bag.ignoreWeight ? ' (' + t('editor.items.ignore_weight') + ')' : ''}]\n`;
+      const items = bag.items;
+      if (!items || !items.item || items.item.length === 0) {
+        res += (t('editor.items.no_items') || '此容器内无物品') + '\n';
       } else {
-        bagResult += '[table]\n';
-        bagResult += items.map((i: any) => {
-          const q = parseInt(i.quantity) || 1;
-          const w = parseFloat(i.weight) || 0;
-          const c = parseFloat(i.cost) || 0;
-          const totalW = Number((w * q).toFixed(4));
-          const totalC = Number((c * q).toFixed(4));
-
-          if (!bag.ignoreWeight) itemsWeight += w * q;
-          itemsValue += c * q;
-
-          const name = i.item + (q > 1 ? `(${q})` : '');
-          return `[tr][td]${name || ''}[/td][td]${totalC === 0 ? '' : totalC + 'gp'}[/td][td]${totalW === 0 ? '' : totalW + '磅'}[/td][td]${i.notes || ''}[/td][/tr]`;
-        }).join('\n');
-        bagResult += '\n[/table]';
+        res += '[table]\n' + items.item.map((_, iIdx) => {
+          const q = parseInt(items.quantity[iIdx] as any) || 1;
+          const c = (parseFloat(items.cost[iIdx] as any) || 0) * q;
+          const w = (parseFloat(items.weight[iIdx] as any) || 0) * q;
+          const name = items.item[iIdx] + (q > 1 ? `(${q})` : '');
+          const cStr = c === 0 ? '' : `${c.toFixed(2)}gp`;
+          const wStr = w === 0 ? '' : `${w.toFixed(2)}lbs`;
+          const notes = items.notes[iIdx] || '';
+          return `[tr][td]${name}[/td][td]${cStr}[/td][td]${wStr}[/td][td]${notes}[/td][/tr]`;
+        }).join('\n') + '\n[/table]';
       }
-      bagResult += '\n[/quote]'
-      return bagResult;
+      return res + '[/quote]';
     }).join('\n');
   }
 
-  const pp = parseInt(data.currency?.pp) || 0;
-  const gp = parseInt(data.currency?.gp) || 0;
-  const sp = parseInt(data.currency?.sp) || 0;
-  const cp = parseInt(data.currency?.cp) || 0;
-  const currencyWeight = parseFloat(data.currency?.coinWeight) || 0;
-  const currencyValue = pp * 10 + gp + sp * 0.1 + cp * 0.01;
+  vars['currencyLine'] = `[b]${t('editor.items.currency')} (${[
+    data.currency.pp > 0 && `${data.currency.pp}${t('editor.items.pp')}`,
+    data.currency.gp > 0 && `${data.currency.gp}${t('editor.items.gp')}`,
+    data.currency.sp > 0 && `${data.currency.sp}${t('editor.items.sp')}`,
+    data.currency.cp > 0 && `${data.currency.cp}${t('editor.items.cp')}`
+  ].filter(Boolean).join('') || '无'}) ${t('editor.items.coin_weight_total')} ${parseFloat(data.currency.coinWeight).toFixed(1)}lbs ${t('editor.items.total_assets')} ${calculateTotalCost(data)}gp[/b]`;
 
-  const coinTexts = [];
-  if (pp > 0) coinTexts.push(`${pp}${t('editor.items.pp')}`);
-  if (gp > 0) coinTexts.push(`${gp}${t('editor.items.gp')}`);
-  if (sp > 0) coinTexts.push(`${sp}${t('editor.items.sp')}`);
-  if (cp > 0) coinTexts.push(`${cp}${t('editor.items.cp')}`);
-  const coinsLine = coinTexts.length > 0 ? `${t('editor.items.currency') || '钱币'}（${coinTexts.join('')}）` : `${t('editor.items.currency') || '钱币'}（无）`;
+  const totalW = calculateTotalWeightNum(data);
+  const enc = getComputedEncumbrance(data);
+  let sKey = t('editor.items.light');
+  if (totalW > enc.heavy) sKey = t('editor.items.overload');
+  else if (totalW > enc.medium) sKey = t('editor.items.heavy');
+  else if (totalW > enc.light) sKey = t('editor.items.medium');
 
-  vars['currencyLine'] = `[b]${coinsLine} ${t('editor.items.coin_weight_total') || '钱币总重'} ${currencyWeight.toFixed(1)}磅 ${t('editor.items.total_assets') || '钱币总价值'} ${currencyValue.toFixed(2)}gp[/b]`;
-
-  const finalTotalWeight = itemsWeight + currencyWeight;
-
-  const strAttr = data.attributes?.[0];
-  const strValue = strAttr ? parseInt(strAttr.final) || 10 : 10;
-  const mult = parseFloat(data.encumbranceMultiplier) || 1;
-
-  let heavyLimitBase = 0;
-  if (strValue <= 10) {
-    heavyLimitBase = strValue * 10;
-  } else {
-    const seq = [115, 130, 150, 175, 200, 230, 260, 300, 350];
-    if (strValue >= 11 && strValue <= 19) { heavyLimitBase = seq[strValue - 11]; }
-    else {
-      const eff = (strValue % 10) + 10;
-      const baseHeavy = eff === 10 ? 100 : seq[eff - 11];
-      const power = Math.floor((strValue - eff) / 10);
-      heavyLimitBase = baseHeavy * Math.pow(4, power);
-    }
-  }
-
-  const lightLimit = Math.floor(heavyLimitBase / 3 * mult);
-  const mediumLimit = Math.floor(heavyLimitBase * 2 / 3 * mult);
-  const heavyLimit = Math.floor(heavyLimitBase * mult);
-
-  let statusKey = t('editor.items.light');
-  if (finalTotalWeight > heavyLimit) statusKey = t('editor.items.overload');
-  else if (finalTotalWeight > mediumLimit) statusKey = t('editor.items.heavy');
-  else if (finalTotalWeight > lightLimit) statusKey = t('editor.items.medium');
-
-  vars['loadSummary'] = `[b]${t('editor.items.total_weight') || '负重'} ${statusKey} ${finalTotalWeight.toFixed(1)}磅 ${lightLimit}/${mediumLimit}/${heavyLimit}[/b]`;
-
-  vars['loadStatus'] = `${statusKey} (${finalTotalWeight.toFixed(1)} 磅)`;
-  vars['loadLimits'] = `${lightLimit} / ${mediumLimit} / ${heavyLimit}`;
-
+  vars['loadSummary'] = `[b]${t('editor.items.total_weight')} ${sKey} ${totalW.toFixed(1)}lbs ${enc.light}/${enc.medium}/${enc.heavy}[/b]`;
   vars['equipmentSection'] = vars['equipmentTable'] + '\n' + vars['currencyLine'] + '\n' + vars['loadSummary'];
 
-  vars['magicBlocks'] = formatDynamicBlock(data.magicBlocks || []);
-  vars['additionalData'] = formatDynamicBlock(data.additionalData || []);
+  // 9. Magic & Additional
+  vars['magicBlocks'] = formatDynamicBlock(data.magicBlocks || [], 'magicBlocks');
+  vars['additionalData'] = formatDynamicBlock(data.additionalData || [], 'additionalData');
 
   const resolveValue = (path: string) => {
     if (vars[path] !== undefined) return String(vars[path]);
-    const pathVal = getS(data, path);
-    if (typeof pathVal === 'string' || typeof pathVal === 'number') return String(pathVal);
-    if (path === 'armorCheckPenalty') return String(vars['acp']);
-    return undefined;
+    const val = getS(data, path);
+    return (typeof val === 'string' || typeof val === 'number') ? String(val) : undefined;
   };
 
   const tagRegex = /\{((?:[^{}\\]|\\.)+)\}/g;
-  let passes = 0;
-  let changed = true;
+  let changed = true, passes = 0;
   while (changed && passes < 3) {
-    const oldBBCode = bbcode;
+    const old = bbcode;
     bbcode = bbcode.replace(tagRegex, (match, content) => {
-      // Find unescaped separators
-      let firstQ = -1;
-      let firstC = -1;
-      let escaped = false;
+      let fQ = -1, fC = -1, esc = false;
       for (let i = 0; i < content.length; i++) {
-        if (escaped) { escaped = false; continue; }
-        if (content[i] === '\\') { escaped = true; continue; }
-        if (content[i] === '?') { if (firstQ === -1) firstQ = i; }
-        else if (content[i] === ':') { if (firstC === -1) firstC = i; }
+        if (esc) { esc = false; continue; }
+        if (content[i] === '\\') { esc = true; continue; }
+        if (content[i] === '?') { if (fQ === -1) fQ = i; }
+        else if (content[i] === ':') { if (fC === -1) fC = i; }
       }
-
-      let path = '';
-      let ifNotEmpty = '';
-      let ifEmpty = '';
-      const hasQ = firstQ !== -1;
-      const hasC = firstC !== -1;
-
-      if (!hasQ && !hasC) {
-        path = content;
-      } else if (hasQ && !hasC) {
-        path = content.substring(0, firstQ);
-        ifNotEmpty = content.substring(firstQ + 1);
-      } else if (!hasQ && hasC) {
-        path = content.substring(0, firstC);
-        ifEmpty = content.substring(firstC + 1);
-      } else {
-        if (firstQ < firstC) {
-          path = content.substring(0, firstQ);
-          ifNotEmpty = content.substring(firstQ + 1, firstC);
-          ifEmpty = content.substring(firstC + 1);
-        } else {
-          path = content.substring(0, firstC);
-          ifEmpty = content.substring(firstC + 1, firstQ);
-          ifNotEmpty = content.substring(firstQ + 1);
+      let p = '', iNE = '', iE = '';
+      if (fQ === -1 && fC === -1) p = content;
+      else if (fQ !== -1 && fC === -1) { p = content.substring(0, fQ); iNE = content.substring(fQ + 1); }
+      else if (fQ === -1 && fC !== -1) { p = content.substring(0, fC); iE = content.substring(fC + 1); }
+      else {
+        if (fQ < fC) { p = content.substring(0, fQ); iNE = content.substring(fQ + 1, fC); iE = content.substring(fC + 1); }
+        else { p = content.substring(0, fC); iE = content.substring(fC + 1, fQ); iNE = content.substring(fQ + 1); }
+      }
+      const val = resolveValue(p);
+      const empty = val === undefined || val === null || val === '';
+      let res = (fQ === -1 && fC === -1) ? (val !== undefined ? val : match) : (fQ !== -1 && fC === -1) ? (!empty ? iNE : '') : (fQ === -1 && fC !== -1) ? (!empty ? val : iE) : (!empty ? iNE : iE);
+      if (val !== undefined && res.includes('$')) {
+        let sub = '', subEsc = false;
+        for (let i = 0; i < res.length; i++) {
+          if (subEsc) { sub += res[i]; subEsc = false; }
+          else if (res[i] === '\\') { sub += '\\'; subEsc = true; }
+          else if (res[i] === '$') sub += val;
+          else sub += res[i];
         }
+        res = sub;
       }
-
-      const val = resolveValue(path);
-      const isEmpty = val === undefined || val === null || val === '';
-
-      let chosen = '';
-      if (!hasQ && !hasC) {
-        chosen = val !== undefined ? val : match;
-      } else if (hasQ && !hasC) {
-        chosen = !isEmpty ? ifNotEmpty : '';
-      } else if (!hasQ && hasC) {
-        chosen = !isEmpty ? val : ifEmpty;
-      } else {
-        chosen = !isEmpty ? ifNotEmpty : ifEmpty;
-      }
-
-      if (val !== undefined && chosen.includes('$')) {
-        let sub = '';
-        let subEscaped = false;
-        for (let i = 0; i < chosen.length; i++) {
-          if (subEscaped) {
-            sub += chosen[i];
-            subEscaped = false;
-          } else if (chosen[i] === '\\') {
-            sub += '\\';
-            subEscaped = true;
-          } else if (chosen[i] === '$') {
-            sub += val;
-          } else {
-            sub += chosen[i];
-          }
-        }
-        chosen = sub;
-      }
-
-      return chosen;
+      return res;
     });
-    changed = bbcode !== oldBBCode;
+    changed = bbcode !== old;
     passes++;
   }
-
-  let finalBBCode = '';
-  let finalEscaped = false;
+  let final = '', fEsc = false;
   for (let i = 0; i < bbcode.length; i++) {
-    if (finalEscaped) {
-      finalBBCode += bbcode[i];
-      finalEscaped = false;
-    } else if (bbcode[i] === '\\') {
-      finalEscaped = true;
-    } else {
-      finalBBCode += bbcode[i];
-    }
+    if (fEsc) { final += bbcode[i]; fEsc = false; }
+    else if (bbcode[i] === '\\') fEsc = true;
+    else final += bbcode[i];
   }
-
-  return finalBBCode;
+  return final;
 }

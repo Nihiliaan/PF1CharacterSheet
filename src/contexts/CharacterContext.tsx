@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { User as FirebaseUser } from 'firebase/auth';
 import { useAuth } from './AuthContext';
 import { auth, googleProvider, githubProvider, discordProvider } from '../lib/firebase';
-import { CharacterData, FolderMetadata, CharacterMetadata } from '../types';
+import { CharacterData, FolderMetadata } from '../types';
 import { DEFAULT_DATA } from '../constants';
 import { getMyCharacters, getFolders, saveCharacter as saveCharacterService, getCharacterById, deleteCharacter as deleteCharacterService, deleteFolder as deleteFolderService, renameItem as renameItemService, moveCharacter as moveCharacterService, moveFolder as moveFolderService, createFolder as createFolderService, copyCharacter as copyCharacterService, ensureLocalFolder as ensureLocalFolderService, saveLink } from '../services/characterService';
 import { driveSyncService } from '../services/driveSyncService';
@@ -51,7 +51,7 @@ interface CharacterContextType {
   toggleBagWeight: (id: string, ignoreWeight: boolean) => void;
   updateBagItems: (id: string, items: any[]) => void;
 
-  addMagicBlock: (type: 'text' | 'table' | 'spell', spellTemplate?: 'sla' | 'spontaneous' | 'prepared') => void;
+  addMagicBlock: (type: 'text' | 'table' | 'spell', spellType?: number) => void;
   updateMagicBlock: (id: string, updates: any) => void;
   removeMagicBlock: (id: string) => void;
 
@@ -161,6 +161,25 @@ export const useCharacter = () => {
 // Securely merge loaded data with defaults to handle schema updates
 const mergeWithDefault = (data: any, defaults: any): any => {
   if (typeof data !== 'object' || data === null) return JSON.parse(JSON.stringify(defaults));
+
+  // Data migration: top-level fields to nested attacks object
+  if (data.meleeAttacks && !data.attacks) {
+    data.attacks = {
+      meleeAttacks: data.meleeAttacks,
+      rangedAttacks: data.rangedAttacks || [],
+      specialAttacks: data.specialAttacks || ''
+    };
+    delete data.meleeAttacks;
+    delete data.rangedAttacks;
+    delete data.specialAttacks;
+  }
+
+  // Data migration: babTable to combatTable
+  if (data.babTable && !data.combatTable) {
+    data.combatTable = data.babTable;
+    delete data.babTable;
+  }
+
   const result = { ...data };
   for (const key in defaults) {
     if (typeof defaults[key] === 'object' && defaults[key] !== null && !Array.isArray(defaults[key])) {
@@ -220,7 +239,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const char = await getCharacterById(charId);
             if (!char || !char.data) throw new Error("Character not found or data is missing");
 
-            if (char.isLink && char.targetId) {
+            if (char.targetId) {
               const targetChar = await getCharacterById(char.targetId);
               if (!targetChar || !targetChar.data) throw new Error("Linked target character not found or data is missing");
 
@@ -331,13 +350,14 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!char || !char.id) return;
     setRecentCharacters(prev => {
       const filtered = prev.filter(p => p.id !== char.id);
-      const name = char.name || char.data?.basic?.name || '未命名';
+      const data = char.data || {};
+      const name = data.basic?.name || char.name || '未命名';
       const newItem = {
         id: char.id,
         name: name,
-        avatar: char.isTemplate ? 'https://ui-avatars.com/api/?name=T&background=6366f1&color=fff' : (char.avatar || char.data?.basic?.avatars?.[0]?.url || ''),
-        classes: char.classes || char.data?.basic?.classes || '',
-        data: char.data
+        avatar: char.isTemplate ? 'https://ui-avatars.com/api/?name=T&background=6366f1&color=fff' : (data.basic?.avatars?.url?.[0] || ''),
+        classes: data.basic?.classes || char.classes || '',
+        data: data
       };
       const next = [newItem, ...filtered].slice(0, 10);
       localStorage.setItem('recent_characters', JSON.stringify(next));
@@ -527,12 +547,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const performSelect = async () => {
       try {
         if (typeof idOrChar === 'object' && idOrChar !== null && idOrChar.id) {
-          if (idOrChar.isLink && idOrChar.targetId) {
+          if (idOrChar.targetId) {
             await loadSharedCharacter(idOrChar.targetId);
             return;
           }
           const char = idOrChar;
-          
+
           if (char.isTemplate) {
             if (!char.data || typeof char.data.content !== 'string') throw new Error("Invalid template data");
             setBbcodeTemplate(char.data.content);
@@ -548,10 +568,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setLastSavedData(JSON.parse(JSON.stringify(merged)));
           setCurrentDocumentId(char.id);
           setIsReadOnly(char.ownerId !== user?.uid);
-          
+
           setViewState('editor');
           addToRecent(char);
-          
+
           const url = new URL(window.location.href);
           url.searchParams.set('id', char.id);
           window.history.replaceState({}, '', url.toString());
@@ -561,10 +581,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const id = idOrChar as string;
         setToast({ message: "正在加载人物资料..." });
         const char = await getCharacterById(id);
-        
+
         if (!char || !char.data) throw new Error("Character not found or data missing");
 
-        if (char.isLink && char.targetId) {
+        if (char.targetId) {
           await loadSharedCharacter(char.targetId);
           return;
         }
@@ -638,7 +658,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           try {
             const folderId = await ensureLocalFolderService('来自分享', null, user.uid);
             const existingChars = await getMyCharacters();
-            const existingLink = existingChars?.find(c => c.isLink && c.targetId === char.id);
+            const existingLink = existingChars?.find(c => c.data?.targetId === char.id);
             if (!existingLink) {
               await saveLink(char, folderId);
               await refreshCharacterList();
@@ -679,39 +699,31 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setData(p => ({ ...p, additionalData: p.additionalData.filter(b => b.id !== id) }));
   };
 
-  const addMagicBlock = (type: 'text' | 'table' | 'spell', spellTemplate?: 'sla' | 'spontaneous' | 'prepared') => {
+  const addMagicBlock = (type: 'text' | 'table' | 'spell', spellType?: number) => {
     let newBlock: any;
-    
-    if (type === 'spell' && spellTemplate) {
+
+    if (type === 'spell') {
+      const sType = spellType ?? 2; // Default to '有0环自发'
       newBlock = {
         id: 'magic-' + Math.random(),
         type: 'spell',
-        spellTemplate,
-        title: spellTemplate === 'sla' ? '类法术能力' : (spellTemplate === 'spontaneous' ? '自发施法' : '准备施法'),
+        spellType: sType,
+        title: sType === 4 ? '类法术能力' : '法术',
         casterLevel: '',
         concentration: '',
         notes: '',
-        baseLevel: 0,
-        tableData: spellTemplate === 'sla' ? [{ uses: '', spell_name: '' }] : [{}] // Default one empty row
+        baseLevel: (sType === 0 || sType === 2) ? 0 : 1,
+        tableData: [{}]
       };
-      
-      if (spellTemplate === 'sla') {
-        newBlock.columns = [
-          { key: 'uses', label: '每日次数', width: '15%' },
-          { key: 'spell_name', label: '法术', width: '85%' }
-        ];
-      } else if (spellTemplate === 'spontaneous') {
-        newBlock.columns = [
-          { key: 'level', label: '环位', width: '10%' },
-          { key: 'uses', label: '每日次数', width: '20%' },
-          { key: 'spell_name', label: '法术', width: '70%' }
-        ];
-      } else if (spellTemplate === 'prepared') {
-        newBlock.columns = [
-          { key: 'level', label: '环位', width: '10%' },
-          { key: 'spell_name', label: '法术', width: '90%' }
-        ];
+
+      // Define columns based on spellType
+      const columns = [{ key: 'level', label: '环位', width: '10%' }];
+      if (sType !== 0 && sType !== 1) {
+        columns.push({ key: 'uses', label: '每日次数', width: '20%' });
       }
+      columns.push({ key: 'spell_name', label: '法术', width: sType > 1 ? '70%' : '90%' });
+      newBlock.columns = columns;
+
     } else {
       newBlock = {
         id: 'magic-' + Math.random(),
@@ -722,7 +734,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         tableData: []
       };
     }
-    
+
     setData(p => ({ ...p, magicBlocks: [...(p.magicBlocks || []), newBlock] }));
   };
 

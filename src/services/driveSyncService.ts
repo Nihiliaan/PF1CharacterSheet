@@ -56,8 +56,8 @@ export const driveSyncService = {
         }
       } else if (driveItem.name.endsWith('.json')) {
         const content = await getFileContent(token, driveItem.id);
-        if (content._isLink && content._targetId) {
-          const fakeTargetChar = { id: content._targetId, data: content };
+        if (content.targetId) {
+          const fakeTargetChar = { id: content.targetId, data: content };
           await saveLink(fakeTargetChar, targetId);
           count++;
         } else if (content.basic && content.attributes) {
@@ -104,11 +104,7 @@ export const driveSyncService = {
       const rawClasses = char.data?.basic?.classes || '人物卡';
       const fileName = `${rawName.replace(/[\\/:*?"<>|]/g, '_')}_${String(rawClasses).replace(/[\\/:*?"<>|]/g, '_').slice(0, 30)}_${char.id.slice(-6)}.json`;
 
-      let dataToSave = char.data;
-      if (char.isLink) {
-        dataToSave = { ...char.data, _isLink: true, _targetId: char.targetId };
-      }
-      await uploadOrUpdateFile(token, fileName, dataToSave, parentDriveId);
+      await uploadOrUpdateFile(token, fileName, char.data, parentDriveId);
     }));
   },
 
@@ -132,8 +128,8 @@ export const driveSyncService = {
         } else if (item.name.endsWith('.json')) {
           try {
             const content = await getFileContent(token, item.id);
-            if (content._isLink && content._targetId) {
-              const fakeTargetChar = { id: content._targetId, data: content };
+            if (content.targetId) {
+              const fakeTargetChar = { id: content.targetId, data: content };
               await saveLink(fakeTargetChar, localParentId);
               importCount++;
             } else if (content.basic && content.attributes) {

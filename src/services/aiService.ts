@@ -275,11 +275,23 @@ export function transformAIData(extracted: any) {
   const listFields = ['meleeAttacks', 'rangedAttacks', 'skills', 'feats', 'classFeatures', 'racialTraits', 'backgroundTraits'];
   listFields.forEach(field => {
     if (extracted[field] && Array.isArray(extracted[field])) {
-      mergedData[field] = extracted[field];
+      if (field === 'meleeAttacks' || field === 'rangedAttacks') {
+        mergedData.attacks[field] = extracted[field];
+      } else {
+        (mergedData as any)[field] = extracted[field];
+      }
     } else {
-      mergedData[field] = (DEFAULT_DATA as any)[field] || [];
+      if (field === 'meleeAttacks' || field === 'rangedAttacks') {
+        mergedData.attacks[field] = (DEFAULT_DATA.attacks as any)[field] || [];
+      } else {
+        (mergedData as any)[field] = (DEFAULT_DATA as any)[field] || [];
+      }
     }
   });
+
+  if (extracted.specialAttacks !== undefined) {
+    mergedData.attacks.specialAttacks = extracted.specialAttacks;
+  }
 
   // 3. 处理魔法/特殊能力块
   if (extracted.magicBlocks && Array.isArray(extracted.magicBlocks)) {

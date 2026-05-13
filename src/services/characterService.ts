@@ -46,27 +46,27 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 export async function saveCharacter(characterData: any, id?: string, folderId?: string | null, isTemplate: boolean = false) {
   if (!auth.currentUser) throw new Error("Must be logged in to save characters");
-  
+
   const path = 'characters';
   try {
     const payload: any = {
-      name: characterData.name || (isTemplate ? "BBCode 模板" : ((characterData.basic && characterData.basic.name) || '未命名人物')),
-      data: characterData,
-      isPublic: true, 
+      name: characterData.basic?.name || characterData.name || (isTemplate ? "BBCode 模板" : '未命名人物'),
+      data: {
+        ...characterData,
+        // 确保 data 内部也包含元数据
+        id: id || characterData.id || '',
+        folderId: folderId !== undefined ? folderId : (characterData.folderId || null),
+        ownerId: characterData.ownerId || auth.currentUser.uid,
+        targetId: characterData.targetId || ''
+      },
+      isPublic: true,
       updatedAt: serverTimestamp(),
-      isTemplate: isTemplate
+      isTemplate: isTemplate,
+      // 数据库顶层保留这些字段用于查询/索引
+      ownerId: characterData.ownerId || auth.currentUser.uid,
+      folderId: folderId !== undefined ? folderId : (characterData.folderId || null),
+      targetId: characterData.targetId || ''
     };
-
-    if (!id) {
-      payload.ownerId = auth.currentUser.uid;
-    }
-
-    // If it's a new character, or if folderId is explicitly provided (even as null)
-    if (!id) {
-       payload.folderId = folderId !== undefined ? folderId : null;
-    } else if (folderId !== undefined) {
-       payload.folderId = folderId;
-    }
 
     if (id) {
       const docRef = doc(db, path, id);
@@ -77,6 +77,8 @@ export async function saveCharacter(characterData: any, id?: string, folderId?: 
         ...payload,
         createdAt: serverTimestamp(),
       });
+      // 创建后反向更新 ID
+      await updateDoc(docRef, { "data.id": docRef.id });
       return docRef.id;
     }
   } catch (error) {
@@ -88,12 +90,17 @@ export async function saveLink(targetChar: any, folderId: string | null) {
   if (!auth.currentUser) throw new Error("Must be logged in to save links");
   const path = 'characters';
   try {
+    const targetId = targetChar.id;
     const payload: any = {
       name: (targetChar.data?.basic?.name) || '未命名人物(分享)',
       data: {
+         id: '', // Will be updated
+         targetId: targetId,
+         folderId: folderId,
+         ownerId: auth.currentUser.uid,
          basic: {
             name: targetChar.data?.basic?.name || '未命名人物(分享)',
-            avatars: targetChar.data?.basic?.avatars || [],
+            avatars: targetChar.data?.basic?.avatars || { url: [], note: [] },
             race: targetChar.data?.basic?.race || '',
             classes: targetChar.data?.basic?.classes || ''
          }
@@ -102,11 +109,11 @@ export async function saveLink(targetChar: any, folderId: string | null) {
       updatedAt: serverTimestamp(),
       ownerId: auth.currentUser.uid,
       folderId: folderId,
-      isLink: true,
-      targetId: targetChar.id,
+      targetId: targetId,
       createdAt: serverTimestamp()
     };
     const docRef = await addDoc(collection(db, path), payload);
+    await updateDoc(docRef, { "data.id": docRef.id });
     return docRef.id;
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
@@ -221,11 +228,24 @@ export async function getMyCharacters() {
   const path = 'characters';
   try {
     const q = query(
-      collection(db, path), 
+      collection(db, path),
       where('ownerId', '==', auth.currentUser.uid)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => {
+      const d = doc.data();
+      return {
+        ...d,
+        id: doc.id,
+        data: {
+          ...d.data,
+          id: doc.id,
+          ownerId: d.ownerId,
+          folderId: d.folderId,
+          targetId: d.targetId || ''
+        }
+      };
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
   }
@@ -237,7 +257,18 @@ export async function getCharacterById(id: string) {
     const docRef = doc(db, 'characters', id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
+      const d = docSnap.data();
+      return {
+        ...d,
+        id: docSnap.id,
+        data: {
+          ...d.data,
+          id: docSnap.id,
+          ownerId: d.ownerId,
+          folderId: d.folderId,
+          targetId: d.targetId || ''
+        }
+      };
     }
     return null;
   } catch (error) {

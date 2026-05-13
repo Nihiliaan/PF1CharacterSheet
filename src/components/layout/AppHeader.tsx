@@ -10,6 +10,7 @@ import { googleProvider } from '../../lib/firebase';
 import { logout } from '../../services/authService';
 
 import { useCharacter } from '../../contexts/CharacterContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface AppHeaderProps {
   isHeaderVisible: boolean;
@@ -25,14 +26,12 @@ export default function AppHeader({
   setIsHeaderPinned
 }: AppHeaderProps) {
   const { t, i18n } = useTranslation();
+  const { user, handleLogin, handleLogout } = useAuth();
   const {
     view,
     setView,
-    user,
     recentCharacters,
     removeFromRecent,
-    handleLogin,
-    handleLogout,
     isReadOnly,
     isSaving,
     handleSave,

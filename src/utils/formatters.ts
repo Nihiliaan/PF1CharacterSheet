@@ -1,44 +1,39 @@
+import { getHandlerByPath } from '../schema/fieldRegistry';
+import handlers from '../schema/dataTypes';
+
+const { getHandlerByType } = handlers;
+
 export const getDisplayValue = (
-  value: string,
+  value: any,
   type: string,
   t: any,
   options: {
     isFocused?: boolean;
+    path?: string;
+    columnKey?: string;
+    row?: any;
     displayFormatter?: (v: string, isFocused: boolean) => string;
+    context?: any;
   } = {}
 ): string => {
-  const { isFocused, displayFormatter } = options;
+  const { isFocused, path, displayFormatter, columnKey, row } = options;
 
+  // 1. 优先使用传入的显式格式化函数
   if (displayFormatter) return displayFormatter(value, isFocused || false);
 
-  if (type === 'quantity' && !isFocused) {
-    if (!value || value === '1') return '';
-    return `×${value}`;
+  // 2. 获取 Handler (优先通过 path，其次通过 type 兜底)
+  const handler = path ? getHandlerByPath(path) : getHandlerByType(type);
+
+  if (handler) {
+    if (isFocused && handler.formatInteractive) {
+      return handler.formatInteractive(value, options.context);
+    }
+    if (handler.formatDisplay) {
+      return handler.formatDisplay(value, options.context);
+    }
   }
 
-  if (type === 'bonus' && !isFocused && value !== '') {
-    const num = parseInt(value);
-    if (!isNaN(num)) return num >= 0 ? `+${num}` : num.toString();
-  }
-
-  if (type === 'level' && !isFocused && value !== '') {
-    return t('editor.lists.level_format', { n: value });
-  }
-
-  if (type === 'distance' && !isFocused && value !== '') {
-    return t('editor.lists.distance_format', { v: value });
-  }
-
-  if (type === 'cost' && !isFocused) {
-    if (!value) return '—';
-    return `${value}${t('editor.items.units.gp') || 'gp'}`;
-  }
-
-  if (type === 'weight' && !isFocused) {
-    if (!value) return '—';
-    return `${value}${t('editor.items.units.lbs') || 'lbs'}`;
-  }
-
+  // 3. 最后的兜底逻辑
   if (value === '' || value === undefined || value === null) return '';
   return String(value);
 };

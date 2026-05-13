@@ -1,6 +1,6 @@
 export type { User as FirebaseUser } from 'firebase/auth';
 
-export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight' | 'markdown';
+export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight' | 'markdown' | 'dailyUses';
 
 export interface Column {
   key: string;
@@ -15,98 +15,184 @@ export interface Column {
 };
 
 export interface DynamicTableProps {
-  columns: Column[];
-  data: Record<string, string>[];
-  originalData?: Record<string, string>[];
-  onChange: (data: Record<string, string>[]) => void;
-  newItemGenerator?: () => Record<string, string>;
+  columns?: Column[];
+  data: Record<string, any>[];
+  originalData?: Record<string, any>[];
+  onChange: (data: Record<string, any>[]) => void;
+  newItemGenerator?: () => Record<string, any>;
   fixedRows?: boolean;
   readonlyColumns?: string[];
-  footerRow?: Record<string, string>;
-  onFooterChange?: (data: Record<string, string>) => void;
-  footerReadonlyColumns?: string[];
-  onColumnLabelChange?: (index: number, newLabel: string) => void;
-  onRemoveColumn?: (index: number) => void;
-  onAddColumn?: () => void;
   rowDraggable?: boolean;
   rowActionMode?: 'drag' | 'delete';
   onRowActionModeToggle?: () => void;
-  onRowDragStart?: (index: number, e: React.DragEvent) => void;
-  onRowDragOver?: (index: number, e: React.DragEvent) => void;
-  onRowDrop?: (index: number, e: React.DragEvent) => void;
   readOnly?: boolean;
+  path?: string;
+}
+
+export interface AttributesSoA {
+  final: number[];
+  modifier: number[];
+  source: string[];
+  status: string[];
+}
+
+export interface CombatSoA {
+  bab: number[];
+  cmb: number[];
+  cmd: number[];
+}
+
+export interface AttacksSoA {
+  weapon: string[];
+  hit: number[];
+  damage: string[];
+  critRange: number[];
+  critMultiplier: number[];
+  range: number[];
+  damageType: string[];
+  special: string[];
+}
+
+export interface ACSoA {
+  ac: number[];
+  source: string[];
+  flatFooted: number[];
+  touch: number[];
+}
+
+export interface SavesSoA {
+  fort: number[];
+  ref: number[];
+  will: number[];
+}
+
+export interface TraitsSoA {
+  name: string[];
+  desc: string[];
+}
+
+export interface BackgroundTraitsSoA {
+  name: string[];
+  type: string[];
+  desc: string[];
+}
+
+export interface ClassFeaturesSoA {
+  level: number[];
+  name: string[];
+  type: number[]; // 0:—, 1:Sp, 2:Su, 3:Ex
+  desc: string[];
+}
+
+export interface FeatsSoA {
+  level: number[];
+  source: string[];
+  name: string[];
+  type: string[];
+  desc: string[];
+}
+
+export interface SkillsSoA {
+  name: string[];
+  total: number[];
+  rank: number[];
+  cs: boolean[];
+  ability: number[]; // 1-6
+  others: string[];
+  special: string[];
+}
+
+export interface EquipmentItemsSoA {
+  item: string[];
+  quantity: number[];
+  cost: number[];
+  weight: number[];
+  notes: string[];
+}
+
+export interface AvatarsSoA {
+  url: string[];
+  note: string[];
 }
 
 export interface CharacterData {
+  // 元数据 (从 CharacterMetadata 迁移并精简)
+  id: string;
+  folderId?: string | null;
+  ownerId?: string;
+  targetId?: string; // 存在且不为空即为 isLink
+
   basic: {
     name: string;
     classes: string;
-    alignment: string;
-    size: string;
-    gender: string;
+    alignment: number;
+    size: number;
+    gender: number;
     race: string;
-    age: string;
-    height: string;
-    weight: string;
-    speed: string;
+    age: number;
+    height: number;
+    weight: number;
+    speed: {
+      land: number;
+      fly: number;
+      maneuverability: number;
+      swim: number;
+      climb: number;
+      burrow: number;
+    };
     senses: string;
-    initiative: string;
-    perception: string;
+    initiative: number;
+    perception: number;
     languages: string;
     deity: string;
-    avatars: { url: string; note: string }[];
+    avatars: AvatarsSoA;
   };
   story: string;
-  attributes: { final: string; modifier: string; source: string; status: string }[];
-  babTable: { bab: string; cmb: string; cmd: string }[];
+  attributes: AttributesSoA;
+  combatTable: CombatSoA;
   combatManeuverNotes: string;
-  meleeAttacks: any[];
-  rangedAttacks: any[];
-  specialAttacks: string;
+  attacks: {
+    meleeAttacks: AttacksSoA;
+    rangedAttacks: AttacksSoA;
+    specialAttacks: string;
+  };
   defenses: {
-    hp: string;
+    hp: number;
     hd: string;
-    acTable: { ac: string; source: string; flatFooted: string; touch: string }[];
+    acTable: ACSoA;
     acNotes: string;
-    savesTable: { fort: string; ref: string; will: string }[];
+    savesTable: SavesSoA;
     savesNotes: string;
     defensiveAbilities: string;
     specialDefenses: string;
   };
-  racialTraits: any[];
-  backgroundTraits: any[];
+  racialTraits: TraitsSoA;
+  backgroundTraits: BackgroundTraitsSoA;
   favoredClass: string;
   favoredClassBonus: string;
-  classFeatures: any[];
-  feats: any[];
+  classFeatures: ClassFeaturesSoA;
+  feats: FeatsSoA;
   magicBlocks: (MagicBlock | SpellBlock)[];
-  skills: any[];
-  skillsTotal: string;
-  armorCheckPenalty: string;
+  skills: SkillsSoA;
+  skillsTotal: number;
+  armorCheckPenalty: number;
   skillsNotes: string;
-  equipmentBags: any[];
-  encumbranceMultiplier: string;
+  equipmentBags: {
+    id: string;
+    name: string;
+    ignoreWeight: boolean;
+    items: EquipmentItemsSoA;
+  }[];
+  encumbranceMultiplier: number;
   equipmentNotes: string;
   currency: {
-    pp: string;
-    gp: string;
-    sp: string;
-    cp: string;
-    coinWeight: string;
+    pp: number;
+    gp: number;
+    sp: number;
+    cp: number;
+    coinWeight: number;
   };
   additionalData: any[];
-}
-
-export interface CharacterMetadata {
-  id: string;
-  name: string;
-  avatar: string;
-  classes: string;
-  data: CharacterData;
-  folderId?: string | null;
-  ownerId?: string;
-  isLink?: boolean;
-  targetId?: string;
 }
 
 export interface MagicBlock {
@@ -115,34 +201,20 @@ export interface MagicBlock {
   title: string;
   content?: string;
   columns?: Column[];
-  tableData?: Record<string, string>[];
+  tableData?: Record<string, any[]>; // SoA inside blocks
 }
 
 export interface SpellBlock {
   id: string;
   type: 'spell';
-  spellTemplate: 'sla' | 'spontaneous' | 'prepared';
+  spellType?: number;
   title: string;
   casterLevel: string;
   concentration: string;
   notes: string;
   baseLevel: 0 | 1;
   columns?: Column[];
-  tableData?: Record<string, string>[];
+  tableData?: Record<string, any[]>; // SoA inside blocks
 }
 
-export const ATTRIBUTE_NAMES = [
-  'STR',
-  'DEX',
-  'CON',
-  'INT',
-  'WIS',
-  'CHA'
-];
-
-export interface FolderMetadata {
-  id: string;
-  name: string;
-  parentId: string | null;
-  ownerId: string;
-}
+export const ATTRIBUTE_NAMES = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
