@@ -30,14 +30,14 @@ export default function SpellTable({
   const columns = React.useMemo(() => {
     const cols: Column[] = [];
     if (spellType !== 4) {
-      cols.push({ key: 'level', label: t('editor.spells.headers.level'), width: '10%' });
+      cols.push({ key: 'level', label: 'editor.spells.level', width: '10%' });
     }
     if (spellType !== 0 && spellType !== 1) {
-      cols.push({ key: 'uses', label: t('editor.spells.headers.uses'), width: '20%' });
+      cols.push({ key: 'uses', label: 'editor.spells.uses', width: '20%' });
     }
-    cols.push({ key: 'spells', label: t('editor.spells.headers.spells'), width: 'auto' });
+    cols.push({ key: 'spells', label: 'editor.spells.spell_name', width: 'auto' });
     return cols;
-  }, [spellType, t]);
+  }, [spellType]);
 
   // SoA 模式下的行数计算
   const rowCount = React.useMemo(() => {
@@ -125,7 +125,7 @@ export default function SpellTable({
           <tr className="bg-stone-200 text-stone-700">
             {columns.map((c) => (
               <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
-                {c.label}
+                {t(c.label)}
               </th>
             ))}
             <th className="w-8 p-0 align-middle border-stone-300">
