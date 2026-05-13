@@ -15,6 +15,8 @@ const AdditionalDataSection: React.FC = () => {
     lastSavedData,
     dragEnabledFor,
     setDragEnabledFor,
+    tableActionMode,
+    toggleTableActionMode,
     handleDragStart,
     handleDragOver,
     handleDrop,
@@ -60,7 +62,7 @@ const AdditionalDataSection: React.FC = () => {
                 }}
                 className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1"
               >
-                <Trash2 size={14} /> {t('common.delete')}
+                <Trash2 size={14} /> {t('common.delete_container')}
               </button>
             </div>
             {block.type === 'text' ? (
@@ -87,6 +89,8 @@ const AdditionalDataSection: React.FC = () => {
                 originalData={lastSavedData.additionalData?.[i]?.tableData}
                 onChange={v => updateAdditionalBlock(block.id, { tableData: v as any })}
                 rowDraggable={true}
+                rowActionMode={tableActionMode}
+                onRowActionModeToggle={toggleTableActionMode}
                 onRowDragStart={(idx, e) => handleTableItemDragStart(`additionalData[${i}].tableData`, idx, e)}
                 onRowDragOver={(idx, e) => handleTableItemDragOver(`additionalData[${i}].tableData`, idx, e)}
                 onRowDrop={(idx, e) => handleTableItemDrop(`additionalData[${i}].tableData`, idx, e)}

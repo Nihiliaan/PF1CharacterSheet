@@ -46,44 +46,14 @@ const AttributesSection: React.FC = () => {
             <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
           </label>
           <div className="flex-1">
-            <div className="grid grid-cols-3 border border-stone-300 rounded overflow-hidden">
-              <div className="flex flex-col border-r border-stone-200">
-                <div className="bg-stone-200 text-stone-700 text-[10px] font-bold py-1 text-center border-b border-stone-300 uppercase">{t('editor.attributes.bab')}</div>
-                <DynamicInput
-                  align="center"
-                  className="font-bold"
-                  value={String(data.combatTable.bab)}
-                  originalValue={String(lastSavedData.combatTable.bab)}
-                  onChange={v => setData(prev => ({ ...prev, combatTable: { ...prev.combatTable, bab: parseInt(v) || 0 } }))}
-                  path="combatTable.bab"
-                  type="bonus"
-                />
-              </div>
-              <div className="flex flex-col border-r border-stone-200">
-                <div className="bg-stone-200 text-stone-700 text-[10px] font-bold py-1 text-center border-b border-stone-300 uppercase">{t('editor.attributes.cmb')}</div>
-                <DynamicInput
-                  align="center"
-                  className="font-bold"
-                  value={String(data.combatTable.cmb)}
-                  originalValue={String(lastSavedData.combatTable.cmb)}
-                  onChange={v => setData(prev => ({ ...prev, combatTable: { ...prev.combatTable, cmb: parseInt(v) || 0 } }))}
-                  path="combatTable.cmb"
-                  type="bonus"
-                />
-              </div>
-              <div className="flex flex-col">
-                <div className="bg-stone-200 text-stone-700 text-[10px] font-bold py-1 text-center border-b border-stone-300 uppercase">{t('editor.attributes.cmd')}</div>
-                <DynamicInput
-                  align="center"
-                  className="font-bold"
-                  value={String(data.combatTable.cmd)}
-                  originalValue={String(lastSavedData.combatTable.cmd)}
-                  onChange={v => setData(prev => ({ ...prev, combatTable: { ...prev.combatTable, cmd: parseInt(v) || 0 } }))}
-                  path="combatTable.cmd"
-                  type="int"
-                />
-              </div>
-            </div>
+            <DynamicTable
+              path="combatTable"
+              data={data.combatTable}
+              originalData={lastSavedData.combatTable}
+              onChange={v => setData(prev => ({ ...prev, combatTable: v as any }))}
+              isStaticObject={true}
+              minWidth="0"
+            />
           </div>
         </div>
         <MultilineInput

@@ -62,8 +62,9 @@ export const DynamicInput = ({
 
   const context = React.useMemo(() => ({
     modifiers: characterContext?.computed?.modifiers,
-    t
-  }), [characterContext?.computed?.modifiers, t]);
+    t,
+    row
+  }), [characterContext?.computed?.modifiers, t, row]);
 
   // 优先级：Path 获取的 Handler > Type 获取的兜底 Handler
   const handler = React.useMemo(() => {
@@ -164,7 +165,7 @@ export const DynamicInput = ({
     handleChange(e.target.value);
   };
 
-  const toggleCheckbox = () => {
+  const toggleBool = () => {
     if (readOnly) return;
     onChange(value === 'true' ? '' : 'true');
   };
@@ -213,13 +214,18 @@ export const DynamicInput = ({
             {displayValue() || <span className="text-stone-300">—</span>}
           </div>
         </div>
-      ) : type === 'checkbox' ? (
-        <div
-          onClick={toggleCheckbox}
-          className={`${paddingClass} ${finalInnerClass} flex items-center justify-center cursor-pointer hover:bg-stone-100/50 ${isChanged ? 'text-amber-900' : 'text-ink'}`}
+      ) : (type === 'bool' || handler?.ui === 'bool') ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleBool();
+          }}
+          className={`${paddingClass} ${finalInnerClass} flex items-center justify-center cursor-pointer hover:bg-stone-200/50 transition-colors w-full h-full min-h-[32px] ${isChanged ? 'text-amber-900 bg-amber-50/30' : 'text-ink'}`}
         >
           {displayValue()}
-        </div>
+        </button>
       ) : type === 'text' ? (
           <div className={`${paddingClass} ${finalInnerClass} flex items-center`}>
             <MarkdownInlineEditor

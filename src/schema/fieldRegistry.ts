@@ -72,7 +72,7 @@ export const CharacterPrototype: any = {
 
   // 3. 战斗统计表 (对应 "combatTable")
   combatTable: {
-    handler: CompositeHandler,
+    handler: CombatInfoHandler,
     bab: BonusHandler,
     cmb: BonusHandler,
     cmd: IntegerHandler
@@ -113,7 +113,7 @@ export const CharacterPrototype: any = {
     hp: PosIntHandler,
     hd: TextHandler,
     acTable: {
-      handler: CompositeHandler,
+      handler: DefensesTableHandler,
       ac: IntegerHandler,
       source: TextHandler,
       flatFooted: IntegerHandler,
@@ -121,7 +121,7 @@ export const CharacterPrototype: any = {
     },
     acNotes: TextHandler,
     savesTable: {
-      handler: CompositeHandler,
+      handler: SavesTableHandler,
       fort: BonusHandler,
       ref: BonusHandler,
       will: BonusHandler

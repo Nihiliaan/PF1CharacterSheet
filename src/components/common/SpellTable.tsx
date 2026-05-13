@@ -134,7 +134,7 @@ export default function SpellTable({
                   type="button"
                   onClick={addRowTop}
                   className="p-1.5 w-full h-full min-h-[36px] flex items-center justify-center text-stone-400 hover:text-stone-900 transition-colors cursor-pointer bg-stone-100 border-l border-stone-300 hover:bg-stone-50"
-                  title="在上方添加行"
+                  title={t('common.add_row')}
                 >
                   <Plus size={16} />
                 </button>
@@ -161,7 +161,7 @@ export default function SpellTable({
                     <td key={c.key} className={`p-0 relative border-stone-300 align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
                       {c.key === 'level' ? (
                         <div className="w-full h-full flex items-center justify-center font-bold px-2 text-stone-700 bg-stone-100/50 min-h-[32px]">
-                          {isLastRow ? `${baseLevel}环` : `${computedLevelNumber}环`}
+                          {t('editor.spells.computed_level', { n: isLastRow ? baseLevel : computedLevelNumber })}
                         </div>
                       ) : (
                         <DynamicInput
@@ -187,7 +187,7 @@ export default function SpellTable({
                         type="button"
                         onClick={() => removeRow(i)}
                         className="text-stone-300 hover:text-red-500 rounded p-1"
-                        title="删除行"
+                        title={t('common.delete')}
                       >
                         <Trash2 size={16} />
                       </button>

@@ -39,6 +39,7 @@ export interface DynamicTableProps {
   onRowDrop?: (index: number, e: any) => void;
   readOnly?: boolean;
   path?: string;
+  isStaticObject?: boolean;
 }
 
 export interface AttributesSoA {

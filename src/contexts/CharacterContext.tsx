@@ -103,6 +103,7 @@ interface CharacterContextType {
   setBbcodeTemplate: (template: string) => void;
   saveAsTemplate: (name: string, content: string) => Promise<void>;
   updateExistingTemplate: (id: string, content: string) => Promise<void>;
+  getItemPath: (charId: string | null) => string;
 }
 
 const CharacterContext = createContext<CharacterContextType | undefined>(undefined);
@@ -117,7 +118,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { t } = useTranslation();
   const { user } = useAuth();
   const { setView, setToast, setConfirmModal, addToRecent } = useUI();
-  const { refreshCharacterList, currentFolderId, tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor } = useVault();
+  const { refreshCharacterList, currentFolderId, tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor, getItemPath } = useVault();
 
   const [data, setData] = useState<CharacterData>(DEFAULT_DATA);
   const [lastSavedData, setLastSavedData] = useState<CharacterData>(JSON.parse(JSON.stringify(DEFAULT_DATA)));
@@ -264,7 +265,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     isAILoading, aiStatusMsg, handleAIExtract,
     // Drive Sync
     driveModal, setDriveModal, isSyncingDrive,
-    handleBrowseDrive, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore
+    handleBrowseDrive, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore,
+    getItemPath
   };
 
   return (

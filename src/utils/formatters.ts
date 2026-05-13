@@ -19,7 +19,7 @@ export const getDisplayValue = (
   const { isFocused, path, displayFormatter, columnKey, row } = options;
 
   // 1. 优先使用传入的显式格式化函数
-  if (displayFormatter) return displayFormatter(value, isFocused || false);
+  if (displayFormatter) return displayFormatter(value, isFocused || false, options.context);
 
   // 2. 获取 Handler (优先通过 path，其次通过 type 兜底)
   const handler = path ? getHandlerByPath(path) : getHandlerByType(type);

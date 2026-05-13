@@ -136,10 +136,10 @@
     },
     "defenses": {
       "ac_details": "AC Details",
-      "ac": "Armor Class (AC)",
+      "ac": "AC",
       "ac_source": "Source",
-      "touch": "Touch AC",
-      "flat_footed": "Flat-Footed AC",
+      "touch": "Touch",
+      "flat_footed": "Flat-Footed",
       "ac_notes": "AC Notes",
       "ac_placeholder": "Armor sources, dodge, natural armor...",
       "hp": "HP",

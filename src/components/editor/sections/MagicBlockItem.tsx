@@ -6,6 +6,7 @@ import DynamicTable from '../../common/DynamicTable';
 import MultilineInput from '../../common/MultilineInput';
 import InlineInput from '../../common/InlineInput';
 import { useUI } from '../../../contexts/UIContext';
+import { useCharacter } from '../../../contexts/CharacterContext';
 
 interface MagicBlockItemProps {
   block: any;
@@ -40,6 +41,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
 }) => {
   const { t } = useTranslation();
   const { setConfirmModal } = useUI();
+  const { tableActionMode, toggleTableActionMode } = useCharacter();
 
   const handleRemove = () => {
     setConfirmModal({
@@ -163,6 +165,8 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
           originalData={originalBlock?.tableData}
           onChange={v => onUpdate(block.id, { tableData: v })}
           rowDraggable={true}
+          rowActionMode={tableActionMode}
+          onRowActionModeToggle={toggleTableActionMode}
           onRowDragStart={(idx, e) => onTableItemDragStart(`magicBlocks[${blockIndex}].tableData`, idx, e)}
           onRowDragOver={(idx, e) => onTableItemDragOver(`magicBlocks[${blockIndex}].tableData`, idx, e)}
           onRowDrop={(idx, e) => onTableItemDrop(`magicBlocks[${blockIndex}].tableData`, idx, e)}

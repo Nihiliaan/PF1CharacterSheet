@@ -433,7 +433,17 @@ const SkillsTableHandler = {
     { key: 'name', label: 'editor.skills.headers.skill', width: '15%' },
     { key: 'total', label: 'editor.skills.headers.total', width: '5%', type: 'bonus' },
     { key: 'rank', label: 'editor.skills.headers.rank', width: '5%', type: 'level' },
-    { key: 'cs', label: 'editor.skills.headers.cs', width: '5%', type: 'checkbox', displayFormatter: (val: any) => String(val) === 'true' ? '+3' : '' },
+    {
+      key: 'cs',
+      label: 'editor.skills.headers.cs',
+      width: '5%',
+      type: 'bool',
+      displayFormatter: (val: any, _isFocused: boolean, context?: any) => {
+        const isCS = String(val) === 'true';
+        const rank = parseInt(context?.row?.rank, 10);
+        return (isCS && !isNaN(rank) && rank > 0) ? '+3' : '';
+      }
+    },
     { key: 'ability', label: 'editor.skills.headers.ability', width: '10%', type: 'attributeIndex' },
     { key: 'others', label: 'editor.skills.headers.others', width: '20%' },
     { key: 'special', label: 'editor.skills.headers.special', width: '35%' }
@@ -507,9 +517,9 @@ const BasicInfoHandler = { ...CompositeHandler };
 const CombatInfoHandler = {
   ...CompositeHandler,
   columns: [
-    { key: 'bab', label: 'BAB', width: '33.33%' },
-    { key: 'cmb', label: 'CMB', width: '33.33%' },
-    { key: 'cmd', label: 'CMD', width: '33.34%' }
+    { key: 'bab', label: 'editor.attributes.bab', width: '33.33%', type: 'bonus' },
+    { key: 'cmb', label: 'editor.attributes.cmb', width: '33.33%', type: 'bonus' },
+    { key: 'cmd', label: 'editor.attributes.cmd', width: '33.34%', type: 'int' }
   ]
 };
 const CurrencyHandler = { ...CompositeHandler };
@@ -550,6 +560,8 @@ const handlers: any = {
   CompositeHandler,
   AttributesTableHandler,
   AttackTableHandler,
+  DefensesTableHandler,
+  SavesTableHandler,
   SkillsTableHandler,
   SimpleListHandler,
   BackgroundTraitsTableHandler,
@@ -560,6 +572,7 @@ const handlers: any = {
   EquipmentItemsHandler,
   // 复合型
   BasicInfoHandler,
+  CombatInfoHandler,
   CurrencyHandler
 };
 
