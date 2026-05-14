@@ -62,8 +62,8 @@ const BaseSelect = {
   ui: 'select',
   validate: () => true,
   update: (v: string) => v,
-  formatDisplay: (v: any) => v || '—',
-  formatInteractive: (v: any) => v || ''
+  formatDisplay: (v: any) => v,
+  formatInteractive: function (v: any, context?: any) { return this.formatDisplay(v) }
 };
 
 /**
@@ -253,16 +253,16 @@ const ClassSkillHandler = Object.assign(Object.create(BoolHandler), {
 });
 
 const AbilityTypeHandler = Object.assign(Object.create(BaseSelect), {
-  options: ['0', '1', '2', '3'],
+  options: [0, 1, 2, 3],
   update: (v: string | number) => parseInt(String(v), 10) || 0,
-  formatDisplay: (v: any) => ABILITY_TYPES[parseInt(v, 10)] || '—',
-  formatInteractive: (v: any) => ABILITY_TYPES[parseInt(v, 10)] || ''
+  formatDisplay: (v: any) => ABILITY_TYPES[v],
+  formatInteractive: (v: any) => ABILITY_TYPES[v]
 });
 
 const SpellTypeHandler = Object.assign(Object.create(BaseSelect), {
-  options: ['0', '1', '2', '3', '4'],
+  options: [0, 1, 2, 3, 4, 5],
   update: (v: string | number) => v,
-  formatDisplay: (v: any) => SPELL_TYPES[parseInt(v, 10)] || v || '—'
+  formatDisplay: (v: any) => SPELL_TYPES[v]
 });
 
 const SpellLevelHandler = Object.assign(Object.create(BaseInt), {
@@ -342,36 +342,15 @@ const HeightHandler = Object.assign(Object.create(PosIntHandler), {
 export { HeightHandler };
 
 const CritRangeHandler = Object.assign(Object.create(BaseSelect), {
-  options: ['20', '19', '18', '17', '16', '15'],
-  update: (v: string | number) => {
-    const s = String(v);
-    if (s.includes('-')) {
-      const match = s.match(/^(\d+)-20$/);
-      return match ? parseInt(match[1], 10) : 20;
-    }
-    return parseInt(s, 10) || 20;
+  options: [20, 19, 18, 17, 16, 15],
+  formatDisplay: (v: number) => {
+    return v == 20 ? '20' : `${v}-20`;
   },
-  formatDisplay: (v: any) => {
-    const min = parseInt(v, 10);
-    if (isNaN(min) || min >= 20) return '20';
-    return `${min}-20`;
-  },
-  formatInteractive: (v: any) => {
-    const min = parseInt(v, 10);
-    if (isNaN(min) || min >= 20) return '20';
-    return `${min}-20`;
-  }
 });
 
 const CritMultiplierHandler = Object.assign(Object.create(BaseSelect), {
-  options: ['2', '3', '4'],
-  update: (v: string | number) => {
-    const clean = String(v).replace('×', '').replace('x', '');
-    const num = parseInt(clean, 10);
-    return isNaN(num) ? 2 : num;
-  },
-  formatDisplay: (v: any) => (v ? `×${v}` : '—'),
-  formatInteractive: (v: any) => (v ? `×${v}` : '—')
+  options: [2, 3, 4],
+  formatDisplay: (v: number) => `×${v}`
 });
 
 const DailyUsesHandler = Object.assign(Object.create(BaseInt), {
