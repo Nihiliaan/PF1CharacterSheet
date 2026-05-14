@@ -363,6 +363,7 @@ const AlignmentHandler = new BaseSelect({
 
 const SizeHandler = new BaseSelect({
   optionValues: SIZES,
+  options: [3, 4],
   i18nPrefix: 'editor.basic.size_options.'
 });
 
