@@ -29,10 +29,10 @@ export default function SpellTable({
   // 根据 spellType 过滤列
   const columns = React.useMemo(() => {
     const cols: Column[] = [];
-    if (spellType !== 5) { // 只有 SLA (5) 隐藏环位
+    if (spellType !== 5) {
       cols.push({ key: 'level', label: 'editor.spells.level', width: '10%' });
     }
-    if (spellType !== 0 && spellType !== 1) {
+    if (spellType !== 0 && spellType !== 1 && spellType !== 4) {
       cols.push({ key: 'uses', label: 'editor.spells.uses', width: '20%' });
     }
     cols.push({ key: 'spells', label: 'editor.spells.spell_name', width: 'auto' });
@@ -68,10 +68,12 @@ export default function SpellTable({
   };
 
   const canAdd = React.useMemo(() => {
-    if (spellType === 4) return true; // 类法术无限制
-    const maxRows = baseLevel === 0 ? 10 : 6;
-    return rowCount < maxRows;
-  }, [rowCount, baseLevel, spellType]);
+    if (spellType === 5) return true; // 类法术无限制
+    if (spellType === 0 || spellType === 2) return rowCount < 10;
+    if (spellType === 1 || spellType === 3) return rowCount < 4;
+    if (spellType === 4) return rowCount < 6;
+    return false;
+  }, [rowCount, spellType]);
 
   const addRowTop = () => {
     if (readOnly) return;
@@ -182,7 +184,7 @@ export default function SpellTable({
                 })}
                 <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors">
                   <div className="flex items-center justify-center w-full h-[32px] opacity-0 group-hover:opacity-100 transition-opacity">
-                    {(spellType === 4 ? !isLastRow : i === 0 && rowCount > 1) && (
+                    {(spellType === 5 ? !isLastRow : i === 0 && rowCount > 1) && (
                       <button
                         type="button"
                         onClick={() => removeRow(i)}

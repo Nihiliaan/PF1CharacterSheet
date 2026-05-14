@@ -88,8 +88,8 @@
         "Colossal": "超巨型"
       },
       "gender_options": {
-        "Male": "男",
-        "Female": "女",
+        "Male": "男性",
+        "Female": "女性",
         "Other": "其它"
       },
       "maneuverability_options": {
@@ -174,13 +174,18 @@
       "concentration": "专注",
       "level": "环位",
       "uses": "每日次数",
+      "types": {
+        "0": "准备(完整/中等)",
+        "1": "准备(次等)",
+        "2": "自发(完整/中等)",
+        "3": "自发(次等)",
+        "4": "化合炼成",
+        "5": "类法术"
+      },
       "spell_name": "法术",
       "notes": "备注",
       "notes_placeholder": "在此输入关于此法术或能力的特别说明...",
-      "base_level_0": "0环",
-      "base_level_1": "1环",
       "computed_level": "{{n}}环",
-      "times_per_day": "次/日",
       "at_will": "随意使用",
       "uses_per_day": "{{n}}次/日"
     },

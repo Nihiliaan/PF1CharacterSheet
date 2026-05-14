@@ -173,13 +173,18 @@
       "concentration": "Concentration",
       "level": "Level",
       "uses": "Daily Uses",
+      "types": {
+        "0": "Prep (Full/Moderate)",
+        "1": "Prep (Minor)",
+        "2": "Spont (Full/Moderate)",
+        "3": "Spont (Minor)",
+        "4": "Extracts",
+        "5": "Spell-like"
+      },
       "spell_name": "Spell",
       "notes": "Notes",
       "notes_placeholder": "Special notes for spells or abilities...",
-      "base_level_0": "Level 0",
-      "base_level_1": "Level 1",
       "computed_level": "Level {{n}}",
-      "times_per_day": "/ day",
       "at_will": "At will",
       "uses_per_day": "{{n}}/day"
     },

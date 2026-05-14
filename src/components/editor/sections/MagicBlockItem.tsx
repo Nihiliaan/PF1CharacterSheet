@@ -117,8 +117,10 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
                       let targetLen = currentLen;
                       if (newType === 0 || newType === 2) {
                         if (currentLen > 10) targetLen = 10;
-                      } else if (newType === 1 || newType === 3) {
+                      } else if (newType === 4) {
                         if (currentLen > 6) targetLen = 6;
+                      } else if (newType === 1 || newType === 3) {
+                        if (currentLen > 4) targetLen = 4;
                       }
                       if (targetLen !== currentLen) {
                         Object.keys(newTableData).forEach(k => {
@@ -130,8 +132,8 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
                   }}
                   className="text-xs font-medium bg-transparent outline-none border-none text-stone-700 cursor-pointer w-full h-5 p-0"
                 >
-                  {['准备(0环)', '准备(1环)', '自发(0环)', '自发(1环)', '类法术'].map((label, idx) => (
-                    <option key={idx} value={idx}>{label}</option>
+                  {[0, 1, 2, 3, 4, 5].map((value) => (
+                    <option key={value} value={value}>{t(`editor.spells.types.${value}`)}</option>
                   ))}
                 </select>
               </div>
