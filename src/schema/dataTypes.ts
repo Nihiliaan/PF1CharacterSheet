@@ -75,10 +75,6 @@ export class BaseInt extends BaseHandler {
   formatDisplay(v: any) {
     return (v === undefined || v === '' || v === null) ? '—' : v.toString();
   }
-
-  formatInteractive(v: any) {
-    return (v === undefined || v === null) ? '0' : v.toString();
-  }
 }
 
 export class BaseSelect extends BaseHandler {
@@ -244,11 +240,6 @@ const BonusHandler = new BaseInt({
     const num = parseInt(v, 10);
     if (isNaN(num)) return '+0';
     return num >= 0 ? `+${num}` : `${num}`;
-  },
-  formatInteractive: (v: any) => {
-    const num = parseInt(v, 10);
-    if (isNaN(num)) return '+0';
-    return num >= 0 ? `+${num}` : `${num}`;
   }
 });
 
@@ -266,8 +257,7 @@ const FloatHandler = new BaseInt({
     if (isNaN(num)) return this.min === -Infinity ? 0 : this.min;
     num = Math.round(num * 100) / 100;
     return Math.min(this.max, Math.max(this.min, num));
-  },
-  formatInteractive: (v: any) => (v === 0 ? '0' : v.toString())
+  }
 });
 
 const CostHandler = new BaseInt({
@@ -279,8 +269,7 @@ const CostHandler = new BaseInt({
     if (v === 0) return '—';
     const unit = context?.t ? context.t('editor.items.units.gp') : 'gp';
     return `${v} ${unit}`;
-  },
-  formatInteractive: (v: any) => FloatHandler.formatInteractive(v)
+  }
 });
 
 const WeightHandler = new BaseInt({
@@ -292,8 +281,7 @@ const WeightHandler = new BaseInt({
     if (v === 0) return '—';
     const unit = context?.t ? context.t('editor.items.units.lbs') : 'lbs';
     return `${v} ${unit}`;
-  },
-  formatInteractive: (v: any) => FloatHandler.formatInteractive(v)
+  }
 });
 
 const BoolHandler = new BaseHandler({
@@ -346,8 +334,7 @@ const SkillAttributeHandler = new BaseSelect({
   optionValues: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'],
   options: [0, 1, 3, 4, 5],
   formatDisplay: function (v: any, context?: any) {
-    const keys = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
-    const mod = context.modifiers[keys[v]];
+    const mod = context.modifiers[this.optionValues[v]];
     const modStr = mod >= 0 ? `+${mod}` : mod;
     return `${modStr}${context.t('editor.attributes.' + this.optionValues[v])}`;
   }
