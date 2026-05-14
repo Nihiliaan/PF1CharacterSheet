@@ -29,7 +29,7 @@ export default function SpellTable({
   // 根据 spellType 过滤列
   const columns = React.useMemo(() => {
     const cols: Column[] = [];
-    if (spellType !== 4) {
+    if (spellType !== 5) { // 只有 SLA (5) 隐藏环位
       cols.push({ key: 'level', label: 'editor.spells.level', width: '10%' });
     }
     if (spellType !== 0 && spellType !== 1) {

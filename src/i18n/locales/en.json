@@ -169,8 +169,6 @@
     },
     "spells": {
       "add_sla_template": "Add SLA Template",
-      "add_spontaneous_template": "Add Spontaneous Template",
-      "add_prepared_template": "Add Prepared Template",
       "caster_level": "Caster Level",
       "concentration": "Concentration",
       "level": "Level",

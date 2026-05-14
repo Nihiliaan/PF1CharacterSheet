@@ -16,7 +16,14 @@ const SIZES = ['Fine', 'Diminutive', 'Tiny', 'Small', 'Medium', 'Large', 'Huge',
 const GENDERS = ['Male', 'Female', 'Other'];
 const MANEUVERABILITY = ['Clumsy', 'Poor', 'Average', 'Good', 'Perfect'];
 const ABILITY_TYPES = ['—', 'Sp', 'Su', 'Ex'];
-const SPELL_TYPES = ['有0环准备', '无0环准备', '有0环自发', '无0环自发', '类法术'];
+const SPELL_TYPES = [
+  '准备 (完整/中等)',
+  '准备 (次等)',
+  '自发 (完整/中等)',
+  '自发 (次等)',
+  '化合炼成',
+  '类法术能力'
+];
 
 /**
  * 基础类型定义
