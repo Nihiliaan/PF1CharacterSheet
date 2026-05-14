@@ -214,7 +214,7 @@ export const DynamicInput = ({
             {displayValue() || <span className="text-stone-300">—</span>}
           </div>
         </div>
-      ) : (type === 'bool' || handler?.ui === 'bool') ? (
+      ) : (type as string === 'bool' || handler?.ui === 'bool') ? (
         <button
           type="button"
           onClick={(e) => {

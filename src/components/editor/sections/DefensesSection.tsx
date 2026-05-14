@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Section from '../../common/Section';
 import DynamicTable from '../../common/DynamicTable';
+import SingleRowTable from '../../common/SingleRowTable';
 import DynamicInput from '../../common/DynamicInput';
 import InlineInput from '../../common/InlineInput';
 import MultilineInput from '../../common/MultilineInput';
@@ -21,12 +22,11 @@ const DefensesSection: React.FC = () => {
               <span className="text-stone-400 font-normal">AC / {t('editor.defenses.touch')} / {t('editor.defenses.flat_footed')}</span>
             </label>
             <div className="flex-1">
-              <DynamicTable
+              <SingleRowTable
                 path="defenses.acTable"
                 data={data.defenses.acTable}
                 originalData={lastSavedData.defenses.acTable}
                 onChange={v => updateDefenses('acTable', v)}
-                isStaticObject={true}
                 minWidth="0"
               />
             </div>
@@ -73,12 +73,11 @@ const DefensesSection: React.FC = () => {
               <span className="text-stone-400 font-normal">{t('editor.defenses.fort')} / {t('editor.defenses.ref')} / {t('editor.defenses.will')}</span>
             </label>
             <div className="flex-1">
-              <DynamicTable
+              <SingleRowTable
                 path="defenses.savesTable"
                 data={data.defenses.savesTable}
                 originalData={lastSavedData.defenses.savesTable}
                 onChange={v => updateDefenses('savesTable', v)}
-                isStaticObject={true}
                 minWidth="0"
               />
             </div>

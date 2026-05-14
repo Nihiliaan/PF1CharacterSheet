@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Section from '../../common/Section';
 import DynamicTable from '../../common/DynamicTable';
+import SingleRowTable from '../../common/SingleRowTable';
 import DynamicInput from '../../common/DynamicInput';
 import MultilineInput from '../../common/MultilineInput';
 import { useCharacter } from '../../../contexts/CharacterContext';
@@ -46,12 +47,11 @@ const AttributesSection: React.FC = () => {
             <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
           </label>
           <div className="flex-1">
-            <DynamicTable
+            <SingleRowTable
               path="combatTable"
               data={data.combatTable}
               originalData={lastSavedData.combatTable}
               onChange={v => setData(prev => ({ ...prev, combatTable: v as any }))}
-              isStaticObject={true}
               minWidth="0"
             />
           </div>

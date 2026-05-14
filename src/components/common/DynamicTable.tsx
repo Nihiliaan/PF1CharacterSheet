@@ -22,8 +22,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     onRowDragOver,
     onRowDrop,
     readOnly = false,
-    minWidth = '600px',
-    isStaticObject = false
+    minWidth = '600px'
   } = props;
 
   const { t } = useTranslation();
@@ -37,34 +36,29 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
 
   // SoA 模式下的行数计算
   const rowCount = React.useMemo(() => {
-    if (isStaticObject) return 1;
     if (!data || typeof data !== 'object' || Array.isArray(data)) return 0;
     const firstKey = columns[0]?.key;
     if (!firstKey) return 0;
     const colData = (data as Record<string, any>)[firstKey];
     return Array.isArray(colData) ? colData.length : 0;
-  }, [data, columns, isStaticObject]);
+  }, [data, columns]);
 
   const updateData = (index: number, key: string, value: any) => {
     if (readOnly) return;
     const newData = { ...data };
 
-    if (isStaticObject) {
-      const cellPath = getCellPath(path || '', index, key);
-      const cellHandler = getHandlerByPath(cellPath);
-      const finalValue = cellHandler?.update ? cellHandler.update(value) : value;
-      newData[key] = finalValue;
-    } else {
-      if (!newData[key]) newData[key] = [];
-      const newColArray = [...newData[key]];
+    const cellPath = getCellPath(path || '', index, key);
+    const cellHandler = getHandlerByPath(cellPath);
+    const finalValue = cellHandler?.update ? cellHandler.update(value) : value;
 
-      const cellPath = getCellPath(path || '', index, key);
-      const cellHandler = getHandlerByPath(cellPath);
-      const finalValue = cellHandler?.update ? cellHandler.update(value) : value;
-
-      newColArray[index] = finalValue;
-      newData[key] = newColArray;
+    if (!newData[key]) {
+      // 初始化数组，确保长度一致
+      newData[key] = new Array(rowCount).fill('');
     }
+    const newColArray = [...newData[key]];
+    newColArray[index] = finalValue;
+    newData[key] = newColArray;
+
     onChange(newData);
   };
 
@@ -88,7 +82,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
   };
 
   const removeRow = (index: number) => {
-    if (readOnly || fixedRows || isStaticObject) return;
+    if (readOnly || fixedRows) return;
     const newData = { ...data };
     Object.keys(newData).forEach(key => {
       if (Array.isArray(newData[key])) {
@@ -100,14 +94,14 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
 
   const getCellPath = (basePath: string, index: number, key: string) => {
     if (!basePath) return undefined;
-    return isStaticObject ? `${basePath}.${key}` : `${basePath}.${key}[${index}]`;
+    return `${basePath}.${key}[${index}]`;
   };
 
   const isRowDirty = (index: number) => {
     if (!originalData) return true;
     return columns.some(c => {
-      const val = isStaticObject ? data[c.key] : data[c.key]?.[index];
-      const origVal = isStaticObject ? originalData[c.key] : originalData[c.key]?.[index];
+      const val = data[c.key]?.[index];
+      const origVal = originalData[c.key]?.[index];
       if (val === origVal) return false;
 
       // 获取该列的处理器
@@ -132,7 +126,6 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
   };
 
   const getRowData = (index: number) => {
-    if (isStaticObject) return data;
     const row: Record<string, any> = {};
     columns.forEach(c => {
       row[c.key] = data[c.key]?.[index];
@@ -141,8 +134,8 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
   };
 
   return (
-    <div className={`w-full rounded border transition-all ${JSON.stringify(data) !== JSON.stringify(originalData) ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} ${isStaticObject ? '' : 'overflow-x-auto'}`}>
-      <table className="w-full border-collapse text-sm table-auto" style={isStaticObject ? { minWidth: '100%' } : { minWidth }}>
+    <div className={`w-full rounded border transition-all ${JSON.stringify(data) !== JSON.stringify(originalData) ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
+      <table className="w-full border-collapse text-sm table-auto" style={{ minWidth }}>
         <thead>
           <tr className="bg-stone-200 text-stone-700">
             {columns.map((c: any) => (
@@ -150,7 +143,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                 {t(c.label)}
               </th>
             ))}
-            {!fixedRows && !isStaticObject && (
+            {!fixedRows && (
               <th className="w-8 p-0 align-middle border-stone-300">
                 {rowDraggable && onRowActionModeToggle ? (
                   <button
@@ -185,7 +178,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                     <td key={c.key} className={`p-0 relative border-stone-300 align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
                       <DynamicInput
                         value={String(row[c.key] ?? '')}
-                        originalValue={isStaticObject ? originalData?.[c.key] : originalData?.[c.key]?.[i]}
+                        originalValue={originalData?.[c.key]?.[i]}
                         onChange={(val) => updateData(i, c.key, val)}
                         path={cellPath}
                         readOnly={readOnly || readonlyColumns?.includes(c.key)}
@@ -200,7 +193,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                     </td>
                   );
                 })}
-                {!fixedRows && !isStaticObject && (
+                {!fixedRows && (
                   <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors">
                     <div className="flex items-center justify-center w-full h-[32px] opacity-0 group-hover:opacity-100 transition-opacity">
                       {rowDraggable && rowActionMode === 'drag' ? (
@@ -221,7 +214,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
               </tr>
             );
           })}
-          {!fixedRows && !isStaticObject && (
+          {!fixedRows && (
             <tr>
               <td colSpan={columns.length + 1} className="p-0 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer">
                 <button

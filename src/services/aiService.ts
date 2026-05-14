@@ -69,15 +69,12 @@ export const characterSchema = {
     },
     babCmbCmd: { type: Type.STRING, description: "BAB/CMB/CMD 信息（旧版字段，请优先填写 babTable）" },
     babTable: {
-      type: Type.ARRAY,
-      description: "BAB/CMB/CMD 表格，包含1个对象",
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          bab: { type: Type.STRING, description: "基本攻击加值 (BAB)" },
-          cmb: { type: Type.STRING, description: "战技攻击加值 (CMB)" },
-          cmd: { type: Type.STRING, description: "战技防御等级 (CMD)" }
-        }
+      type: Type.OBJECT,
+      description: "BAB/CMB/CMD 信息",
+      properties: {
+        bab: { type: Type.STRING, description: "基本攻击加值 (BAB)" },
+        cmb: { type: Type.STRING, description: "战技攻击加值 (CMB)" },
+        cmd: { type: Type.STRING, description: "战技防御等级 (CMD)" }
       }
     },
     combatManeuverNotes: { type: Type.STRING, description: "战技相关的通用备注或特殊加值说明" },
@@ -88,28 +85,22 @@ export const characterSchema = {
         hp: { type: Type.STRING, description: "HP（总生命值）" },
         hd: { type: Type.STRING, description: "HD（生命骰，如 3d8+3）" },
         acTable: {
-          type: Type.ARRAY,
-          description: "AC 详情表格，包含1个对象",
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              ac: { type: Type.STRING, description: "综合 AC" },
-              flatFooted: { type: Type.STRING, description: "措手不及 AC" },
-              touch: { type: Type.STRING, description: "接触 AC" }
-            }
+          type: Type.OBJECT,
+          description: "AC 详情",
+          properties: {
+            ac: { type: Type.STRING, description: "综合 AC" },
+            flatFooted: { type: Type.STRING, description: "措手不及 AC" },
+            touch: { type: Type.STRING, description: "接触 AC" }
           }
         },
         acNotes: { type: Type.STRING, description: "防护等级相关的备注（如护甲、盾牌、敏捷等来源）" },
         savesTable: {
-          type: Type.ARRAY,
-          description: "豁免表格，包含1个对象",
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              fort: { type: Type.STRING, description: "强韧豁免" },
-              ref: { type: Type.STRING, description: "反射豁免" },
-              will: { type: Type.STRING, description: "意志豁免" }
-            }
+          type: Type.OBJECT,
+          description: "豁免信息",
+          properties: {
+            fort: { type: Type.STRING, description: "强韧豁免" },
+            ref: { type: Type.STRING, description: "反射豁免" },
+            will: { type: Type.STRING, description: "意志豁免" }
           }
         },
         savesNotes: { type: Type.STRING, description: "豁免相关的备注（如抗力加值等）" },

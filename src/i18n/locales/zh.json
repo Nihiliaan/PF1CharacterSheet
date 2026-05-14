@@ -182,7 +182,9 @@
       "base_level_0": "0环",
       "base_level_1": "1环",
       "computed_level": "{{n}}环",
-      "times_per_day": "次/日"
+      "times_per_day": "次/日",
+      "at_will": "随意使用",
+      "uses_per_day": "{{n}}次/日"
     },
     "items": {
       "headers": {

@@ -218,7 +218,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleExportBBCode = () => {
     const tmpl = localStorage.getItem('bbcode_template') || DEFAULT_BBCODE_TEMPLATE;
-    const bbcode = generateBBCode(data, tmpl, t);
+    const bbcode = generateBBCode(data, tmpl, t, { computed, data });
     navigator.clipboard.writeText(bbcode);
     setToast({ message: "BBCode 已复制到剪贴板！" });
   };

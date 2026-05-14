@@ -46,6 +46,7 @@ export const useCharacterPersistence = (
       data.combatTable = data.babTable;
       delete data.babTable;
     }
+
     const result = { ...data };
     for (const key in defaults) {
       if (typeof defaults[key] === 'object' && defaults[key] !== null && !Array.isArray(defaults[key])) {

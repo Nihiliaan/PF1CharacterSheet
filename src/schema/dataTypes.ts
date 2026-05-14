@@ -27,8 +27,7 @@ const BaseText = {
   validate: () => true,
   update: (v: string) => v,
   formatDisplay: (v: any) => v,
-  formatInteractive: (v: any) => v,
-  get formatExport() { return this.formatDisplay; }
+  formatInteractive: (v: any) => v
 };
 
 const BaseInt = {
@@ -49,8 +48,7 @@ const BaseInt = {
     return Math.min(this.max, Math.max(this.min, num));
   },
   formatDisplay: (v: any) => (v === undefined || v === '') ? '—' : v.toString(),
-  formatInteractive: (v: any) => v?.toString() || '0',
-  get formatExport() { return this.formatDisplay; }
+  formatInteractive: (v: any) => v?.toString() || '0'
 };
 
 const BaseSelect = {
@@ -58,8 +56,7 @@ const BaseSelect = {
   validate: () => true,
   update: (v: string) => v,
   formatDisplay: (v: any) => v || '—',
-  formatInteractive: (v: any) => v || '',
-  get formatExport() { return this.formatDisplay; }
+  formatInteractive: (v: any) => v || ''
 };
 
 /**
@@ -231,6 +228,23 @@ const BoolHandler = Object.assign(Object.create(BaseText), {
   formatInteractive: (v: any) => (v ? 'true' : 'false')
 });
 
+const ClassSkillHandler = Object.assign(Object.create(BoolHandler), {
+  formatDisplay: (v: any, context?: any) => {
+    const isCS = v === true || v === 'true';
+    const rank = parseInt(context?.row?.rank, 10);
+    return (isCS && !isNaN(rank) && rank > 0) ? '+3' : '';
+  },
+  formatExport: function (v: any, context?: any) {
+    const display = this.formatDisplay(v, context);
+    if (display === '+3') {
+      const t = context?.t;
+      return t ? `+3${t('editor.sections.cs_short')}` : '+3本职';
+    }
+    // 即使是 false，在导出时也应该根据 rank 决定是否输出，这里遵循 formatDisplay
+    return display;
+  }
+});
+
 const AbilityTypeHandler = Object.assign(Object.create(BaseSelect), {
   options: ['0', '1', '2', '3'],
   update: (v: string | number) => parseInt(String(v), 10) || 0,
@@ -264,7 +278,7 @@ const SkillAttributeHandler = Object.assign(Object.create(BaseInt), {
       const keys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
       const mod = context.modifiers[keys[idx - 1]];
       const modStr = mod >= 0 ? `+${mod}` : mod;
-      return `${modStr} ${name}`;
+      return `${modStr}${name}`;
     }
     return name;
   },
@@ -354,13 +368,20 @@ const CritMultiplierHandler = Object.assign(Object.create(BaseSelect), {
 });
 
 const DailyUsesHandler = Object.assign(Object.create(BaseInt), {
-  validate: (v: string) => v === '' || /^-?\d+$/.test(v),
-  update: (v: string) => (v === '' ? 0 : parseInt(v, 10)),
-  formatDisplay: (v: any) => {
-    if (v === -1) return '随意';
-    return `${v}次/日`;
+  min: 0,
+  validate: (v: string) => v === '' || /^\d+$/.test(v),
+  update: (v: string) => (v === '' ? 0 : Math.max(0, parseInt(v, 10))),
+  formatDisplay: (v: any, context?: any) => {
+    const num = parseInt(v, 10);
+    if (isNaN(num) || num === 0) {
+      return context?.t ? context.t('editor.spells.at_will') : '随意使用';
+    }
+    return context?.t ? context.t('editor.spells.uses_per_day', { n: num }) : `${num}次/日`;
   },
-  formatInteractive: (v: any) => v?.toString() || '0'
+  formatInteractive: (v: any) => {
+    const num = parseInt(v, 10);
+    return (isNaN(num) || num === 0) ? '0' : num.toString();
+  }
 });
 
 // 复合容器基类 (用于非表格的多列布局)
@@ -437,12 +458,7 @@ const SkillsTableHandler = {
       key: 'cs',
       label: 'editor.skills.headers.cs',
       width: '5%',
-      type: 'bool',
-      displayFormatter: (val: any, _isFocused: boolean, context?: any) => {
-        const isCS = String(val) === 'true';
-        const rank = parseInt(context?.row?.rank, 10);
-        return (isCS && !isNaN(rank) && rank > 0) ? '+3' : '';
-      }
+      type: 'classSkill'
     },
     { key: 'ability', label: 'editor.skills.headers.ability', width: '10%', type: 'attributeIndex' },
     { key: 'others', label: 'editor.skills.headers.others', width: '20%' },
@@ -541,6 +557,7 @@ export function getHandlerByType(type: string): any {
     case 'weight': return FloatHandler;
     case 'bool':
     case 'checkbox': return BoolHandler;
+    case 'classSkill': return ClassSkillHandler;
     default: return TextHandler;
   }
 }
@@ -553,8 +570,9 @@ const handlers: any = {
   DistanceHandler, SkillAttributeHandler, CostHandler, WeightHandler,
   ManeuverabilityHandler, AlignmentHandler, SizeHandler, GenderHandler,
   HeightHandler, AgeHandler, CritRangeHandler, CritMultiplierHandler, BonusHandler,
-  FloatHandler, BoolHandler, AbilityTypeHandler, SpellTypeHandler,
+  FloatHandler, BoolHandler, ClassSkillHandler, AbilityTypeHandler, SpellTypeHandler,
   SpellLevelHandler, DailyUsesHandler,
+  ClassSkillHandler,
   getHandlerByType,
   // 业务层
   CompositeHandler,

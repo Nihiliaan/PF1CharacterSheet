@@ -181,7 +181,9 @@
       "base_level_0": "Level 0",
       "base_level_1": "Level 1",
       "computed_level": "Level {{n}}",
-      "times_per_day": "/ day"
+      "times_per_day": "/ day",
+      "at_will": "At will",
+      "uses_per_day": "{{n}}/day"
     },
     "items": {
       "headers": {

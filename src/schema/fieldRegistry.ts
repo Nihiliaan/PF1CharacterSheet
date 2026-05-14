@@ -3,7 +3,7 @@ import handlers from './dataTypes';
 
 const {
   TextHandler, IntegerHandler, PosIntHandler, BonusHandler, LevelHandler,
-  FloatHandler, BoolHandler, SkillAttributeHandler, QuantityHandler,
+  FloatHandler, BoolHandler, ClassSkillHandler, SkillAttributeHandler, QuantityHandler,
   CostHandler, WeightHandler, CritRangeHandler, CritMultiplierHandler,
   DistanceHandler, AbilityTypeHandler, SpellTypeHandler, CompositeHandler,
   SpellLevelHandler, DailyUsesHandler, AgeHandler, HeightHandler,
@@ -167,7 +167,7 @@ export const CharacterPrototype: any = {
     name: TextHandler,
     total: BonusHandler,
     rank: LevelHandler,
-    cs: BoolHandler,
+    cs: ClassSkillHandler,
     ability: SkillAttributeHandler,
     misc: IntegerHandler,
     special: TextHandler

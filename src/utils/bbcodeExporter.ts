@@ -1,290 +1,279 @@
-import { ATTRIBUTE_NAMES, CharacterData } from '../types';
-import { getDisplayValue } from './formatters';
+import Handlebars from 'handlebars';
+import { get } from 'lodash-es';
+import { CharacterData } from '../types';
+import { getExportValue } from './formatters';
+import { getHandlerByPath } from '../schema/fieldRegistry';
 import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from './calculations';
 
-export function generateBBCode(data: CharacterData, template: string, t: any): string {
-  let bbcode = template;
+// 创建隔离的 Handlebars 实例
+const hbs = Handlebars.create();
 
-  const getS = (obj: any, path: string) => {
-    const parts = path.split('.');
-    let curr = obj;
-    for (const p of parts) {
-      if (curr === undefined || curr === null) return undefined;
-      // Handle array access like avatars[0].url
-      const arrayMatch = p.match(/^(.+)\[(\d+)\]$/);
-      if (arrayMatch) {
-        const key = arrayMatch[1];
-        const idx = parseInt(arrayMatch[2]);
-        curr = curr[key]?.[idx];
-      } else if (Array.isArray(curr) && /^\d+$/.test(p)) {
-        curr = curr[parseInt(p)];
-      } else {
-        curr = curr[p];
-      }
+/**
+ * 辅助函数：根据路径安全从 SoA 取原始值
+ */
+function getValueFromSoA(rootStorage: any, logicalPath: string, propName: string): any {
+  if (!rootStorage) return null;
+  if (!logicalPath) return rootStorage[propName];
+
+  // logicalPath 示例: "skills.5", "defenses.acTable", "equipmentBags.0.items.2"
+  const parts = logicalPath.split('.');
+  const lastPart = parts[parts.length - 1];
+
+  // 检查最后一部分是否是数字索引
+  const isIndexed = /^\d+$/.test(lastPart);
+
+  if (isIndexed) {
+    const index = parseInt(parts.pop()!, 10);
+    const parentPath = parts.join('.');
+    const target = parentPath ? get(rootStorage, parentPath) : rootStorage;
+
+    if (Array.isArray(target)) {
+      // 处理普通数组 AoO (如 equipmentBags)
+      return target[index] ? target[index][propName] : null;
+    } else if (target && target[propName] && Array.isArray(target[propName])) {
+      // 处理 SoA (如 skills)
+      return target[propName][index];
     }
-    return curr;
-  };
-
-  const formatDynamicBlock = (blocks: any[], parentPath: string) => {
-    if (!blocks || blocks.length === 0) return t('common.none') || '无';
-    return blocks.map((block, index) => {
-      let blockResult = `[b]${block.title}[/b]`;
-      const blockPath = `${parentPath}[${index}]`;
-
-      if (block.type === 'text') {
-        blockResult += `\n${block.content || t('editor.lists.no_content') || '暂无内容'}`;
-      } else if (block.type === 'table') {
-        const cols = block.columns || [];
-        const tableData = block.tableData || [];
-        if (tableData.length > 0) {
-          blockResult += '\n[table]\n';
-          tableData.forEach((row: any, rowIndex: number) => {
-            blockResult += '[tr]' + cols.map((c: any) => {
-              const val = row[c.key] || '';
-              // 按照 SoA 寻址：parentPath[index].tableData.key[rowIndex]
-              const cellPath = `${blockPath}.tableData.${c.key}[${rowIndex}]`;
-              return `[td]${getDisplayValue(val, c.type || 'text', t, { path: cellPath })}[/td]`;
-            }).join('') + '[/tr]\n';
-          });
-          blockResult += '[/table]';
-        }
-      } else if (block.type === 'spell') {
-        const cl = block.casterLevel || '0';
-        const conc = block.concentration || '0';
-        const clStr = getDisplayValue(cl, 'level', t, { path: `${blockPath}.casterLevel` });
-        const concStr = getDisplayValue(conc, 'bonus', t, { path: `${blockPath}.concentration` });
-
-        blockResult += `（[b]${t('editor.spells.caster_level')}[/b] ${clStr}；[b]${t('editor.spells.concentration')}[/b] ${concStr}）\n`;
-
-        const tableData = block.tableData || [];
-        const baseLevel = block.baseLevel ?? ((block.spellType === 0 || block.spellType === 2) ? 0 : 1);
-        const spellType = block.spellType ?? 2;
-
-        if (tableData.length > 0) {
-          blockResult += '[table]\n';
-          [...tableData].reverse().forEach((row: any, i: number) => {
-            const rowIndex = tableData.length - 1 - i;
-            const levelNum = rowIndex + baseLevel;
-            const levelStr = t('editor.spells.computed_level', { n: levelNum }) || `${levelNum}环`;
-
-            blockResult += '[tr]';
-            if (spellType !== 4) blockResult += `[td]${levelStr}[/td]`;
-            if (spellType !== 0 && spellType !== 1) {
-              const usesVal = getDisplayValue(row.uses, 'dailyUses', t, { path: `${blockPath}.spellTable.uses[${rowIndex}]` });
-              blockResult += `[td]${usesVal}[/td]`;
-            }
-            const spellsVal = row.spells || '';
-            blockResult += `[td]${spellsVal}[/td]`;
-            blockResult += '[/tr]\n';
-          });
-          blockResult += '[/table]\n';
-        }
-
-        if (block.notes) blockResult += `${block.notes}`;
-      }
-      return blockResult;
-    }).join('\n[hr]\n');
-  };
-
-  const vars: Record<string, string> = {};
-
-  // 1. Basic Info
-  const basicFields = ['name', 'classes', 'alignment', 'deity', 'size', 'gender', 'race', 'age', 'height', 'weight', 'senses', 'initiative', 'perception', 'languages'];
-  basicFields.forEach(f => {
-    vars[f] = getDisplayValue(getS(data, `basic.${f}`) || '', 'text', t, { path: `basic.${f}` });
-  });
-
-  vars['speed'] = getDisplayValue(data.basic.speed.land, 'distance', t, { path: 'basic.speed.land' });
-
-  vars['avatarUrl'] = (data.basic.avatars?.url?.[0]) || 'http://此处填写人物头像图片地址';
-  vars['acp'] = getDisplayValue(data.armorCheckPenalty, 'int', t, { path: 'armorCheckPenalty' });
-
-  // 2. Attributes
-  vars['attributesTable'] = '[table]\n' +
-    (data.attributes?.final || []).map((_, i: number) => {
-      const name = t('editor.attributes.' + ATTRIBUTE_NAMES[i]) || '';
-      const final = getDisplayValue(data.attributes.final[i], 'int', t, { path: `attributes.final[${i}]` });
-      const mod = getDisplayValue(data.attributes.modifier[i], 'bonus', t, { path: `attributes.modifier[${i}]` });
-      const source = data.attributes.source[i] || '';
-      const status = data.attributes.status[i] ? ' ' + data.attributes.status[i] : '';
-      return `[tr][td]${name}[/td][td]${final}[/td][td]${mod}[/td][td]${source}${status}[/td][/tr]`;
-    }).join('\n') + '\n[/table]';
-
-  // 3. Combat Table (Correct path: combatTable.key[0])
-  vars['bab'] = getDisplayValue(data.combatTable?.bab?.[0], 'bonus', t, { path: 'combatTable.bab[0]' });
-  vars['cmb'] = getDisplayValue(data.combatTable?.cmb?.[0], 'bonus', t, { path: 'combatTable.cmb[0]' });
-  vars['cmd'] = getDisplayValue(data.combatTable?.cmd?.[0], 'int', t, { path: 'combatTable.cmd[0]' });
-  vars['combatManeuverNotes'] = data.combatManeuverNotes || '';
-
-  // 4. Attacks
-  const formatAttackTable = (attacks: any, path: string) => {
-    if (!attacks || !attacks.weapon || attacks.weapon.length === 0) return '';
-    return '[table]\n' + attacks.weapon.map((_: any, i: number) => {
-      const weapon = attacks.weapon[i] || '';
-      const hit = getDisplayValue(attacks.hit[i], 'bonus', t, { path: `${path}.hit[${i}]` });
-      const damage = attacks.damage[i] || '';
-      const critRange = getDisplayValue(attacks.critRange[i], 'critRange', t, { path: `${path}.critRange[${i}]` });
-      const critMult = getDisplayValue(attacks.critMultiplier[i], 'critMultiplier', t, { path: `${path}.critMultiplier[${i}]` });
-      const critStr = (critRange === '20' && (critMult === '×2' || critMult === '2')) ? '' : `${critRange}${critMult}`;
-      const range = getDisplayValue(attacks.range[i], 'distance', t, { path: `${path}.range[${i}]` });
-      return `[tr][td]${weapon}[/td][td]${hit}[/td][td]${damage}[/td][td]${critStr}[/td][td]${attacks.damageType[i] || ''}[/td][td]${range}[/td][td]${attacks.special[i] || ''}[/td][/tr]`;
-    }).join('\n') + '\n[/table]';
-  };
-
-  vars['meleeAttackTable'] = formatAttackTable(data.attacks.meleeAttacks, 'attacks.meleeAttacks');
-  vars['rangedAttackTable'] = formatAttackTable(data.attacks.rangedAttacks, 'attacks.rangedAttacks');
-  vars['specialAttacks'] = data.attacks.specialAttacks || '';
-
-  // 5. Defenses
-  vars['ac'] = getDisplayValue(data.defenses.acTable?.ac?.[0], 'int', t, { path: 'defenses.acTable.ac[0]' });
-  vars['acTouch'] = getDisplayValue(data.defenses.acTable?.touch?.[0], 'int', t, { path: 'defenses.acTable.touch[0]' });
-  vars['acFlatFooted'] = getDisplayValue(data.defenses.acTable?.flatFooted?.[0], 'int', t, { path: 'defenses.acTable.flatFooted[0]' });
-  vars['acSource'] = data.defenses.acTable?.source?.[0] || '';
-  vars['acNotes'] = data.defenses.acNotes || '';
-  vars['acLine'] = vars['ac'] ? `[b]AC[/b] ${vars['ac']}, [b]${t('editor.defenses.flat_footed')}[/b] ${vars['acFlatFooted']}, [b]${t('editor.defenses.touch')}[/b] ${vars['acTouch']}${vars['acSource'] ? ` (${vars['acSource']})` : ''}${vars['acNotes'] ? `；${vars['acNotes']}` : ''}` : '';
-
-  vars['hp'] = getDisplayValue(data.defenses.hp, 'posInt', t, { path: 'defenses.hp' });
-  vars['hd'] = data.defenses.hd || '';
-  vars['hpLine'] = `[b]HP[/b] ${vars['hp']}${vars['hd'] ? ` (${vars['hd']})` : ''}`;
-
-  vars['saveFort'] = getDisplayValue(data.defenses.savesTable?.fort?.[0], 'bonus', t, { path: 'defenses.savesTable.fort[0]' });
-  vars['saveRef'] = getDisplayValue(data.defenses.savesTable?.ref?.[0], 'bonus', t, { path: 'defenses.savesTable.ref[0]' });
-  vars['saveWill'] = getDisplayValue(data.defenses.savesTable?.will?.[0], 'bonus', t, { path: 'defenses.savesTable.will[0]' });
-  vars['savesNotes'] = data.defenses.savesNotes || '';
-  vars['saveLine'] = vars['saveFort'] ? `[b]${t('editor.defenses.fort')}[/b] ${vars['saveFort']}, [b]${t('editor.defenses.ref')}[/b] ${vars['saveRef']}, [b]${t('editor.defenses.will')}[/b] ${vars['saveWill']}${vars['savesNotes'] ? ` (${vars['savesNotes']})` : ''}` : '';
-  vars['specialDefenses'] = data.defenses.specialDefenses || '';
-
-  // 6. Traits & Features
-  vars['racialTraits'] = (data.racialTraits?.name?.length > 0)
-    ? '[table]\n' + data.racialTraits.name.map((_, i: number) => `[tr][td]${getDisplayValue(data.racialTraits.name[i], 'text', t, { path: `racialTraits.name[${i}]` })}[/td][td]${getDisplayValue(data.racialTraits.desc[i], 'text', t, { path: `racialTraits.desc[${i}]` })}[/td][/tr]`).join('\n') + '\n[/table]'
-    : t('common.none');
-
-  vars['backgroundTraits'] = (data.backgroundTraits?.name?.length > 0)
-    ? data.backgroundTraits.name.map((_, i: number) => `${data.backgroundTraits.name[i]}(${data.backgroundTraits.type[i]}): ${data.backgroundTraits.desc[i]}`).join('\n')
-    : t('common.none');
-
-  vars['favoredClass'] = data.favoredClass || '';
-  vars['favoredClassBonus'] = data.favoredClassBonus || '';
-
-  vars['classFeatures'] = (data.classFeatures?.name?.length > 0)
-    ? '[table]\n' + data.classFeatures.name.map((_, i: number) => `[tr][td]${getDisplayValue(data.classFeatures.level[i], 'level', t, { path: `classFeatures.level[${i}]` })}[/td][td]${data.classFeatures.name[i]}${data.classFeatures.type[i] ? `（${t('editor.class_features.types.' + data.classFeatures.type[i]) || ''}）` : ''}[/td][td]${data.classFeatures.desc[i]}[/td][/tr]`).join('\n') + '\n[/table]'
-    : t('common.none');
-
-  vars['featTable'] = (data.feats?.name?.length > 0)
-    ? '[table]\n' + data.feats.name.map((_, i: number) => `[tr][td]${getDisplayValue(data.feats.level[i], 'level', t, { path: `feats.level[${i}]` })}[/td][td]${data.feats.name[i] || ''}${data.feats.type[i] ? ` (${data.feats.type[i]})` : ''}[/td][td]${data.feats.desc[i] || ''}[/td][/tr]`).join('\n') + '\n[/table]'
-    : t('common.none');
-
-  // 7. Skills
-  vars['skillTable'] = (data.skills?.name?.length > 0)
-    ? '[table]\n' + data.skills.name.map((_, i: number) => {
-        const total = getDisplayValue(data.skills.total[i], 'bonus', t, { path: `skills.total[${i}]` });
-        const rank = getDisplayValue(data.skills.rank[i], 'level', t, { path: `skills.rank[${i}]` });
-        const cs = (data.skills.cs[i] && (data.skills.rank[i] || 0) > 0) ? `+3${t('editor.sections.cs_short')}` : '';
-        let attrStr = '';
-        if (data.skills.ability[i] && data.skills.ability[i] !== 0) {
-          const idx = data.skills.ability[i] - 1;
-          attrStr = `${getDisplayValue(data.attributes.modifier[idx], 'bonus', t, { path: `attributes.modifier[${idx}]` })}${t('editor.attributes.' + ATTRIBUTE_NAMES[idx])}`;
-        }
-        const det = [rank, cs, attrStr, data.skills.others?.[i]].filter(x => x).join(' ');
-        return `[tr][td]${data.skills.name[i] || ''}[/td][td]${det ? `${total} (${det})` : total}[/td][td]${data.skills.special?.[i] || ''}[/td][/tr]`;
-      }).join('\n') + '\n[/table]'
-    : t('common.none');
-
-  // 8. Equipment & Currency
-  if (!data.equipmentBags || data.equipmentBags.length === 0) {
-    vars['equipmentTable'] = t('common.none');
   } else {
-    vars['equipmentTable'] = data.equipmentBags.map((bag, bIdx) => {
-      let res = `[quote author=${bag.name}${bag.ignoreWeight ? ' (' + t('editor.items.ignore_weight') + ')' : ''}]\n`;
-      const items = bag.items;
-      if (!items || !items.item || items.item.length === 0) {
-        res += (t('editor.items.no_items') || '此容器内无物品') + '\n';
-      } else {
-        res += '[table]\n' + items.item.map((_, iIdx) => {
-          const q = parseInt(items.quantity[iIdx] as any) || 1;
-          const c = (parseFloat(items.cost[iIdx] as any) || 0) * q;
-          const w = (parseFloat(items.weight[iIdx] as any) || 0) * q;
-          const name = items.item[iIdx] + (q > 1 ? `(${q})` : '');
-          const cStr = c === 0 ? '' : `${c.toFixed(2)}gp`;
-          const wStr = w === 0 ? '' : `${w.toFixed(2)}lbs`;
-          const notes = items.notes[iIdx] || '';
-          return `[tr][td]${name}[/td][td]${cStr}[/td][td]${wStr}[/td][td]${notes}[/td][/tr]`;
-        }).join('\n') + '\n[/table]';
-      }
-      return res + '[/quote]';
-    }).join('\n');
+    // 处理静态对象，如 defenses.acTable
+    const target = get(rootStorage, logicalPath);
+    return target ? target[propName] : null;
+  }
+  return null;
+}
+
+// 1. 覆盖 {{#each}} 以支持 SoA 和路径追踪
+hbs.registerHelper('each', function (this: any, context: any, options: Handlebars.HelperOptions) {
+  if (!context) return options.inverse(this);
+
+  let result = "";
+  const data = Handlebars.createFrame(options.data);
+  const parentPath = data.fullPath || "";
+  // 获取当前迭代对象的字段名 (如 "skills", "tableData")
+  const currentKey = (options as any).ids ? (options as any).ids[0] : "";
+
+  const keys = (typeof context === 'object' && !Array.isArray(context)) ? Object.keys(context) : [];
+  // 增强 SoA 判定：包含数组属性的对象
+  const isSoA = !Array.isArray(context) && keys.length > 0 && keys.some(k => Array.isArray(context[k]));
+
+  // 找寻最大长度
+  let length = 0;
+  if (isSoA) {
+    keys.forEach(k => {
+      if (Array.isArray(context[k])) length = Math.max(length, context[k].length);
+    });
+  } else if (Array.isArray(context)) {
+    length = context.length;
   }
 
-  vars['currencyLine'] = `[b]${t('editor.items.currency')} (${[
-    data.currency.pp > 0 && `${data.currency.pp}${t('editor.items.pp')}`,
-    data.currency.gp > 0 && `${data.currency.gp}${t('editor.items.gp')}`,
-    data.currency.sp > 0 && `${data.currency.sp}${t('editor.items.sp')}`,
-    data.currency.cp > 0 && `${data.currency.cp}${t('editor.items.cp')}`
-  ].filter(Boolean).join('') || '无'}) ${t('editor.items.coin_weight_total')} ${parseFloat(String(data.currency.coinWeight)).toFixed(1)}lbs ${t('editor.items.total_assets')} ${calculateTotalCost(data)}gp[/b]`;
+  for (let i = 0; i < length; i++) {
+    data.index = i;
+    data.first = (i === 0);
+    data.last = (i === length - 1);
 
-  const totalW = calculateTotalWeightNum(data);
-  const enc = getComputedEncumbrance(data);
-  let sKey = t('editor.items.light');
-  if (totalW > enc.heavy) sKey = t('editor.items.overload');
-  else if (totalW > enc.medium) sKey = t('editor.items.heavy');
-  else if (totalW > enc.light) sKey = t('editor.items.medium');
+    // 维护绝对逻辑路径 (核心修复：包含字段名)
+    const baseLevelPath = parentPath && currentKey ? `${parentPath}.${currentKey}` : (currentKey || parentPath);
+    data.fullPath = baseLevelPath ? `${baseLevelPath}.${i}` : `${i}`;
 
-  vars['loadSummary'] = `[b]${t('editor.items.total_weight')} ${sKey} ${totalW.toFixed(1)}lbs ${enc.light}/${enc.medium}/${enc.heavy}[/b]`;
-  vars['equipmentSection'] = vars['equipmentTable'] + '\n' + vars['currencyLine'] + '\n' + vars['loadSummary'];
+    let rowData;
+    if (isSoA) {
+      rowData = {};
+      keys.forEach(k => {
+        rowData[k] = Array.isArray(context[k]) ? context[k][i] : context[k];
+      });
+    } else {
+      rowData = context[i];
+    }
 
-  // 9. Magic & Additional
-  vars['magicBlocks'] = formatDynamicBlock(data.magicBlocks || [], 'magicBlocks');
-  vars['additionalData'] = formatDynamicBlock(data.additionalData || [], 'additionalData');
+    result += options.fn(rowData, { data });
+  }
+  return result;
+});
 
-  const resolveValue = (path: string) => {
-    if (vars[path] !== undefined) return String(vars[path]);
-    const val = getS(data, path);
-    return (typeof val === 'string' || typeof val === 'number') ? String(val) : undefined;
+// 2. 覆盖 {{#with}} 以追踪路径
+hbs.registerHelper('with', function (this: any, context: any, options: Handlebars.HelperOptions) {
+  if (!context || (typeof context === 'object' && Object.keys(context).length === 0)) {
+    return options.inverse(this);
+  }
+
+  const data = Handlebars.createFrame(options.data);
+  const parentPath = data.fullPath || "";
+  // Handlebars 内部通过 options.ids 获取当前 with 的路径名
+  const currentKey = (options as any).ids ? (options as any).ids[0] : "";
+
+  data.fullPath = parentPath && currentKey ? `${parentPath}.${currentKey}` : (currentKey || parentPath);
+
+  return options.fn(context, { data });
+});
+
+// 3. 实现 {{raw "prop"}} 从原始存储取值
+hbs.registerHelper('raw', function (propName: string, options: Handlebars.HelperOptions) {
+  const fullPath = options.data.fullPath;
+  const rootStorage = options.data.root._storage;
+  return getValueFromSoA(rootStorage, fullPath, propName);
+});
+
+// 4. 逻辑辅助函数 (保持不变)
+hbs.registerHelper('eq', (a, b) => a === b);
+hbs.registerHelper('ne', (a, b) => a !== b);
+hbs.registerHelper('and', (a, b) => a && b);
+hbs.registerHelper('or', (a, b) => a || b);
+hbs.registerHelper('not', (a) => !a);
+
+/**
+ * 将数据转换为仅包含显示值的视图对象 (保持 SoA/Object 结构不变)
+ */
+export function buildViewObject(data: any, t: any, characterContext?: any): any {
+  const context = {
+    t,
+    modifiers: characterContext?.computed?.modifiers,
+    character: characterContext
   };
 
-  const tagRegex = /\{((?:[^{}\\]|\\.)+)\}/g;
-  let changed = true, passes = 0;
-  while (changed && passes < 3) {
-    const old = bbcode;
-    bbcode = bbcode.replace(tagRegex, (match, content) => {
-      let fQ = -1, fC = -1, esc = false;
-      for (let i = 0; i < content.length; i++) {
-        if (esc) { esc = false; continue; }
-        if (content[i] === '\\') { esc = true; continue; }
-        if (content[i] === '?') { if (fQ === -1) fQ = i; }
-        else if (content[i] === ':') { if (fC === -1) fC = i; }
+  function processNode(val: any, path: string): any {
+    if (val === null || val === undefined) return val;
+
+    // 1. 处理数组
+    if (Array.isArray(val)) {
+      // 检查数组类型：如果是 AoO (对象数组)，对每个对象递归
+      if (val.length > 0 && typeof val[0] === 'object' && val[0] !== null) {
+        return val.map((item, i) => processNode(item, `${path}.${i}`));
       }
-      let p = '', iNE = '', iE = '';
-      if (fQ === -1 && fC === -1) p = content;
-      else if (fQ !== -1 && fC === -1) { p = content.substring(0, fQ); iNE = content.substring(fQ + 1); }
-      else if (fQ === -1 && fC !== -1) { p = content.substring(0, fC); iE = content.substring(fC + 1); }
-      else {
-        if (fQ < fC) { p = content.substring(0, fQ); iNE = content.substring(fQ + 1, fC); iE = content.substring(fC + 1); }
-        else { p = content.substring(0, fC); iE = content.substring(fC + 1, fQ); iNE = content.substring(fQ + 1); }
-      }
-      const val = resolveValue(p);
-      const empty = val === undefined || val === null || val === '';
-      let res = (fQ === -1 && fC === -1) ? (val !== undefined ? val : match) : (fQ !== -1 && fC === -1) ? (!empty ? iNE : '') : (fQ === -1 && fC !== -1) ? (!empty ? val : iE) : (!empty ? iNE : iE);
-      if (val !== undefined && res.includes('$')) {
-        let sub = '', subEsc = false;
-        for (let i = 0; i < res.length; i++) {
-          if (subEsc) { sub += res[i]; subEsc = false; }
-          else if (res[i] === '\\') { sub += '\\'; subEsc = true; }
-          else if (res[i] === '$') sub += val;
-          else sub += res[i];
+      // 如果是 SoA 列 (基础值数组) 或空数组，对每个元素格式化
+      // 注意：SoA 列中的每个元素共享相同的 schema 路径 (不带索引)
+      return val.map((item) => getExportValue(item, 'text', t, { path, context }));
+    }
+
+    // 2. 处理对象
+    if (typeof val === 'object') {
+      const keys = Object.keys(val);
+      // SoA 判定：非数组对象，且第一个属性值是数组 (如 skills)
+      const isSoA = keys.length > 0 && Array.isArray(val[keys[0]]);
+
+      if (isSoA) {
+        const length = val[keys[0]].length;
+        const result: any = {};
+        keys.forEach(k => result[k] = []);
+
+        for (let i = 0; i < length; i++) {
+          // 预先组装这一行的原始数据作为上下文
+          const row: any = {};
+          keys.forEach(k => row[k] = val[k][i]);
+
+          keys.forEach(k => {
+            const childPath = path ? `${path}.${k}` : k;
+            // 传入包含 row 的 context，确保 ClassSkillHandler 等能找到同行数据
+            result[k].push(getExportValue(val[k][i], 'text', t, {
+              path: childPath,
+              context: { ...context, row }
+            }));
+          });
         }
-        res = sub;
+        return result;
       }
-      return res;
+
+      // 普通对象处理
+      const result: any = {};
+      for (const key in val) {
+        const childPath = path ? `${path}.${key}` : key;
+        const childVal = val[key];
+        result[key] = processNode(childVal, childPath);
+      }
+      return result;
+    }
+
+    // 3. 处理终端基础值 (字符串、数字等)
+    return getExportValue(val, 'text', t, { path, context });
+  }
+
+  // 构建仅包含显示值的树
+  const view = processNode(data, '');
+
+  // 注入计算属性
+  view.totalCost = calculateTotalCost(data);
+  view.totalWeight = calculateTotalWeightNum(data).toFixed(1);
+  const enc = getComputedEncumbrance(data);
+  view.encumbrance = enc;
+
+  // 处理法术块与自定义表格的环位注入、数据归一化
+  if (view.magicBlocks && Array.isArray(view.magicBlocks)) {
+    view.magicBlocks.forEach((block: any, blockIdx: number) => {
+      const rawBlock = data.magicBlocks[blockIdx] as any;
+      if (!rawBlock) return;
+
+      // 1. 强制归一化 tableData 为 SoA 结构 (并剔除残留的数组索引 Key)
+      if (rawBlock.tableData) {
+        let soa: any = {};
+        if (Array.isArray(rawBlock.tableData)) {
+          // AoO 模式转换
+          if (rawBlock.tableData.length > 0 && typeof rawBlock.tableData[0] === 'object') {
+            const keys = Object.keys(rawBlock.tableData[0]);
+            keys.forEach(k => {
+              soa[k] = rawBlock.tableData.map((row: any) => row[k]);
+            });
+          }
+        } else {
+          // 对象模式：剔除可能存在的数字索引 Key (如 "0", "1")
+          Object.keys(rawBlock.tableData).forEach(k => {
+            if (isNaN(Number(k)) && Array.isArray(rawBlock.tableData[k])) {
+              soa[k] = rawBlock.tableData[k];
+            }
+          });
+        }
+        block.tableData = processNode(soa, `magicBlocks.${blockIdx}.tableData`);
+      }
+
+      // 2. 环位注入逻辑 (确保 rowCount 计算准确)
+      const tableData = block.tableData;
+      if (tableData && typeof tableData === 'object' && !Array.isArray(tableData)) {
+        // 兼容 Key 别名
+        if (tableData.spells) tableData.spell_name = tableData.spells;
+
+        // 找寻最长的数据列作为行数参考 (排除 level 自身)
+        const rowCount = Object.keys(tableData)
+          .filter(k => k !== 'level')
+          .reduce((max, k) => Math.max(max, Array.isArray(tableData[k]) ? tableData[k].length : 0), 0);
+
+        if (rawBlock.type === 'spell') {
+          const baseLevel = rawBlock.baseLevel || 0;
+          const levelArray: string[] = [];
+          for (let i = 0; i < rowCount; i++) {
+            const isLastRow = i === rowCount - 1;
+            const computedLevelNumber = rowCount - 1 - i + baseLevel;
+            levelArray.push(String(isLastRow ? baseLevel : computedLevelNumber));
+          }
+          tableData.level = levelArray;
+
+          // 同步 columns
+          if (block.columns && rawBlock.spellType !== 4) {
+            if (!block.columns.some((c: any) => c.key === 'level')) {
+              block.columns = [{ key: 'level', label: t('editor.spells.level') }, ...block.columns];
+            }
+          }
+        }
+      }
     });
-    changed = bbcode !== old;
-    passes++;
   }
-  let final = '', fEsc = false;
-  for (let i = 0; i < bbcode.length; i++) {
-    if (fEsc) { final += bbcode[i]; fEsc = false; }
-    else if (bbcode[i] === '\\') fEsc = true;
-    else final += bbcode[i];
+
+  // 额外快捷访问
+  if (view.basic) {
+    view.name = view.basic.name;
+    view.race = view.basic.race;
   }
-  return final;
+
+  return view;
 }
+
+export function generateBBCode(data: CharacterData, template: string, t: any, characterContext?: any): string {
+  try {
+    const viewObject = buildViewObject(data, t, characterContext);
+    console.log('BBCode View Object (Enhanced):', viewObject);
+    const compile = hbs.compile(template);
+    return compile(viewObject);
+  } catch (error: any) {
+    console.error('BBCode Export Error:', error);
+    return `[color=red]导出错误: ${error.message}[/color]\n\n模板源码:\n${template}`;
+  }
+}
+
+export default generateBBCode;

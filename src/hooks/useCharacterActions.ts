@@ -39,8 +39,10 @@ export const useCharacterActions = (
       };
       const columns = [{ key: 'level', label: '环位', width: '10%' }];
       if (sType !== 0 && sType !== 1) columns.push({ key: 'uses', label: '每日次数', width: '20%' });
-      columns.push({ key: 'spell_name', label: '法术', width: sType > 1 ? '70%' : '90%' });
+      columns.push({ key: 'spells', label: '法术', width: sType > 1 ? '70%' : '90%' });
       newBlock.columns = columns;
+      newBlock.tableData = { spells: [] };
+      if (sType !== 0 && sType !== 1) newBlock.tableData.uses = [];
     } else {
       newBlock = {
         id: 'magic-' + Math.random(),
@@ -48,7 +50,7 @@ export const useCharacterActions = (
         title: type === 'text' ? '自定文本' : '类别名',
         content: '',
         columns: [{ key: 'col0', label: '列1' }, { key: 'col1', label: '列2' }, { key: 'col2', label: '列3' }],
-        tableData: []
+        tableData: { col0: [], col1: [], col2: [] }
       };
     }
     setData(p => ({ ...p, magicBlocks: [...(p.magicBlocks || []), newBlock] }));

@@ -39,7 +39,17 @@ export interface DynamicTableProps {
   onRowDrop?: (index: number, e: any) => void;
   readOnly?: boolean;
   path?: string;
-  isStaticObject?: boolean;
+}
+
+export interface SingleRowTableProps {
+  columns?: Column[];
+  data: Record<string, any>;
+  originalData?: Record<string, any>;
+  onChange: (data: Record<string, any>) => void;
+  readonlyColumns?: string[];
+  readOnly?: boolean;
+  path?: string;
+  minWidth?: string;
 }
 
 export interface AttributesSoA {
