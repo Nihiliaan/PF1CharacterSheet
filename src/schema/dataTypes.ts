@@ -266,8 +266,7 @@ const SpellLevelHandler = Object.assign(Object.create(BaseInt), {
   formatInteractive: (v: any) => (v === 0 || v === '0') ? '' : v?.toString() || ''
 });
 
-const SkillAttributeHandler = Object.assign(Object.create(BaseInt), {
-  ui: 'attributeIndex',
+const SkillAttributeHandler = Object.assign(Object.create(BaseIndexSelect), {
   update: (v: string | number) => {
     const val = parseInt(String(v), 10);
     return isNaN(val) || val === 0 ? 4 : val; // 默认智力

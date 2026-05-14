@@ -6,7 +6,7 @@ const {
   FloatHandler, BoolHandler, ClassSkillHandler, SkillAttributeHandler, QuantityHandler,
   CostHandler, WeightHandler, CritRangeHandler, CritMultiplierHandler,
   DistanceHandler, AbilityTypeHandler, SpellTypeHandler, CompositeHandler,
-  SpellLevelHandler, DailyUsesHandler, AgeHandler, HeightHandler,
+  DailyUsesHandler, AgeHandler, HeightHandler,
   // 业务表格 Handler
   AttributesTableHandler, AttackTableHandler, DefensesTableHandler,
   SavesTableHandler, SkillsTableHandler, SimpleListHandler,

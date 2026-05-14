@@ -78,10 +78,10 @@ export const DynamicInput = ({
   // Ensure default font size if not provided by className
   const finalInnerClass = React.useMemo(() => {
     const hasTextSize = innerClass.includes('text-xs') ||
-                       innerClass.includes('text-sm') ||
-                       innerClass.includes('text-base') ||
-                       innerClass.includes('text-lg') ||
-                       innerClass.includes('text-xl');
+      innerClass.includes('text-sm') ||
+      innerClass.includes('text-base') ||
+      innerClass.includes('text-lg') ||
+      innerClass.includes('text-xl');
     return hasTextSize ? innerClass : `text-sm ${innerClass}`;
   }, [innerClass]);
 
@@ -183,7 +183,7 @@ export const DynamicInput = ({
         <MarkdownInlineEditor
           value={value}
           readOnly={true}
-          onChange={() => {}}
+          onChange={() => { }}
           className="!bg-transparent !p-0"
         />
       </div>
@@ -195,16 +195,16 @@ export const DynamicInput = ({
       ref={containerRef}
       className={`grid h-full w-full relative group transition-colors ${defaultHeightClass} ${isChanged && !hideIndicator ? 'bg-amber-100/40' : ''} ${wrapperClassName}`}
     >
-      {(type === 'select' || type === 'attributeIndex' || handler?.ui === 'select' || handler?.ui === 'attributeIndex') ? (
+      {(handler?.ui === 'select') ? (
         <div className="relative w-full h-full">
           <select
-            value={value || (type === 'attributeIndex' ? '4' : '')}
+            value={value || (handler.options[handler.defaultIndex] || '')}
             onChange={handleSelectChange}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
-            {(options || handler?.options || []).map((opt: string) => (
+            {(handler.options || []).map((opt: any) => (
               <option key={opt} value={opt}>
                 {handler?.formatDisplay ? handler.formatDisplay(opt, context) : opt}
               </option>
@@ -214,7 +214,7 @@ export const DynamicInput = ({
             {displayValue() || <span className="text-stone-300">—</span>}
           </div>
         </div>
-      ) : (type as string === 'bool' || handler?.ui === 'bool') ? (
+      ) : (handler?.ui === 'bool') ? (
         <button
           type="button"
           onClick={(e) => {
@@ -226,19 +226,19 @@ export const DynamicInput = ({
         >
           {displayValue()}
         </button>
-      ) : type === 'text' ? (
-          <div className={`${paddingClass} ${finalInnerClass} flex items-center`}>
-            <MarkdownInlineEditor
-                value={value}
-                onChange={handleChange}
-                placeholder={placeholder}
-                singleLine={singleLine}
-                transactionFilter={transactionFilter}
-                height={height}
-                minHeight={minHeight}
-                className="!bg-transparent !p-0 w-full"
-            />
-          </div>
+      ) : handler?.ui === 'text' ? (
+        <div className={`${paddingClass} ${finalInnerClass} flex items-center`}>
+          <MarkdownInlineEditor
+            value={value}
+            onChange={handleChange}
+            placeholder={placeholder}
+            singleLine={singleLine}
+            transactionFilter={transactionFilter}
+            height={height}
+            minHeight={minHeight}
+            className="!bg-transparent !p-0 w-full"
+          />
+        </div>
       ) : (
         <>
           <div className={`col-start-1 row-start-1 invisible whitespace-pre-wrap break-words ${paddingClass} ${finalInnerClass} pointer-events-none`}>
@@ -249,7 +249,7 @@ export const DynamicInput = ({
             onChange={handleTextareaChange}
             onFocus={() => setIsFocused(true)}
             onBlur={handleBlur}
-            className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent ${paddingClass} ${finalInnerClass} ${type === 'quantity' ? 'text-stone-500' : ''} ${isChanged ? 'text-amber-900' : ''}`}
+            className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent ${paddingClass} ${finalInnerClass} ${isChanged ? 'text-amber-900' : ''}`}
             rows={1}
             placeholder={placeholder}
           />
