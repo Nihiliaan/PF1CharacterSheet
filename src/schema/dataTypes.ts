@@ -334,9 +334,11 @@ const SpellTypeHandler = new BaseSelect({
   lowestLevel: [0, 1, 0, 1, 1],
   update: (v: any) => v,
   formatDisplay: (v: any, context?: any) => {
-    let key = v;
-    if (typeof v === 'number' && v >= 0 && v < 6) key = v;
-    return context?.t ? context.t(`editor.spells.types.${key}`) : key;
+    return context.t(`editor.spells.types.${v}`);
+  },
+  getRequiredRowCount: function (type: number) {
+    if (type === 5) return null;
+    return this.highestLevel[type] - this.lowestLevel[type] + 1;
   }
 } as any);
 

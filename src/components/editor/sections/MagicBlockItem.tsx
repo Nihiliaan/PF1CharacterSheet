@@ -46,19 +46,27 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
       onConfirm: () => onRemove(block.id)
     });
   };
-  const handleTypeChange = e => {
-    const newType = parseInt(e.target.value, 10);
+  const handleTypeChange = (val: string) => {
+    const newType = parseInt(val, 10);
     let newTableData = { ...(block.tableData || {}) };
-    const firstKey = Object.keys(newTableData)[0];
-    if (firstKey && Array.isArray(newTableData[firstKey])) {
-      const currentLen = newTableData[firstKey].length;
-      let targetLen = currentLen;
-      if (targetLen < currentLen) {
-        Object.keys(newTableData).forEach(k => {
-          newTableData[k] = newTableData[k].slice(currentLen - targetLen);
-        });
-      }
+
+    const targetCount = SpellTypeHandler?.getRequiredRowCount?.(newType);
+
+    if (targetCount !== null && targetCount !== undefined) {
+      Object.keys(newTableData).forEach(key => {
+        if (Array.isArray(newTableData[key])) {
+          const arr = [...newTableData[key]];
+          if (arr.length > targetCount) {
+            newTableData[key] = arr.slice(0, targetCount);
+          } else {
+            while (newTableData[key].length < targetCount) {
+              newTableData[key].push(key === 'uses' ? 0 : '');
+            }
+          }
+        }
+      });
     }
+
     onUpdate(block.id, { spellType: newType, tableData: newTableData });
   };
 
@@ -78,7 +86,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
         >
           <GripVertical size={16} />
         </div>
-        <div className="flex items-center gap-2 min-w-[120px]">
+        <div className="flex items-center gap-2 flex-1 min-w-[120px]">
           <input
             className={`text-sm font-bold uppercase tracking-wider bg-transparent border-b outline-none transition-colors w-full ${block.title !== originalBlock?.title ? 'text-amber-600 border-amber-300' : 'text-stone-700 border-transparent focus:border-stone-400'}`}
             value={block.title}
@@ -94,7 +102,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
         </div>
 
         {
-          <div className="flex-1 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3">
             <div className="w-24">
               <InlineInput
                 label={t('editor.spells.caster_level')}
@@ -113,19 +121,14 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
                 onChange={v => onUpdate(block.id, { concentration: v })}
               />
             </div>
-            <div className="flex-1 min-w-[140px]">
-              <div className="flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 h-[42px] justify-center">
-                <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none mb-1">类型 TYPE</label>
-                <select
-                  value={block.spellType ?? 2}
-                  onChange={handleTypeChange}
-                  className="text-xs font-medium bg-transparent outline-none border-none text-stone-700 cursor-pointer w-full h-5 p-0"
-                >
-                  {SpellTypeHandler.options.map((value) => (
-                    <option key={value} value={value}>{SpellTypeHandler.formatDisplay(value, { t })}</option>
-                  ))}
-                </select>
-              </div>
+            <div className="w-32">
+              <InlineInput
+                label="类型 TYPE"
+                path={`magicBlocks[${blockIndex}].type`}
+                value={block.spellType ?? 2}
+                originalValue={originalBlock?.spellType}
+                onChange={handleTypeChange}
+              />
             </div>
           </div>
         }
