@@ -11,88 +11,156 @@ export const REGEX_PATTERNS = {
  * 核心数据枚举
  */
 const ALIGNMENTS = ['LG', 'NG', 'CG', 'LN', 'N', 'CN', 'LE', 'NE', 'CE'];
-// ... (保留原有枚举定义)
 const SIZES = ['Fine', 'Diminutive', 'Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan', 'Colossal'];
 const GENDERS = ['Male', 'Female', 'Other'];
 const MANEUVERABILITY = ['Clumsy', 'Poor', 'Average', 'Good', 'Perfect'];
 const ABILITY_TYPES = ['—', 'Sp', 'Su', 'Ex'];
 
 /**
- * 基础类型定义
+ * 基础处理器类
  */
+export class BaseHandler {
+  ui: string = 'text';
 
-const BaseText = {
-  ui: 'text',
-  validate: () => true,
-  update: (v: string) => v,
-  formatDisplay: (v: any) => v,
-  formatInteractive: (v: any) => v
-};
+  constructor(config: Partial<BaseHandler> = {}) {
+    Object.assign(this, config);
+  }
 
-const BaseInt = {
-  ui: 'number',
-  step: 1,
-  min: -Infinity,
-  max: Infinity,
-  validate: function (v: string) {
+  validate(v: any): boolean {
+    return true;
+  }
+
+  update(v: any): any {
+    return v;
+  }
+
+  formatDisplay(v: any, context?: any): string {
+    return (v === undefined || v === null || v === '') ? '' : String(v);
+  }
+
+  formatInteractive(v: any, context?: any): string {
+    return this.formatDisplay(v, context);
+  }
+}
+
+export class BaseText extends BaseHandler {
+  ui = 'text';
+}
+
+export class BaseInt extends BaseHandler {
+  ui = 'number';
+  step = 1;
+  min = -Infinity;
+  max = Infinity;
+
+  constructor(config: Partial<BaseInt> = {}) {
+    super();
+    Object.assign(this, config);
+  }
+
+  validate(v: string) {
     if (v === '') return true;
     if (!REGEX_PATTERNS.int.test(v)) return false;
     const num = parseInt(v, 10);
     return num >= this.min && num <= this.max;
-  },
-  update: function (v: string) {
+  }
+
+  update(v: string) {
     if (v === '') return this.min === -Infinity ? 0 : this.min;
     const num = parseInt(v, 10);
     if (isNaN(num)) return this.min === -Infinity ? 0 : this.min;
     return Math.min(this.max, Math.max(this.min, num));
-  },
-  formatDisplay: (v: any) => (v === undefined || v === '') ? '—' : v.toString(),
-  formatInteractive: (v: any) => v?.toString() || '0'
-};
+  }
 
-const BaseSelect = {
-  ui: 'select',
-  validate: () => true,
-  update: (v: string) => v,
-  formatDisplay: (v: any, context?: any) => v,
-  formatInteractive: function (v: any, context?: any) { return this.formatDisplay(v) }
-};
+  formatDisplay(v: any) {
+    return (v === undefined || v === '' || v === null) ? '—' : v.toString();
+  }
 
-/**
- * 中间层：基于索引的选择器 (用于存储数字索引，显示文本的枚举)
- */
-const BaseIndexSelect = Object.assign(Object.create(BaseSelect), {
-  options: [] as string[],
-  i18nPrefix: '',
-  update: function (v: string) {
-    const idx = this.options.indexOf(v);
-    return idx === -1 ? 0 : idx;
-  },
-  formatDisplay: function (v: any, context?: any) {
-    // 兼容索引和字符串 Key
+  formatInteractive(v: any) {
+    return (v === undefined || v === null) ? '0' : v.toString();
+  }
+}
+
+export class BaseSelect extends BaseHandler {
+  ui = 'select';
+  optionValues: any[] = [];
+  options: number[] = [];
+  i18nPrefix: string = '';
+
+  constructor(config: Partial<BaseSelect> = {}) {
+    super();
+    const { options, ...rest } = config;
+    Object.assign(this, rest);
+    if (options) {
+      this.options = options;
+    } else if (this.optionValues.length > 0) {
+      this.options = [...this.optionValues.keys()];
+    }
+  }
+
+  update(v: any): any {
+    if (typeof v === 'string') {
+      const idx = this.optionValues.indexOf(v);
+      if (idx !== -1) return idx;
+      const num = parseInt(v, 10);
+      if (!isNaN(num) && this.optionValues[num] !== undefined) return num;
+    }
+    return typeof v === 'number' ? v : 0;
+  }
+
+  formatDisplay(v: any, context?: any): string {
     let key = v;
-    if (typeof v === 'number' || /^\d+$/.test(String(v))) {
-      key = this.options[parseInt(v, 10)];
+    const idx = parseInt(v, 10);
+    if (!isNaN(idx) && this.optionValues[idx] !== undefined) {
+      key = this.optionValues[idx];
     }
 
-    if (!key) return '—';
+    if (key === undefined || key === null || key === '') return '—';
     const t = context?.t;
-    return t ? t(`${this.i18nPrefix}${key}`) : key;
-  },
-  formatInteractive: function (v: any, context?: any) {
-    return this.formatDisplay(v, context);
+    return t ? t(`${this.i18nPrefix}${key}`) : String(key);
   }
-});
+}
+
+export class BaseTable extends BaseHandler {
+  ui = 'table';
+  columns: any[] = [];
+  fixedRows: boolean = false;
+  view?: string;
+
+  constructor(config: Partial<BaseTable> = {}) {
+    super();
+    Object.assign(this, config);
+  }
+
+  formatDisplay(v: any) {
+    return `Array(${v?.length || 0})`;
+  }
+}
+
+export class CompositeHandler extends BaseHandler {
+  ui = 'composite';
+  view: string = 'CompositeView';
+  columns?: any[];
+
+  constructor(config: Partial<CompositeHandler> = {}) {
+    super();
+    Object.assign(this, config);
+  }
+
+  formatDisplay(v: any) {
+    return 'Composite Object';
+  }
+}
 
 /**
  * 具体业务处理器实现
  */
 
-const TextHandler = Object.create(BaseText);
+const TextHandler = new BaseText();
 
-const IntegerHandler = Object.create(BaseInt);
+const IntegerHandler = new BaseInt();
 
-const PosIntHandler = Object.assign(Object.create(BaseInt), {
+const PosIntHandler = new BaseInt({
   ui: 'posInt',
   min: 1,
   validate: function (v: string) {
@@ -101,7 +169,7 @@ const PosIntHandler = Object.assign(Object.create(BaseInt), {
   }
 });
 
-const NonNegativeIntHandler = Object.assign(Object.create(BaseInt), {
+const NonNegativeIntHandler = new BaseInt({
   ui: 'int',
   min: 0,
   validate: function (v: string) {
@@ -110,8 +178,13 @@ const NonNegativeIntHandler = Object.assign(Object.create(BaseInt), {
   }
 });
 
-const QuantityHandler = Object.assign(Object.create(PosIntHandler), {
+const QuantityHandler = new BaseInt({
   ui: 'quantity',
+  min: 1,
+  validate: function (v: string) {
+    if (v === '') return true;
+    return REGEX_PATTERNS.posInt.test(v) && parseInt(v, 10) >= this.min;
+  },
   formatDisplay: (v: any) => {
     const num = parseInt(v, 10);
     if (isNaN(num) || num <= 1) return '';
@@ -123,11 +196,12 @@ const QuantityHandler = Object.assign(Object.create(PosIntHandler), {
   }
 });
 
-const LevelHandler = Object.assign(Object.create(PosIntHandler), {
+const LevelHandler = new BaseInt({
   ui: 'level',
+  min: 0,
   max: 20,
   update: function (v: string) {
-    if (v === '' || v === '0') return 0; // 等级特例：允许 0 但 UI 显示为空
+    if (v === '' || v === '0') return 0;
     const num = parseInt(v, 10);
     return isNaN(num) ? 0 : Math.min(this.max, Math.max(0, num));
   },
@@ -138,7 +212,7 @@ const LevelHandler = Object.assign(Object.create(PosIntHandler), {
   formatInteractive: (v: any) => (v === 0 || v === '0' || !v) ? '' : v.toString()
 });
 
-const DistanceHandler = Object.assign(Object.create(BaseInt), {
+const DistanceHandler = new BaseInt({
   ui: 'distance',
   min: 0,
   step: 5,
@@ -157,7 +231,7 @@ const DistanceHandler = Object.assign(Object.create(BaseInt), {
   }
 });
 
-const BonusHandler = Object.assign(Object.create(BaseInt), {
+const BonusHandler = new BaseInt({
   ui: 'bonus',
   validate: (v: string | number) => v === '' || REGEX_PATTERNS.int.test(String(v)),
   update: (v: string | number) => {
@@ -178,7 +252,7 @@ const BonusHandler = Object.assign(Object.create(BaseInt), {
   }
 });
 
-const FloatHandler = Object.assign(Object.create(BaseInt), {
+const FloatHandler = new BaseInt({
   ui: 'float',
   validate: function (v: string) {
     if (v === '') return true;
@@ -190,36 +264,39 @@ const FloatHandler = Object.assign(Object.create(BaseInt), {
     if (v === '') return this.min === -Infinity ? 0 : this.min;
     let num = parseFloat(v);
     if (isNaN(num)) return this.min === -Infinity ? 0 : this.min;
-
-    // 限制最多两位小数
     num = Math.round(num * 100) / 100;
-
     return Math.min(this.max, Math.max(this.min, num));
   },
   formatInteractive: (v: any) => (v === 0 ? '0' : v.toString())
 });
 
-const CostHandler = Object.assign(Object.create(FloatHandler), {
+const CostHandler = new BaseInt({
   ui: 'cost',
   min: 0,
+  validate: function (v: string) { return FloatHandler.validate.call(this, v); },
+  update: function (v: string) { return FloatHandler.update.call(this, v); },
   formatDisplay: (v: any, context?: any) => {
     if (v === 0) return '—';
     const unit = context?.t ? context.t('editor.items.units.gp') : 'gp';
     return `${v} ${unit}`;
-  }
+  },
+  formatInteractive: (v: any) => FloatHandler.formatInteractive(v)
 });
 
-const WeightHandler = Object.assign(Object.create(FloatHandler), {
+const WeightHandler = new BaseInt({
   ui: 'weight',
   min: 0,
+  validate: function (v: string) { return FloatHandler.validate.call(this, v); },
+  update: function (v: string) { return FloatHandler.update.call(this, v); },
   formatDisplay: (v: any, context?: any) => {
     if (v === 0) return '—';
     const unit = context?.t ? context.t('editor.items.units.lbs') : 'lbs';
     return `${v} ${unit}`;
-  }
+  },
+  formatInteractive: (v: any) => FloatHandler.formatInteractive(v)
 });
 
-const BoolHandler = Object.assign(Object.create(BaseText), {
+const BoolHandler = new BaseHandler({
   ui: 'bool',
   validate: (v: string) => v === 'true' || v === 'false' || v === '',
   update: (v: string) => v === 'true',
@@ -227,7 +304,11 @@ const BoolHandler = Object.assign(Object.create(BaseText), {
   formatInteractive: (v: any) => (v ? 'true' : 'false')
 });
 
-const ClassSkillHandler = Object.assign(Object.create(BoolHandler), {
+const ClassSkillHandler = new BaseHandler({
+  ui: 'bool',
+  validate: (v: string) => v === 'true' || v === 'false' || v === '',
+  update: (v: string) => v === 'true',
+  formatInteractive: (v: any) => (v ? 'true' : 'false'),
   formatDisplay: (v: any, context?: any) => {
     const isCS = v === true || v === 'true';
     const rank = parseInt(context?.row?.rank, 10);
@@ -239,75 +320,59 @@ const ClassSkillHandler = Object.assign(Object.create(BoolHandler), {
       const t = context?.t;
       return t ? `+3${t('editor.sections.cs_short')}` : '+3本职';
     }
-    // 即使是 false，在导出时也应该根据 rank 决定是否输出，这里遵循 formatDisplay
     return display;
+  }
+} as any);
+
+const AbilityTypeHandler = new BaseSelect({
+  optionValues: ABILITY_TYPES
+});
+
+const SpellTypeHandler = new BaseSelect({
+  optionValues: [0, 1, 2, 3, 4, 5],
+  highestLevel: [9, 4, 9, 4, 6],
+  lowestLevel: [0, 1, 0, 1, 1],
+  update: (v: any) => v,
+  formatDisplay: (v: any, context?: any) => {
+    let key = v;
+    if (typeof v === 'number' && v >= 0 && v < 6) key = v;
+    return context?.t ? context.t(`editor.spells.types.${key}`) : key;
+  }
+} as any);
+
+const SkillAttributeHandler = new BaseSelect({
+  optionValues: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'],
+  options: [0, 1, 3, 4, 5],
+  formatDisplay: function (v: any, context?: any) {
+    const keys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+    const mod = context.modifiers[keys[v]];
+    const modStr = mod >= 0 ? `+${mod}` : mod;
+    return `${modStr}${context.t('editor.attributes.' + this.optionValues[v])}`;
   }
 });
 
-const AbilityTypeHandler = Object.assign(Object.create(BaseSelect), {
-  options: [0, 1, 2, 3],
-  update: (v: string | number) => parseInt(String(v), 10) || 0,
-  formatDisplay: (v: any) => ABILITY_TYPES[v],
-  formatInteractive: (v: any) => ABILITY_TYPES[v]
-});
-
-const SpellTypeHandler = Object.assign(Object.create(BaseSelect), {
-  options: [0, 1, 2, 3, 4, 5],
-  highestLevel: [9, 4, 9, 4, 6],
-  lowestLevel: [0, 1, 0, 1, 1],
-  update: (v: string | number) => v,
-  formatDisplay: (v: any, context?: any) => context?.t ? context.t(`editor.spells.types.${v}`) : v
-});
-
-const SpellLevelHandler = Object.assign(Object.create(BaseInt), {
-  validate: (v: string) => v === '' || /^[0-9]$/.test(v),
-  update: (v: string) => (v === '' ? 0 : parseInt(v, 10)),
-  formatDisplay: (v: any) => (v === 0 || v === '0') ? '' : `${v}环`,
-  formatInteractive: (v: any) => (v === 0 || v === '0') ? '' : v?.toString() || ''
-});
-
-const SkillAttributeHandler = Object.assign(Object.create(BaseIndexSelect), {
-  update: (v: string | number) => {
-    const val = parseInt(String(v), 10);
-    return isNaN(val) || val === 0 ? 4 : val; // 默认智力
-  },
-  formatDisplay: (v: any, context?: any) => {
-    const idx = parseInt(v, 10) || 4;
-    const name = ['力量', '敏捷', '体质', '智力', '感知', '魅力'][idx - 1] || '智力';
-    if (context?.modifiers) {
-      const keys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-      const mod = context.modifiers[keys[idx - 1]];
-      const modStr = mod >= 0 ? `+${mod}` : mod;
-      return `${modStr}${name}`;
-    }
-    return name;
-  },
-  // 确保聚焦时也显示格式化文本，并接收上下文
-  formatInteractive: function (v: any, context?: any) { return this.formatDisplay(v, context); },
-  options: ['1', '2', '4', '5', '6'] // 排除 3 (体质)
-});
-
-const ManeuverabilityHandler = Object.assign(Object.create(BaseIndexSelect), {
-  options: MANEUVERABILITY,
+const ManeuverabilityHandler = new BaseSelect({
+  optionValues: MANEUVERABILITY,
   i18nPrefix: 'editor.basic.maneuverability_options.'
 });
 
-const AlignmentHandler = Object.assign(Object.create(BaseIndexSelect), {
-  options: ALIGNMENTS,
+const AlignmentHandler = new BaseSelect({
+  optionValues: ALIGNMENTS,
   i18nPrefix: 'editor.basic.alignment_options.'
 });
 
-const SizeHandler = Object.assign(Object.create(BaseIndexSelect), {
-  options: SIZES,
+const SizeHandler = new BaseSelect({
+  optionValues: SIZES,
   i18nPrefix: 'editor.basic.size_options.'
 });
 
-const GenderHandler = Object.assign(Object.create(BaseIndexSelect), {
-  options: GENDERS,
+const GenderHandler = new BaseSelect({
+  optionValues: GENDERS,
   i18nPrefix: 'editor.basic.gender_options.'
 });
 
-const AgeHandler = Object.assign(Object.create(NonNegativeIntHandler), {
+const AgeHandler = new BaseInt({
+  min: 0,
   formatDisplay: (v: any, context?: any) => {
     if (v === undefined || v === null || v === '') return '';
     return context?.t ? context.t('editor.lists.age_format', { n: v }) : `${v}岁`;
@@ -315,7 +380,8 @@ const AgeHandler = Object.assign(Object.create(NonNegativeIntHandler), {
 });
 export { AgeHandler };
 
-const HeightHandler = Object.assign(Object.create(PosIntHandler), {
+const HeightHandler = new BaseInt({
+  min: 1,
   formatDisplay: (v: any, context?: any) => {
     const totalInches = parseInt(v, 10);
     if (!totalInches || totalInches <= 0) return '';
@@ -334,19 +400,41 @@ const HeightHandler = Object.assign(Object.create(PosIntHandler), {
 });
 export { HeightHandler };
 
-const CritRangeHandler = Object.assign(Object.create(BaseSelect), {
-  options: [20, 19, 18, 17, 16, 15],
-  formatDisplay: (v: number) => {
-    return v == 20 ? '20' : `${v}-20`;
+const CritRangeHandler = new BaseSelect({
+  optionValues: [20, 19, 18, 17, 16, 15],
+  update: function (v: any) {
+    const idx = parseInt(v, 10);
+    if (!isNaN(idx) && idx >= 0 && idx < this.optionValues.length) return this.optionValues[idx];
+    return v;
+  },
+  formatDisplay: function (v: any) {
+    let val = v;
+    const idx = parseInt(v, 10);
+    if (!isNaN(idx) && idx >= 0 && idx < this.optionValues.length && v < 10) {
+      val = this.optionValues[idx];
+    }
+    return val == 20 ? '20' : `${val}-20`;
   },
 });
 
-const CritMultiplierHandler = Object.assign(Object.create(BaseSelect), {
-  options: [2, 3, 4],
-  formatDisplay: (v: number) => `×${v}`
+const CritMultiplierHandler = new BaseSelect({
+  optionValues: [2, 3, 4],
+  update: function (v: any) {
+    const idx = parseInt(v, 10);
+    if (!isNaN(idx) && idx >= 0 && idx < this.optionValues.length) return this.optionValues[idx];
+    return v;
+  },
+  formatDisplay: function (v: any) {
+    let val = v;
+    const idx = parseInt(v, 10);
+    if (!isNaN(idx) && idx >= 0 && idx < this.optionValues.length && v < 3) {
+      val = this.optionValues[idx];
+    }
+    return `×${val}`;
+  }
 });
 
-const DailyUsesHandler = Object.assign(Object.create(BaseInt), {
+const DailyUsesHandler = new BaseInt({
   min: 0,
   validate: (v: string) => v === '' || /^\d+$/.test(v),
   update: (v: string) => (v === '' ? 0 : Math.max(0, parseInt(v, 10))),
@@ -363,25 +451,7 @@ const DailyUsesHandler = Object.assign(Object.create(BaseInt), {
   }
 });
 
-// 复合容器基类 (用于非表格的多列布局)
-const CompositeHandler = {
-  ui: 'composite',
-  view: 'CompositeView', // 稍后我们将创建一个通用的 CompositeView
-  formatDisplay: (v: any) => 'Composite Object',
-  update: (v: any) => v
-};
-
-// 基础表格处理器
-const BaseTable = {
-  ui: 'table',
-  columns: [] as any[],
-  fixedRows: false,
-  formatDisplay: (v: any) => `Array(${v?.length || 0})`,
-  update: (v: any) => v
-};
-
-const AttributesTableHandler = {
-  ...BaseTable,
+const AttributesTableHandler = new BaseTable({
   columns: [
     { key: 'name', label: 'editor.attributes.headers.attr', width: '10%' },
     { key: 'final', label: 'editor.attributes.headers.final', width: '10%', type: 'int' },
@@ -390,12 +460,11 @@ const AttributesTableHandler = {
     { key: 'status', label: 'editor.attributes.headers.status', width: '20%' }
   ],
   fixedRows: true
-};
+});
 
-const AttackTableHandler = {
-  ...BaseTable,
+const AttackTableHandler = new BaseTable({
   columns: [
-    { key: 'weapon', label: 'editor.attacks.weapon', width: '20%' }, // 修正 Key
+    { key: 'weapon', label: 'editor.attacks.weapon', width: '20%' },
     { key: 'hit', label: 'editor.attacks.hit', width: '8%', type: 'bonus' },
     { key: 'damage', label: 'editor.attacks.damage', width: '12%' },
     { key: 'critRange', label: 'editor.attacks.crit_range', width: '8%', type: 'critRange' },
@@ -404,76 +473,64 @@ const AttackTableHandler = {
     { key: 'damageType', label: 'editor.attacks.damage_type', width: '10%' },
     { key: 'special', label: 'editor.attacks.special', width: '26%' }
   ]
-};
+});
 
-const DefensesTableHandler = {
-  ...BaseTable,
+const DefensesTableHandler = new BaseTable({
   columns: [
     { key: 'ac', label: 'editor.defenses.ac', width: '15%', type: 'int' },
-    { key: 'source', label: 'editor.attributes.headers.source', width: '55%' }, // 使用 attributes 里的 source
+    { key: 'source', label: 'editor.attributes.headers.source', width: '55%' },
     { key: 'touch', label: 'editor.defenses.touch', width: '15%', type: 'int' },
     { key: 'flatFooted', label: 'editor.defenses.flat_footed', width: '15%', type: 'int' }
   ],
   fixedRows: true
-};
+});
 
-const SavesTableHandler = {
-  ...BaseTable,
+const SavesTableHandler = new BaseTable({
   columns: [
     { key: 'fort', label: 'editor.defenses.fort', width: '33.33%', type: 'bonus' },
     { key: 'ref', label: 'editor.defenses.ref', width: '33.33%', type: 'bonus' },
     { key: 'will', label: 'editor.defenses.will', width: '33.34%', type: 'bonus' }
   ],
   fixedRows: true
-};
+});
 
-const SkillsTableHandler = {
-  ...BaseTable,
+const SkillsTableHandler = new BaseTable({
   columns: [
     { key: 'name', label: 'editor.skills.headers.skill', width: '15%' },
     { key: 'total', label: 'editor.skills.headers.total', width: '5%', type: 'bonus' },
     { key: 'rank', label: 'editor.skills.headers.rank', width: '5%', type: 'level' },
-    {
-      key: 'cs',
-      label: 'editor.skills.headers.cs',
-      width: '5%',
-      type: 'classSkill'
-    },
+    { key: 'cs', label: 'editor.skills.headers.cs', width: '5%', type: 'classSkill' },
     { key: 'ability', label: 'editor.skills.headers.ability', width: '10%', type: 'attributeIndex' },
     { key: 'others', label: 'editor.skills.headers.others', width: '20%' },
     { key: 'special', label: 'editor.skills.headers.special', width: '35%' }
   ]
-};
+});
 
-const SimpleListHandler = {
-  ...BaseTable,
+const SimpleListHandler = new BaseTable({
   columns: [
     { key: 'name', label: 'editor.lists.name', width: '25%' },
     { key: 'desc', label: 'editor.lists.description', width: '75%' }
   ]
-};
+});
 
-const BackgroundTraitsTableHandler = {
-  ...BaseTable,
+const BackgroundTraitsTableHandler = new BaseTable({
   columns: [
     { key: 'name', label: 'editor.lists.name', width: '20%' },
     { key: 'type', label: 'editor.lists.type', width: '10%' },
     { key: 'desc', label: 'editor.lists.description', width: '70%' }
   ]
-};
+});
 
-const ClassFeaturesTableHandler = {
-  ...BaseTable,
+const ClassFeaturesTableHandler = new BaseTable({
   columns: [
     { key: 'level', label: 'editor.lists.level', width: '5%', type: 'level' },
     { key: 'name', label: 'editor.lists.name', width: '20%' },
     { key: 'type', label: 'editor.lists.type', width: '5%', type: 'abilityType' },
     { key: 'desc', label: 'editor.lists.description', width: '70%' }
   ]
-};
+});
 
-const FeatsTableHandler = {
-  ...BaseTable,
+const FeatsTableHandler = new BaseTable({
   columns: [
     { key: 'level', label: 'editor.lists.level', width: '5%', type: 'level' },
     { key: 'source', label: 'editor.lists.source', width: '10%' },
@@ -481,21 +538,18 @@ const FeatsTableHandler = {
     { key: 'type', label: 'editor.lists.type', width: '10%' },
     { key: 'desc', label: 'editor.lists.description', width: '55%' }
   ]
-};
+});
 
-const SpellTableHandler = {
-  ...BaseTable,
+const SpellTableHandler = new BaseTable({
   view: 'SpellTable'
-};
+});
 
-const MagicBlocksHandler = {
-  ...BaseTable,
+const MagicBlocksHandler = new BaseTable({
   view: 'MagicBlocks',
   formatDisplay: (v: any) => `Casting Systems (${v?.length || 0})`
-};
+});
 
-const EquipmentItemsHandler = {
-  ...BaseTable,
+const EquipmentItemsHandler = new BaseTable({
   columns: [
     { key: 'item', label: 'editor.items.headers.item', width: '35%', hideRightBorder: true },
     { key: 'quantity', label: '', width: '5%', type: 'quantity' },
@@ -503,26 +557,25 @@ const EquipmentItemsHandler = {
     { key: 'weight', label: 'editor.items.headers.weight', width: '10%', type: 'weight' },
     { key: 'notes', label: 'editor.items.headers.notes', width: '40%' }
   ]
-};
+});
 
 /**
  * 业务专用复合处理器 (Composite Handlers)
  */
-const BasicInfoHandler = { ...CompositeHandler };
-const CombatInfoHandler = {
-  ...CompositeHandler,
+const BasicInfoHandler = new CompositeHandler();
+const CombatInfoHandler = new CompositeHandler({
   columns: [
     { key: 'bab', label: 'editor.attributes.bab', width: '33.33%', type: 'bonus' },
     { key: 'cmb', label: 'editor.attributes.cmb', width: '33.33%', type: 'bonus' },
     { key: 'cmd', label: 'editor.attributes.cmd', width: '33.34%', type: 'int' }
   ]
-};
-const CurrencyHandler = { ...CompositeHandler };
+});
+const CurrencyHandler = new CompositeHandler();
 
 /**
  * 根据 UI 类型获取对应的 Handler (兜底用)
  */
-export function getHandlerByType(type: string): any {
+export function getHandlerByType(type: string): BaseHandler {
   switch (type) {
     case 'number':
     case 'int': return IntegerHandler;
@@ -550,11 +603,10 @@ const handlers: any = {
   ManeuverabilityHandler, AlignmentHandler, SizeHandler, GenderHandler,
   HeightHandler, AgeHandler, CritRangeHandler, CritMultiplierHandler, BonusHandler,
   FloatHandler, BoolHandler, ClassSkillHandler, AbilityTypeHandler, SpellTypeHandler,
-  SpellLevelHandler, DailyUsesHandler,
-  ClassSkillHandler,
+  DailyUsesHandler,
   getHandlerByType,
   // 业务层
-  CompositeHandler,
+  BaseHandler, BaseText, BaseInt, BaseSelect, BaseTable, CompositeHandler,
   AttributesTableHandler,
   AttackTableHandler,
   DefensesTableHandler,

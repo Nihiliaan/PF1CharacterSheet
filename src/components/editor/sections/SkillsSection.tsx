@@ -49,7 +49,7 @@ const SkillsSection: React.FC = () => {
           data={data.skills}
           originalData={lastSavedData.skills}
           onChange={v => setData(prev => ({ ...prev, skills: v as any }))}
-          newItemGenerator={() => ({ name: '', total: 0, rank: 0, cs: false, ability: 0, others: '', special: '' })}
+          newItemGenerator={() => ({ name: '', total: 0, rank: 0, cs: false, ability: 3, others: '', special: '' })}
           rowDraggable={true}
           rowActionMode={tableActionMode}
           onRowActionModeToggle={toggleTableActionMode}
