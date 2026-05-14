@@ -207,7 +207,7 @@ const LevelHandler = new BaseInt({
   },
   formatDisplay: (v: any, context?: any) => {
     if (v === 0 || v === '0' || !v) return '';
-    return context?.t ? context.t('editor.lists.level_format', { n: v }) : `${v}级`;
+    return context.t('editor.lists.level_format', { n: v });
   },
   formatInteractive: (v: any) => (v === 0 || v === '0' || !v) ? '' : v.toString()
 });
@@ -346,7 +346,7 @@ const SkillAttributeHandler = new BaseSelect({
   optionValues: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'],
   options: [0, 1, 3, 4, 5],
   formatDisplay: function (v: any, context?: any) {
-    const keys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+    const keys = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
     const mod = context.modifiers[keys[v]];
     const modStr = mod >= 0 ? `+${mod}` : mod;
     return `${modStr}${context.t('editor.attributes.' + this.optionValues[v])}`;

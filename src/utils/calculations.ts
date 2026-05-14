@@ -100,12 +100,12 @@ export const getComputedEncumbrance = (data: CharacterData): EncumbranceThreshol
  */
 export const getAttributeModifiers = (data: CharacterData) => {
   return {
-    str: getModifier(data.attributes?.final?.[0] ?? 10),
-    dex: getModifier(data.attributes?.final?.[1] ?? 10),
-    con: getModifier(data.attributes?.final?.[2] ?? 10),
-    int: getModifier(data.attributes?.final?.[3] ?? 10),
-    wis: getModifier(data.attributes?.final?.[4] ?? 10),
-    cha: getModifier(data.attributes?.final?.[5] ?? 10),
+    STR: getModifier(data.attributes?.final?.[0] ?? 10),
+    DEX: getModifier(data.attributes?.final?.[1] ?? 10),
+    CON: getModifier(data.attributes?.final?.[2] ?? 10),
+    INT: getModifier(data.attributes?.final?.[3] ?? 10),
+    WIS: getModifier(data.attributes?.final?.[4] ?? 10),
+    CHA: getModifier(data.attributes?.final?.[5] ?? 10),
   };
 };
 
