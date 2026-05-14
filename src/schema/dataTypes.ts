@@ -16,14 +16,6 @@ const SIZES = ['Fine', 'Diminutive', 'Tiny', 'Small', 'Medium', 'Large', 'Huge',
 const GENDERS = ['Male', 'Female', 'Other'];
 const MANEUVERABILITY = ['Clumsy', 'Poor', 'Average', 'Good', 'Perfect'];
 const ABILITY_TYPES = ['—', 'Sp', 'Su', 'Ex'];
-const SPELL_TYPES = [
-  '准备 (完整/中等)',
-  '准备 (次等)',
-  '自发 (完整/中等)',
-  '自发 (次等)',
-  '化合炼成',
-  '类法术能力'
-];
 
 /**
  * 基础类型定义
@@ -62,7 +54,7 @@ const BaseSelect = {
   ui: 'select',
   validate: () => true,
   update: (v: string) => v,
-  formatDisplay: (v: any) => v,
+  formatDisplay: (v: any, context?: any) => v,
   formatInteractive: function (v: any, context?: any) { return this.formatDisplay(v) }
 };
 
@@ -261,8 +253,10 @@ const AbilityTypeHandler = Object.assign(Object.create(BaseSelect), {
 
 const SpellTypeHandler = Object.assign(Object.create(BaseSelect), {
   options: [0, 1, 2, 3, 4, 5],
+  highestLevel: [9, 4, 9, 4, 6],
+  lowestLevel: [0, 1, 0, 1, 1],
   update: (v: string | number) => v,
-  formatDisplay: (v: any) => SPELL_TYPES[v]
+  formatDisplay: (v: any, context?: any) => context?.t ? context.t(`editor.spells.types.${v}`) : v
 });
 
 const SpellLevelHandler = Object.assign(Object.create(BaseInt), {

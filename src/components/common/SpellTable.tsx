@@ -9,7 +9,6 @@ interface SpellTableProps {
   spellType: number;
   data: Record<string, any>;
   originalData?: Record<string, any>;
-  baseLevel: 0 | 1;
   onChange: (data: Record<string, any>) => void;
   readOnly?: boolean;
   path?: string;
@@ -19,7 +18,6 @@ export default function SpellTable({
   spellType,
   data,
   originalData,
-  baseLevel,
   onChange,
   readOnly = false,
   path
@@ -147,8 +145,7 @@ export default function SpellTable({
         <tbody className="divide-y divide-stone-300">
           {Array.from({ length: rowCount }).map((_, i) => {
             const row = getRowData(i);
-            const isLastRow = i === rowCount - 1;
-            const computedLevelNumber = rowCount - 1 - i + baseLevel;
+            const computedLevelNumber = rowCount - 1 - i + ([0, 2].includes(spellType) ? 0 : 1);
 
             return (
               <tr
@@ -163,7 +160,7 @@ export default function SpellTable({
                     <td key={c.key} className={`p-0 relative border-stone-300 align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
                       {c.key === 'level' ? (
                         <div className="w-full h-full flex items-center justify-center font-bold px-2 text-stone-700 bg-stone-100/50 min-h-[32px]">
-                          {t('editor.spells.computed_level', { n: isLastRow ? baseLevel : computedLevelNumber })}
+                          {t('editor.spells.computed_level', { n: computedLevelNumber })}
                         </div>
                       ) : (
                         <DynamicInput
@@ -184,7 +181,7 @@ export default function SpellTable({
                 })}
                 <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors">
                   <div className="flex items-center justify-center w-full h-[32px] opacity-0 group-hover:opacity-100 transition-opacity">
-                    {(spellType === 5 ? !isLastRow : i === 0 && rowCount > 1) && (
+                    {(spellType === 5 || i === 0) && (
                       <button
                         type="button"
                         onClick={() => removeRow(i)}

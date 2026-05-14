@@ -8,7 +8,7 @@ export const DEFAULT_BBCODE_TEMPLATE = `{{#with basic}}[table][tr][td]
 {{alignment}} {{deity}}
 {{size}} {{gender}} {{race}}
 {{height}} {{weight}} {{age}}
-{{speed}} {{senses}}
+{{speed.land}} {{senses}}
 先攻 {{initiative}} 察觉 {{perception}}
 语言 {{languages}}
 [/td]
@@ -79,10 +79,10 @@ hp {{hp}} ({{hd}})
 [b]法术与类法术能力[/b]
 [hr]
 {{#each magicBlocks}}
-[b]{{title}}[/b]（CL {{casterLevel}}, 专注 {{concentration}}）
+[b]{{title}}[/b]（CL {{casterLevel}}{{#unless (eq (raw "spellType") 4)}}, 专注 {{concentration}}{{/unless}}）
 [table]
 {{#each tableData}}
-[tr][td]{{level}}环[/td]{{#if uses}}[td]{{uses}}[/td]{{/if}}[td]{{spell_name}}{{spells}}[/td][/tr]
+[tr]{{#unless (eq (raw "spellType") 5)}}[td]{{level}}[/td]{{/unless}}{{#if uses}}[td]{{uses}}[/td]{{/if}}[td]{{spell_name}}{{spells}}[/td][/tr]
 {{/each}}
 [/table]
 {{#if notes}}备注：{{notes}}{{/if}}
@@ -93,7 +93,7 @@ hp {{hp}} ({{hd}})
 [hr]
 [table]
 {{#each skills}}
-[tr][td]{{name}}[/td][td]{{total}} ({{rank}} {{cs}} {{ability}} {{others}})[/td][td]{{special}}[/td][/tr]
+[tr][td]{{name}}[/td][td]{{total}} ({{rank}}{{cs}}{{ability}} {{others}})[/td][td]{{special}}[/td][/tr]
 {{/each}}
 [/table]
 [hr]

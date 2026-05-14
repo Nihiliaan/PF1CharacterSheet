@@ -2,11 +2,11 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { GripVertical, Trash2 } from 'lucide-react';
 import SpellTable from '../../common/SpellTable';
-import DynamicTable from '../../common/DynamicTable';
 import MultilineInput from '../../common/MultilineInput';
 import InlineInput from '../../common/InlineInput';
 import { useUI } from '../../../contexts/UIContext';
 import { useCharacter } from '../../../contexts/CharacterContext';
+import { getHandlerByPath } from '../../../schema/fieldRegistry';
 
 interface MagicBlockItemProps {
   block: any;
@@ -34,20 +34,32 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
   onDragOver,
   onDrop,
   onUpdate,
-  onRemove,
-  onTableItemDragStart,
-  onTableItemDragOver,
-  onTableItemDrop
+  onRemove
 }) => {
   const { t } = useTranslation();
   const { setConfirmModal } = useUI();
-  const { tableActionMode, toggleTableActionMode } = useCharacter();
+  const SpellTypeHandler = getHandlerByPath(`magicBlocks[${blockIndex}].type`);
 
   const handleRemove = () => {
     setConfirmModal({
       title: t('common.confirm_delete_container'),
       onConfirm: () => onRemove(block.id)
     });
+  };
+  const handleTypeChange = e => {
+    const newType = parseInt(e.target.value, 10);
+    let newTableData = { ...(block.tableData || {}) };
+    const firstKey = Object.keys(newTableData)[0];
+    if (firstKey && Array.isArray(newTableData[firstKey])) {
+      const currentLen = newTableData[firstKey].length;
+      let targetLen = currentLen;
+      if (targetLen < currentLen) {
+        Object.keys(newTableData).forEach(k => {
+          newTableData[k] = newTableData[k].slice(currentLen - targetLen);
+        });
+      }
+    }
+    onUpdate(block.id, { spellType: newType, tableData: newTableData });
   };
 
   return (
@@ -81,7 +93,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
           </button>
         </div>
 
-        {block.type === 'spell' && (
+        {
           <div className="flex-1 flex flex-wrap items-center gap-3">
             <div className="w-24">
               <InlineInput
@@ -106,75 +118,28 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
                 <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none mb-1">类型 TYPE</label>
                 <select
                   value={block.spellType ?? 2}
-                  onChange={e => {
-                    const newType = parseInt(e.target.value, 10);
-                    const is0LevelBase = (newType === 0 || newType === 2);
-                    const baseLevel = is0LevelBase ? 0 : 1;
-                    let newTableData = { ...(block.tableData || {}) };
-                    const firstKey = Object.keys(newTableData)[0];
-                    if (firstKey && Array.isArray(newTableData[firstKey])) {
-                      const currentLen = newTableData[firstKey].length;
-                      let targetLen = currentLen;
-                      if (newType === 0 || newType === 2) {
-                        if (currentLen > 10) targetLen = 10;
-                      } else if (newType === 4) {
-                        if (currentLen > 6) targetLen = 6;
-                      } else if (newType === 1 || newType === 3) {
-                        if (currentLen > 4) targetLen = 4;
-                      }
-                      if (targetLen !== currentLen) {
-                        Object.keys(newTableData).forEach(k => {
-                          newTableData[k] = newTableData[k].slice(currentLen - targetLen);
-                        });
-                      }
-                    }
-                    onUpdate(block.id, { spellType: newType, baseLevel, tableData: newTableData });
-                  }}
+                  onChange={handleTypeChange}
                   className="text-xs font-medium bg-transparent outline-none border-none text-stone-700 cursor-pointer w-full h-5 p-0"
                 >
-                  {[0, 1, 2, 3, 4, 5].map((value) => (
-                    <option key={value} value={value}>{t(`editor.spells.types.${value}`)}</option>
+                  {SpellTypeHandler.options.map((value) => (
+                    <option key={value} value={value}>{SpellTypeHandler.formatDisplay(value, { t })}</option>
                   ))}
                 </select>
               </div>
             </div>
           </div>
-        )}
+        }
       </div>
-      {block.type === 'text' ? (
-        <MultilineInput
-          label={t('editor.lists.content')}
-          path={`magicBlocks[${blockIndex}].content`}
-          value={block.content || ''}
-          originalValue={originalBlock?.content}
-          onChange={v => onUpdate(block.id, { content: v })}
-          height="120px"
-        />
-      ) : block.type === 'spell' ? (
+      {
         <SpellTable
           spellType={block.spellType ?? 2}
           data={block.tableData || { uses: [0], spells: [''] }}
           originalData={originalBlock?.tableData}
-          baseLevel={block.baseLevel ?? ((block.spellType === 0 || block.spellType === 2) ? 0 : 1)}
           onChange={v => onUpdate(block.id, { tableData: v })}
           path={`magicBlocks[${blockIndex}].tableData`}
         />
-      ) : (
-        <DynamicTable
-          path={`magicBlocks[${blockIndex}].tableData`}
-          columns={block.columns || []}
-          data={block.tableData || {}}
-          originalData={originalBlock?.tableData}
-          onChange={v => onUpdate(block.id, { tableData: v })}
-          rowDraggable={true}
-          rowActionMode={tableActionMode}
-          onRowActionModeToggle={toggleTableActionMode}
-          onRowDragStart={(idx, e) => onTableItemDragStart(`magicBlocks[${blockIndex}].tableData`, idx, e)}
-          onRowDragOver={(idx, e) => onTableItemDragOver(`magicBlocks[${blockIndex}].tableData`, idx, e)}
-          onRowDrop={(idx, e) => onTableItemDrop(`magicBlocks[${blockIndex}].tableData`, idx, e)}
-        />
-      )}
-      {block.type === 'spell' && (
+      }
+      {
         <div className="mt-2">
           <MultilineInput
             label={t('editor.spells.notes')}
@@ -186,7 +151,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
             isAutoHeight={true}
           />
         </div>
-      )}
+      }
     </div>
   );
 };

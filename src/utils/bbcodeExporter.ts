@@ -245,7 +245,7 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
           tableData.level = levelArray;
 
           // 同步 columns
-          if (block.columns && rawBlock.spellType !== 4) {
+          if (block.columns) {
             if (!block.columns.some((c: any) => c.key === 'level')) {
               block.columns = [{ key: 'level', label: t('editor.spells.level') }, ...block.columns];
             }
@@ -267,7 +267,18 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
 export function generateBBCode(data: CharacterData, template: string, t: any, characterContext?: any): string {
   try {
     const viewObject = buildViewObject(data, t, characterContext);
+
+    // 显式挂载 _storage 并设置为不可枚举，防止递归遍历崩溃，同时方便在控制台查看
+    Object.defineProperty(viewObject, '_storage', {
+      value: data,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    });
     console.log('BBCode View Object (Enhanced):', viewObject);
+    console.log('--- Storage Data Check ---');
+    console.log('Storage content:', (viewObject as any)._storage);
+
     const compile = hbs.compile(template);
     return compile(viewObject);
   } catch (error: any) {
