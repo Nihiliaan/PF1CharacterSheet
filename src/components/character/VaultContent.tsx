@@ -314,17 +314,12 @@ const VaultContent = ({
       onConfirm: async (name) => {
         if (name && name.trim()) {
           const trimmedName = name.trim();
-          // Unique folder name check
-          if (folders.some(f => f.parentId === currentFolderId && f.name.toLowerCase() === trimmedName.toLowerCase())) {
-            setToast({ message: "该目录下已存在同名文件夹", type: 'error' });
-            return;
-          }
           try {
             await createFolder(trimmedName, currentFolderId);
             onRefresh();
             setToast({ message: "文件夹创建成功" });
-          } catch (e) {
-            setToast({ message: "创建文件夹失败", type: 'error' });
+          } catch (e: any) {
+            setToast({ message: e.message || "创建文件夹失败", type: 'error' });
           }
         }
       }
@@ -343,11 +338,7 @@ const VaultContent = ({
           onConfirm: async () => {
             await Promise.all(idsToDelete.map(async id => {
               const isF = folders.some(f => f.id === id);
-              if (isF) {
-                const f = folders.find(folder => folder.id === id);
-                if (f?.name === '来自分享') return;
-                await deleteFolder(id);
-              }
+              if (isF) await deleteFolder(id);
               else await deleteCharacter(id);
             }));
             setToast({ message: "已删除所选项目" });
@@ -356,25 +347,40 @@ const VaultContent = ({
           }
         });
         return; 
-      } else if (action === 'rename' && isFolder) {
-          if (item?.name === '来自分享') {
-            setToast({ message: "无法重命名来源文件夹", type: 'error' });
-            return;
+      } else if (action === 'rename') {
+          // Strip extension for editing if it's a file
+          let editName = item.name || '';
+          if (!isFolder) {
+            const lastDot = editName.lastIndexOf('.');
+            if (lastDot > 0) {
+              if (editName.endsWith('.pf1') || editName.endsWith('.bbc')) {
+                editName = editName.substring(0, lastDot);
+              } else if (editName.endsWith('.lnk')) {
+                const mainName = editName.substring(0, lastDot);
+                const secondDot = mainName.lastIndexOf('.');
+                if (secondDot > 0 && (mainName.endsWith('.pf1') || mainName.endsWith('.bbc'))) {
+                  editName = mainName.substring(0, secondDot);
+                } else {
+                  editName = mainName;
+                }
+              }
+            }
           }
+
           setModal({
             type: 'prompt',
-            title: '重命名文件夹',
-            defaultValue: item?.name || '',
+            title: isFolder ? '重命名文件夹' : '重命名文件',
+            defaultValue: editName,
             onConfirm: async (newName) => {
               const trimmed = newName.trim();
-              if (!trimmed || trimmed === item?.name) return;
-              if (folders.some(f => f.parentId === item?.parentId && (f.name || '').toLowerCase() === trimmed.toLowerCase() && f.id !== item?.id)) {
-                setToast({ message: "该目录下已存在同名文件夹", type: 'error' });
-                return;
+              if (!trimmed || trimmed === editName) return;
+              try {
+                await renameItem(item.id, isFolder ? 'folder' : 'character', trimmed);
+                setToast({ message: "重命名成功" });
+                onRefresh();
+              } catch (e: any) {
+                setToast({ message: e.message || "重命名失败", type: 'error' });
               }
-              await renameItem(item!.id, 'folder', trimmed);
-              setToast({ message: "重命名成功" });
-              onRefresh();
             }
           });
           return;
@@ -398,20 +404,6 @@ const VaultContent = ({
         const shareUrl = `${window.location.origin}${window.location.pathname}?id=${item.id}`;
         navigator.clipboard.writeText(shareUrl);
         setToast({ message: "分享链接已复制！" });
-      } else if (action === 'rename') {
-          setModal({
-            type: 'prompt',
-            title: '重命名',
-            defaultValue: item.name,
-            onConfirm: async (newName) => {
-              if (newName && newName !== item.name) {
-                await renameItem(item.id, isFolder ? 'folder' : 'character', newName);
-                setToast({ message: "重命名成功" });
-                onRefresh();
-              }
-            }
-          });
-          return;
       }
       onRefresh();
     } catch (e) {
@@ -639,6 +631,8 @@ const VaultContent = ({
                       <div className="text-[9px] text-stone-400 font-medium truncate mt-0.5">
                         {char.isTemplate ? 'BBCode 导出模板' : (
                           <>
+                            <MarkdownPreview text={char.data?.basic?.name || '未命名角色'} className="inline text-stone-500" />
+                            {' • '}
                             <MarkdownPreview text={char.data?.basic?.race || '未知种族'} className="inline" />
                             {' · '}
                             <MarkdownPreview text={char.data?.basic?.classes || '未知职业'} className="inline" />

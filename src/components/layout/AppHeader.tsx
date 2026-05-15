@@ -162,11 +162,12 @@ export default function AppHeader() {
     const name = window.prompt('新建文件夹', '新文件夹');
     if (name && name.trim()) {
       const trimmedName = name.trim();
-      if (folders.some(f => f.parentId === currentFolderId && f.name.toLowerCase() === trimmedName.toLowerCase())) {
-        return;
+      try {
+        await createFolder(trimmedName, currentFolderId);
+        refreshCharacterList();
+      } catch (e: any) {
+        alert(e.message || "创建文件夹失败");
       }
-      await createFolder(trimmedName, currentFolderId);
-      refreshCharacterList();
     }
   };
 

@@ -235,7 +235,14 @@ export const useCharacterPersistence = (
         url.searchParams.set('id', char.id);
         window.history.replaceState({}, '', url.toString());
         addToRecent(char);
-        if (user && char.ownerId === user.uid) setIsReadOnly(false);
+        if (user && char.ownerId === user.uid) {
+          setIsReadOnly(false);
+        } else if (user) {
+          // Auto-create link in "Shared" folder for others
+          const sharedFolderId = await ensureLocalFolderService('来自分享', null, user.uid);
+          await saveLink(char, sharedFolderId);
+          await refreshCharacterList();
+        }
       }
     } catch (e) {
       setToast({ message: "加载分享内容失败", type: 'error' });
@@ -260,10 +267,6 @@ export const useCharacterPersistence = (
 
         if (charId) {
           await selectCharacter(charId, true);
-        }
-        if (user) {
-          await ensureLocalFolderService('来自分享', null, user.uid);
-          refreshCharacterList();
         }
       } catch (error) {} finally {
         setIsSyncing(false);

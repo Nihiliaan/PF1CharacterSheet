@@ -54,16 +54,17 @@ export const driveSyncService = {
         for (const child of children) {
           await processItem(child, newLocalId);
         }
-      } else if (driveItem.name.endsWith('.json')) {
+      } else if (driveItem.name.endsWith('.pf1') || driveItem.name.endsWith('.bbc') || driveItem.name.endsWith('.lnk') || driveItem.name.endsWith('.json')) {
         const content = await getFileContent(token, driveItem.id);
+        const isTemplate = driveItem.name.endsWith('.bbc') || (content.content !== undefined && content.name !== undefined);
+        
         if (content.targetId) {
-          const fakeTargetChar = { id: content.targetId, data: content };
+          const fakeTargetChar = { id: content.targetId, data: content, name: driveItem.name };
           await saveLink(fakeTargetChar, targetId);
           count++;
-        } else if (content.basic && content.attributes) {
-          const finalData = { ...content, basic: { ...content.basic, name: content.basic.name || driveItem.name.replace('.json', '') } };
-          // Note: Context will need to handle the actual save call or we pass a save function
-          await saveCharacterService(finalData, undefined, targetId || undefined);
+        } else {
+          // saveCharacter handles extensions and duplicates
+          await saveCharacterService(content, undefined, targetId || undefined, isTemplate);
           count++;
         }
       }
@@ -100,9 +101,8 @@ export const driveSyncService = {
 
     await Promise.all(characters.map(async char => {
       const parentDriveId = driveFolderMap[char.folderId || 'root'] || rootFolderId;
-      const rawName = char.name || '未命名角色';
-      const rawClasses = char.data?.basic?.classes || '人物卡';
-      const fileName = `${rawName.replace(/[\\/:*?"<>|]/g, '_')}_${String(rawClasses).replace(/[\\/:*?"<>|]/g, '_').slice(0, 30)}_${char.id.slice(-6)}.json`;
+      // Use the actual name which already has extension (.pf1, .bbc, .lnk)
+      const fileName = (char.name || '未命名文件').replace(/[\\/:*?"<>|]/g, '_');
 
       await uploadOrUpdateFile(token, fileName, char.data, parentDriveId);
     }));
@@ -125,16 +125,17 @@ export const driveSyncService = {
         if (item.mimeType === 'application/vnd.google-apps.folder') {
           const newLocalFolderId = await ensureLocalFolderService(item.name, localParentId, user.uid);
           await processDriveFolder(item.id, newLocalFolderId);
-        } else if (item.name.endsWith('.json')) {
+        } else if (item.name.endsWith('.pf1') || item.name.endsWith('.bbc') || item.name.endsWith('.lnk') || item.name.endsWith('.json')) {
           try {
             const content = await getFileContent(token, item.id);
+            const isTemplate = item.name.endsWith('.bbc') || (content.content !== undefined && content.name !== undefined);
+            
             if (content.targetId) {
-              const fakeTargetChar = { id: content.targetId, data: content };
+              const fakeTargetChar = { id: content.targetId, data: content, name: item.name };
               await saveLink(fakeTargetChar, localParentId);
               importCount++;
-            } else if (content.basic && content.attributes) {
-              const finalData = { ...content, basic: { ...content.basic, name: content.basic.name || item.name.split('_')[0].replace('.json', '') } };
-              await saveCharacterService(finalData, undefined, localParentId || undefined);
+            } else {
+              await saveCharacterService(content, undefined, localParentId || undefined, isTemplate);
               importCount++;
             }
           } catch (e) {

@@ -217,11 +217,22 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const handleExport = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const isTemplate = ui.view === 'bbcode-template';
+    const ext = isTemplate ? '.bbc' : '.pf1';
+    
+    // Try to get filename from current document id
+    let filename = '';
+    // Since we don't have access to VaultContext easily here without potential circular deps 
+    // (though in App.tsx it's fine), we'll use character name as fallback.
+    filename = (isTemplate ? 'template' : (data.basic?.name || 'character')) + ext;
+
+    const exportData = isTemplate ? { content: bbcodeTemplate, name: 'template' } : data;
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${data.basic.name || 'character'}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
   };
