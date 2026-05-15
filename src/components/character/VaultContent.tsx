@@ -11,6 +11,7 @@ import Toast from '../common/Toast';
 import Dialog from '../common/Dialog';
 import ContextMenu from '../common/ContextMenu';
 import DriveBrowser from './DriveBrowser';
+import MarkdownPreview from '../common/MarkdownPreview';
 
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useUI } from '../../contexts/UIContext';
@@ -29,7 +30,7 @@ const VaultContent = ({
     selectCharacter: onSelect,
     saveCharacter,
     setData,
-    setCurrentDocumentId
+    setCurrentCharacterId
   } = useCharacter();
 
   const {
@@ -44,7 +45,7 @@ const VaultContent = ({
     navigateToPathIndex
   } = useDriveSync();
 
-  const { setShowAIModal } = useCharacterAI(setData, setCurrentDocumentId);
+  const { setShowAIModal } = useCharacterAI(setData, setCurrentCharacterId);
 
   const {
     toast,
@@ -64,10 +65,10 @@ const VaultContent = ({
     deleteCharacter,
     renameItem,
     copyCharacter,
-    ensureLocalFolder
+    ensureLocalFolder,
+    search,
+    viewMode
   } = useVault();
-  const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: any; isFolder: boolean } | null>(null);
   const [draggedItem, setDraggedItem] = useState<{ id: string; type: 'character' | 'folder' } | null>(null);
 
@@ -459,141 +460,6 @@ const VaultContent = ({
           onCancel={() => setModal(null)} 
         />
       )}
-      {/* Vault Toolbar */}
-      <div className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between shadow-sm flex-wrap gap-4">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <button 
-            onClick={() => setCurrentFolderId(null)}
-            onDragOver={e => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); handleDropOnFolder(null); }}
-            className="flex items-center gap-1.5 text-stone-500 hover:text-primary transition-colors p-1 rounded hover:bg-stone-100"
-          >
-            <User size={16} /> 根目录
-          </button>
-          {path.map(f => (
-            <React.Fragment key={f.id}>
-              <ChevronRight size={14} className="text-stone-300" />
-              <button 
-                onClick={() => setCurrentFolderId(f.id)}
-                onDragOver={e => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); handleDropOnFolder(f.id); }}
-                className="hover:text-primary transition-colors p-1 rounded hover:bg-stone-100"
-              >
-                {f.name}
-              </button>
-            </React.Fragment>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-4 flex-1 max-w-md mx-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="搜索我的收藏..." 
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-stone-100 rounded-full text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all border border-transparent focus:border-stone-300"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-            <div className="relative group">
-              <button 
-                className="flex items-center gap-1.5 px-3 py-2 bg-stone-100 text-stone-600 hover:bg-stone-200 rounded-lg transition-all text-xs font-bold"
-              >
-                <Download size={16} /> 导入
-              </button>
-              <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-stone-200 shadow-xl rounded-xl py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                <button 
-                  onClick={() => document.getElementById('local-import-input')?.click()}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2"
-                >
-                  <HardDrive size={14} /> 本地文件
-                </button>
-                <button 
-                  onClick={() => document.getElementById('local-folder-import-input')?.click()}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2"
-                >
-                  <Folder size={14} /> 本地文件夹
-                </button>
-                <button 
-                  onClick={handleImportClipboard}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2"
-                >
-                  <Check size={14} /> 剪贴板导入
-                </button>
-                <div className="h-px bg-stone-100 my-1"></div>
-                <button 
-                  onClick={handleBrowseDrive}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2 font-bold text-primary"
-                >
-                  <Search size={14} /> 浏览云端导入...
-                </button>
-                <button 
-                  onClick={() => setShowAIModal(true)}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2 font-bold text-indigo-600"
-                >
-                  <Sparkles size={14} /> AI 识别导入...
-                </button>
-                <button 
-                  onClick={handleCloudRestore}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2"
-                >
-                  <RotateCcw size={14} /> 从云端备份还原
-                </button>
-                <button 
-                  onClick={handleCloudBackup}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2"
-                >
-                  <CloudUpload size={14} /> 云端备份当前数据
-                </button>
-              </div>
-            </div>
-            {selectedIds.length > 0 && (
-              <button 
-                onClick={() => handleAction('delete', { id: 'multiple', name: '所选项目' }, false)}
-                className="flex items-center gap-2 px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors text-xs font-bold"
-              >
-                <Trash2 size={16} /> 删除 ({selectedIds.length})
-              </button>
-            )}
-            <button 
-              onClick={handleCloudBackup}
-              disabled={isSyncingDrive}
-              className={`p-2 rounded-lg transition-all ${
-                isSyncingDrive 
-                ? 'text-blue-400 animate-pulse' 
-                : 'text-stone-500 hover:bg-stone-100 hover:text-blue-600'
-              }`}
-              title="云端快速备份"
-            >
-              <CloudUpload size={20} />
-            </button>
-            <button 
-              onClick={handleCreateFolder}
-              className="p-2 text-stone-500 hover:bg-stone-100 rounded-lg transition-colors"
-              title="新建文件夹"
-            >
-              <FolderPlus size={20} />
-            </button>
-            <div className="w-px h-6 bg-stone-200 mx-1"></div>
-            <button 
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'text-primary bg-primary/10' : 'text-stone-500 hover:bg-stone-100'}`}
-            >
-              <Grid size={20} />
-            </button>
-            <button 
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'text-primary bg-primary/10' : 'text-stone-500 hover:bg-stone-100'}`}
-            >
-              <ListIcon size={20} />
-            </button>
-        </div>
-      </div>
-
       {/* Explorer Content */}
       <div 
         ref={explorerRef}
@@ -766,10 +632,19 @@ const VaultContent = ({
                       )}
                   </div>
                   <div className={viewMode === 'grid' ? "text-center min-w-0" : "flex-1 min-w-0"}>
-                      <p className={`text-xs font-bold line-clamp-1 ${isSelected ? 'text-primary' : 'text-stone-800'}`}>{char.name}</p>
-                      <p className="text-[9px] text-stone-400 font-medium truncate mt-0.5">
-                        {char.isTemplate ? 'BBCode 导出模板' : `${char.data?.basic?.race || '未知种族'} · ${char.data?.basic?.classes || '未知职业'}`}
-                      </p>
+                      <MarkdownPreview 
+                        text={char.name} 
+                        className={`text-xs font-bold line-clamp-1 block ${isSelected ? 'text-primary' : 'text-stone-800'}`} 
+                      />
+                      <div className="text-[9px] text-stone-400 font-medium truncate mt-0.5">
+                        {char.isTemplate ? 'BBCode 导出模板' : (
+                          <>
+                            <MarkdownPreview text={char.data?.basic?.race || '未知种族'} className="inline" />
+                            {' · '}
+                            <MarkdownPreview text={char.data?.basic?.classes || '未知职业'} className="inline" />
+                          </>
+                        )}
+                      </div>
                   </div>
                 </div>
               );

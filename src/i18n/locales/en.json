@@ -11,6 +11,14 @@
     "logout": "Logout",
     "ai_identify": "AI Extract",
     "create_new": "Create New",
+    "new_character": "New Character",
+    "new_template": "New Template",
+    "import_default": "Import Default",
+    "about": "About",
+    "character_editor": "Character Editor",
+    "bbcode_editor": "BBCode Template Editor",
+    "vault": "My Vault",
+    "settings": "Account Settings",
     "pinned": "Unpin Header",
     "unpinned": "Pin Header",
     "add_paragraph": "Add Paragraph",
@@ -252,11 +260,12 @@
     "bbcode": {
       "title": "BBCode Export Template Settings",
       "desc": "Customize the template used for BBCode generation. Use {variable_name} to insert data.",
-      "reset": "Reset Default",
+      "import_default": "Import Default",
       "save_as": "Save As",
       "content_label": "Template Content",
       "var_ref": "Available Variables Reference",
       "prompt_name": "Enter template name",
+      "confirm_new_template": "Are you sure you want to create a new template? Unsaved changes will be lost.",
       "default_name": "New BBCode Template",
       "confirm_reset": "Are you sure you want to reset to the default template? This will overwrite your current changes.",
       "reset_success": "Restored default template",
@@ -265,7 +274,7 @@
       "syntax_simple_not_empty": "Show only if not empty",
       "syntax_simple_empty": "Show only if empty",
       "syntax_placeholder": "Refers to the field value within branches",
-      "syntax_escape": "Escape symbols ? : $ \\"
+      "syntax_escape": "Escape symbols ? : $ \\\\"
     },
     "overlays": {
       "syncing": "Connecting to the other world...",

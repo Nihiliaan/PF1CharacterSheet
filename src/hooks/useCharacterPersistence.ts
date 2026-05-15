@@ -16,8 +16,10 @@ export const useCharacterPersistence = (
   setData: React.Dispatch<React.SetStateAction<CharacterData>>,
   lastSavedData: CharacterData,
   setLastSavedData: (data: CharacterData) => void,
-  currentDocumentId: string | null,
-  setCurrentDocumentId: (id: string | null) => void,
+  currentCharacterId: string | null,
+  setCurrentCharacterId: (id: string | null) => void,
+  currentTemplateId: string | null,
+  setCurrentTemplateId: (id: string | null) => void,
   setIsReadOnly: (val: boolean) => void,
   setIsSyncing: (val: boolean) => void,
   setToast: (toast: any) => void,
@@ -27,7 +29,8 @@ export const useCharacterPersistence = (
   refreshCharacterList: () => void,
   currentFolderId: string | null,
   isDirty: boolean,
-  setBbcodeTemplate: (t: string) => void
+  setBbcodeTemplate: (t: string) => void,
+  setLastSavedTemplate: (t: string) => void
 ) => {
   const [isSaving, setIsSaving] = useState(false);
 
@@ -58,25 +61,32 @@ export const useCharacterPersistence = (
     return result;
   };
 
-  const handleSaveInternal = async (saveData: CharacterData, id?: string | null, folderId?: string | null) => {
+  const handleSaveInternal = async (saveData: CharacterData | { content: string, name?: string }, id?: string | null, folderId?: string | null, isTemplate: boolean = false) => {
     if (!user) {
       setToast({ message: "请先登录后再保存", type: 'error' });
       return;
     }
     setIsSaving(true);
     try {
-      const newId = await saveCharacterService(saveData, id || undefined, folderId);
+      const newId = await saveCharacterService(saveData, id || undefined, folderId, isTemplate);
       if (newId) {
-        if (!id || id === currentDocumentId) {
-          setCurrentDocumentId(newId);
+        if (isTemplate) {
+          setCurrentTemplateId(newId);
+          if ('content' in saveData) {
+            setLastSavedTemplate(saveData.content);
+          }
+        } else {
+          setCurrentCharacterId(newId);
           setLastSavedData(JSON.parse(JSON.stringify(saveData)));
           const url = new URL(window.location.href);
           url.searchParams.set('id', newId);
           window.history.replaceState({}, '', url.toString());
         }
-        addToRecent({ id: newId, name: saveData?.basic?.name || '未命名人物', data: saveData });
+        
+        const name = isTemplate ? (('name' in saveData ? saveData.name : null) || '未命名模板') : ((saveData as CharacterData)?.basic?.name || '未命名人物');
+        addToRecent({ id: newId, name, data: saveData, isTemplate });
         await refreshCharacterList();
-        setToast({ message: id ? "人物卡保存成功！" : "已创建并保存新人物卡" });
+        setToast({ message: id ? (isTemplate ? "模板保存成功！" : "人物卡保存成功！") : (isTemplate ? "已创建并保存新模板" : "已创建并保存新人物卡") });
         return newId;
       }
     } catch (e: any) {
@@ -86,7 +96,7 @@ export const useCharacterPersistence = (
     }
   };
 
-  const handleSave = async () => handleSaveInternal(data, currentDocumentId, currentFolderId);
+  const handleSave = async () => handleSaveInternal(data, currentCharacterId, currentFolderId);
 
   const performCreateNew = async () => {
     const newData = JSON.parse(JSON.stringify(DEFAULT_DATA));
@@ -104,7 +114,7 @@ export const useCharacterPersistence = (
     } else {
       setData(newData);
       setLastSavedData(JSON.parse(JSON.stringify(newData)));
-      setCurrentDocumentId(null);
+      setCurrentCharacterId(null);
       setIsReadOnly(false);
       const url = new URL(window.location.href);
       url.searchParams.delete('id');
@@ -138,15 +148,17 @@ export const useCharacterPersistence = (
           }
           const char = idOrChar;
           if (char.isTemplate) {
-            setBbcodeTemplate(char.data?.content || '');
+            const content = char.data?.content || '';
+            setBbcodeTemplate(content);
+            setLastSavedTemplate(content);
             setView('bbcode-template');
-            setCurrentDocumentId(char.id);
+            setCurrentTemplateId(char.id);
             return;
           }
           const merged = mergeWithDefault(char.data, DEFAULT_DATA);
           setData(merged);
           setLastSavedData(JSON.parse(JSON.stringify(merged)));
-          setCurrentDocumentId(char.id);
+          setCurrentCharacterId(char.id);
           setIsReadOnly(char.ownerId !== user?.uid);
           setView('editor');
           addToRecent(char);
@@ -157,23 +169,25 @@ export const useCharacterPersistence = (
         }
 
         const id = idOrChar as string;
-        setToast({ message: "正在加载人物资料..." });
+        setToast({ message: "正在加载..." });
         const char = await getCharacterById(id) as CharacterDocument | null;
-        if (!char || !char.data) throw new Error("Character not found");
+        if (!char || !char.data) throw new Error("Document not found");
         if (char.targetId) {
           await loadSharedCharacter(char.targetId);
           return;
         }
         if (char.isTemplate) {
-          setBbcodeTemplate(char.data.content || '');
+          const content = char.data.content || '';
+          setBbcodeTemplate(content);
+          setLastSavedTemplate(content);
           setView('bbcode-template');
-          setCurrentDocumentId(char.id);
+          setCurrentTemplateId(char.id);
           return;
         }
         const merged = mergeWithDefault(char.data, DEFAULT_DATA);
         setData(merged);
         setLastSavedData(JSON.parse(JSON.stringify(merged)));
-        setCurrentDocumentId(char.id);
+        setCurrentCharacterId(char.id);
         setIsReadOnly(char.ownerId !== user?.uid);
         setView('editor');
         addToRecent(char);
@@ -181,13 +195,13 @@ export const useCharacterPersistence = (
         url.searchParams.set('id', id);
         window.history.replaceState({}, '', url.toString());
       } catch (e: any) {
-        setToast({ message: "人物卡加载失败", type: 'error' });
+        setToast({ message: "加载失败", type: 'error' });
       }
     };
 
     if (isDirty && !skipDirtyCheck) {
       setConfirmModal({
-        title: "是否保存当前修改后再打开新角色？",
+        title: "是否保存当前修改后再打开新项目？",
         onConfirm: () => performSelect(),
         onSecondaryConfirm: async () => {
           await handleSave();
@@ -205,13 +219,16 @@ export const useCharacterPersistence = (
       const char = await getCharacterById(id) as CharacterDocument | null;
       if (char) {
         if (char.isTemplate) {
-          setBbcodeTemplate(char.data.content || '');
+          const content = char.data.content || '';
+          setBbcodeTemplate(content);
+          setLastSavedTemplate(content);
+          setCurrentTemplateId(char.id);
           setView('bbcode-template');
         } else {
           const merged = mergeWithDefault(char.data, DEFAULT_DATA);
           setData(merged);
           setLastSavedData(JSON.parse(JSON.stringify(merged)));
-          setCurrentDocumentId(char.id);
+          setCurrentCharacterId(char.id);
           setView('editor');
         }
         const url = new URL(window.location.href);

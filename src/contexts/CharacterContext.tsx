@@ -9,9 +9,8 @@ import { useCharacterPersistence } from '../hooks/useCharacterPersistence';
 import { useCharacterAI } from '../hooks/useCharacterAI';
 import { useDriveSync } from '../hooks/useDriveSync';
 import { CharacterData } from '../types';
-import { DEFAULT_DATA } from '../constants';
+import { DEFAULT_DATA, DEFAULT_BBCODE_TEMPLATE } from '../constants';
 import { generateBBCode } from '../utils/bbcodeExporter';
-import { DEFAULT_BBCODE_TEMPLATE } from '../components/BBCodeTemplateEditor';
 import { getAttributeModifiers, calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../utils/calculations';
 import { saveCharacter as saveCharacterService } from '../services/characterService';
 import { ensureLocalFolder as ensureLocalFolderService } from '../services/characterService';
@@ -24,12 +23,15 @@ interface CharacterContextType {
   lastSavedData: CharacterData;
   isReadOnly: boolean;
   setIsReadOnly: (val: boolean) => void;
-  currentDocumentId: string | null;
-  setCurrentDocumentId: (id: string | null) => void;
+  currentCharacterId: string | null;
+  setCurrentCharacterId: (id: string | null) => void;
+  currentTemplateId: string | null;
+  setCurrentTemplateId: (id: string | null) => void;
   isSaving: boolean;
   isSyncing: boolean;
   setIsSyncing: (val: boolean) => void;
   isDirty: boolean;
+  isTemplateDirty: boolean;
   tableActionMode: 'drag' | 'delete';
   toggleTableActionMode: () => void;
   dragEnabledFor: string | null;
@@ -117,20 +119,25 @@ export const useCharacter = () => {
 export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { setView, setToast, setConfirmModal, addToRecent } = useUI();
+  const ui = useUI();
+  const { setView, setToast, setConfirmModal, addToRecent } = ui;
   const { refreshCharacterList, currentFolderId, tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor, getItemPath } = useVault();
 
   const [data, setData] = useState<CharacterData>(DEFAULT_DATA);
   const [lastSavedData, setLastSavedData] = useState<CharacterData>(JSON.parse(JSON.stringify(DEFAULT_DATA)));
-  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
+  const [currentCharacterId, setCurrentCharacterId] = useState<string | null>(null);
+  const [currentTemplateId, setCurrentTemplateId] = useState<string | null>(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [isSyncing, setIsSyncing] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
+  const [isTemplateDirty, setIsTemplateDirty] = useState(false);
   const [bbcodeTemplate, setBbcodeTemplate] = useState(() => localStorage.getItem('bbcode_template') || '');
+  const [lastSavedTemplate, setLastSavedTemplate] = useState(localStorage.getItem('bbcode_template') || '');
 
   useEffect(() => {
     localStorage.setItem('bbcode_template', bbcodeTemplate);
-  }, [bbcodeTemplate]);
+    setIsTemplateDirty(bbcodeTemplate !== lastSavedTemplate);
+  }, [bbcodeTemplate, lastSavedTemplate]);
 
   const computed = useMemo(() => {
     const modifiers = getAttributeModifiers(data);
@@ -180,16 +187,18 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     loadSharedCharacter
   } = useCharacterPersistence(
     user, data, setData, lastSavedData, setLastSavedData,
-    currentDocumentId, setCurrentDocumentId, setIsReadOnly, setIsSyncing,
+    currentCharacterId, setCurrentCharacterId,
+    currentTemplateId, setCurrentTemplateId,
+    setIsReadOnly, setIsSyncing,
     setToast, setConfirmModal, setView, addToRecent, refreshCharacterList,
-    currentFolderId, isDirty, setBbcodeTemplate
+    currentFolderId, isDirty, setBbcodeTemplate, setLastSavedTemplate
   );
 
   const {
     userApiKey, setUserApiKey, showApiKeyInput, setShowApiKeyInput,
     aiInputText, setAiInputText, showAIModal, setShowAIModal,
     isAILoading, aiStatusMsg, handleAIExtract
-  } = useCharacterAI(setData, setCurrentDocumentId);
+  } = useCharacterAI(setData, setCurrentCharacterId);
 
   const {
     driveModal, setDriveModal, isSyncingDrive,
@@ -197,11 +206,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   } = useDriveSync();
 
   const handleShare = () => {
-    if (!currentDocumentId) {
+    const id = ui.view === 'bbcode-template' ? currentTemplateId : currentCharacterId;
+    if (!id) {
       setToast({ message: "请先打开一个人物卡或模板", type: 'error' });
       return;
     }
-    const shareUrl = `${window.location.origin}${window.location.pathname}?id=${currentDocumentId}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?id=${id}`;
     navigator.clipboard.writeText(shareUrl);
     setToast({ message: "分享链接已复制到剪贴板！" });
   };
@@ -227,9 +237,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!user) return setToast({ message: "请先登录", type: 'error' });
     try {
       const templateFolderId = await ensureLocalFolderService('模板', null, user.uid);
-      await saveCharacterService({ content, name }, undefined, templateFolderId, true);
-      await refreshCharacterList();
-      setToast({ message: "模板已保存", type: 'success' });
+      const newId = await saveCharacterService({ content, name }, undefined, templateFolderId, true);
+      if (newId) {
+        setLastSavedTemplate(content);
+        setCurrentTemplateId(newId);
+        await refreshCharacterList();
+        setToast({ message: "模板已保存", type: 'success' });
+      }
     } catch (e) {
       setToast({ message: "保存模板失败", type: 'error' });
     }
@@ -239,6 +253,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!user) return;
     try {
       await saveCharacterService({ content }, id, undefined, true);
+      setLastSavedTemplate(content);
       setToast({ message: "模板已更新", type: 'success' });
     } catch (e) {
       setToast({ message: "更新模板失败", type: 'error' });
@@ -246,8 +261,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const value: CharacterContextType = {
-    data, setData, computed, lastSavedData, isReadOnly, setIsReadOnly, currentDocumentId, setCurrentDocumentId, isSaving,
-    isSyncing, setIsSyncing, isDirty,
+    data, setData, computed, lastSavedData, isReadOnly, setIsReadOnly, 
+    currentCharacterId, setCurrentCharacterId,
+    currentTemplateId, setCurrentTemplateId,
+    isSaving,
+    isSyncing, setIsSyncing, isDirty, isTemplateDirty,
     tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor,
     updateBasic, updateDefenses, addBag, removeBag, updateBagName, toggleBagWeight, updateBagItems,
     addMagicBlock, updateMagicBlock, removeMagicBlock,

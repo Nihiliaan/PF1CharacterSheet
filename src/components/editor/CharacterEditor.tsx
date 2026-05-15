@@ -67,10 +67,6 @@ export default function CharacterEditor({
 
       <TableOfContents />
       <main className={`max-w-5xl mx-auto py-12 px-4 sm:px-8 pb-32 transition-all duration-300 ${isReadOnly ? 'pointer-events-none opacity-90 grayscale-[0.2]' : ''}`}>
-        <header className="mb-8 text-center flex flex-col items-center">
-          <h1 className="text-4xl font-serif font-bold mb-2">{t('editor.title')}</h1>
-        </header>
-
         <BasicInfoSection />
         <StorySection />
         <AttributesSection />

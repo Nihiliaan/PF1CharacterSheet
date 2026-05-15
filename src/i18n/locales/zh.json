@@ -11,6 +11,14 @@
     "logout": "退出",
     "ai_identify": "AI 识别",
     "create_new": "创建新角色",
+    "new_character": "新建角色卡",
+    "new_template": "新建模板",
+    "import_default": "导入默认",
+    "about": "关于",
+    "character_editor": "人物卡编辑器",
+    "bbcode_editor": "BBCode 模板编辑器",
+    "vault": "我的档案库",
+    "settings": "账户设置",
     "pinned": "固定顶部栏",
     "unpinned": "取消固定顶部栏",
     "add_paragraph": "添加段落",
@@ -253,11 +261,12 @@
     "bbcode": {
       "title": "BBCode 导出模板设置",
       "desc": "自定义生成论坛代码时使用的模板，使用 {变量名} 插入数据。",
-      "reset": "恢复默认",
+      "import_default": "导入默认",
       "save_as": "另存为",
       "content_label": "模板内容",
       "var_ref": "可用变量参考",
       "prompt_name": "请输入模板名称",
+      "confirm_new_template": "确定要创建新模板吗？未保存的修改将丢失。",
       "default_name": "新 BBCode 模板",
       "confirm_reset": "确定要恢复默认模板吗？这将覆盖您当前的修改。",
       "reset_success": "已恢复默认模板",
@@ -266,7 +275,7 @@
       "syntax_simple_not_empty": "仅当非空时显示",
       "syntax_simple_empty": "仅当为空时显示",
       "syntax_placeholder": "在分支内代指字段的值",
-      "syntax_escape": "对符号 ? : $ \\ 进行转义"
+      "syntax_escape": "对符号 ? : $ \\\\ 进行转义"
     },
     "overlays": {
       "syncing": "正在连接到异世界...",

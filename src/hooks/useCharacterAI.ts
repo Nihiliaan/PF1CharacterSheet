@@ -56,7 +56,7 @@ export const useCharacterAI = (setData: (data: CharacterData) => void, setCurren
       setData(mergedData);
       setToast({ message: "AI 识别并填写成功！" });
       setView('editor');
-      setCurrentDocumentId(null);
+      setCurrentId(null);
       setShowAIModal(false);
       setAiInputText('');
     } catch (e: any) {

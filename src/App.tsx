@@ -101,6 +101,20 @@ function AppContent() {
               <BBCodeTemplateEditor />
             </motion.div>
           )}
+
+          {view === 'about' && (
+            <motion.div key="about" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full overflow-y-auto p-8 custom-scrollbar">
+              <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-stone-200 p-8 mt-8">
+                <h1 className="text-3xl font-serif font-bold mb-4">关于本系统</h1>
+                <p className="text-stone-600 leading-relaxed mb-4">
+                  人物卡管理系统是一个专为 PF1 跑团玩家设计的工具，旨在提供便捷的角色数据管理与 BBCode 导出功能。
+                </p>
+                <p className="text-stone-500 text-sm italic">
+                  内容稍后填写...
+                </p>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 

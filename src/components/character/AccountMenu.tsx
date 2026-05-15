@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronDown, LayoutGrid, RotateCcw, ChevronRight, X, Settings, FilePlus, LogOut } from 'lucide-react';
+import { ChevronDown, LayoutGrid, RotateCcw, ChevronRight, X, Settings, LogOut } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import MarkdownPreview from '../common/MarkdownPreview';
 
-const AccountMenu = ({ user, view, setView, recentCharacters, currentDocumentId, onSelect, onRemoveRecent, onLogout, confirmNavigation }: any) => {
+const AccountMenu = ({ user, view, setView, recentCharacters, onSelect, onRemoveRecent, onLogout, confirmNavigation }: any) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [showRecent, setShowRecent] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -25,7 +28,6 @@ const AccountMenu = ({ user, view, setView, recentCharacters, currentDocumentId,
     };
   }, []);
 
-  // Show recently opened characters, including the current one, sorted to the top
   const displayRecent = recentCharacters.slice(0, 5);
 
   const handleViewChange = (newView: string) => {
@@ -62,7 +64,7 @@ const AccountMenu = ({ user, view, setView, recentCharacters, currentDocumentId,
               className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors border-b border-stone-50 ${view === 'vault' ? 'bg-primary/5 text-primary font-bold' : 'text-stone-700 hover:bg-stone-50'}`}
             >
               <LayoutGrid size={16} className={view === 'vault' ? 'text-primary' : 'text-stone-400'} />
-              <span>我的档案库</span>
+              <span>{t('common.vault')}</span>
             </button>
 
             <div 
@@ -95,7 +97,8 @@ const AccountMenu = ({ user, view, setView, recentCharacters, currentDocumentId,
                         <div key={char.id} className="relative group/item">
                           <button
                             onClick={() => {
-                              onSelect(char, () => setIsOpen(false));
+                              onSelect(char, true);
+                              setIsOpen(false);
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left pr-10"
                           >
@@ -105,8 +108,8 @@ const AccountMenu = ({ user, view, setView, recentCharacters, currentDocumentId,
                               referrerPolicy="no-referrer"
                             />
                             <div className="flex-1 min-w-0">
-                               <p className="font-bold truncate text-stone-800">{char.name}</p>
-                               <p className="text-[10px] text-stone-400 truncate tracking-tight">{char.classes || '未定义职业'}</p>
+                               <MarkdownPreview text={char.name} className="font-bold truncate text-stone-800 block" />
+                               <MarkdownPreview text={char.classes || '未定义职业'} className="text-[10px] text-stone-400 truncate tracking-tight block" />
                             </div>
                           </button>
                           <button 
@@ -124,22 +127,12 @@ const AccountMenu = ({ user, view, setView, recentCharacters, currentDocumentId,
               </AnimatePresence>
             </div>
 
-          <div className="h-px bg-stone-100 my-1 mx-2" />
-
             <button 
               onClick={() => handleViewChange('settings')}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${view === 'settings' ? 'bg-primary/5 text-primary font-bold' : 'text-stone-700 hover:bg-stone-50'}`}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors border-t border-stone-50 ${view === 'settings' ? 'bg-primary/5 text-primary font-bold' : 'text-stone-700 hover:bg-stone-50'}`}
             >
               <Settings size={16} className={view === 'settings' ? 'text-primary' : 'text-stone-400'} />
-              <span>账户设置</span>
-            </button>
-
-            <button
-               onClick={() => handleViewChange('bbcode-template')}
-               className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors border-b border-stone-50 ${view === 'bbcode-template' ? 'bg-primary/5 text-primary font-bold' : 'text-stone-700 hover:bg-stone-50'}`}
-             >
-               <FilePlus size={16} className={view === 'bbcode-template' ? 'text-primary' : 'text-stone-400'} />
-               <span>修改转BBCode代码模板</span>
+              <span>{t('common.settings')}</span>
             </button>
 
             <div className="h-px bg-stone-100 my-1 mx-2" />
@@ -154,7 +147,7 @@ const AccountMenu = ({ user, view, setView, recentCharacters, currentDocumentId,
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
             >
               <LogOut size={16} />
-              <span>登出</span>
+              <span>{t('common.logout')}</span>
             </button>
           </motion.div>
         )}

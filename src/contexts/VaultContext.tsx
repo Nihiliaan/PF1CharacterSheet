@@ -35,6 +35,11 @@ interface VaultContextType {
   copyCharacter: (id: string) => Promise<void>;
   ensureLocalFolder: (name: string, parentId: string | null, userId: string) => Promise<string>;
   getItemPath: (charId: string | null) => string;
+
+  search: string;
+  setSearch: (s: string) => void;
+  viewMode: 'grid' | 'list';
+  setViewMode: (m: 'grid' | 'list') => void;
 }
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
@@ -55,6 +60,9 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [tableActionMode, setTableActionMode] = useState<'drag' | 'delete'>('drag');
   const [dragEnabledFor, setDragEnabledFor] = useState<string | null>(null);
+
+  const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const refreshCharacterList = useCallback(async () => {
     try {
@@ -132,7 +140,8 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     myCharacters, folders, currentFolderId, setCurrentFolderId, refreshCharacterList,
     tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor,
     moveCharacter, moveFolder, createFolder, deleteFolder, deleteCharacter, renameItem, copyCharacter, ensureLocalFolder,
-    getItemPath
+    getItemPath,
+    search, setSearch, viewMode, setViewMode
   };
 
   return (

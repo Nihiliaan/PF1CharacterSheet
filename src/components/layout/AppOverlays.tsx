@@ -20,14 +20,8 @@ export default function AppOverlays() {
 
   const {
     isSyncing,
-  } = useCharacter();
-
-  const {
     setData,
-    setCurrentDocumentId
-  } = useCharacter();
-
-  const {
+    setCurrentCharacterId,
     handleAIExtract,
     showAIModal,
     setShowAIModal,
@@ -39,7 +33,7 @@ export default function AppOverlays() {
     aiInputText,
     setAiInputText,
     aiStatusMsg
-  } = useCharacterAI(setData, setCurrentDocumentId);
+  } = useCharacter();
 
   return (
     <>

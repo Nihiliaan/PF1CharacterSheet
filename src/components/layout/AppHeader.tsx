@@ -1,22 +1,40 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
-  LayoutGrid, Save, Share2, Download, Copy, FilePlus, Sparkles, Plus, Pin, User, Languages 
+  LayoutGrid, Save, Share2, Download, Copy, FilePlus, Sparkles, Plus, Pin, User, Languages, 
+  ChevronDown, Info, RotateCcw, X, Search, HardDrive, Folder, CloudUpload, Grid, List as ListIcon,
+  FolderPlus, ChevronRight
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { User as FirebaseUser } from 'firebase/auth';
 import AccountMenu from '../character/AccountMenu';
 import { googleProvider } from '../../lib/firebase';
 import { logout } from '../../services/authService';
 
-import { useUI } from '../../contexts/UIContext';
+import { useUI, ViewType } from '../../contexts/UIContext';
 import { useCharacter } from '../../contexts/CharacterContext';
+import { useVault } from '../../contexts/VaultContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCharacterAI } from '../../hooks/useCharacterAI';
 
 export default function AppHeader() {
   const { t, i18n } = useTranslation();
   const { user, handleLogin, handleLogout } = useAuth();
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const navRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const navCloseTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const handleNavMouseEnter = () => {
+    if (navCloseTimeout.current) clearTimeout(navCloseTimeout.current);
+    setIsNavOpen(true);
+  };
+
+  const handleNavMouseLeave = () => {
+    navCloseTimeout.current = setTimeout(() => {
+      setIsNavOpen(false);
+    }, 300);
+  };
 
   const {
     view,
@@ -32,27 +50,126 @@ export default function AppHeader() {
   const {
     isReadOnly,
     isSaving,
+    isDirty,
+    isTemplateDirty,
     handleSave,
     handleShare,
     handleExport,
     handleExportBBCode,
     handleNew,
-    currentDocumentId,
+    currentCharacterId,
+    currentTemplateId,
+    bbcodeTemplate,
+    updateExistingTemplate,
+    saveAsTemplate,
+    setBbcodeTemplate,
     selectCharacter,
     setData,
-    setCurrentDocumentId
+    setCurrentCharacterId,
+    getItemPath,
+    setShowAIModal
   } = useCharacter();
 
-  const { setShowAIModal } = useCharacterAI(setData, setCurrentDocumentId);
+  const {
+    currentFolderId,
+    setCurrentFolderId,
+    folders,
+    search,
+    setSearch,
+    viewMode,
+    setViewMode,
+    handleCloudBackup,
+    handleCloudRestore,
+    isSyncingDrive,
+    handleBrowseDrive,
+    createFolder,
+    refreshCharacterList
+  } = useVault();
 
   const toggleLanguage = () => {
     const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';
     i18n.changeLanguage(newLang);
   };
 
-  const confirmNavigation = (action: () => void) => {
-    action(); 
+  useEffect(() => {
+    return () => {
+      if (navCloseTimeout.current) clearTimeout(navCloseTimeout.current);
+    };
+  }, []);
+
+  const navItems = [
+    { id: 'editor', label: t('common.character_editor'), icon: <LayoutGrid size={16} /> },
+    { id: 'bbcode-template', label: t('common.bbcode_editor'), icon: <Copy size={16} /> },
+    { id: 'vault', label: t('common.vault'), icon: <LayoutGrid size={16} />, hidden: !user },
+    { id: 'about', label: t('common.about'), icon: <Info size={16} /> },
+  ].filter(item => !item.hidden);
+
+  const currentNavItem = navItems.find(item => item.id === view) || navItems[0];
+
+  const currentPath = view === 'bbcode-template' 
+    ? (getItemPath(currentTemplateId) || t('common.new_template'))
+    : (getItemPath(currentCharacterId) || t('common.new_character'));
+  
+  const isCurrentDirty = view === 'bbcode-template' ? isTemplateDirty : isDirty;
+  const displayPath = currentPath + (isCurrentDirty ? '*' : '');
+
+  const handleBBCodeSave = async () => {
+    if (currentTemplateId) {
+      await updateExistingTemplate(currentTemplateId, bbcodeTemplate);
+    } else {
+      const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
+      if (name) {
+        await saveAsTemplate(name, bbcodeTemplate);
+      }
+    }
   };
+
+  const handleBBCodeSaveAs = async () => {
+    const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
+    if (name) {
+      await saveAsTemplate(name, bbcodeTemplate);
+    }
+  };
+
+  const handleImportDefault = () => {
+    if (window.confirm(t('editor.bbcode.confirm_reset'))) {
+      (window as any).__resetBBCodeTemplate?.();
+    }
+  };
+
+  const handleNewTemplate = () => {
+    if (isTemplateDirty && !window.confirm(t('editor.bbcode.confirm_new_template') || "确定要创建新模板吗？未保存的修改将丢失。")) {
+      return;
+    }
+    setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
+    setCurrentTemplateId(null);
+  };
+
+  const breadcrumbs = (() => {
+    let p = [];
+    let curId = currentFolderId;
+    while (curId) {
+      const f = folders.find(folder => folder.id === curId);
+      if (f) {
+        p.unshift(f);
+        curId = f.parentId;
+      } else break;
+    }
+    return p;
+  })();
+
+  const handleCreateFolder = async () => {
+    const name = window.prompt('新建文件夹', '新文件夹');
+    if (name && name.trim()) {
+      const trimmedName = name.trim();
+      if (folders.some(f => f.parentId === currentFolderId && f.name.toLowerCase() === trimmedName.toLowerCase())) {
+        return;
+      }
+      await createFolder(trimmedName, currentFolderId);
+      refreshCharacterList();
+    }
+  };
+
   return (
     <motion.header 
       initial={false}
@@ -65,27 +182,94 @@ export default function AppHeader() {
       onMouseLeave={() => !isHeaderPinned && setIsHeaderVisible(false)}
       className="bg-stone-800 text-stone-100 px-4 py-3 fixed top-0 left-0 right-0 z-[65] shadow-md flex items-center justify-between"
     >
-      <div className="flex items-center gap-3">
-        <button 
-          onClick={() => setView('editor')}
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+      <div className="flex items-center gap-4">
+        {/* Navigation Dropdown */}
+        <div 
+          className="relative" 
+          ref={navRef}
+          onMouseEnter={handleNavMouseEnter}
+          onMouseLeave={handleNavMouseLeave}
         >
-          <div className="bg-primary p-1.5 rounded rotate-3">
-            <LayoutGrid size={20} className="text-white" />
+          <button 
+            onClick={() => setIsNavOpen(!isNavOpen)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 rounded-lg transition-colors group"
+          >
+            <div className="bg-primary p-1 rounded">
+              {React.cloneElement(currentNavItem.icon as React.ReactElement, { size: 16, className: "text-white" })}
+            </div>
+            <span className="font-bold text-sm hidden sm:inline">{currentNavItem.label}</span>
+            <ChevronDown size={14} className={`text-stone-400 group-hover:text-white transition-transform ${isNavOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          <AnimatePresence>
+            {isNavOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute left-0 mt-2 w-56 bg-white border border-stone-200 rounded-xl shadow-xl z-[70] py-1"
+              >
+                {navItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setView(item.id as ViewType);
+                      setIsNavOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${view === item.id ? 'bg-primary/5 text-primary font-bold' : 'text-stone-700 hover:bg-stone-50'}`}
+                  >
+                    <div className={view === item.id ? 'text-primary' : 'text-stone-400'}>
+                      {item.icon}
+                    </div>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Path/Breadcrumb Display */}
+        <div className="h-6 w-px bg-stone-600 hidden md:block"></div>
+        {view === 'vault' ? (
+          <div className="hidden md:flex items-center gap-2 text-stone-400 text-xs font-medium">
+             <button 
+                onClick={() => setCurrentFolderId(null)}
+                className="hover:text-white transition-colors flex items-center gap-1"
+              >
+                <User size={14} /> {t('common.vault')}
+              </button>
+              {breadcrumbs.map(f => (
+                <React.Fragment key={f.id}>
+                  <ChevronRight size={12} className="text-stone-600" />
+                  <button 
+                    onClick={() => setCurrentFolderId(f.id)}
+                    className="hover:text-white transition-colors"
+                  >
+                    {f.name}
+                  </button>
+                </React.Fragment>
+              ))}
           </div>
-          <div>
-            <h1 className="text-lg font-serif font-bold leading-none tracking-tight">
-              {t('common.app_name')} <span className="text-stone-400 font-sans text-xs font-normal">{t('common.app_subtitle')}</span>
-            </h1>
+        ) : (
+          <div className="hidden md:flex items-center gap-2 text-stone-400 text-xs font-medium max-w-[300px] truncate">
+            <span className="truncate" title={currentPath}>{displayPath}</span>
           </div>
-        </button>
+        )}
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
-        {view === 'editor' ? (
+        {view === 'editor' && (
           <>
             {!isReadOnly && (
               <>
+                <button 
+                  onClick={() => setShowAIModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-medium transition-colors shadow-lg shadow-indigo-200"
+                >
+                  <Sparkles size={16} />
+                  <span className="hidden sm:inline">{t('common.ai_identify')}</span>
+                </button>
                 <button 
                   onClick={handleSave} 
                   disabled={isSaving}
@@ -130,22 +314,160 @@ export default function AppHeader() {
               <span className="hidden sm:inline">{t('common.new')}</span>
             </button>
           </>
-        ) : (
-          <div className="flex items-center gap-2">
+        )}
+
+        {view === 'bbcode-template' && (
+          <>
             <button 
-              onClick={() => setShowAIModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-medium transition-colors shadow-lg shadow-indigo-200"
+              onClick={handleNewTemplate}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
             >
-              <Sparkles size={16} />
-              <span className="hidden sm:inline">{t('common.ai_identify')}</span>
+              <FilePlus size={16} />
+              <span className="hidden sm:inline">{t('common.new')}</span>
             </button>
+
             <button 
-              onClick={handleNew}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-primary text-white rounded text-sm font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
-          >
-            <Plus size={18} />
-            {t('common.create_new')}
-          </button>
+              onClick={handleBBCodeSave}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors"
+            >
+              <Save size={16} />
+              <span className="hidden sm:inline">{t('common.save')}</span>
+            </button>
+
+            <button 
+              onClick={handleBBCodeSaveAs}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
+            >
+              <FilePlus size={16} />
+              <span className="hidden sm:inline">{t('editor.bbcode.save_as')}</span>
+            </button>
+
+            <button 
+              onClick={handleShare}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+            >
+              <Share2 size={16} />
+              <span className="hidden sm:inline">{t('common.share')}</span>
+            </button>
+
+            <button 
+              onClick={handleImportDefault}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+            >
+              <RotateCcw size={16} />
+              <span className="hidden sm:inline">{t('common.import_default')}</span>
+            </button>
+          </>
+        )}
+
+        {view === 'vault' && (
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center h-8">
+              <motion.div
+                initial={false}
+                animate={{ 
+                  width: isSearchExpanded || search ? 150 : 32,
+                  backgroundColor: isSearchExpanded || search ? 'rgba(68, 64, 60, 0.5)' : 'transparent'
+                }}
+                className="flex items-center rounded-lg border border-transparent focus-within:border-stone-600 focus-within:ring-2 focus-within:ring-primary/20 transition-all overflow-hidden"
+              >
+                <button 
+                  onClick={() => {
+                    setIsSearchExpanded(!isSearchExpanded);
+                    if (!isSearchExpanded) {
+                      setTimeout(() => searchInputRef.current?.focus(), 100);
+                    }
+                  }}
+                  className={`p-2 flex-shrink-0 transition-colors ${isSearchExpanded || search ? 'text-stone-400' : 'text-stone-400 hover:bg-stone-700 hover:text-white'}`}
+                >
+                  <Search size={16} />
+                </button>
+                <input 
+                  ref={searchInputRef}
+                  type="text" 
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  onBlur={() => {
+                    if (!search) setIsSearchExpanded(false);
+                  }}
+                  className="w-full bg-transparent border-none outline-none text-xs text-stone-100 pr-3"
+                  style={{ display: isSearchExpanded || search ? 'block' : 'none' }}
+                />
+              </motion.div>
+            </div>
+
+            <div className="h-6 w-px bg-stone-600 mx-1"></div>
+
+            <div className="relative group">
+              <button 
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 rounded-lg transition-colors text-xs font-bold"
+              >
+                <Download size={16} /> 导入
+              </button>
+              <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-stone-200 shadow-xl rounded-xl py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                <button 
+                  onClick={() => document.getElementById('local-import-input')?.click()}
+                  className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
+                >
+                  <HardDrive size={14} /> 本地文件
+                </button>
+                <button 
+                  onClick={() => document.getElementById('local-folder-import-input')?.click()}
+                  className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
+                >
+                  <Folder size={14} /> 本地文件夹
+                </button>
+                <div className="h-px bg-stone-100 my-1"></div>
+                <button 
+                  onClick={handleBrowseDrive}
+                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2 font-bold text-primary"
+                >
+                  <Search size={14} /> 浏览云端导入...
+                </button>
+                <button 
+                  onClick={handleCloudRestore}
+                  className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
+                >
+                  <RotateCcw size={14} /> 云端备份还原
+                </button>
+              </div>
+            </div>
+
+            <button 
+              onClick={handleCloudBackup}
+              disabled={isSyncingDrive}
+              className={`p-2 rounded-lg transition-all ${
+                isSyncingDrive 
+                ? 'text-blue-400 animate-pulse' 
+                : 'text-stone-400 hover:bg-stone-700 hover:text-blue-400'
+              }`}
+              title="云端快速备份"
+            >
+              <CloudUpload size={18} />
+            </button>
+
+            <button 
+              onClick={handleCreateFolder}
+              className="p-2 text-stone-400 hover:bg-stone-700 hover:text-white rounded-lg transition-colors"
+              title="新建文件夹"
+            >
+              <FolderPlus size={18} />
+            </button>
+
+            <div className="flex bg-stone-700 rounded-lg p-0.5 ml-1">
+              <button 
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'text-stone-400 hover:text-white'}`}
+              >
+                <Grid size={14} />
+              </button>
+              <button 
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'text-stone-400 hover:text-white'}`}
+              >
+                <ListIcon size={14} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -181,8 +503,9 @@ export default function AppHeader() {
               view={view} 
               setView={setView} 
               recentCharacters={recentCharacters}
-              currentDocumentId={currentDocumentId}
-              confirmNavigation={confirmNavigation}
+              currentCharacterId={currentCharacterId}
+              currentTemplateId={currentTemplateId}
+              confirmNavigation={(a: any) => a()}
               onSelect={selectCharacter}
               onRemoveRecent={removeFromRecent}
               onLogout={logout}
