@@ -3,7 +3,7 @@ import { ChevronRight, ChevronDown, Save, RotateCcw, FilePlus } from 'lucide-rea
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 
-export const DEFAULT_BBCODE_TEMPLATE = `{{#with basic}}[table][tr][td]
+export const DEFAULT_BBCODE_TEMPLATE = `{{#md2bb}}{{#with basic}}[table][tr][td]
 {{name}} {{classes}}
 {{alignment}} {{deity}}
 {{size}} {{gender}} {{race}}
@@ -117,6 +117,7 @@ hp {{hp}} ({{hd}})
 [/quote]
 {{/each}}
 [b]总资产 {{totalCost}}gp，总重 {{totalWeight}}lbs[/b]
+{{/md2bb}}
 `;
 
 import { useCharacter } from '../contexts/CharacterContext';

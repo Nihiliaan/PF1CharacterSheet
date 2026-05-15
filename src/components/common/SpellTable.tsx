@@ -148,7 +148,7 @@ export default function SpellTable({
         <tbody className="divide-y divide-stone-300">
           {Array.from({ length: rowCount }).map((_, i) => {
             const row = getRowData(i);
-            const lowestLevel = handlers.SpellTypeHandler.lowestLevel[spellType] || 0;
+            const lowestLevel = handlers.SpellTypeHandler.lowestLevel[spellType];
             const computedLevelNumber = rowCount - 1 - i + lowestLevel;
 
             return (

@@ -21,6 +21,8 @@ export const BBCODE_SYNTAX_GUIDE: BBCodeSyntaxItem[] = [
   { code: '{{#unless condition}}...{{/unless}}', desc: '反向条件判断 (当条件为 false 时显示)' },
   { code: '(eq a b)', desc: '逻辑 Helper: 相等判断', example: '{{#if (eq (raw "size") 4)}}中型{{/if}}' },
   { code: '(and a b), (or a b), (not a)', desc: '逻辑 Helper: 与、或、非运算' },
+  { code: '{{md2bb field}}', desc: '将 Markdown 链接 [文字](url) 转换为 BBCode [url=url]文字[/url]' },
+  { code: '{{#md2bb}}...{{/md2bb}}', desc: '块级 Helper: 将内部所有 Markdown 链接转换为 BBCode' },
 ];
 
 export const BBCODE_DATA_TREE: BBCodeTreeItem[] = [

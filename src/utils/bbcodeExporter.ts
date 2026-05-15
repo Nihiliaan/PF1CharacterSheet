@@ -159,6 +159,24 @@ hbs.registerHelper('and', (a, b) => a && b);
 hbs.registerHelper('or', (a, b) => a || b);
 hbs.registerHelper('not', (a) => !a);
 
+// 5. Markdown 到 BBCode 转换辅助函数
+const mdLinkRegex = /\[([^\]]+)\]\(([^\)]+)\)/g;
+const convertMdLinks = (text: any) => {
+  if (typeof text !== 'string') return text;
+  return text.replace(mdLinkRegex, '[url=$2]$1[/url]');
+};
+
+hbs.registerHelper('md2bb', function (this: any, context: any, options?: any) {
+  // 处理块级用法: {{#md2bb}}...{{/md2bb}} 或 {{#md2bb context}}...{{/md2bb}}
+  const actualOptions = options || context;
+  if (actualOptions && typeof actualOptions.fn === 'function') {
+    const content = actualOptions.fn(this);
+    return new Handlebars.SafeString(convertMdLinks(content));
+  }
+  // 处理行内用法: {{md2bb field}}
+  return convertMdLinks(context);
+});
+
 /**
  * 将数据转换为仅包含显示值的视图对象 (保持 SoA/Object 结构不变)
  */
