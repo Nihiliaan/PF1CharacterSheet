@@ -40,13 +40,15 @@ export default function SpellTable({
 
   // SoA 模式下的行数计算
   const rowCount = React.useMemo(() => {
-    const required = handlers.SpellTypeHandler.getRequiredRowCount(spellType);
-    if (required !== null) return required;
     if (!data || typeof data !== 'object' || Array.isArray(data)) return 0;
-    const firstKey = columns.find(c => c.key !== 'level')?.key || 'spells';
-    const colData = (data as Record<string, any>)[firstKey];
-    return Array.isArray(colData) ? colData.length : 0;
-  }, [data, columns, spellType]);
+    // 优先使用 spells 数组作为行数来源，因为它是最核心且始终存在的列
+    const spellsArr = (data as Record<string, any>)['spells'];
+    if (Array.isArray(spellsArr)) return spellsArr.length;
+
+    // 兜底：寻找任意一个数组
+    const firstKey = Object.keys(data).find(k => Array.isArray(data[k]));
+    return firstKey ? data[firstKey].length : 0;
+  }, [data]);
 
   const getCellPath = (basePath: string, index: number, key: string) => {
     if (!basePath) return undefined;

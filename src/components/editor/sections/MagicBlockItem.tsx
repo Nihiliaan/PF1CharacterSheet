@@ -7,6 +7,7 @@ import InlineInput from '../../common/InlineInput';
 import { useUI } from '../../../contexts/UIContext';
 import { useCharacter } from '../../../contexts/CharacterContext';
 import { getHandlerByPath } from '../../../schema/fieldRegistry';
+import handlers from '../../../schema/dataTypes';
 
 interface MagicBlockItemProps {
   block: any;
@@ -48,24 +49,42 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
   };
   const handleTypeChange = (val: string) => {
     const newType = parseInt(val, 10);
+    const oldType = Number(block.spellType ?? 2);
+    if (newType === oldType) return;
+
     let newTableData = { ...(block.tableData || {}) };
+    const targetMax = handlers.SpellTypeHandler.getRequiredRowCount(newType);
 
-    const targetCount = SpellTypeHandler?.getRequiredRowCount?.(newType);
+    const isFM = (t: number) => t === 0 || t === 2;
+    const isMinor = (t: number) => t === 1 || t === 3;
+    const isAlc = (t: number) => t === 4;
+    const isSLA = (t: number) => t === 5;
 
-    if (targetCount !== null && targetCount !== undefined) {
-      Object.keys(newTableData).forEach(key => {
-        if (Array.isArray(newTableData[key])) {
-          const arr = [...newTableData[key]];
-          if (arr.length > targetCount) {
-            newTableData[key] = arr.slice(0, targetCount);
-          } else {
-            while (newTableData[key].length < targetCount) {
-              newTableData[key].push(key === 'uses' ? 0 : '');
-            }
-          }
-        }
-      });
-    }
+    // 确保 spells 和 uses 数组长度同步（以 spells 为准）
+    const spells = Array.isArray(newTableData.spells) ? [...newTableData.spells] : [];
+    const currentLen = spells.length;
+    
+    ['spells', 'uses'].forEach(key => {
+      let arr = key === 'spells' ? spells : (Array.isArray(newTableData[key]) ? [...newTableData[key]] : []);
+      while (arr.length < currentLen) arr.push(key === 'uses' ? 0 : '');
+
+      // 1. 低往高：次等/化合 -> 完整中等，补 0 环
+      if ((isMinor(oldType) || isAlc(oldType)) && isFM(newType)) {
+        arr.push(key === 'uses' ? 0 : '');
+      }
+
+      // 2. 高往低
+      if (isSLA(oldType)) {
+        if (targetMax !== null && arr.length > targetMax) arr = arr.slice(-targetMax);
+      } else if (isFM(oldType) && (isMinor(newType) || isAlc(newType))) {
+        if (arr.length > 0) arr.pop(); // 删 0 环
+        if (targetMax !== null && arr.length > targetMax) arr = arr.slice(-targetMax);
+      } else if (isAlc(oldType) && isMinor(newType)) {
+        if (targetMax !== null && arr.length > targetMax) arr = arr.slice(-targetMax);
+      }
+
+      newTableData[key] = arr;
+    });
 
     onUpdate(block.id, { spellType: newType, tableData: newTableData });
   };
