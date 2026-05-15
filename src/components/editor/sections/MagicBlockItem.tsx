@@ -112,7 +112,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
                 onChange={v => onUpdate(block.id, { casterLevel: v })}
               />
             </div>
-            <div className="w-24">
+            <div className={`w-24 ${block.spellType === 4 ? 'invisible' : ''}`}>
               <InlineInput
                 label={t('editor.spells.concentration')}
                 path={`magicBlocks[${blockIndex}].concentration`}

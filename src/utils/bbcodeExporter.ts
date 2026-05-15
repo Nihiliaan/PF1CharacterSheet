@@ -4,6 +4,7 @@ import { CharacterData } from '../types';
 import { getExportValue } from './formatters';
 import { getHandlerByPath } from '../schema/fieldRegistry';
 import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from './calculations';
+import handlers from '../schema/dataTypes';
 
 // 创建隔离的 Handlebars 实例
 const hbs = Handlebars.create();
@@ -13,10 +14,29 @@ const hbs = Handlebars.create();
  */
 function getValueFromSoA(rootStorage: any, logicalPath: string, propName: string): any {
   if (!rootStorage) return null;
-  if (!logicalPath) return rootStorage[propName];
+
+  let currentPath = logicalPath || "";
+  let currentProp = propName;
+
+  // 处理 ../ 前缀，对齐 Handlebars 的向上寻址逻辑
+  while (currentProp.startsWith('../')) {
+    currentProp = currentProp.substring(3);
+    if (currentPath) {
+      const parts = currentPath.split('.');
+      const last = parts.pop();
+      // 如果弹出的最后一部分是数字索引，则根据 Handlebars 习惯，通常需要再弹出一层（字段名）
+      // 使得 ../ 能从 each 的项回到 each 的父级
+      if (last && /^\d+$/.test(last) && parts.length > 0) {
+        parts.pop();
+      }
+      currentPath = parts.join('.');
+    }
+  }
+
+  if (!currentPath) return rootStorage[currentProp];
 
   // logicalPath 示例: "skills.5", "defenses.acTable", "equipmentBags.0.items.2"
-  const parts = logicalPath.split('.');
+  const parts = currentPath.split('.');
   const lastPart = parts[parts.length - 1];
 
   // 检查最后一部分是否是数字索引
@@ -29,15 +49,15 @@ function getValueFromSoA(rootStorage: any, logicalPath: string, propName: string
 
     if (Array.isArray(target)) {
       // 处理普通数组 AoO (如 equipmentBags)
-      return target[index] ? target[index][propName] : null;
-    } else if (target && target[propName] && Array.isArray(target[propName])) {
+      return target[index] ? target[index][currentProp] : null;
+    } else if (target && target[currentProp] && Array.isArray(target[currentProp])) {
       // 处理 SoA (如 skills)
-      return target[propName][index];
+      return target[currentProp][index];
     }
   } else {
     // 处理静态对象，如 defenses.acTable
-    const target = get(rootStorage, logicalPath);
-    return target ? target[propName] : null;
+    const target = get(rootStorage, currentPath);
+    return target ? target[currentProp] : null;
   }
   return null;
 }
@@ -48,9 +68,19 @@ hbs.registerHelper('each', function (this: any, context: any, options: Handlebar
 
   let result = "";
   const data = Handlebars.createFrame(options.data);
-  const parentPath = data.fullPath || "";
-  // 获取当前迭代对象的字段名 (如 "skills", "tableData")
-  const currentKey = (options as any).ids ? (options as any).ids[0] : "";
+
+  // 优先从 context 自身获取路径 (由 buildViewObject 注入)
+  const contextPath = (context && typeof context === 'object') ? (context as any)._path : "";
+
+  // 回退机制：如果 context 没有路径，尝试通过 options.ids 手动拼接 (旧逻辑)
+  let currentNodePath = contextPath;
+  if (!currentNodePath) {
+    const parentPath = data.fullPath || "";
+    const currentKey = (options as any).ids ? (options as any).ids[0] : "";
+    // 过滤掉 "this" 或 "." 等无意义的键
+    const cleanKey = (currentKey === 'this' || currentKey === '.') ? '' : currentKey;
+    currentNodePath = parentPath && cleanKey ? `${parentPath}.${cleanKey}` : (cleanKey || parentPath);
+  }
 
   const keys = (typeof context === 'object' && !Array.isArray(context)) ? Object.keys(context) : [];
   // 增强 SoA 判定：包含数组属性的对象
@@ -71,9 +101,8 @@ hbs.registerHelper('each', function (this: any, context: any, options: Handlebar
     data.first = (i === 0);
     data.last = (i === length - 1);
 
-    // 维护绝对逻辑路径 (核心修复：包含字段名)
-    const baseLevelPath = parentPath && currentKey ? `${parentPath}.${currentKey}` : (currentKey || parentPath);
-    data.fullPath = baseLevelPath ? `${baseLevelPath}.${i}` : `${i}`;
+    // 维护绝对逻辑路径
+    data.fullPath = currentNodePath ? `${currentNodePath}.${i}` : `${i}`;
 
     let rowData;
     if (isSoA) {
@@ -97,11 +126,19 @@ hbs.registerHelper('with', function (this: any, context: any, options: Handlebar
   }
 
   const data = Handlebars.createFrame(options.data);
-  const parentPath = data.fullPath || "";
-  // Handlebars 内部通过 options.ids 获取当前 with 的路径名
-  const currentKey = (options as any).ids ? (options as any).ids[0] : "";
 
-  data.fullPath = parentPath && currentKey ? `${parentPath}.${currentKey}` : (currentKey || parentPath);
+  // 优先从 context 自身获取路径
+  const contextPath = (context && typeof context === 'object') ? (context as any)._path : "";
+
+  if (contextPath) {
+    data.fullPath = contextPath;
+  } else {
+    // 回退机制
+    const parentPath = data.fullPath || "";
+    const currentKey = (options as any).ids ? (options as any).ids[0] : "";
+    const cleanKey = (currentKey === 'this' || currentKey === '.') ? '' : currentKey;
+    data.fullPath = parentPath && cleanKey ? `${parentPath}.${cleanKey}` : (cleanKey || parentPath);
+  }
 
   return options.fn(context, { data });
 });
@@ -110,12 +147,14 @@ hbs.registerHelper('with', function (this: any, context: any, options: Handlebar
 hbs.registerHelper('raw', function (propName: string, options: Handlebars.HelperOptions) {
   const fullPath = options.data.fullPath;
   const rootStorage = options.data.root._storage;
-  return getValueFromSoA(rootStorage, fullPath, propName);
+  const val = getValueFromSoA(rootStorage, fullPath, propName);
+  console.log(`[BBCode Raw] path: ${fullPath}, prop: ${propName}, val:`, val);
+  return val;
 });
 
 // 4. 逻辑辅助函数 (保持不变)
-hbs.registerHelper('eq', (a, b) => a === b);
-hbs.registerHelper('ne', (a, b) => a !== b);
+hbs.registerHelper('eq', (a, b) => a == b);
+hbs.registerHelper('ne', (a, b) => a != b);
 hbs.registerHelper('and', (a, b) => a && b);
 hbs.registerHelper('or', (a, b) => a || b);
 hbs.registerHelper('not', (a) => !a);
@@ -135,20 +174,26 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
 
     // 1. 处理数组
     if (Array.isArray(val)) {
+      let result;
       // 检查数组类型：如果是 AoO (对象数组)，对每个对象递归
       if (val.length > 0 && typeof val[0] === 'object' && val[0] !== null) {
-        return val.map((item, i) => processNode(item, `${path}.${i}`));
+        result = val.map((item, i) => processNode(item, `${path}.${i}`));
+      } else {
+        // 如果是 SoA 列 (基础值数组) 或空数组，对每个元素格式化
+        result = val.map((item) => getExportValue(item, 'text', t, { path, context }));
       }
-      // 如果是 SoA 列 (基础值数组) 或空数组，对每个元素格式化
-      // 注意：SoA 列中的每个元素共享相同的 schema 路径 (不带索引)
-      return val.map((item) => getExportValue(item, 'text', t, { path, context }));
+      // 为数组注入路径
+      Object.defineProperty(result, '_path', { value: path, enumerable: false, configurable: true });
+      return result;
     }
 
     // 2. 处理对象
     if (typeof val === 'object') {
       const keys = Object.keys(val);
-      // SoA 判定：非数组对象，且第一个属性值是数组 (如 skills)
-      const isSoA = keys.length > 0 && Array.isArray(val[keys[0]]);
+      // SoA 判定：非数组对象，且所有属性值都是数组 (如 skills)
+      const isSoA = keys.length > 0 &&
+        keys.every((k, i, arr) =>
+          Array.isArray(val[k]) && (i === 0 || val[k].length === val[arr[0]].length));
 
       if (isSoA) {
         const length = val[keys[0]].length;
@@ -169,6 +214,8 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
             }));
           });
         }
+        // 为 SoA 对象注入路径
+        Object.defineProperty(result, '_path', { value: path, enumerable: false, configurable: true });
         return result;
       }
 
@@ -179,6 +226,8 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
         const childVal = val[key];
         result[key] = processNode(childVal, childPath);
       }
+      // 为普通对象注入路径
+      Object.defineProperty(result, '_path', { value: path, enumerable: false, configurable: true });
       return result;
     }
 
@@ -188,6 +237,7 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
 
   // 构建仅包含显示值的树
   const view = processNode(data, '');
+
 
   // 注入计算属性
   view.totalCost = calculateTotalCost(data);
@@ -235,14 +285,9 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
           .reduce((max, k) => Math.max(max, Array.isArray(tableData[k]) ? tableData[k].length : 0), 0);
 
         if (rawBlock.type === 'spell') {
-          const baseLevel = rawBlock.baseLevel || 0;
-          const levelArray: string[] = [];
-          for (let i = 0; i < rowCount; i++) {
-            const isLastRow = i === rowCount - 1;
-            const computedLevelNumber = rowCount - 1 - i + baseLevel;
-            levelArray.push(String(isLastRow ? baseLevel : computedLevelNumber));
-          }
-          tableData.level = levelArray;
+          const spellType = rawBlock.spellType || 0;
+          const lowestLevel = handlers.SpellTypeHandler.lowestLevel[spellType] || 0;
+          tableData.level = Array.from({ length: rowCount }, (_, i) => String(rowCount - 1 - i + lowestLevel));
 
           // 同步 columns
           if (block.columns) {

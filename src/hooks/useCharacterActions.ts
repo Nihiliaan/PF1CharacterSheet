@@ -34,7 +34,6 @@ export const useCharacterActions = (
         casterLevel: '',
         concentration: '',
         notes: '',
-        baseLevel: (sType === 0 || sType === 2) ? 0 : 1,
         tableData: [{}]
       };
       const columns = [{ key: 'level', label: '环位', width: '10%' }];

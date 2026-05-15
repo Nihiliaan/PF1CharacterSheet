@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, RotateCcw, FilePlus } from 'lucide-react';
+import { ChevronRight, ChevronDown, Save, RotateCcw, FilePlus } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,13 +30,13 @@ export const DEFAULT_BBCODE_TEMPLATE = `{{#with basic}}[table][tr][td]
 近战攻击
 [table]
 {{#each attacks.meleeAttacks}}
-[tr][td]{{weapon}}[/td][td]{{hit}}[/td][td]{{damage}}[/td][td]{{#unless (and (eq (raw "critRange") 20) (eq (raw "critMultiplier") 2))}}{{critRange}}{{critMultiplier}}{{/unless}}[/td][td]{{damageType}}[/td][td]{{range}}[/td][td]{{special}}[/td][/tr]
+[tr][td]{{weapon}}[/td][td]{{hit}}[/td][td]{{damage}}{{#unless (and (eq critRange "20") (eq critMultiplier "×2"))}}/{{critRange}}{{critMultiplier}}{{/unless}}[/td][td]{{damageType}}[/td][td]{{range}}[/td][td]{{special}}[/td][/tr]
 {{/each}}
 [/table]
 远程攻击
 [table]
 {{#each attacks.rangedAttacks}}
-[tr][td]{{weapon}}[/td][td]{{hit}}[/td][td]{{damage}}[/td][td]{{#unless (and (eq (raw "critRange") 20) (eq (raw "critMultiplier") 2))}}{{critRange}}{{critMultiplier}}{{/unless}}[/td][td]{{damageType}}[/td][td]{{range}}[/td][td]{{special}}[/td][/tr]
+[tr][td]{{weapon}}[/td][td]{{hit}}[/td][td]{{damage}}{{#unless (and (eq critRange "20") (eq critMultiplier "×2"))}}/{{critRange}}{{critMultiplier}}{{/unless}}[/td][td]{{damageType}}[/td][td]{{range}}[/td][td]{{special}}[/td][/tr]
 {{/each}}
 [/table]
 {{#if attacks.specialAttacks}}
@@ -82,13 +82,13 @@ hp {{hp}} ({{hd}})
 [b]{{title}}[/b]（CL {{casterLevel}}{{#unless (eq (raw "spellType") 4)}}, 专注 {{concentration}}{{/unless}}）
 [table]
 {{#each tableData}}
-[tr]{{#unless (eq (raw "spellType") 5)}}[td]{{level}}[/td]{{/unless}}{{#if uses}}[td]{{uses}}[/td]{{/if}}[td]{{spell_name}}{{spells}}[/td][/tr]
+[tr]{{#unless (eq (raw "../spellType") 5)}}[td]{{level}}[/td]{{/unless}}{{#if uses}}[td]{{uses}}[/td]{{/if}}[td]{{spells}}[/td][/tr]
 {{/each}}
 [/table]
 {{#if notes}}备注：{{notes}}{{/if}}
 {{/each}}
-[hr]
 {{/if}}
+[hr]
 [b]技能[/b]
 [hr]
 [table]
@@ -120,7 +120,50 @@ hp {{hp}} ({{hd}})
 `;
 
 import { useCharacter } from '../contexts/CharacterContext';
+import { BBCODE_SYNTAX_GUIDE, BBCODE_DATA_TREE, BBCodeTreeItem } from '../constants/bbcodeHelp';
 
+const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeItem; level?: number; defaultOpen?: boolean }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen || level < 1); // 默认展开第一层
+  const hasChildren = item.children && item.children.length > 0;
+
+  return (
+    <div className="flex flex-col">
+      <div
+        className="flex items-center gap-2 py-1 hover:bg-stone-100 rounded px-2 transition-colors group cursor-pointer"
+        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        onClick={() => hasChildren && setIsOpen(!isOpen)}
+      >
+        <div className="w-4 flex items-center justify-center text-stone-400">
+          {hasChildren ? (
+            isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+          ) : (
+            <div className="w-1 h-1 bg-stone-300 rounded-full" />
+          )}
+        </div>
+        <code className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+          {item.key}
+        </code>
+        {item.isSoA && (
+          <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded font-bold uppercase tracking-tighter">SoA</span>
+        )}
+        <span className="text-[11px] text-stone-500 truncate">{item.desc}</span>
+      </div>
+
+      {hasChildren && (
+        <motion.div
+          initial={false}
+          animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+          className="overflow-hidden"
+        >
+          {item.children?.map((child) => (
+            <TreeItem key={child.key} item={child} level={level + 1} />
+          ))}
+        </motion.div>
+      )}
+    </div>
+  );
+};
 export default function BBCodeTemplateEditor() {
   const { t } = useTranslation();
   const { setToast, bbcodeTemplate, setBbcodeTemplate, saveAsTemplate, updateExistingTemplate, getItemPath, currentDocumentId } = useCharacter();
@@ -203,160 +246,37 @@ export default function BBCodeTemplateEditor() {
 
         <div className="mt-8 bg-white rounded-xl p-6 border border-stone-200 shadow-sm">
           <h3 className="font-bold text-stone-800 mb-6 text-base border-b pb-2">{t('editor.bbcode.var_ref')}</h3>
-          <div className="space-y-8">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Syntax Guide */}
-            <section className="bg-amber-50/50 p-4 rounded-lg border border-amber-100">
-              <h4 className="text-xs font-bold text-amber-700 mb-3 uppercase tracking-widest border-l-2 border-amber-600 pl-2">
+            <div>
+              <h4 className="text-xs font-bold text-amber-700 mb-4 uppercase tracking-widest border-l-2 border-amber-600 pl-2">
                 {t('editor.bbcode.syntax_title')}
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-6 text-[11px] font-mono text-stone-600">
-                <div className="flex flex-col gap-1">
-                  <span className="text-amber-800">{'{field?ifNotEmpty:ifEmpty}'}</span>
-                  <span className="text-stone-500 italic">{t('editor.bbcode.syntax_cond')}</span>
-                  <span className="text-stone-400 mt-1">Ex: {'{specialAttacks?攻:$:无}'}</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-amber-800">{'{field?ifNotEmpty}'}</span>
-                  <span className="text-stone-500 italic">{t('editor.bbcode.syntax_simple_not_empty')}</span>
-                  <span className="text-stone-400 mt-1">Ex: {'{acNotes?($)}'}</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-amber-800">{'{field:ifEmpty}'}</span>
-                  <span className="text-stone-500 italic">{t('editor.bbcode.syntax_simple_empty')}</span>
-                  <span className="text-stone-400 mt-1">Ex: {'{deity:无信仰}'}</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-amber-800">$ / \? / \: / \$ / \\</span>
-                  <span className="text-stone-500 italic">{t('editor.bbcode.syntax_placeholder')} & {t('editor.bbcode.syntax_escape')}</span>
-                  <span className="text-stone-400 mt-1">Ex: {'{name?英雄：\$:未知}'}</span>
-                </div>
+              <div className="space-y-4">
+                {BBCODE_SYNTAX_GUIDE.map((item, idx) => (
+                  <div key={idx} className="flex flex-col gap-1">
+                    <code className="text-xs font-bold text-amber-800 bg-amber-50 self-start px-1 rounded">{item.code}</code>
+                    <p className="text-[11px] text-stone-600 leading-tight">{item.desc}</p>
+                    {item.example && (
+                      <code className="text-[10px] text-stone-400 italic mt-0.5">{item.example}</code>
+                    )}
+                  </div>
+                ))}
               </div>
-            </section>
+            </div>
 
-            {/* 1. Basic Info */}
-            <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">1. {t('editor.sections.basic')}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span>{'{name}'} - {t('editor.basic.name')}</span>
-                <span>{'{classes}'} - {t('editor.basic.classes')}</span>
-                <span>{'{alignment}'} - {t('editor.basic.alignment')}</span>
-                <span>{'{deity}'} - {t('editor.basic.deity')}</span>
-                <span>{'{size}'} - {t('editor.basic.size')}</span>
-                <span>{'{gender}'} - {t('editor.basic.gender')}</span>
-                <span>{'{race}'} - {t('editor.basic.race')}</span>
-                <span>{'{age}'} - {t('editor.basic.age')}</span>
-                <span>{'{height}'} - {t('editor.basic.height')}</span>
-                <span>{'{weight}'} - {t('editor.basic.weight')}</span>
-                <span>{'{speed}'} - {t('editor.basic.speed')}</span>
-                <span>{'{senses}'} - {t('editor.basic.senses')}</span>
-                <span>{'{initiative}'} - {t('editor.basic.initiative')}</span>
-                <span>{'{perception}'} - {t('editor.basic.perception')}</span>
-                <span>{'{languages}'} - {t('editor.basic.languages')}</span>
-                <span>{'{avatarUrl}'} - 1{t('editor.lists.image_url')}</span>
+            {/* Data Tree */}
+            <div>
+              <h4 className="text-xs font-bold text-indigo-700 mb-4 uppercase tracking-widest border-l-2 border-indigo-600 pl-2">
+                数据结构参考
+              </h4>
+              <div className="bg-stone-50 rounded-lg border border-stone-100 p-2 max-h-[600px] overflow-y-auto custom-scrollbar">
+                {BBCODE_DATA_TREE.map((item) => (
+                  <TreeItem key={item.key} item={item} />
+                ))}
               </div>
-            </section>
-
-            {/* 2. Story */}
-            <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">2. {t('editor.sections.story')}</h4>
-              <div className="grid grid-cols-1 gap-y-2 text-[11px] font-mono text-stone-600">
-                <span>{'{story}'} - {t('editor.sections.story')}</span>
-              </div>
-            </section>
-
-            {/* 3. Attributes */}
-            <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">3. {t('editor.sections.attributes')}</h4>
-              <div className="grid grid-cols-1 gap-y-2 text-[11px] font-mono text-stone-600">
-                <span>{'{attributesTable}'} - {t('editor.sections.attributes')}</span>
-              </div>
-            </section>
-
-            {/* 4. Combat Stats */}
-            <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">4. {t('editor.attributes.combat_stats')}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span>{'{bab}'} - BAB</span>
-                <span>{'{cmb}'} - CMB</span>
-                <span>{'{cmd}'} - CMD</span>
-                <span className="col-span-full">{'{combatManeuverNotes}'} - {t('editor.attributes.maneuver_notes')}</span>
-              </div>
-            </section>
-
-            {/* 5. Attacks */}
-            <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">5. {t('editor.sections.attacks')}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span>{'{meleeAttackTable}'} - {t('editor.attacks.melee')}</span>
-                <span>{'{rangedAttackTable}'} - {t('editor.attacks.ranged')}</span>
-                <span className="col-span-full">{'{specialAttacks}'} - {t('editor.attacks.special_attacks')}</span>
-              </div>
-            </section>
-
-            {/* 6. Defenses */}
-            <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">6. {t('editor.sections.defenses')}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span>{'{hp}'} - {t('editor.defenses.hp')}</span>
-                <span>{'{hd}'} - {t('editor.defenses.hd')}</span>
-                <span>{'{ac}'} - {t('editor.defenses.ac')}</span>
-                <span>{'{acFlatFooted}'} - {t('editor.defenses.flat_footed')}</span>
-                <span>{'{acTouch}'} - {t('editor.defenses.touch')}</span>
-                <span>{'{acSource}'} - {t('editor.attributes.headers.source')}</span>
-                <span className="col-span-2">{'{acNotes}'} - {t('editor.defenses.ac_notes')}</span>
-                <span>{'{saveFort}'} - {t('editor.defenses.fort')}</span>
-                <span>{'{saveRef}'} - {t('editor.defenses.ref')}</span>
-                <span>{'{saveWill}'} - {t('editor.defenses.will')}</span>
-                <span className="col-span-2">{'{savesNotes}'} - {t('editor.defenses.saves_notes')}</span>
-                <span className="col-span-full">{'{specialDefenses}'} - {t('editor.defenses.special_defenses')}</span>
-              </div>
-            </section>
-
-            {/* 7. Traits */}
-            <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">7. {t('editor.sections.traits')}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span className="col-span-full">{'{racialTraits}'} - {t('editor.sections.racial_traits')}</span>
-                <span className="col-span-full">{'{backgroundTraits}'} - {t('editor.sections.traits')}</span>
-                <span>{'{favoredClass}'} - {t('editor.lists.favored_class')}</span>
-                <span>{'{favoredClassBonus}'} - {t('editor.lists.favored_class_bonus')}</span>
-                <span className="col-span-full">{'{classFeatures}'} - {t('editor.sections.class_features')}</span>
-              </div>
-            </section>
-
-            {/* 8. Feats & Skills */}
-            <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">8. {t('editor.sections.feats')} & {t('editor.sections.skills')}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span>{'{featTable}'} - {t('editor.sections.feats')}</span>
-                <span>{'{skillTable}'} - {t('editor.sections.skills')}</span>
-                <span>{'{acp}'} - {t('editor.skills.acp')}</span>
-                <span>{'{skillsTotal}'} - {t('editor.skills.total_points')}</span>
-                <span className="col-span-full">{'{skillsNotes}'} - {t('editor.skills.notes')}</span>
-                <span className="col-span-full">{'{magicBlocks}'} - {t('editor.sections.spells')}</span>
-              </div>
-            </section>
-
-            {/* 9. Equipment */}
-            <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">9. {t('editor.sections.equipment')}</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-4 text-[11px] font-mono text-stone-600">
-                <span className="col-span-full">{'{equipmentTable}'} - {t('editor.sections.equipment')}</span>
-                <span className="col-span-full">{'{currencyLine}'} - {t('editor.items.total_assets')}</span>
-                <span className="col-span-full">{'{loadSummary}'} - {t('editor.items.total_weight')}</span>
-                <span className="col-span-full">{'{equipmentSection}'} - {t('editor.sections.equipment')} ({t('common.all')})</span>
-                <span>{'{loadStatus}'} - {t('editor.items.total_weight')} (Legacy)</span>
-                <span>{'{loadLimits}'} - {t('editor.items.heavy')} (Legacy)</span>
-              </div>
-            </section>
-
-            {/* 10. Additional */}
-            <section>
-              <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-widest border-l-2 border-primary pl-2">10. {t('editor.sections.additional')}</h4>
-              <div className="grid grid-cols-1 gap-y-2 text-[11px] font-mono text-stone-600">
-                <span>{'{additionalData}'} - {t('editor.sections.additional')}</span>
-              </div>
-            </section>
+            </div>
           </div>
         </div>
 

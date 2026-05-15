@@ -251,7 +251,6 @@ export interface SpellBlock {
   casterLevel: string;
   concentration: string;
   notes: string;
-  baseLevel: 0 | 1;
   columns?: Column[];
   tableData?: Record<string, any[]>; // SoA inside blocks
 }

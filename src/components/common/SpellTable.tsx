@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Column } from '../../types';
 import DynamicInput from './DynamicInput';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
+import handlers from '../../schema/dataTypes';
 
 interface SpellTableProps {
   spellType: number;
@@ -39,11 +40,13 @@ export default function SpellTable({
 
   // SoA 模式下的行数计算
   const rowCount = React.useMemo(() => {
+    const required = handlers.SpellTypeHandler.getRequiredRowCount(spellType);
+    if (required !== null) return required;
     if (!data || typeof data !== 'object' || Array.isArray(data)) return 0;
     const firstKey = columns.find(c => c.key !== 'level')?.key || 'spells';
     const colData = (data as Record<string, any>)[firstKey];
     return Array.isArray(colData) ? colData.length : 0;
-  }, [data, columns]);
+  }, [data, columns, spellType]);
 
   const getCellPath = (basePath: string, index: number, key: string) => {
     if (!basePath) return undefined;
@@ -145,7 +148,8 @@ export default function SpellTable({
         <tbody className="divide-y divide-stone-300">
           {Array.from({ length: rowCount }).map((_, i) => {
             const row = getRowData(i);
-            const computedLevelNumber = rowCount - 1 - i + ([0, 2].includes(spellType) ? 0 : 1);
+            const lowestLevel = handlers.SpellTypeHandler.lowestLevel[spellType] || 0;
+            const computedLevelNumber = rowCount - 1 - i + lowestLevel;
 
             return (
               <tr
