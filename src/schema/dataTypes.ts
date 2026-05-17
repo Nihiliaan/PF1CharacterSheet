@@ -81,6 +81,7 @@ export class BaseSelect extends BaseHandler {
   ui = 'select';
   optionValues: any[] = [];
   options: number[] = [];
+  default: 0
   i18nPrefix: string = '';
 
   constructor(config: Partial<BaseSelect> = {}) {
@@ -393,7 +394,7 @@ export { HeightHandler };
 const CritRangeHandler = new BaseSelect({
   optionValues: [20, 19, 18, 17, 16, 15],
   formatDisplay: function (v: number) {
-    const val = this.optionValues[v];
+    const val = v ? this.optionValues[v] : 20;
     return val == 20 ? '20' : `${val}-20`;
   },
 });
