@@ -392,35 +392,16 @@ export { HeightHandler };
 
 const CritRangeHandler = new BaseSelect({
   optionValues: [20, 19, 18, 17, 16, 15],
-  update: function (v: any) {
-    const idx = parseInt(v, 10);
-    if (!isNaN(idx) && idx >= 0 && idx < this.optionValues.length) return this.optionValues[idx];
-    return v;
-  },
-  formatDisplay: function (v: any) {
-    let val = v;
-    const idx = parseInt(v, 10);
-    if (!isNaN(idx) && idx >= 0 && idx < this.optionValues.length && v < 10) {
-      val = this.optionValues[idx];
-    }
+  formatDisplay: function (v: number) {
+    const val = this.optionValues[v];
     return val == 20 ? '20' : `${val}-20`;
   },
 });
 
 const CritMultiplierHandler = new BaseSelect({
   optionValues: [2, 3, 4],
-  update: function (v: any) {
-    const idx = parseInt(v, 10);
-    if (!isNaN(idx) && idx >= 0 && idx < this.optionValues.length) return this.optionValues[idx];
-    return v;
-  },
-  formatDisplay: function (v: any) {
-    let val = v;
-    const idx = parseInt(v, 10);
-    if (!isNaN(idx) && idx >= 0 && idx < this.optionValues.length && v < 3) {
-      val = this.optionValues[idx];
-    }
-    return `×${val}`;
+  formatDisplay: function (v: number) {
+    return `×${this.optionValues[v]}`;
   }
 });
 
