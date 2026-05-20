@@ -1,151 +1,105 @@
-import { getDriveAccessToken, ensureFolder as ensureFolderDrive, uploadOrUpdateFile, listDriveFiles, getFileContent, findPF1Root } from './googleDriveService';
-import { ensureLocalFolder as ensureLocalFolderService, saveLink, getMyCharacters, getFolders, saveCharacter as saveCharacterService } from './characterService';
-import { CharacterData } from '../types';
+import { IStorageProvider, StorageItem } from './storage/types';
+import { FirestoreStorageProvider } from './storage/FirestoreProvider';
+import { GoogleDriveProvider } from './storage/GoogleDriveProvider';
 import { User as FirebaseUser } from 'firebase/auth';
 
 /**
- * 处理 Google Drive 同步、备份和恢复的逻辑服务
+ * 核心同步服务：负责在不同的存储提供商之间同步数据
+ * 这是一个“深层”模块，它只关心 IStorageProvider 接口，不关心具体的存储实现。
+ */
+export class SyncService {
+  /**
+   * 将源提供商的数据递归同步到目标提供商
+   */
+  static async sync(
+    source: IStorageProvider,
+    target: IStorageProvider,
+    sourceParentId: string | null = null,
+    targetParentId: string | null = null,
+    onProgress?: (msg: string) => void
+  ) {
+    const items = await source.list(sourceParentId);
+    
+    for (const item of items) {
+      if (item.mimeType === 'application/vnd.google-apps.folder') {
+        onProgress?.(`正在同步文件夹: ${item.name}`);
+        const newTargetFolderId = await target.ensureFolder(item.name, targetParentId);
+        await this.sync(source, target, item.id, newTargetFolderId, onProgress);
+      } else {
+        onProgress?.(`正在同步文件: ${item.name}`);
+        const fullItem = await source.load(item.id);
+        await target.save({
+          name: fullItem.name,
+          data: fullItem.data,
+          parentId: targetParentId
+        });
+      }
+    }
+  }
+}
+
+/**
+ * 业务同步服务 (旧服务的重构版本，保持 API 兼容)
  */
 export const driveSyncService = {
-  /**
-   * 浏览 Google Drive 根目录
-   */
+  async backupToCloud(user: FirebaseUser) {
+    const firestore = new FirestoreStorageProvider();
+    const drive = new GoogleDriveProvider();
+    
+    const rootDriveId = await drive.ensureFolder('PF1CharacterSheet', null);
+    await SyncService.sync(firestore, drive, null, rootDriveId);
+  },
+
+  async restoreFromCloud(user: FirebaseUser, currentFolderId: string | null) {
+    const firestore = new FirestoreStorageProvider();
+    const drive = new GoogleDriveProvider();
+    
+    const token = await drive.getToken();
+    const pf1RootId = await (new GoogleDriveProvider()).list(null).then(items => items.find(i => i.name === 'PF1CharacterSheet')?.id);
+    
+    if (pf1RootId) {
+      await SyncService.sync(drive, firestore, pf1RootId, currentFolderId);
+    }
+  },
+
+  // 保持浏览和导航的兼容性
   async browseDrive(user: FirebaseUser | null) {
-    if (!user) throw new Error("User not logged in");
-    const isGoogleUser = user.providerData.some(p => p.providerId === 'google.com');
-    if (!isGoogleUser) throw new Error("Not a Google user");
-
-    const token = await getDriveAccessToken();
-    if (!token) throw new Error("No token");
-
-    const pf1RootId = await findPF1Root(token);
-    if (!pf1RootId) return { needsFolder: true };
-
-    const items = await listDriveFiles(token, pf1RootId);
+    const drive = new GoogleDriveProvider();
+    const items = await drive.list(null);
+    const root = items.find(i => i.name === 'PF1CharacterSheet');
+    
+    if (!root) return { needsFolder: true };
+    
+    const rootItems = await drive.list(root.id);
     return {
-      currentPath: [{ id: pf1RootId, name: 'PF1CharacterSheet' }],
-      items
+      currentPath: [{ id: root.id, name: 'PF1CharacterSheet' }],
+      items: rootItems
     };
   },
 
-  /**
-   * 导航到 Drive 文件夹
-   */
   async navigate(folderId: string, folderName: string, currentPath: any[]) {
-    const token = await getDriveAccessToken();
-    const items = await listDriveFiles(token, folderId);
+    const drive = new GoogleDriveProvider();
+    const items = await drive.list(folderId);
     return {
       currentPath: [...currentPath, { id: folderId, name: folderName }],
       items
     };
   },
 
-  /**
-   * 从 Drive 导入项目
-   */
-  async importItems(item: any, user: FirebaseUser, currentFolderId: string | null, onProgress?: (msg: string) => void) {
-    const token = await getDriveAccessToken();
-    let count = 0;
+  async importItems(item: any, user: FirebaseUser, currentFolderId: string | null) {
+    const firestore = new FirestoreStorageProvider();
+    const drive = new GoogleDriveProvider();
 
-    const processItem = async (driveItem: any, targetId: string | null) => {
-      if (driveItem.mimeType === 'application/vnd.google-apps.folder') {
-        const newLocalId = await ensureLocalFolderService(driveItem.name, targetId, user.uid);
-        const children = await listDriveFiles(token, driveItem.id);
-        for (const child of children) {
-          await processItem(child, newLocalId);
-        }
-      } else if (driveItem.name.endsWith('.pf1') || driveItem.name.endsWith('.bbc') || driveItem.name.endsWith('.lnk') || driveItem.name.endsWith('.json')) {
-        const content = await getFileContent(token, driveItem.id);
-        const isTemplate = driveItem.name.endsWith('.bbc') || (content.content !== undefined && content.name !== undefined);
-        
-        if (content.targetId) {
-          const fakeTargetChar = { id: content.targetId, data: content, name: driveItem.name };
-          await saveLink(fakeTargetChar, targetId);
-          count++;
-        } else {
-          // saveCharacter handles extensions and duplicates
-          await saveCharacterService(content, undefined, targetId || undefined, isTemplate);
-          count++;
-        }
-      }
-    };
-
-    await processItem(item, currentFolderId);
-    return count;
-  },
-
-  /**
-   * 备份所有数据到云端
-   */
-  async backupToCloud(user: FirebaseUser, characters: any[], folders: any[]) {
-    const token = await getDriveAccessToken();
-    if (!token) throw new Error("No token");
-
-    const rootFolderId = await ensureFolderDrive(token, "PF1CharacterSheet");
-    const driveFolderMap: Record<string, string> = { 'root': rootFolderId };
-
-    const sortedFoldersList = [...folders].sort((a, b) => {
-      const getDepth = (id: string | null): number => {
-        if (!id) return 0;
-        const f = folders.find(f => f.id === id);
-        return 1 + getDepth(f?.parentId || null);
-      };
-      return getDepth(a.parentId) - getDepth(b.parentId);
-    });
-
-    for (const folder of sortedFoldersList) {
-      const parentDriveId = driveFolderMap[folder.parentId || 'root'];
-      const driveId = await ensureFolderDrive(token, folder.name, parentDriveId);
-      driveFolderMap[folder.id] = driveId;
+    if (item.mimeType === 'application/vnd.google-apps.folder') {
+      const newLocalId = await firestore.ensureFolder(item.name, currentFolderId);
+      await SyncService.sync(drive, firestore, item.id, newLocalId);
+    } else {
+      const fullItem = await drive.load(item.id);
+      await firestore.save({
+        name: item.name,
+        data: fullItem.data,
+        parentId: currentFolderId
+      });
     }
-
-    await Promise.all(characters.map(async char => {
-      const parentDriveId = driveFolderMap[char.folderId || 'root'] || rootFolderId;
-      // Use the actual name which already has extension (.pf1, .bbc, .lnk)
-      const fileName = (char.name || '未命名文件').replace(/[\\/:*?"<>|]/g, '_');
-
-      await uploadOrUpdateFile(token, fileName, char.data, parentDriveId);
-    }));
-  },
-
-  /**
-   * 从云端还原数据
-   */
-  async restoreFromCloud(user: FirebaseUser, currentFolderId: string | null) {
-    const token = await getDriveAccessToken();
-    if (!token) throw new Error("No token");
-
-    const pf1RootId = await findPF1Root(token);
-    if (!pf1RootId) return 0;
-
-    let importCount = 0;
-    const processDriveFolder = async (driveFolderId: string, localParentId: string | null) => {
-      const items = await listDriveFiles(token, driveFolderId);
-      for (const item of items) {
-        if (item.mimeType === 'application/vnd.google-apps.folder') {
-          const newLocalFolderId = await ensureLocalFolderService(item.name, localParentId, user.uid);
-          await processDriveFolder(item.id, newLocalFolderId);
-        } else if (item.name.endsWith('.pf1') || item.name.endsWith('.bbc') || item.name.endsWith('.lnk') || item.name.endsWith('.json')) {
-          try {
-            const content = await getFileContent(token, item.id);
-            const isTemplate = item.name.endsWith('.bbc') || (content.content !== undefined && content.name !== undefined);
-            
-            if (content.targetId) {
-              const fakeTargetChar = { id: content.targetId, data: content, name: item.name };
-              await saveLink(fakeTargetChar, localParentId);
-              importCount++;
-            } else {
-              await saveCharacterService(content, undefined, localParentId || undefined, isTemplate);
-              importCount++;
-            }
-          } catch (e) {
-            console.warn(`Failed to restore file ${item.name}`, e);
-          }
-        }
-      }
-    };
-
-    await processDriveFolder(pf1RootId, currentFolderId);
-    return importCount;
   }
 };

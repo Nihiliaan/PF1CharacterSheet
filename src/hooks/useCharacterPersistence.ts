@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CharacterData, CharacterDocument } from '../types';
 import { DEFAULT_DATA } from '../constants';
+import { dataMigration } from '../utils/dataMigration';
 import {
   saveCharacter as saveCharacterService,
   getCharacterById,
   ensureLocalFolder as ensureLocalFolderService,
-  saveLink,
-  getMyCharacters
+  saveLink
 } from '../services/characterService';
 
 export const useCharacterPersistence = (
@@ -33,33 +33,6 @@ export const useCharacterPersistence = (
   setLastSavedTemplate: (t: string) => void
 ) => {
   const [isSaving, setIsSaving] = useState(false);
-
-  const mergeWithDefault = (data: any, defaults: any): any => {
-    if (typeof data !== 'object' || data === null) return JSON.parse(JSON.stringify(defaults));
-    // Migration logic
-    if (data.meleeAttacks && !data.attacks) {
-      data.attacks = {
-        meleeAttacks: data.meleeAttacks,
-        rangedAttacks: data.rangedAttacks || [],
-        specialAttacks: data.specialAttacks || ''
-      };
-      delete data.meleeAttacks; delete data.rangedAttacks; delete data.specialAttacks;
-    }
-    if (data.babTable && !data.combatTable) {
-      data.combatTable = data.babTable;
-      delete data.babTable;
-    }
-
-    const result = { ...data };
-    for (const key in defaults) {
-      if (typeof defaults[key] === 'object' && defaults[key] !== null && !Array.isArray(defaults[key])) {
-        result[key] = mergeWithDefault(data[key], defaults[key]);
-      } else if (result[key] === undefined) {
-        result[key] = JSON.parse(JSON.stringify(defaults[key]));
-      }
-    }
-    return result;
-  };
 
   const handleSaveInternal = async (saveData: CharacterData | { content: string, name?: string }, id?: string | null, folderId?: string | null, isTemplate: boolean = false) => {
     if (!user) {
@@ -155,7 +128,7 @@ export const useCharacterPersistence = (
             setCurrentTemplateId(char.id);
             return;
           }
-          const merged = mergeWithDefault(char.data, DEFAULT_DATA);
+          const merged = dataMigration.mergeWithDefault(char.data);
           setData(merged);
           setLastSavedData(JSON.parse(JSON.stringify(merged)));
           setCurrentCharacterId(char.id);
@@ -184,7 +157,7 @@ export const useCharacterPersistence = (
           setCurrentTemplateId(char.id);
           return;
         }
-        const merged = mergeWithDefault(char.data, DEFAULT_DATA);
+        const merged = dataMigration.mergeWithDefault(char.data);
         setData(merged);
         setLastSavedData(JSON.parse(JSON.stringify(merged)));
         setCurrentCharacterId(char.id);
@@ -225,7 +198,7 @@ export const useCharacterPersistence = (
           setCurrentTemplateId(char.id);
           setView('bbcode-template');
         } else {
-          const merged = mergeWithDefault(char.data, DEFAULT_DATA);
+          const merged = dataMigration.mergeWithDefault(char.data);
           setData(merged);
           setLastSavedData(JSON.parse(JSON.stringify(merged)));
           setCurrentCharacterId(char.id);
