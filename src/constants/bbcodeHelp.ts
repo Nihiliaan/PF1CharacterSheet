@@ -90,19 +90,19 @@ export const BBCODE_DATA_TREE: BBCodeTreeItem[] = [
     desc: '攻击信息',
     children: [
       {
-        key: 'meleeAttacks', desc: '近战攻击 SoA', isSoA: true, children: [
+        key: 'melee', desc: '近战攻击 SoA', isSoA: true, children: [
           { key: 'weapon', desc: '武器名称' },
           { key: 'hit', desc: '攻击加值' },
           { key: 'damage', desc: '伤害骰/值' },
           { key: 'critRange', desc: '暴击威胁范围 (如 20)' },
           { key: 'critMultiplier', desc: '暴击倍率 (如 2)' },
-          { key: 'range', desc: '射程' },
+          { key: 'touch', desc: '触及范围' },
           { key: 'damageType', desc: '伤害类型' },
           { key: 'special', desc: '特殊属性/说明' },
         ]
       },
       {
-        key: 'rangedAttacks', desc: '远程攻击 SoA', isSoA: true, children: [
+        key: 'ranged', desc: '远程攻击 SoA', isSoA: true, children: [
           { key: 'weapon', desc: '武器名称' },
           { key: 'hit', desc: '攻击加值' },
           { key: 'damage', desc: '伤害骰/值' },
@@ -218,6 +218,7 @@ export const BBCODE_DATA_TREE: BBCodeTreeItem[] = [
       { key: 'concentration', desc: '专注加值' },
       { key: 'type', desc: '类型 (原始值)' },
       { key: 'notes', desc: '块备注' },
+      { key: 'level', desc: '环位/级别 (虚拟数组)' },
       { key: 'spells', desc: '法术项 (数组)' },
       { key: 'uses', desc: '使用次数 (数组)' },
     ]

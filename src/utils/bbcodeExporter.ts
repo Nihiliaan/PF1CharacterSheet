@@ -1,6 +1,6 @@
 import Handlebars from 'handlebars';
 import { get } from 'lodash-es';
-import { CharacterData } from '../types';
+import { CharacterData, ATTRIBUTE_NAMES } from '../types';
 import { getExportValue } from './formatters';
 import { getHandlerByPath } from '../schema/fieldRegistry';
 import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from './calculations';
@@ -150,7 +150,7 @@ hbs.registerHelper('md2bb', function (this: any, context: any, options?: any) {
     const content = actualOptions.fn(this);
     return new Handlebars.SafeString(convertMdLinks(content));
   }
-  return convertMdLinks(context);
+  return new Handlebars.SafeString(convertMdLinks(context));
 });
 
 /**
@@ -222,34 +222,34 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
 
   const view = processNode(data, '');
 
+  // 注入属性名称 (因为数据层没有存储固定名称)
+  if (view.attributes) {
+    view.attributes.name = ATTRIBUTE_NAMES.map(attr => t('editor.attributes.' + attr));
+  }
+
   // 注入计算属性
   view.totalCost = calculateTotalCost(data);
   view.totalWeight = calculateTotalWeightNum(data).toFixed(1);
   view.encumbrance = getComputedEncumbrance(data);
 
-  // 处理法术块 (新平铺结构)
+  // 处理法术块 (注入虚拟 level 数组以支持 SoA 遍历)
   if (view.magicBlocks && Array.isArray(view.magicBlocks)) {
     view.magicBlocks.forEach((block: any, blockIdx: number) => {
       const rawBlock = data.magicBlocks[blockIdx] as any;
       if (!rawBlock || rawBlock.type !== 5 && rawBlock.type !== 'spell') return;
 
-      // 提取平铺的 uses/spells 并转换为视图层
       const rowCount = Math.max(
         Array.isArray(rawBlock.uses) ? rawBlock.uses.length : 0,
         Array.isArray(rawBlock.spells) ? rawBlock.spells.length : 0
       );
 
-      // 创建一个虚拟的 tableData 以供 Handlebars 循环
-      block.tableData = [];
       const spellType = rawBlock.spellType || (typeof rawBlock.type === 'number' ? rawBlock.type : 0);
       const lowestLevel = handlers.SpellTypeHandler.lowestLevel[spellType] || 0;
 
+      // 注入 level 数组
+      block.level = [];
       for (let i = 0; i < rowCount; i++) {
-        block.tableData.push({
-          level: String(rowCount - 1 - i + lowestLevel),
-          uses: block.uses?.[i] || '',
-          spells: block.spells?.[i] || ''
-        });
+        block.level.push(String(rowCount - 1 - i + lowestLevel));
       }
     });
   }
@@ -271,7 +271,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any, ch
       writable: true,
       configurable: true
     });
-    const compile = hbs.compile(template);
+    const compile = hbs.compile(template, { noEscape: true });
     return compile(viewObject);
   } catch (error: any) {
     console.error('BBCode Export Error:', error);

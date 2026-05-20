@@ -3,6 +3,7 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useCharacter } from '../contexts/CharacterContext';
+import { useUI } from '../contexts/UIContext';
 import { BBCODE_SYNTAX_GUIDE, BBCODE_DATA_TREE, BBCodeTreeItem } from '../constants/bbcodeHelp';
 import { DEFAULT_BBCODE_TEMPLATE } from '../constants';
 
@@ -51,7 +52,8 @@ const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeIt
 
 export default function BBCodeTemplateEditor() {
   const { t } = useTranslation();
-  const { bbcodeTemplate, setBbcodeTemplate, setToast } = useCharacter();
+  const { bbcodeTemplate, setBbcodeTemplate } = useCharacter();
+  const { setToast } = useUI();
 
   useEffect(() => {
     (window as any).__resetBBCodeTemplate = () => {
