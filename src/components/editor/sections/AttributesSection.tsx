@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import Section from '../../common/Section';
 import DynamicTable from '../../common/DynamicTable';
 import SingleRowTable from '../../common/SingleRowTable';
-import DynamicInput from '../../common/DynamicInput';
 import MultilineInput from '../../common/MultilineInput';
 import { useCharacter } from '../../../contexts/CharacterContext';
 import { ATTRIBUTE_NAMES } from '../../../types';
@@ -44,10 +43,10 @@ const AttributesSection: React.FC = () => {
           </label>
           <div className="flex-1">
             <SingleRowTable
-              path="combatTable"
-              data={data.combatTable}
-              originalData={lastSavedData.combatTable}
-              onChange={v => update('combatTable', v)}
+              path="combatManeuver"
+              data={data.combatManeuver}
+              originalData={lastSavedData.combatManeuver}
+              onChange={v => update('combatManeuver', v)}
               minWidth="0"
             />
           </div>
@@ -55,10 +54,10 @@ const AttributesSection: React.FC = () => {
         <MultilineInput
           className="w-full md:w-1/2"
           label={t('editor.attributes.maneuver_notes')}
-          path="combatManeuverNotes"
-          value={data.combatManeuverNotes || ''}
-          originalValue={lastSavedData.combatManeuverNotes}
-          onChange={v => update('combatManeuverNotes', v)}
+          path="combatManeuver.notes"
+          value={data.combatManeuver.notes || ''}
+          originalValue={lastSavedData.combatManeuver?.notes}
+          onChange={v => update('combatManeuver.notes', v)}
           placeholder={t('editor.attributes.maneuver_placeholder')}
           height="100%"
         />

@@ -14,7 +14,10 @@ export const dataUpdateService = {
     const handler = getHandlerByPath(path);
     
     // 如果有对应的处理器，先进行数据转换（如字符串转数字）
-    const finalValue = handler ? handler.update(value) : value;
+    // 增加防御性检查，确保 update 方法存在
+    const finalValue = (handler && typeof handler.update === 'function') 
+      ? handler.update(value) 
+      : value;
 
     return produce(data, draft => {
       const parts = path.split('.');
@@ -47,71 +50,29 @@ export const dataUpdateService = {
   },
 
   /**
-   * 通用字段更新 (保留兼容性，但内部调用新逻辑)
-   */
-  updateField(data: CharacterData, section: keyof CharacterData, key: string, val: any): CharacterData {
-    return this.updateByPath(data, `${String(section)}.${key}`, val);
-  },
-
-  /**
    * 背包管理
    */
   addBag(data: CharacterData): CharacterData {
     return produce(data, draft => {
-      draft.equipmentBags.push({
+      if (!draft.equipment) draft.equipment = { container: [], encumbranceMultiplier: 1, currency: { pp: 0, gp: 0, sp: 0, cp: 0, coinWeight: 0 }, notes: '' };
+      draft.equipment.container.push({
         id: 'bag-' + Math.random().toString(36).substr(2, 9),
-        name: '新背包',
+        name: '新容器',
         ignoreWeight: false,
-        items: {
-          item: [],
-          quantity: [],
-          cost: [],
-          weight: [],
-          notes: []
-        }
+        item: [],
+        quantity: [],
+        cost: [],
+        weight: [],
+        notes: []
       });
     });
   },
 
   removeBag(data: CharacterData, id: string): CharacterData {
     return produce(data, draft => {
-      draft.equipmentBags = draft.equipmentBags.filter(b => b.id !== id);
-    });
-  },
-
-  updateBag(data: CharacterData, id: string, updates: any): CharacterData {
-    return produce(data, draft => {
-      const bag = draft.equipmentBags.find(b => b.id === id);
-      if (bag) {
-        Object.assign(bag, updates);
+      if (draft.equipment?.container) {
+        draft.equipment.container = draft.equipment.container.filter(b => b.id !== id);
       }
-    });
-  },
-
-  /**
-   * 模块化数据块 (Magic Blocks / Additional Data)
-   */
-  addBlock(data: CharacterData, listName: 'magicBlocks' | 'additionalData', block: any): CharacterData {
-    return produce(data, draft => {
-      draft[listName].push({
-        id: (listName === 'magicBlocks' ? 'magic-' : 'add-') + Math.random().toString(36).substr(2, 9),
-        ...block
-      });
-    });
-  },
-
-  updateBlock(data: CharacterData, listName: 'magicBlocks' | 'additionalData', id: string, updates: any): CharacterData {
-    return produce(data, draft => {
-      const block = draft[listName].find(b => b.id === id);
-      if (block) {
-        Object.assign(block, updates);
-      }
-    });
-  },
-
-  removeBlock(data: CharacterData, listName: 'magicBlocks' | 'additionalData', id: string): CharacterData {
-    return produce(data, draft => {
-      draft[listName] = draft[listName].filter(b => b.id !== id);
     });
   },
 
@@ -133,7 +94,7 @@ export const dataUpdateService = {
       }
 
       if (list && typeof list === 'object' && !Array.isArray(list)) {
-        // SoA 模式：对所有列进行同步排序
+        // SoA 模式：对所有数组列进行同步排序
         Object.keys(list).forEach(key => {
           if (Array.isArray(list[key])) {
             const [removed] = list[key].splice(sourceIndex, 1);
@@ -152,23 +113,24 @@ export const dataUpdateService = {
    */
   moveItemBetweenBags(data: CharacterData, sourceBagId: string, sourceIndex: number, targetBagId: string, targetIndex: number): CharacterData {
     return produce(data, draft => {
-      const sourceBag = draft.equipmentBags.find(b => b.id === sourceBagId);
-      const targetBag = draft.equipmentBags.find(b => b.id === targetBagId);
+      const sourceBag = draft.equipment?.container.find(b => b.id === sourceBagId);
+      const targetBag = draft.equipment?.container.find(b => b.id === targetBagId);
+      
       if (sourceBag && targetBag) {
-        const sourceItems = sourceBag.items as any;
-        const targetItems = targetBag.items as any;
-
         const removedItem: Record<string, any> = {};
-        Object.keys(sourceItems).forEach(key => {
-          if (Array.isArray(sourceItems[key])) {
-            const [val] = sourceItems[key].splice(sourceIndex, 1);
+        
+        // 从源提取所有属性
+        Object.keys(sourceBag).forEach(key => {
+          if (Array.isArray(sourceBag[key])) {
+            const [val] = sourceBag[key].splice(sourceIndex, 1);
             removedItem[key] = val;
           }
         });
 
-        Object.keys(targetItems).forEach(key => {
-          if (Array.isArray(targetItems[key])) {
-            targetItems[key].splice(targetIndex, 0, removedItem[key] ?? '');
+        // 插入到目标
+        Object.keys(targetBag).forEach(key => {
+          if (Array.isArray(targetBag[key])) {
+            targetBag[key].splice(targetIndex, 0, removedItem[key] ?? '');
           }
         });
       }

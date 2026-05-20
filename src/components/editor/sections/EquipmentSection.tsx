@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 import Section from '../../common/Section';
 import InlineInput from '../../common/InlineInput';
+import MultilineInput from '../../common/MultilineInput';
 import EncumbranceBar from './EncumbranceBar';
 import EquipmentBagItem from './EquipmentBagItem';
 import { useCharacter } from '../../../contexts/CharacterContext';
@@ -28,12 +29,12 @@ const EquipmentSection: React.FC = () => {
   return (
     <Section id="equipment" title={t('editor.sections.equipment')}>
       <div className="flex flex-col gap-8">
-        {data.equipmentBags.map((bag, bagIndex) => (
+        {data.equipment.container.map((bag, bagIndex) => (
           <EquipmentBagItem
             key={bag.id}
             bag={bag}
             bagIndex={bagIndex}
-            originalBag={lastSavedData.equipmentBags?.[bagIndex]}
+            originalBag={lastSavedData.equipment?.container?.[bagIndex]}
             tableActionMode={tableActionMode}
             onToggleTableActionMode={toggleTableActionMode}
             update={update}
@@ -56,42 +57,42 @@ const EquipmentSection: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
           <InlineInput
             label={t('editor.items.pp')}
-            path="currency.pp"
-            value={String(data.currency.pp)}
-            originalValue={String(lastSavedData.currency?.pp)}
-            onChange={v => update('currency.pp', v)}
+            path="equipment.currency.pp"
+            value={String(data.equipment.currency.pp)}
+            originalValue={String(lastSavedData.equipment?.currency?.pp)}
+            onChange={v => update('equipment.currency.pp', v)}
             placeholder="0"
           />
           <InlineInput
             label={t('editor.items.gp')}
-            path="currency.gp"
-            value={String(data.currency.gp)}
-            originalValue={String(lastSavedData.currency?.gp)}
-            onChange={v => update('currency.gp', v)}
+            path="equipment.currency.gp"
+            value={String(data.equipment.currency.gp)}
+            originalValue={String(lastSavedData.equipment?.currency?.gp)}
+            onChange={v => update('equipment.currency.gp', v)}
             placeholder="0"
           />
           <InlineInput
             label={t('editor.items.sp')}
-            path="currency.sp"
-            value={String(data.currency.sp)}
-            originalValue={String(lastSavedData.currency?.sp)}
-            onChange={v => update('currency.sp', v)}
+            path="equipment.currency.sp"
+            value={String(data.equipment.currency.sp)}
+            originalValue={String(lastSavedData.equipment?.currency?.sp)}
+            onChange={v => update('equipment.currency.sp', v)}
             placeholder="0"
           />
           <InlineInput
             label={t('editor.items.cp')}
-            path="currency.cp"
-            value={String(data.currency.cp)}
-            originalValue={String(lastSavedData.currency?.cp)}
-            onChange={v => update('currency.cp', v)}
+            path="equipment.currency.cp"
+            value={String(data.equipment.currency.cp)}
+            originalValue={String(lastSavedData.equipment?.currency?.cp)}
+            onChange={v => update('equipment.currency.cp', v)}
             placeholder="0"
           />
           <InlineInput
             label={t('editor.items.coin_weight')}
-            path="currency.coinWeight"
-            value={String(data.currency.coinWeight)}
-            originalValue={String(lastSavedData.currency?.coinWeight)}
-            onChange={v => update('currency.coinWeight', v)}
+            path="equipment.currency.coinWeight"
+            value={String(data.equipment.currency.coinWeight)}
+            originalValue={String(lastSavedData.equipment?.currency?.coinWeight)}
+            onChange={v => update('equipment.currency.coinWeight', v)}
             placeholder="0"
           />
         </div>
@@ -112,12 +113,24 @@ const EquipmentSection: React.FC = () => {
             </label>
             <input
               className="text-sm font-medium text-ink bg-transparent outline-none px-0.5 w-full"
-              value={data.encumbranceMultiplier}
-              onChange={e => update('encumbranceMultiplier', e.target.value)}
+              value={data.equipment.encumbranceMultiplier}
+              onChange={e => update('equipment.encumbranceMultiplier', e.target.value)}
             />
           </div>
 
           <EncumbranceBar data={data} />
+        </div>
+
+        <div className="mt-4">
+          <MultilineInput
+            label="备注 NOTES"
+            path="equipment.notes"
+            value={data.equipment.notes || ''}
+            originalValue={lastSavedData.equipment?.notes}
+            onChange={v => update('equipment.notes', v)}
+            placeholder="关于装备、资产或其他物品的备注..."
+            isAutoHeight={true}
+          />
         </div>
       </div>
     </Section>

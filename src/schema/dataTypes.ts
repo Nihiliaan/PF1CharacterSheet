@@ -21,6 +21,7 @@ const ABILITY_TYPES = ['—', 'Sp', 'Su', 'Ex'];
  */
 export class BaseHandler {
   ui: string = 'text';
+  defaultValue: any = '';
 
   constructor(config: Partial<BaseHandler> = {}) {
     Object.assign(this, config);
@@ -34,6 +35,10 @@ export class BaseHandler {
     return v;
   }
 
+  getDefaultValue(): any {
+    return this.defaultValue;
+  }
+
   formatDisplay(v: any, context?: any): string {
     return (v === undefined || v === null || v === '') ? '' : String(v);
   }
@@ -45,6 +50,7 @@ export class BaseHandler {
 
 export class BaseText extends BaseHandler {
   ui = 'text';
+  defaultValue = '';
 }
 
 export class BaseInt extends BaseHandler {
@@ -52,10 +58,14 @@ export class BaseInt extends BaseHandler {
   step = 1;
   min = -Infinity;
   max = Infinity;
+  defaultValue = 0;
 
   constructor(config: Partial<BaseInt> = {}) {
     super();
     Object.assign(this, config);
+    if (config.min !== undefined && this.defaultValue < config.min) {
+      this.defaultValue = config.min;
+    }
   }
 
   validate(v: string) {
@@ -66,9 +76,9 @@ export class BaseInt extends BaseHandler {
   }
 
   update(v: string) {
-    if (v === '') return this.min === -Infinity ? 0 : this.min;
+    if (v === '') return this.defaultValue;
     const num = parseInt(v, 10);
-    if (isNaN(num)) return this.min === -Infinity ? 0 : this.min;
+    if (isNaN(num)) return this.defaultValue;
     return Math.min(this.max, Math.max(this.min, num));
   }
 
@@ -81,7 +91,7 @@ export class BaseSelect extends BaseHandler {
   ui = 'select';
   optionValues: any[] = [];
   options: number[] = [];
-  default: 0
+  defaultIndex: number = 0;
   i18nPrefix: string = '';
 
   constructor(config: Partial<BaseSelect> = {}) {
@@ -95,6 +105,10 @@ export class BaseSelect extends BaseHandler {
     }
   }
 
+  getDefaultValue(): any {
+    return this.defaultIndex;
+  }
+
   update(v: any): any {
     if (typeof v === 'string') {
       const idx = this.optionValues.indexOf(v);
@@ -102,15 +116,13 @@ export class BaseSelect extends BaseHandler {
       const num = parseInt(v, 10);
       if (!isNaN(num) && this.optionValues[num] !== undefined) return num;
     }
-    return typeof v === 'number' ? v : 0;
+    return typeof v === 'number' ? v : this.defaultIndex;
   }
 
   formatDisplay(v: any, context?: any): string {
-    let key = v;
     const idx = parseInt(v, 10);
-    if (!isNaN(idx) && this.optionValues[idx] !== undefined) {
-      key = this.optionValues[idx];
-    }
+    const finalIdx = (!isNaN(idx) && this.optionValues[idx] !== undefined) ? idx : this.defaultIndex;
+    const key = this.optionValues[finalIdx];
 
     if (key === undefined || key === null || key === '') return '—';
     const t = context?.t;
@@ -213,14 +225,15 @@ const DistanceHandler = new BaseInt({
   ui: 'distance',
   min: 0,
   step: 5,
+  defaultValue: 5,
   validate: (v: string | number) => {
     if (v === '' || v === undefined || v === null) return true;
     return REGEX_PATTERNS.posInt.test(String(v));
   },
   update: (v: string | number) => {
-    if (v === '' || v === undefined || v === null) return 0;
+    if (v === '' || v === undefined || v === null) return 5;
     const num = parseInt(String(v).replace(/[^\d]/g, ''), 10);
-    return isNaN(num) ? 0 : num;
+    return isNaN(num) ? 5 : num;
   },
   formatDisplay: (v: any, context?: any) => {
     if (v === '' || v === undefined || v === null || v === 0) return '';
@@ -393,16 +406,17 @@ export { HeightHandler };
 
 const CritRangeHandler = new BaseSelect({
   optionValues: [20, 19, 18, 17, 16, 15],
-  formatDisplay: function (v: number) {
-    const val = v ? this.optionValues[v] : 20;
+  formatDisplay: function (v: any) {
+    const val = this.optionValues[parseInt(v, 10)] ?? 20;
     return val == 20 ? '20' : `${val}-20`;
   },
 });
 
 const CritMultiplierHandler = new BaseSelect({
   optionValues: [2, 3, 4],
-  formatDisplay: function (v: number) {
-    return `×${this.optionValues[v]}`;
+  formatDisplay: function (v: any) {
+    const val = this.optionValues[parseInt(v, 10)] ?? 2;
+    return `×${val}`;
   }
 });
 
@@ -434,7 +448,20 @@ const AttributesTableHandler = new BaseTable({
   fixedRows: true
 });
 
-const AttackTableHandler = new BaseTable({
+const MeleeAttackTableHandler = new BaseTable({
+  columns: [
+    { key: 'weapon', label: 'editor.attacks.weapon', width: '20%' },
+    { key: 'hit', label: 'editor.attacks.hit', width: '8%', type: 'bonus' },
+    { key: 'damage', label: 'editor.attacks.damage', width: '12%' },
+    { key: 'critRange', label: 'editor.attacks.crit_range', width: '8%', type: 'critRange' },
+    { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '8%', type: 'critMultiplier' },
+    { key: 'touch', label: 'editor.attacks.range', width: '8%', type: 'distance' },
+    { key: 'damageType', label: 'editor.attacks.damage_type', width: '10%' },
+    { key: 'special', label: 'editor.attacks.special', width: '26%' }
+  ]
+});
+
+const RangedAttackTableHandler = new BaseTable({
   columns: [
     { key: 'weapon', label: 'editor.attacks.weapon', width: '20%' },
     { key: 'hit', label: 'editor.attacks.hit', width: '8%', type: 'bonus' },
@@ -562,6 +589,9 @@ export function getHandlerByType(type: string): BaseHandler {
     case 'bool':
     case 'checkbox': return BoolHandler;
     case 'classSkill': return ClassSkillHandler;
+    case 'critRange': return CritRangeHandler;
+    case 'critMultiplier': return CritMultiplierHandler;
+    case 'abilityType': return AbilityTypeHandler;
     default: return TextHandler;
   }
 }
@@ -580,7 +610,8 @@ const handlers: any = {
   // 业务层
   BaseHandler, BaseText, BaseInt, BaseSelect, BaseTable, CompositeHandler,
   AttributesTableHandler,
-  AttackTableHandler,
+  MeleeAttackTableHandler,
+  RangedAttackTableHandler,
   DefensesTableHandler,
   SavesTableHandler,
   SkillsTableHandler,

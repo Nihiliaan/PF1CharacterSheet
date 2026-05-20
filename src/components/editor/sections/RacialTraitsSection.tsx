@@ -8,8 +8,8 @@ const RacialTraitsSection: React.FC = () => {
   const { t } = useTranslation();
   const {
     data,
-    setData,
     lastSavedData,
+    update,
     tableActionMode,
     toggleTableActionMode,
     handleTableItemDragStart,
@@ -23,8 +23,7 @@ const RacialTraitsSection: React.FC = () => {
         path="racialTraits"
         data={data.racialTraits}
         originalData={lastSavedData.racialTraits}
-        onChange={v => setData(prev => ({ ...prev, racialTraits: v as any }))}
-        newItemGenerator={() => ({ name: '', desc: '' })}
+        onChange={v => update('racialTraits', v)}
         rowDraggable={true}
         rowActionMode={tableActionMode}
         onRowActionModeToggle={toggleTableActionMode}

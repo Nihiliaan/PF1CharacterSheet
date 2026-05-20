@@ -39,7 +39,6 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
 }) => {
   const { t } = useTranslation();
   const { setConfirmModal } = useUI();
-  const SpellTypeHandler = getHandlerByPath(`magicBlocks[${blockIndex}].type`);
 
   const handleRemove = () => {
     setConfirmModal({
@@ -49,10 +48,10 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
   };
   const handleTypeChange = (val: string) => {
     const newType = parseInt(val, 10);
-    const oldType = Number(block.spellType ?? 2);
+    const oldType = Number(block.type ?? 2);
     if (newType === oldType) return;
 
-    let newTableData = { ...(block.tableData || {}) };
+    let updates: any = { type: newType };
     const targetMax = handlers.SpellTypeHandler.getRequiredRowCount(newType);
 
     const isFM = (t: number) => t === 0 || t === 2;
@@ -61,11 +60,11 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
     const isSLA = (t: number) => t === 5;
 
     // 确保 spells 和 uses 数组长度同步（以 spells 为准）
-    const spells = Array.isArray(newTableData.spells) ? [...newTableData.spells] : [];
+    const spells = Array.isArray(block.spells) ? [...block.spells] : [];
     const currentLen = spells.length;
     
     ['spells', 'uses'].forEach(key => {
-      let arr = key === 'spells' ? spells : (Array.isArray(newTableData[key]) ? [...newTableData[key]] : []);
+      let arr = key === 'spells' ? spells : (Array.isArray(block[key]) ? [...block[key]] : []);
       while (arr.length < currentLen) arr.push(key === 'uses' ? 0 : '');
 
       // 1. 低往高：次等/化合 -> 完整中等，补 0 环
@@ -83,10 +82,10 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
         if (targetMax !== null && arr.length > targetMax) arr = arr.slice(-targetMax);
       }
 
-      newTableData[key] = arr;
+      updates[key] = arr;
     });
 
-    update(`magicBlocks[${blockIndex}]`, { ...block, spellType: newType, tableData: newTableData });
+    update(`magicBlocks[${blockIndex}]`, { ...block, ...updates });
   };
 
   return (
@@ -131,7 +130,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
                 onChange={v => update(`magicBlocks[${blockIndex}].casterLevel`, v)}
               />
             </div>
-            <div className={`w-24 ${block.spellType === 4 ? 'invisible' : ''}`}>
+            <div className={`w-24 ${block.type === 4 ? 'invisible' : ''}`}>
               <InlineInput
                 label={t('editor.spells.concentration')}
                 path={`magicBlocks[${blockIndex}].concentration`}
@@ -144,8 +143,8 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
               <InlineInput
                 label="类型 TYPE"
                 path={`magicBlocks[${blockIndex}].type`}
-                value={block.spellType ?? 2}
-                originalValue={originalBlock?.spellType}
+                value={block.type ?? 2}
+                originalValue={originalBlock?.type}
                 onChange={handleTypeChange}
               />
             </div>
@@ -154,11 +153,11 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
       </div>
       {
         <SpellTable
-          spellType={block.spellType ?? 2}
-          data={block.tableData || { uses: [0], spells: [''] }}
-          originalData={originalBlock?.tableData}
-          onChange={v => update(`magicBlocks[${blockIndex}].tableData`, v)}
-          path={`magicBlocks[${blockIndex}].tableData`}
+          spellType={block.type ?? 2}
+          data={block}
+          originalData={originalBlock}
+          onChange={v => update(`magicBlocks[${blockIndex}]`, { ...block, ...v })}
+          path={`magicBlocks[${blockIndex}]`}
         />
       }
       {

@@ -63,9 +63,21 @@ export interface CombatData {
   bab: number;
   cmb: number;
   cmd: number;
+  notes: string;
 }
 
-export interface AttacksSoA {
+export interface MeleeAttacksSoA {
+  weapon: string[];
+  hit: number[];
+  damage: string[];
+  critRange: number[];
+  critMultiplier: number[];
+  touch: number[]; // Renamed from range
+  damageType: string[];
+  special: string[];
+}
+
+export interface RangedAttacksSoA {
   weapon: string[];
   hit: number[];
   damage: string[];
@@ -81,12 +93,14 @@ export interface ACData {
   source: string;
   flatFooted: number;
   touch: number;
+  notes: string;
 }
 
 export interface SavesData {
   fort: number;
   ref: number;
   will: number;
+  notes: string;
 }
 
 export interface TraitsSoA {
@@ -115,17 +129,23 @@ export interface FeatsSoA {
   desc: string[];
 }
 
-export interface SkillsSoA {
+export interface SkillsData extends Record<string, any> {
   name: string[];
   total: number[];
   rank: number[];
   cs: boolean[];
-  ability: number[]; // 1-6
+  ability: number[];
   others: string[];
   special: string[];
+  totalPoints: number; // 对应 DEFAULT_DATA 中的 total (重命名以避开冲突)
+  acp: number;
+  notes: string;
 }
 
-export interface EquipmentItemsSoA {
+export interface ContainerData {
+  id: string;
+  name: string;
+  ignoreWeight: boolean;
   item: string[];
   quantity: number[];
   cost: number[];
@@ -152,14 +172,13 @@ export interface CharacterDocument {
 }
 
 export interface CharacterData {
-  // 元数据 (从 CharacterMetadata 迁移并精简)
   id: string;
   folderId?: string | null;
   ownerId?: string;
-  targetId?: string; // 存在且不为空即为 isLink
+  targetId?: string;
   isLink?: boolean;
   isTemplate?: boolean;
-  content?: string; // 用于 BBCode 模板
+  content?: string;
 
   basic: {
     name: string;
@@ -188,71 +207,42 @@ export interface CharacterData {
   };
   story: string;
   attributes: AttributesSoA;
-  combatTable: CombatData;
-  combatManeuverNotes: string;
+  combatManeuver: CombatData;
   attacks: {
-    meleeAttacks: AttacksSoA;
-    rangedAttacks: AttacksSoA;
+    melee: MeleeAttacksSoA;
+    ranged: RangedAttacksSoA;
     specialAttacks: string;
   };
   defenses: {
     hp: number;
     hd: string;
-    acTable: ACData;
-    acNotes: string;
-    savesTable: SavesData;
-    savesNotes: string;
-    defensiveAbilities: string;
+    armorClass: ACData;
+    saves: SavesData;
     specialDefenses: string;
   };
   racialTraits: TraitsSoA;
   backgroundTraits: BackgroundTraitsSoA;
-  favoredClass: string;
-  favoredClassBonus: string;
+  favoredClass: {
+    fc: string;
+    fcb: string;
+  };
   classFeatures: ClassFeaturesSoA;
   feats: FeatsSoA;
-  magicBlocks: (MagicBlock | SpellBlock)[];
-  skills: SkillsSoA;
-  skillsTotal: number;
-  armorCheckPenalty: number;
-  skillsNotes: string;
-  equipmentBags: {
-    id: string;
-    name: string;
-    ignoreWeight: boolean;
-    items: EquipmentItemsSoA;
-  }[];
-  encumbranceMultiplier: number;
-  equipmentNotes: string;
-  currency: {
-    pp: number;
-    gp: number;
-    sp: number;
-    cp: number;
-    coinWeight: number;
+  magicBlocks: any[]; // 结构灵活
+  skills: SkillsData;
+  equipment: {
+    container: ContainerData[];
+    encumbranceMultiplier: number;
+    currency: {
+      pp: number;
+      gp: number;
+      sp: number;
+      cp: number;
+      coinWeight: number;
+    };
+    notes: string;
   };
   additionalData: any[];
-}
-
-export interface MagicBlock {
-  id: string;
-  type: 'text' | 'table';
-  title: string;
-  content?: string;
-  columns?: Column[];
-  tableData?: Record<string, any[]>; // SoA inside blocks
-}
-
-export interface SpellBlock {
-  id: string;
-  type: 'spell';
-  spellType?: number;
-  title: string;
-  casterLevel: string;
-  concentration: string;
-  notes: string;
-  columns?: Column[];
-  tableData?: Record<string, any[]>; // SoA inside blocks
 }
 
 export const ATTRIBUTE_NAMES = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];

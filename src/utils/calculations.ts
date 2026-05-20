@@ -25,38 +25,43 @@ export const getSizeModifier = (size: string): number => {
 
 export const calculateTotalCost = (data: CharacterData): string => {
   let total = 0;
-  data.equipmentBags.forEach(bag => {
-    const items = bag.items;
-    if (!items || !items.item) return;
-    items.item.forEach((_, i) => {
-      const cost = parseFloat(items.cost[i] as any) || 0;
-      const qty = parseInt(items.quantity[i] as any) || 1;
-      total += cost * qty;
+  const equipment = data.equipment;
+  if (equipment && equipment.container) {
+    equipment.container.forEach(bag => {
+      if (!bag.item) return;
+      bag.item.forEach((_, i) => {
+        const cost = parseFloat(bag.cost[i] as any) || 0;
+        const qty = parseInt(bag.quantity[i] as any) || 1;
+        total += cost * qty;
+      });
     });
-  });
+  }
 
-  const pp = parseInt(data.currency?.pp as any) || 0;
-  const gp = parseInt(data.currency?.gp as any) || 0;
-  const sp = parseInt(data.currency?.sp as any) || 0;
-  const cp = parseInt(data.currency?.cp as any) || 0;
+  const currency = equipment?.currency;
+  const pp = parseInt(currency?.pp as any) || 0;
+  const gp = parseInt(currency?.gp as any) || 0;
+  const sp = parseInt(currency?.sp as any) || 0;
+  const cp = parseInt(currency?.cp as any) || 0;
   total += pp * 10 + gp + sp * 0.1 + cp * 0.01;
 
   return total.toLocaleString('en-US', { maximumFractionDigits: 2 });
 };
 
 export const calculateTotalWeightNum = (data: CharacterData): number => {
-  let total = parseFloat(data.currency?.coinWeight as any) || 0;
-  data.equipmentBags.forEach(bag => {
-    if (!bag.ignoreWeight) {
-      const items = bag.items;
-      if (!items || !items.item) return;
-      items.item.forEach((_, i) => {
-        const weight = parseFloat(items.weight[i] as any) || 0;
-        const qty = parseInt(items.quantity[i] as any) || 1;
-        total += weight * qty;
-      });
-    }
-  });
+  const equipment = data.equipment;
+  let total = parseFloat(equipment?.currency?.coinWeight as any) || 0;
+  if (equipment && equipment.container) {
+    equipment.container.forEach(bag => {
+      if (!bag.ignoreWeight || bag.ignoreWeight === false) {
+        if (!bag.item) return;
+        bag.item.forEach((_, i) => {
+          const weight = parseFloat(bag.weight[i] as any) || 0;
+          const qty = parseInt(bag.quantity[i] as any) || 1;
+          total += weight * qty;
+        });
+      }
+    });
+  }
   return total;
 };
 
@@ -68,7 +73,7 @@ export interface EncumbranceThresholds {
 
 export const getComputedEncumbrance = (data: CharacterData): EncumbranceThresholds => {
   const strValue = data.attributes?.final?.[0] ?? 10;
-  const mult = parseFloat(data.encumbranceMultiplier as any) > 0 ? parseFloat(data.encumbranceMultiplier as any) : 1;
+  const mult = parseFloat(data.equipment?.encumbranceMultiplier as any) > 0 ? parseFloat(data.equipment?.encumbranceMultiplier as any) : 1;
 
   let heavy = 0;
   if (strValue <= 10) {
@@ -108,4 +113,3 @@ export const getAttributeModifiers = (data: CharacterData) => {
     CHA: getModifier(data.attributes?.final?.[5] ?? 10),
   };
 };
-

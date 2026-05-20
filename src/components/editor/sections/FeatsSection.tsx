@@ -8,8 +8,8 @@ const FeatsSection: React.FC = () => {
   const { t } = useTranslation();
   const {
     data,
-    setData,
     lastSavedData,
+    update,
     tableActionMode,
     toggleTableActionMode,
     handleTableItemDragStart,
@@ -23,8 +23,7 @@ const FeatsSection: React.FC = () => {
         path="feats"
         data={data.feats}
         originalData={lastSavedData.feats}
-        onChange={v => setData(prev => ({ ...prev, feats: v as any }))}
-        newItemGenerator={() => ({ level: 1, name: '', type: '', source: '', desc: '' })}
+        onChange={v => update('feats', v)}
         rowDraggable={true}
         rowActionMode={tableActionMode}
         onRowActionModeToggle={toggleTableActionMode}

@@ -13,7 +13,7 @@ export interface BBCodeTreeItem {
 
 export const BBCODE_SYNTAX_GUIDE: BBCodeSyntaxItem[] = [
   { code: '{{field}}', desc: '输出变量的格式化文本值' },
-  { code: '{{raw "field"}}', desc: '输出变量的原始数值 (常用于计算或逻辑判断)', example: '{{#if (eq (raw "spellType") 1)}}...{{/if}}' },
+  { code: '{{raw "field"}}', desc: '输出变量的原始数值 (常用于计算或逻辑判断)', example: '{{#if (eq (raw "size") 4)}}中型{{/if}}' },
   { code: '{{raw "../field"}}', desc: '在循环内部访问上一层级原始数据' },
   { code: '{{#with field}}...{{/with}}', desc: '进入一个对象的作用域' },
   { code: '{{#each field}}...{{/each}}', desc: '遍历数组或 SoA 结构。在内部可使用当前行字段，也可使用 {{@index}}、{{@first}}、{{@last}}' },
@@ -76,15 +76,15 @@ export const BBCODE_DATA_TREE: BBCodeTreeItem[] = [
     ]
   },
   {
-    key: 'combatTable',
+    key: 'combatManeuver',
     desc: '战斗属性',
     children: [
       { key: 'bab', desc: '基本攻击加值' },
       { key: 'cmb', desc: '战技加值' },
       { key: 'cmd', desc: '战技防御' },
+      { key: 'notes', desc: '备注' },
     ]
   },
-  { key: 'combatManeuverNotes', desc: '战技备注' },
   {
     key: 'attacks',
     desc: '攻击信息',
@@ -123,23 +123,22 @@ export const BBCODE_DATA_TREE: BBCodeTreeItem[] = [
       { key: 'hp', desc: '生命值' },
       { key: 'hd', desc: '生命骰 (文本, 如 1d10+2)' },
       {
-        key: 'acTable', desc: 'AC 详情', children: [
+        key: 'armorClass', desc: 'AC 详情', children: [
           { key: 'ac', desc: '防御等级' },
           { key: 'touch', desc: '接触' },
           { key: 'flatFooted', desc: '措手不及' },
           { key: 'source', desc: 'AC 组成说明' },
+          { key: 'notes', desc: '备注' },
         ]
       },
-      { key: 'acNotes', desc: 'AC 备注' },
       {
-        key: 'savesTable', desc: '存档详情', children: [
-          { key: 'fort', desc: '强韧存档' },
-          { key: 'ref', desc: '反射存档' },
-          { key: 'will', desc: '意志存档' },
+        key: 'saves', desc: '豁免详情', children: [
+          { key: 'fort', desc: '强韧豁免' },
+          { key: 'ref', desc: '反射豁免' },
+          { key: 'will', desc: '意志豁免' },
+          { key: 'notes', desc: '备注' },
         ]
       },
-      { key: 'savesNotes', desc: '存档备注' },
-      { key: 'defensiveAbilities', desc: '防御能力' },
       { key: 'specialDefenses', desc: '特殊防御' },
     ]
   },
@@ -162,8 +161,14 @@ export const BBCODE_DATA_TREE: BBCodeTreeItem[] = [
       { key: 'desc', desc: '特性描述' },
     ]
   },
-  { key: 'favoredClass', desc: '天赋职业' },
-  { key: 'favoredClassBonus', desc: '天赋职业奖励' },
+  {
+    key: 'favoredClass',
+    desc: '天赋职业',
+    children: [
+      { key: 'fc', desc: '职业' },
+      { key: 'fcb', desc: '奖励' },
+    ]
+  },
   {
     key: 'classFeatures',
     desc: '职业特性 SoA',
@@ -189,70 +194,64 @@ export const BBCODE_DATA_TREE: BBCodeTreeItem[] = [
   },
   {
     key: 'skills',
-    desc: '技能 SoA',
+    desc: '技能',
     isSoA: true,
     children: [
       { key: 'name', desc: '技能名' },
-      { key: 'total', desc: '总加值' },
+      { key: 'total', desc: '总加值 (数组)' },
       { key: 'rank', desc: '技能等级' },
       { key: 'cs', desc: '本职技能 (布尔值)' },
       { key: 'ability', desc: '关联属性 (原始值 1-6)' },
       { key: 'others', desc: '其它修正' },
       { key: 'special', desc: '特殊加值说明' },
+      { key: 'totalPoints', desc: '技能点总数' },
+      { key: 'acp', desc: '防具检定减值 (ACP)' },
+      { key: 'notes', desc: '技能备注' },
     ]
   },
-  { key: 'skillsTotal', desc: '技能点总数' },
-  { key: 'armorCheckPenalty', desc: '防具检定减值 (ACP)' },
-  { key: 'skillsNotes', desc: '技能备注' },
   {
     key: 'magicBlocks',
-    desc: '法术/能力块数组 (Array)',
+    desc: '施法/能力块数组 (Array)',
     children: [
       { key: 'title', desc: '标题' },
       { key: 'casterLevel', desc: '施法者等级' },
       { key: 'concentration', desc: '专注加值' },
-      { key: 'spellType', desc: '法术类型 (1:自发, 2:准备, 4:类法术, 5:其它表格)' },
+      { key: 'type', desc: '类型 (原始值)' },
       { key: 'notes', desc: '块备注' },
-      {
-        key: 'tableData', desc: '表格内容 SoA', isSoA: true, children: [
-          { key: 'level', desc: '环位/等级 (由系统自动计算注入)' },
-          { key: 'spells', desc: '法术名/项' },
-          { key: 'uses', desc: '使用次数/次数说明' },
-        ]
-      },
+      { key: 'spells', desc: '法术项 (数组)' },
+      { key: 'uses', desc: '使用次数 (数组)' },
     ]
   },
   {
-    key: 'equipmentBags',
-    desc: '物品栏数组 (Array)',
+    key: 'equipment',
+    desc: '装备与资产',
     children: [
-      { key: 'name', desc: '包名' },
-      { key: 'ignoreWeight', desc: '是否忽略重量 (布尔值)' },
       {
-        key: 'items', desc: '物品 SoA', isSoA: true, children: [
-          { key: 'item', desc: '物品名称' },
-          { key: 'quantity', desc: '数量' },
-          { key: 'cost', desc: '单价 (gp)' },
-          { key: 'weight', desc: '单重 (lbs)' },
-          { key: 'notes', desc: '物品备注' },
+        key: 'container', desc: '容器数组 (Array)', children: [
+          { key: 'name', desc: '包名' },
+          { key: 'ignoreWeight', desc: '忽略重量' },
+          { key: 'item', desc: '物品名 (数组)' },
+          { key: 'quantity', desc: '数量 (数组)' },
+          { key: 'cost', desc: '单价 (数组)' },
+          { key: 'weight', desc: '重量 (数组)' },
+          { key: 'notes', desc: '备注 (数组)' },
         ]
       },
-    ]
-  },
-  { key: 'equipmentNotes', desc: '装备总备注' },
-  {
-    key: 'currency',
-    desc: '货币/资产详情',
-    children: [
-      { key: 'pp', desc: '白金币 (pp)' },
-      { key: 'gp', desc: '金币 (gp)' },
-      { key: 'sp', desc: '银币 (sp)' },
-      { key: 'cp', desc: '铜币 (cp)' },
-      { key: 'coinWeight', desc: '货币总重' },
+      { key: 'encumbranceMultiplier', desc: '负重倍率' },
+      {
+        key: 'currency', desc: '货币', children: [
+          { key: 'pp', desc: 'pp' },
+          { key: 'gp', desc: 'gp' },
+          { key: 'sp', desc: 'sp' },
+          { key: 'cp', desc: 'cp' },
+          { key: 'coinWeight', desc: '货币重' },
+        ]
+      },
+      { key: 'notes', desc: '总备注' },
     ]
   },
   { key: 'totalCost', desc: '总资产 (gp)' },
   { key: 'totalWeight', desc: '负重总重 (lbs)' },
-  { key: 'encumbrance', desc: '负重状态 (轻/中/重/超/不动)' },
+  { key: 'encumbrance', desc: '负重状态' },
   { key: 'additionalData', desc: '附加数据数组' },
 ];

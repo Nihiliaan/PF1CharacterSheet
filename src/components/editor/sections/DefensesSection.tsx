@@ -1,9 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Section from '../../common/Section';
-import DynamicTable from '../../common/DynamicTable';
 import SingleRowTable from '../../common/SingleRowTable';
-import DynamicInput from '../../common/DynamicInput';
 import InlineInput from '../../common/InlineInput';
 import MultilineInput from '../../common/MultilineInput';
 import { useCharacter } from '../../../contexts/CharacterContext';
@@ -23,10 +21,10 @@ const DefensesSection: React.FC = () => {
             </label>
             <div className="flex-1">
               <SingleRowTable
-                path="defenses.acTable"
-                data={data.defenses.acTable}
-                originalData={lastSavedData.defenses.acTable}
-                onChange={v => update('defenses.acTable', v)}
+                path="defenses.armorClass"
+                data={data.defenses.armorClass}
+                originalData={lastSavedData.defenses.armorClass}
+                onChange={v => update('defenses.armorClass', v)}
                 minWidth="0"
               />
             </div>
@@ -34,10 +32,10 @@ const DefensesSection: React.FC = () => {
           <MultilineInput
             className="w-full md:w-1/2"
             label={t('editor.defenses.ac_notes')}
-            path="defenses.acNotes"
-            value={data.defenses.acNotes || ''}
-            originalValue={lastSavedData.defenses.acNotes}
-            onChange={v => update('defenses.acNotes', v)}
+            path="defenses.armorClass.notes"
+            value={data.defenses.armorClass.notes || ''}
+            originalValue={lastSavedData.defenses.armorClass?.notes}
+            onChange={v => update('defenses.armorClass.notes', v)}
             placeholder={t('editor.defenses.ac_placeholder')}
             height="100%"
           />
@@ -74,10 +72,10 @@ const DefensesSection: React.FC = () => {
             </label>
             <div className="flex-1">
               <SingleRowTable
-                path="defenses.savesTable"
-                data={data.defenses.savesTable}
-                originalData={lastSavedData.defenses.savesTable}
-                onChange={v => update('defenses.savesTable', v)}
+                path="defenses.saves"
+                data={data.defenses.saves}
+                originalData={lastSavedData.defenses.saves}
+                onChange={v => update('defenses.saves', v)}
                 minWidth="0"
               />
             </div>
@@ -85,10 +83,10 @@ const DefensesSection: React.FC = () => {
           <MultilineInput
             className="w-full md:w-1/2"
             label={t('editor.defenses.saves_notes')}
-            path="defenses.savesNotes"
-            value={data.defenses.savesNotes || ''}
-            originalValue={lastSavedData.defenses.savesNotes}
-            onChange={v => update('defenses.savesNotes', v)}
+            path="defenses.saves.notes"
+            value={data.defenses.saves.notes || ''}
+            originalValue={lastSavedData.defenses.saves?.notes}
+            onChange={v => update('defenses.saves.notes', v)}
             placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
             height="100%"
           />

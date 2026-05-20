@@ -50,7 +50,7 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
     e.dataTransfer.dropEffect = 'move';
     const sourceIndex = draggedBagIndex.current;
     if (sourceIndex !== null && sourceIndex !== targetIndex) {
-      setData(p => dataUpdateService.reorderList(p, 'equipmentBags', sourceIndex, targetIndex));
+      setData(p => dataUpdateService.reorderList(p, 'equipment.container', sourceIndex, targetIndex));
       draggedBagIndex.current = targetIndex;
     }
   };
@@ -60,10 +60,10 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
     e.stopPropagation();
     if (draggedItem.current !== null) {
       const currentDrag = draggedItem.current;
-      const targetBag = data.equipmentBags[dropIndex];
+      const targetBag = data.equipment.container[dropIndex];
       if (currentDrag.bagId !== targetBag.id) {
-        const targetItems = targetBag.items as any;
-        const targetLength = Array.isArray(targetItems) ? targetItems.length : (Object.values(targetItems)[0] as any[])?.length || 0;
+        // 目标物品列表长度 (SoA 模式，取 item 数组长度)
+        const targetLength = targetBag.item?.length || 0;
         setData(p => dataUpdateService.moveItemBetweenBags(p, currentDrag.bagId, currentDrag.itemIndex, targetBag.id, targetLength));
       }
     }
@@ -84,24 +84,16 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
     const currentDrag = draggedItem.current;
     if (currentDrag !== null) {
       const { bagId: sourceBagId, itemIndex: sourceItemIndex } = currentDrag;
-      if (sourceBagId !== targetBagId || sourceItemIndex !== targetItemIndex) {
-        setData(p => {
-          if (sourceBagId === targetBagId) {
-            return produce(p, draft => {
-              const bag = draft.equipmentBags.find(b => b.id === sourceBagId);
-              if (bag) {
-                const items = bag.items as any;
-                Object.keys(items).forEach(key => {
-                  if (Array.isArray(items[key])) {
-                    const [val] = items[key].splice(sourceItemIndex, 1);
-                    items[key].splice(targetItemIndex, 0, val);
-                  }
-                });
-              }
-            });
+      if (sourceBagId === targetBagId) {
+        if (sourceItemIndex !== targetItemIndex) {
+          const bagIdx = data.equipment.container.findIndex(b => b.id === targetBagId);
+          if (bagIdx !== -1) {
+            setData(p => dataUpdateService.reorderList(p, `equipment.container[${bagIdx}]`, sourceItemIndex, targetItemIndex));
+            draggedItem.current = { bagId: targetBagId, itemIndex: targetItemIndex };
           }
-          return dataUpdateService.moveItemBetweenBags(p, sourceBagId, sourceItemIndex, targetBagId, targetItemIndex);
-        });
+        }
+      } else {
+        setData(p => dataUpdateService.moveItemBetweenBags(p, sourceBagId, sourceItemIndex, targetBagId, targetItemIndex));
         draggedItem.current = { bagId: targetBagId, itemIndex: targetItemIndex };
       }
     }
@@ -126,8 +118,8 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
     const sourceId = draggedBlockId.current;
     if (sourceId && sourceId !== targetId) {
       setData(p => dataUpdateService.reorderList(p, listName,
-        p[listName].findIndex(b => b.id === sourceId),
-        p[listName].findIndex(b => b.id === targetId)
+        p[listName].findIndex((b: any) => b.id === sourceId),
+        p[listName].findIndex((b: any) => b.id === targetId)
       ));
     }
   };

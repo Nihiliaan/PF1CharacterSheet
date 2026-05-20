@@ -66,6 +66,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     if (readOnly || fixedRows) return;
     const newData = { ...data };
 
+    // 优先使用传入的生成器，如果没有则从 Schema 获取默认值
     if (newItemGenerator) {
       const newItem = newItemGenerator();
       Object.keys(newItem).forEach(key => {
@@ -74,8 +75,12 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
       });
     } else {
       columns.forEach((c: any) => {
-        if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill('');
-        newData[c.key] = [...newData[c.key], ''];
+        const cellPath = getCellPath(path || '', 0, c.key); // 获取列路径（不考虑索引）
+        const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
+        const defaultValue = cellHandler?.getDefaultValue ? cellHandler.getDefaultValue() : '';
+        
+        if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill(defaultValue);
+        newData[c.key] = [...newData[c.key], defaultValue];
       });
     }
     onChange(newData);

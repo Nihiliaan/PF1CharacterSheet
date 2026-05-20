@@ -9,8 +9,8 @@ const AttacksSection: React.FC = () => {
   const { t } = useTranslation();
   const {
     data,
-    setData,
     lastSavedData,
+    update,
     tableActionMode,
     toggleTableActionMode,
     handleTableItemDragStart,
@@ -24,32 +24,30 @@ const AttacksSection: React.FC = () => {
         <div className="border-b border-stone-200">
           <DynamicTable
             minWidth="0"
-            path="attacks.meleeAttacks"
-            data={data.attacks.meleeAttacks}
-            originalData={lastSavedData.attacks.meleeAttacks}
-            onChange={v => setData(prev => ({ ...prev, attacks: { ...prev.attacks, meleeAttacks: v as any } }))}
-            newItemGenerator={() => ({ weapon: '', hit: 0, damage: '', critRange: 20, critMultiplier: 2, range: 5, damageType: '', special: '' })}
+            path="attacks.melee"
+            data={data.attacks.melee}
+            originalData={lastSavedData.attacks?.melee}
+            onChange={v => update('attacks.melee', v)}
             rowDraggable={true}
             rowActionMode={tableActionMode}
             onRowActionModeToggle={toggleTableActionMode}
-            onRowDragStart={(idx, e) => handleTableItemDragStart('attacks.meleeAttacks', idx, e)}
-            onRowDragOver={(idx, e) => handleTableItemDragOver('attacks.meleeAttacks', idx, e)}
-            onRowDrop={(idx, e) => handleTableItemDrop('attacks.meleeAttacks', idx, e)}
+            onRowDragStart={(idx, e) => handleTableItemDragStart('attacks.melee', idx, e)}
+            onRowDragOver={(idx, e) => handleTableItemDragOver('attacks.melee', idx, e)}
+            onRowDrop={(idx, e) => handleTableItemDrop('attacks.melee', idx, e)}
           />
         </div>
         <DynamicTable
           minWidth="0"
-          path="attacks.rangedAttacks"
-          data={data.attacks.rangedAttacks}
-          originalData={lastSavedData.attacks.rangedAttacks}
-          onChange={v => setData(prev => ({ ...prev, attacks: { ...prev.attacks, rangedAttacks: v as any } }))}
-          newItemGenerator={() => ({ weapon: '', hit: 0, damage: '', critRange: 20, critMultiplier: 2, range: 20, damageType: '', special: '' })}
+          path="attacks.ranged"
+          data={data.attacks.ranged}
+          originalData={lastSavedData.attacks?.ranged}
+          onChange={v => update('attacks.ranged', v)}
           rowDraggable={true}
           rowActionMode={tableActionMode}
           onRowActionModeToggle={toggleTableActionMode}
-          onRowDragStart={(idx, e) => handleTableItemDragStart('attacks.rangedAttacks', idx, e)}
-          onRowDragOver={(idx, e) => handleTableItemDragOver('attacks.rangedAttacks', idx, e)}
-          onRowDrop={(idx, e) => handleTableItemDrop('attacks.rangedAttacks', idx, e)}
+          onRowDragStart={(idx, e) => handleTableItemDragStart('attacks.ranged', idx, e)}
+          onRowDragOver={(idx, e) => handleTableItemDragOver('attacks.ranged', idx, e)}
+          onRowDrop={(idx, e) => handleTableItemDrop('attacks.ranged', idx, e)}
         />
       </div>
       <MultilineInput
@@ -58,7 +56,7 @@ const AttacksSection: React.FC = () => {
         path="attacks.specialAttacks"
         value={data.attacks.specialAttacks || ''}
         originalValue={lastSavedData.attacks.specialAttacks || ''}
-        onChange={v => setData(prev => ({ ...prev, attacks: { ...prev.attacks, specialAttacks: v } }))}
+        onChange={v => update('attacks.specialAttacks', v)}
         isAutoHeight={true}
       />
     </Section>

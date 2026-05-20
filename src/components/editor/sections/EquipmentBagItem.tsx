@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Trash2, GripVertical } from 'lucide-react';
 import DynamicTable from '../../common/DynamicTable';
 import { useUI } from '../../../contexts/UIContext';
+import { useCharacter } from '../../../contexts/CharacterContext';
 
 interface EquipmentBagItemProps {
   bag: any;
@@ -62,13 +63,13 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
           <input
             className="text-lg font-bold font-serif bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 max-w-sm w-full"
             value={bag.name}
-            onChange={e => update(`equipmentBags[${bagIndex}].name`, e.target.value)}
+            onChange={e => update(`equipment.container[${bagIndex}].name`, e.target.value)}
           />
           <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-stone-400 hover:text-stone-600 transition-colors shrink-0 ml-2">
             <input
               type="checkbox"
               checked={bag.ignoreWeight}
-              onChange={e => update(`equipmentBags[${bagIndex}].ignoreWeight`, e.target.checked)}
+              onChange={e => update(`equipment.container[${bagIndex}].ignoreWeight`, e.target.checked)}
               className="rounded border-stone-300 text-primary focus:ring-primary h-3 w-3"
             />
             {t('editor.items.ignore_weight')}
@@ -82,11 +83,10 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
         </button>
       </div>
       <DynamicTable
-        path={`equipmentBags[${bagIndex}].items`}
-        data={bag.items}
-        originalData={originalBag?.items}
-        onChange={v => update(`equipmentBags[${bagIndex}].items`, v)}
-        newItemGenerator={() => ({ item: '', quantity: 1, cost: 0, weight: 0, notes: '' })}
+        path={`equipment.container[${bagIndex}]`}
+        data={bag}
+        originalData={originalBag}
+        onChange={v => update(`equipment.container[${bagIndex}]`, v)}
         rowDraggable={true}
         rowActionMode={tableActionMode}
         onRowActionModeToggle={onToggleTableActionMode}

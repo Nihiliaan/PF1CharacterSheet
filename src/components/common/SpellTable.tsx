@@ -85,8 +85,13 @@ export default function SpellTable({
     const newData = { ...data };
     columns.forEach(c => {
       if (c.key === 'level') return;
-      if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill('');
-      newData[c.key] = ['', ...newData[c.key]];
+
+      const cellPath = getCellPath(path || '', 0, c.key);
+      const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
+      const defaultValue = cellHandler?.getDefaultValue ? cellHandler.getDefaultValue() : '';
+
+      if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill(defaultValue);
+      newData[c.key] = [defaultValue, ...newData[c.key]];
     });
     onChange(newData);
   };

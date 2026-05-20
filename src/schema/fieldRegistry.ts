@@ -19,18 +19,18 @@ const {
 /**
  * 角色数据导航原型树 (Character Prototype Tree)
  * 核心职责：将平面的 CharacterData 路径映射到复杂的业务逻辑 Handler
- * 必须与 defaultData.json 的物理结构 100% 对齐
+ * 必须与 DEFAULT_DATA 的物理结构 100% 对齐
  */
 export const CharacterPrototype: any = {
-  // 0. 元数据 (Metadata)
+  // 0. 元数据
   id: TextHandler,
   folderId: TextHandler,
   ownerId: TextHandler,
   targetId: TextHandler,
 
-  // 1. 基础信息 (对应 defaultData.json 中的 "basic")
+  // 1. 基础信息
   basic: {
-    handler: BasicInfoHandler, // 复合展示
+    handler: BasicInfoHandler,
     name: TextHandler,
     classes: TextHandler,
     alignment: handlers.AlignmentHandler,
@@ -61,7 +61,7 @@ export const CharacterPrototype: any = {
 
   story: TextHandler,
 
-  // 2. 核心属性 (SoA 数组结构)
+  // 2. 核心属性
   attributes: {
     handler: AttributesTableHandler,
     final: IntegerHandler,
@@ -70,31 +70,31 @@ export const CharacterPrototype: any = {
     status: TextHandler
   },
 
-  // 3. 战斗统计表 (对应 "combatTable")
-  combatTable: {
+  // 3. 战斗统计 (User structure: combatManeuver)
+  combatManeuver: {
     handler: CombatInfoHandler,
     bab: BonusHandler,
     cmb: BonusHandler,
-    cmd: IntegerHandler
+    cmd: IntegerHandler,
+    notes: TextHandler
   },
-  combatManeuverNotes: TextHandler,
 
   // 4. 攻击系统
   attacks: {
     handler: CompositeHandler,
-    meleeAttacks: {
-      handler: AttackTableHandler,
+    melee: {
+      handler: handlers.MeleeAttackTableHandler,
       weapon: TextHandler,
       hit: BonusHandler,
       damage: TextHandler,
       critRange: CritRangeHandler,
       critMultiplier: CritMultiplierHandler,
-      range: DistanceHandler,
+      touch: DistanceHandler,
       damageType: TextHandler,
       special: TextHandler
     },
-    rangedAttacks: {
-      handler: AttackTableHandler,
+    ranged: {
+      handler: handlers.RangedAttackTableHandler,
       weapon: TextHandler,
       hit: BonusHandler,
       damage: TextHandler,
@@ -112,26 +112,25 @@ export const CharacterPrototype: any = {
     handler: CompositeHandler,
     hp: PosIntHandler,
     hd: TextHandler,
-    acTable: {
+    armorClass: {
       handler: DefensesTableHandler,
       ac: IntegerHandler,
       source: TextHandler,
       flatFooted: IntegerHandler,
-      touch: IntegerHandler
+      touch: IntegerHandler,
+      notes: TextHandler
     },
-    acNotes: TextHandler,
-    savesTable: {
+    saves: {
       handler: SavesTableHandler,
       fort: BonusHandler,
       ref: BonusHandler,
-      will: BonusHandler
+      will: BonusHandler,
+      notes: TextHandler
     },
-    savesNotes: TextHandler,
-    defensiveAbilities: TextHandler,
     specialDefenses: TextHandler
   },
 
-  // 6. 特性与专长 (SoA)
+  // 6. 特性与专长
   racialTraits: {
     handler: SimpleListHandler,
     name: TextHandler,
@@ -143,8 +142,10 @@ export const CharacterPrototype: any = {
     type: TextHandler,
     desc: TextHandler
   },
-  favoredClass: TextHandler,
-  favoredClassBonus: TextHandler,
+  favoredClass: {
+    fc: TextHandler,
+    fcb: TextHandler
+  },
   classFeatures: {
     handler: ClassFeaturesTableHandler,
     level: LevelHandler,
@@ -161,61 +162,61 @@ export const CharacterPrototype: any = {
     desc: TextHandler
   },
 
-  // 7. 技能 (SoA)
+  // 7. 技能 (User structure: skills)
   skills: {
     handler: SkillsTableHandler,
     name: TextHandler,
-    total: BonusHandler,
+    total: BonusHandler, // 表格中的总计
     rank: LevelHandler,
     cs: ClassSkillHandler,
     ability: SkillAttributeHandler,
-    misc: IntegerHandler,
-    special: TextHandler
+    others: TextHandler,
+    special: TextHandler,
+    // 技能区块配置 (重命名以避开冲突)
+    totalPoints: handlers.NonNegativeIntHandler,
+    acp: handlers.NonNegativeIntHandler,
+    notes: TextHandler
   },
-  skillsTotal: IntegerHandler,
-  armorCheckPenalty: IntegerHandler,
 
-  // 8. 装备系统 (Array of Objects)
-  equipmentBags: {
-    handler: { ...handlers.BaseTable, view: 'EquipmentBags' },
-    name: TextHandler,
-    ignoreWeight: BoolHandler,
-    items: {
-      handler: EquipmentItemsHandler,
+  // 8. 装备与资产 (User structure: equipment)
+  equipment: {
+    container: {
+      handler: new handlers.BaseTable({ ...EquipmentItemsHandler, view: 'EquipmentBags' }),
+      name: TextHandler,
+      ignoreWeight: BoolHandler,
+      // 物品平铺
       item: TextHandler,
       quantity: QuantityHandler,
       cost: CostHandler,
       weight: WeightHandler,
       notes: TextHandler
-    }
-  },
-  encumbranceMultiplier: FloatHandler,
-  currency: {
-    handler: CurrencyHandler,
-    pp: IntegerHandler,
-    gp: IntegerHandler,
-    sp: IntegerHandler,
-    cp: IntegerHandler,
-    coinWeight: FloatHandler
-  },
-
-  // 9. 施法系统 (Array Mode)
-  magicBlocks: {
-    handler: { ...MagicBlocksHandler, view: 'MagicBlocks' },
-    title: TextHandler,
-    type: SpellTypeHandler,
-    casterLevel: LevelHandler,
-    concentration: BonusHandler,
-    tableData: {
-      handler: SpellTableHandler,
-      uses: DailyUsesHandler,
-      spells: TextHandler
+    },
+    encumbranceMultiplier: FloatHandler,
+    currency: {
+      handler: CurrencyHandler,
+      pp: IntegerHandler,
+      gp: IntegerHandler,
+      sp: IntegerHandler,
+      cp: IntegerHandler,
+      coinWeight: FloatHandler
     },
     notes: TextHandler
   },
 
+  // 9. 施法系统 (Uses/Spells 平铺)
+  magicBlocks: {
+    handler: new handlers.BaseTable({ ...MagicBlocksHandler, view: 'MagicBlocks' }),
+    title: TextHandler,
+    type: SpellTypeHandler,
+    casterLevel: LevelHandler,
+    concentration: BonusHandler,
+    uses: DailyUsesHandler, // 现在在 block 级别平铺
+    spells: TextHandler, // 现在在 block 级别平铺
+    notes: TextHandler
+  },
+
   additionalData: {
-    handler: { ...handlers.BaseTable, view: 'AdditionalData' },
+    handler: new handlers.BaseTable({ view: 'AdditionalData' }),
   }
 };
 
@@ -236,7 +237,6 @@ export function getHandlerByPath(path: string): any {
       return null;
     }
 
-    // 显式确保如果 handler 属性不存在，则返回 node 本身，如果两者都无则返回 null
     const handler = node.handler ? node.handler : node;
     return handler || null;
   } catch (e) {

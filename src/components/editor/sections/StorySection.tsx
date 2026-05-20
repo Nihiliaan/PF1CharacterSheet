@@ -6,19 +6,18 @@ import { useCharacter } from '../../../contexts/CharacterContext';
 
 const StorySection: React.FC = () => {
   const { t } = useTranslation();
-  const { data, setData, lastSavedData } = useCharacter();
+  const { data, lastSavedData, update } = useCharacter();
 
   return (
     <Section id="story" title={t('editor.sections.story')}>
       <MultilineInput
         label={t('editor.sections.story')}
-        placeholder={t('editor.basic.story_placeholder')}
         path="story"
-        value={data.story}
-        originalValue={lastSavedData.story}
-        onChange={v => setData(prev => ({ ...prev, story: v }))}
-        isAutoHeight={true}
-        className="font-serif italic"
+        value={data.story || ''}
+        originalValue={lastSavedData.story || ''}
+        onChange={v => update('story', v)}
+        placeholder={t('editor.basic.story_placeholder')}
+        minHeight="300px"
       />
     </Section>
   );

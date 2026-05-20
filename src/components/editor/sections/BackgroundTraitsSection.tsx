@@ -9,8 +9,8 @@ const BackgroundTraitsSection: React.FC = () => {
   const { t } = useTranslation();
   const {
     data,
-    setData,
     lastSavedData,
+    update,
     tableActionMode,
     toggleTableActionMode,
     handleTableItemDragStart,
@@ -25,8 +25,7 @@ const BackgroundTraitsSection: React.FC = () => {
           path="backgroundTraits"
           data={data.backgroundTraits}
           originalData={lastSavedData.backgroundTraits}
-          onChange={v => setData(prev => ({ ...prev, backgroundTraits: v as any }))}
-          newItemGenerator={() => ({ name: '', type: '', desc: '' })}
+          onChange={v => update('backgroundTraits', v)}
           rowDraggable={true}
           rowActionMode={tableActionMode}
           onRowActionModeToggle={toggleTableActionMode}
@@ -37,17 +36,17 @@ const BackgroundTraitsSection: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InlineInput
             label={t('editor.lists.favored_class')}
-            path="favoredClass"
-            value={data.favoredClass}
-            originalValue={lastSavedData.favoredClass}
-            onChange={v => setData(p => ({ ...p, favoredClass: v }))}
+            path="favoredClass.fc"
+            value={data.favoredClass.fc}
+            originalValue={lastSavedData.favoredClass?.fc}
+            onChange={v => update('favoredClass.fc', v)}
           />
           <InlineInput
             label={t('editor.lists.favored_class_bonus')}
-            path="favoredClassBonus"
-            value={data.favoredClassBonus}
-            originalValue={lastSavedData.favoredClassBonus}
-            onChange={v => setData(p => ({ ...p, favoredClassBonus: v }))}
+            path="favoredClass.fcb"
+            value={data.favoredClass.fcb}
+            originalValue={lastSavedData.favoredClass?.fcb}
+            onChange={v => update('favoredClass.fcb', v)}
           />
         </div>
       </div>

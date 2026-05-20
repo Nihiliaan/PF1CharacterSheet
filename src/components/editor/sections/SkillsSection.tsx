@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Section from '../../common/Section';
 import DynamicTable from '../../common/DynamicTable';
 import InlineInput from '../../common/InlineInput';
+import MultilineInput from '../../common/MultilineInput';
 import { useCharacter } from '../../../contexts/CharacterContext';
 
 const SkillsSection: React.FC = () => {
@@ -24,20 +25,20 @@ const SkillsSection: React.FC = () => {
         <div className="w-full md:w-1/6">
           <InlineInput
             label={t('editor.skills.total_points')}
-            path="skillsTotal"
-            value={String(data.skillsTotal)}
-            originalValue={String(lastSavedData.skillsTotal)}
-            onChange={v => update('skillsTotal', v)}
+            path="skills.totalPoints"
+            value={String(data.skills.totalPoints)}
+            originalValue={String(lastSavedData.skills?.totalPoints)}
+            onChange={v => update('skills.totalPoints', v)}
             placeholder="0"
           />
         </div>
         <div className="w-full md:w-1/6">
           <InlineInput
             label={t('editor.skills.acp')}
-            path="armorCheckPenalty"
-            value={String(data.armorCheckPenalty)}
-            originalValue={String(lastSavedData.armorCheckPenalty)}
-            onChange={v => update('armorCheckPenalty', v)}
+            path="skills.acp"
+            value={String(data.skills.acp)}
+            originalValue={String(lastSavedData.skills?.acp)}
+            onChange={v => update('skills.acp', v)}
             displayFormatter={(v, isFocused) => (!v || v === '0' || isFocused) ? v : `-${v}`}
             placeholder="0"
           />
@@ -49,13 +50,23 @@ const SkillsSection: React.FC = () => {
           data={data.skills}
           originalData={lastSavedData.skills}
           onChange={v => update('skills', v)}
-          newItemGenerator={() => ({ name: '', total: 0, rank: 0, cs: false, ability: 3, others: '', special: '' })}
           rowDraggable={true}
           rowActionMode={tableActionMode}
-...          onRowActionModeToggle={toggleTableActionMode}
+          onRowActionModeToggle={toggleTableActionMode}
           onRowDragStart={(idx, e) => handleTableItemDragStart('skills', idx, e)}
           onRowDragOver={(idx, e) => handleTableItemDragOver('skills', idx, e)}
           onRowDrop={(idx, e) => handleTableItemDrop('skills', idx, e)}
+        />
+      </div>
+      <div className="mt-4">
+        <MultilineInput
+          label={t('editor.skills.notes')}
+          path="skills.notes"
+          value={data.skills.notes || ''}
+          originalValue={lastSavedData.skills?.notes}
+          onChange={v => update('skills.notes', v)}
+          placeholder="技能备注..."
+          isAutoHeight={true}
         />
       </div>
     </Section>

@@ -19,10 +19,39 @@ export const useCharacterActions = (
   }, [isReadOnly, setData]);
 
   /**
-   * 列表项管理 (这些需要特殊的业务逻辑，保留作为 Action)
+   * 列表项管理
    */
-  const addBag = () => setData(p => dataUpdateService.addBag(p));
-  const removeBag = (id: string) => setData(p => dataUpdateService.removeBag(p, id));
+  const addBag = () => {
+    setData(p => ({
+      ...p,
+      equipment: {
+        ...p.equipment,
+        container: [
+          ...(p.equipment.container || []),
+          {
+            id: 'bag-' + Math.random(),
+            name: '新容器',
+            ignoreWeight: false,
+            item: [],
+            quantity: [],
+            cost: [],
+            weight: [],
+            notes: []
+          }
+        ]
+      }
+    }));
+  };
+
+  const removeBag = (id: string) => {
+    setData(p => ({
+      ...p,
+      equipment: {
+        ...p.equipment,
+        container: p.equipment.container.filter(b => b.id !== id)
+      }
+    }));
+  };
 
   const addMagicBlock = (type: 'text' | 'table' | 'spell', spellType?: number) => {
     let newBlock: any;
@@ -33,10 +62,11 @@ export const useCharacterActions = (
         type: 'spell',
         spellType: sType,
         title: sType === 4 ? '类法术能力' : '法术',
-        casterLevel: '',
-        concentration: '',
+        casterLevel: 1,
+        concentration: 1,
         notes: '',
-        tableData: { spells: [], uses: [] }
+        uses: [],
+        spells: []
       };
     } else {
       newBlock = {
