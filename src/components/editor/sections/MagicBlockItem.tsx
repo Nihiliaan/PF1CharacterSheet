@@ -18,7 +18,7 @@ interface MagicBlockItemProps {
   onDragStart: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
-  onUpdate: (id: string, updates: any) => void;
+  update: (path: string, val: any) => void;
   onRemove: (id: string) => void;
   onTableItemDragStart: (listKey: string, idx: number, e: React.DragEvent) => void;
   onTableItemDragOver: (listKey: string, idx: number, e: React.DragEvent) => void;
@@ -34,7 +34,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
   onDragStart,
   onDragOver,
   onDrop,
-  onUpdate,
+  update,
   onRemove
 }) => {
   const { t } = useTranslation();
@@ -86,7 +86,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
       newTableData[key] = arr;
     });
 
-    onUpdate(block.id, { spellType: newType, tableData: newTableData });
+    update(`magicBlocks[${blockIndex}]`, { ...block, spellType: newType, tableData: newTableData });
   };
 
   return (
@@ -109,7 +109,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
           <input
             className={`text-sm font-bold uppercase tracking-wider bg-transparent border-b outline-none transition-colors w-full ${block.title !== originalBlock?.title ? 'text-amber-600 border-amber-300' : 'text-stone-700 border-transparent focus:border-stone-400'}`}
             value={block.title}
-            onChange={e => onUpdate(block.id, { title: e.target.value })}
+            onChange={e => update(`magicBlocks[${blockIndex}].title`, e.target.value)}
             placeholder={t('editor.lists.block_title')}
           />
           <button
@@ -128,7 +128,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
                 path={`magicBlocks[${blockIndex}].casterLevel`}
                 value={block.casterLevel || ''}
                 originalValue={originalBlock?.casterLevel}
-                onChange={v => onUpdate(block.id, { casterLevel: v })}
+                onChange={v => update(`magicBlocks[${blockIndex}].casterLevel`, v)}
               />
             </div>
             <div className={`w-24 ${block.spellType === 4 ? 'invisible' : ''}`}>
@@ -137,7 +137,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
                 path={`magicBlocks[${blockIndex}].concentration`}
                 value={block.concentration || ''}
                 originalValue={originalBlock?.concentration}
-                onChange={v => onUpdate(block.id, { concentration: v })}
+                onChange={v => update(`magicBlocks[${blockIndex}].concentration`, v)}
               />
             </div>
             <div className="w-32">
@@ -157,7 +157,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
           spellType={block.spellType ?? 2}
           data={block.tableData || { uses: [0], spells: [''] }}
           originalData={originalBlock?.tableData}
-          onChange={v => onUpdate(block.id, { tableData: v })}
+          onChange={v => update(`magicBlocks[${blockIndex}].tableData`, v)}
           path={`magicBlocks[${blockIndex}].tableData`}
         />
       }
@@ -168,7 +168,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
             path={`magicBlocks[${blockIndex}].notes`}
             value={block.notes || ''}
             originalValue={originalBlock?.notes}
-            onChange={v => onUpdate(block.id, { notes: v })}
+            onChange={v => update(`magicBlocks[${blockIndex}].notes`, v)}
             placeholder={t('editor.spells.notes_placeholder')}
             isAutoHeight={true}
           />

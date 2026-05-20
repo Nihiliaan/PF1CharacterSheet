@@ -2,25 +2,27 @@ import React, { useCallback } from 'react';
 import { CharacterData } from '../types';
 import { dataUpdateService } from '../services/dataUpdateService';
 
+/**
+ * 角色数据更新操作的封装 Hook
+ * 现在统一使用 updateByPath 模式，极大简化了组件层的逻辑
+ */
 export const useCharacterActions = (
   isReadOnly: boolean,
   setData: React.Dispatch<React.SetStateAction<CharacterData>>
 ) => {
-  const updateBasic = useCallback((key: string, val: any) => {
+  /**
+   * 核心更新函数：支持路径寻址和自动类型转换
+   */
+  const update = useCallback((path: string, value: any) => {
     if (isReadOnly) return;
-    setData(p => dataUpdateService.updateField(p, 'basic', key, val));
+    setData(p => dataUpdateService.updateByPath(p, path, value));
   }, [isReadOnly, setData]);
 
-  const updateDefenses = useCallback((key: string, val: any) => {
-    if (isReadOnly) return;
-    setData(p => dataUpdateService.updateField(p, 'defenses', key, val));
-  }, [isReadOnly, setData]);
-
+  /**
+   * 列表项管理 (这些需要特殊的业务逻辑，保留作为 Action)
+   */
   const addBag = () => setData(p => dataUpdateService.addBag(p));
   const removeBag = (id: string) => setData(p => dataUpdateService.removeBag(p, id));
-  const updateBagName = (id: string, name: string) => setData(p => dataUpdateService.updateBag(p, id, { name }));
-  const toggleBagWeight = (id: string, ignoreWeight: boolean) => setData(p => dataUpdateService.updateBag(p, id, { ignoreWeight }));
-  const updateBagItems = (id: string, items: any[]) => setData(p => dataUpdateService.updateBag(p, id, { items }));
 
   const addMagicBlock = (type: 'text' | 'table' | 'spell', spellType?: number) => {
     let newBlock: any;
@@ -34,14 +36,8 @@ export const useCharacterActions = (
         casterLevel: '',
         concentration: '',
         notes: '',
-        tableData: [{}]
+        tableData: { spells: [], uses: [] }
       };
-      const columns = [{ key: 'level', label: '环位', width: '10%' }];
-      if (sType !== 0 && sType !== 1) columns.push({ key: 'uses', label: '每日次数', width: '20%' });
-      columns.push({ key: 'spells', label: '法术', width: sType > 1 ? '70%' : '90%' });
-      newBlock.columns = columns;
-      newBlock.tableData = { spells: [] };
-      if (sType !== 0 && sType !== 1) newBlock.tableData.uses = [];
     } else {
       newBlock = {
         id: 'magic-' + Math.random(),
@@ -53,13 +49,6 @@ export const useCharacterActions = (
       };
     }
     setData(p => ({ ...p, magicBlocks: [...(p.magicBlocks || []), newBlock] }));
-  };
-
-  const updateMagicBlock = (id: string, updates: any) => {
-    setData(p => ({
-      ...p,
-      magicBlocks: p.magicBlocks.map(b => b.id === id ? { ...b, ...updates } : b)
-    }));
   };
 
   const removeMagicBlock = (id: string) => {
@@ -79,20 +68,17 @@ export const useCharacterActions = (
     setData(p => ({ ...p, additionalData: [...p.additionalData, newBlock] }));
   };
 
-  const updateAdditionalBlock = (id: string, updates: any) => {
-    setData(p => ({
-      ...p,
-      additionalData: p.additionalData.map(b => b.id === id ? { ...b, ...updates } : b)
-    }));
-  };
-
   const removeAdditionalBlock = (id: string) => {
     setData(p => ({ ...p, additionalData: p.additionalData.filter(b => b.id !== id) }));
   };
 
   return {
-    updateBasic, updateDefenses, addBag, removeBag, updateBagName, toggleBagWeight, updateBagItems,
-    addMagicBlock, updateMagicBlock, removeMagicBlock,
-    addAdditionalBlock, updateAdditionalBlock, removeAdditionalBlock
+    update,
+    addBag,
+    removeBag,
+    addMagicBlock,
+    removeMagicBlock,
+    addAdditionalBlock,
+    removeAdditionalBlock
   };
 };

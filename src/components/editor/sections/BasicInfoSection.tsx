@@ -8,7 +8,7 @@ import { useCharacter } from '../../../contexts/CharacterContext';
 
 const BasicInfoSection: React.FC = () => {
   const { t } = useTranslation();
-  const { data, lastSavedData, updateBasic } = useCharacter();
+  const { data, lastSavedData, update } = useCharacter();
 
   return (
     <Section id="basic-info" title={t('editor.sections.basic')} className="max-w-[1200px] mx-auto">
@@ -20,7 +20,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.name}
             path="basic.name"
             originalValue={lastSavedData.basic.name}
-            onChange={v => updateBasic('name', v)}
+            onChange={v => update('basic.name', v)}
           />
           <InlineInput
             className="col-span-12 sm:col-span-6 font-bold"
@@ -28,7 +28,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.classes}
             path="basic.classes"
             originalValue={lastSavedData.basic.classes}
-            onChange={v => updateBasic('classes', v)}
+            onChange={v => update('basic.classes', v)}
           />
           <InlineInput
             className="col-span-12 sm:col-span-6"
@@ -36,7 +36,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.alignment}
             path="basic.alignment"
             originalValue={lastSavedData.basic.alignment}
-            onChange={v => updateBasic('alignment', v)}
+            onChange={v => update('basic.alignment', v)}
           />
           <InlineInput
             className="col-span-12 sm:col-span-6"
@@ -44,7 +44,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.deity || ''}
             path="basic.deity"
             originalValue={lastSavedData.basic.deity || ''}
-            onChange={v => updateBasic('deity', v)}
+            onChange={v => update('basic.deity', v)}
           />
           <InlineInput
             className="col-span-4"
@@ -52,7 +52,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.size}
             path="basic.size"
             originalValue={lastSavedData.basic.size}
-            onChange={v => updateBasic('size', v)}
+            onChange={v => update('basic.size', v)}
           />
           <InlineInput
             className="col-span-4"
@@ -60,7 +60,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.gender}
             path="basic.gender"
             originalValue={lastSavedData.basic.gender}
-            onChange={v => updateBasic('gender', v)}
+            onChange={v => update('basic.gender', v)}
           />
           <InlineInput
             className="col-span-4"
@@ -68,7 +68,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.race}
             path="basic.race"
             originalValue={lastSavedData.basic.race}
-            onChange={v => updateBasic('race', v)}
+            onChange={v => update('basic.race', v)}
           />
           <InlineInput
             className="col-span-4"
@@ -76,7 +76,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.age}
             path="basic.age"
             originalValue={lastSavedData.basic.age}
-            onChange={v => updateBasic('age', v)}
+            onChange={v => update('basic.age', v)}
           />
           <InlineInput
             className="col-span-4"
@@ -84,7 +84,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.height}
             path="basic.height"
             originalValue={lastSavedData.basic.height}
-            onChange={v => updateBasic('height', v)}
+            onChange={v => update('basic.height', v)}
           />
           <InlineInput
             className="col-span-4"
@@ -92,7 +92,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.weight}
             path="basic.weight"
             originalValue={lastSavedData.basic.weight}
-            onChange={v => updateBasic('weight', v)}
+            onChange={v => update('basic.weight', v)}
           />
           <InlineInput
             className="col-span-12 sm:col-span-6"
@@ -100,7 +100,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.speed.land}
             path="basic.speed.land"
             originalValue={lastSavedData.basic.speed.land}
-            onChange={v => updateBasic('speed', { ...data.basic.speed, land: v })}
+            onChange={v => update('basic.speed.land', v)}
           />
           <InlineInput
             className="col-span-12 sm:col-span-6"
@@ -108,7 +108,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.senses}
             path="basic.senses"
             originalValue={lastSavedData.basic.senses}
-            onChange={v => updateBasic('senses', v)}
+            onChange={v => update('basic.senses', v)}
           />
           <InlineInput
             className="col-span-12 sm:col-span-6"
@@ -116,7 +116,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.initiative}
             path="basic.initiative"
             originalValue={lastSavedData.basic.initiative}
-            onChange={v => updateBasic('initiative', v)}
+            onChange={v => update('basic.initiative', v)}
           />
           <InlineInput
             className="col-span-12 sm:col-span-6"
@@ -124,7 +124,7 @@ const BasicInfoSection: React.FC = () => {
             value={data.basic.perception}
             path="basic.perception"
             originalValue={lastSavedData.basic.perception}
-            onChange={v => updateBasic('perception', v)}
+            onChange={v => update('basic.perception', v)}
           />
           <MultilineInput
             className="col-span-12 mt-2"
@@ -132,14 +132,14 @@ const BasicInfoSection: React.FC = () => {
             path="basic.languages"
             value={data.basic.languages}
             originalValue={lastSavedData.basic.languages}
-            onChange={v => updateBasic('languages', v)}
+            onChange={v => update('basic.languages', v)}
             isAutoHeight={true}
           />
         </div>
         <div className="w-full md:w-64">
           <AvatarGallery
             avatars={data.basic.avatars}
-            onUpdate={(newAvatars) => updateBasic('avatars', newAvatars)}
+            onUpdate={(newAvatars) => update('basic.avatars', newAvatars)}
           />
         </div>
       </div>

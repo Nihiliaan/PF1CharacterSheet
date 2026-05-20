@@ -10,12 +10,12 @@ const SpellsSection: React.FC = () => {
   const {
     data,
     lastSavedData,
+    update,
     dragEnabledFor,
     setDragEnabledFor,
     handleDragStart,
     handleDragOver,
     handleDrop,
-    updateMagicBlock,
     removeMagicBlock,
     addMagicBlock,
     handleTableItemDragStart,
@@ -37,7 +37,7 @@ const SpellsSection: React.FC = () => {
             onDragStart={(e) => handleDragStart(e, block.id)}
             onDragOver={(e) => handleDragOver(e, block.id, 'magicBlocks')}
             onDrop={(e) => handleDrop(e, block.id, 'magicBlocks')}
-            onUpdate={updateMagicBlock}
+            update={update}
             onRemove={removeMagicBlock}
             onTableItemDragStart={handleTableItemDragStart}
             onTableItemDragOver={handleTableItemDragOver}

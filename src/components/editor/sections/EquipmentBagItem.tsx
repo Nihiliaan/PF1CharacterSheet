@@ -10,10 +10,7 @@ interface EquipmentBagItemProps {
   originalBag: any;
   tableActionMode: 'drag' | 'delete';
   onToggleTableActionMode: () => void;
-  onUpdateBagName: (id: string, name: string) => void;
-  onToggleBagWeight: (id: string, ignore: boolean) => void;
-  onUpdateBagItems: (id: string, items: any) => void;
-  onRemoveBag: (id: string) => void;
+  update: (path: string, val: any) => void;
   onBagDragStart: (e: React.DragEvent, idx: number) => void;
   onBagDragOver: (e: React.DragEvent, idx: number) => void;
   onBagDrop: (e: React.DragEvent, idx: number) => void;
@@ -28,10 +25,7 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
   originalBag,
   tableActionMode,
   onToggleTableActionMode,
-  onUpdateBagName,
-  onToggleBagWeight,
-  onUpdateBagItems,
-  onRemoveBag,
+  update,
   onBagDragStart,
   onBagDragOver,
   onBagDrop,
@@ -41,11 +35,12 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
 }) => {
   const { t } = useTranslation();
   const { setConfirmModal } = useUI();
+  const { removeBag } = useCharacter();
 
   const handleRemove = () => {
     setConfirmModal({
       title: t('common.confirm_delete_container'),
-      onConfirm: () => onRemoveBag(bag.id)
+      onConfirm: () => removeBag(bag.id)
     });
   };
 
@@ -67,13 +62,13 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
           <input
             className="text-lg font-bold font-serif bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 max-w-sm w-full"
             value={bag.name}
-            onChange={e => onUpdateBagName(bag.id, e.target.value)}
+            onChange={e => update(`equipmentBags[${bagIndex}].name`, e.target.value)}
           />
           <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-stone-400 hover:text-stone-600 transition-colors shrink-0 ml-2">
             <input
               type="checkbox"
               checked={bag.ignoreWeight}
-              onChange={e => onToggleBagWeight(bag.id, e.target.checked)}
+              onChange={e => update(`equipmentBags[${bagIndex}].ignoreWeight`, e.target.checked)}
               className="rounded border-stone-300 text-primary focus:ring-primary h-3 w-3"
             />
             {t('editor.items.ignore_weight')}
@@ -90,7 +85,7 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
         path={`equipmentBags[${bagIndex}].items`}
         data={bag.items}
         originalData={originalBag?.items}
-        onChange={v => onUpdateBagItems(bag.id, v)}
+        onChange={v => update(`equipmentBags[${bagIndex}].items`, v)}
         newItemGenerator={() => ({ item: '', quantity: 1, cost: 0, weight: 0, notes: '' })}
         rowDraggable={true}
         rowActionMode={tableActionMode}

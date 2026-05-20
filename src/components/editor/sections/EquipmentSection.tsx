@@ -12,15 +12,11 @@ const EquipmentSection: React.FC = () => {
   const { t } = useTranslation();
   const {
     data,
-    setData,
     lastSavedData,
+    update,
     tableActionMode,
     toggleTableActionMode,
     addBag,
-    removeBag,
-    updateBagName,
-    toggleBagWeight,
-    updateBagItems,
     handleBagDragStart,
     handleBagDragOver,
     handleBagDrop,
@@ -40,10 +36,7 @@ const EquipmentSection: React.FC = () => {
             originalBag={lastSavedData.equipmentBags?.[bagIndex]}
             tableActionMode={tableActionMode}
             onToggleTableActionMode={toggleTableActionMode}
-            onUpdateBagName={updateBagName}
-            onToggleBagWeight={toggleBagWeight}
-            onUpdateBagItems={updateBagItems}
-            onRemoveBag={removeBag}
+            update={update}
             onBagDragStart={handleBagDragStart}
             onBagDragOver={handleBagDragOver}
             onBagDrop={handleBagDrop}
@@ -66,7 +59,7 @@ const EquipmentSection: React.FC = () => {
             path="currency.pp"
             value={String(data.currency.pp)}
             originalValue={String(lastSavedData.currency?.pp)}
-            onChange={v => setData(p => ({ ...p, currency: { ...p.currency, pp: parseInt(v) || 0 } }))}
+            onChange={v => update('currency.pp', v)}
             placeholder="0"
           />
           <InlineInput
@@ -74,7 +67,7 @@ const EquipmentSection: React.FC = () => {
             path="currency.gp"
             value={String(data.currency.gp)}
             originalValue={String(lastSavedData.currency?.gp)}
-            onChange={v => setData(p => ({ ...p, currency: { ...p.currency, gp: parseInt(v) || 0 } }))}
+            onChange={v => update('currency.gp', v)}
             placeholder="0"
           />
           <InlineInput
@@ -82,7 +75,7 @@ const EquipmentSection: React.FC = () => {
             path="currency.sp"
             value={String(data.currency.sp)}
             originalValue={String(lastSavedData.currency?.sp)}
-            onChange={v => setData(p => ({ ...p, currency: { ...p.currency, sp: parseInt(v) || 0 } }))}
+            onChange={v => update('currency.sp', v)}
             placeholder="0"
           />
           <InlineInput
@@ -90,7 +83,7 @@ const EquipmentSection: React.FC = () => {
             path="currency.cp"
             value={String(data.currency.cp)}
             originalValue={String(lastSavedData.currency?.cp)}
-            onChange={v => setData(p => ({ ...p, currency: { ...p.currency, cp: parseInt(v) || 0 } }))}
+            onChange={v => update('currency.cp', v)}
             placeholder="0"
           />
           <InlineInput
@@ -98,7 +91,7 @@ const EquipmentSection: React.FC = () => {
             path="currency.coinWeight"
             value={String(data.currency.coinWeight)}
             originalValue={String(lastSavedData.currency?.coinWeight)}
-            onChange={v => setData(p => ({ ...p, currency: { ...p.currency, coinWeight: parseFloat(v) || 0 } }))}
+            onChange={v => update('currency.coinWeight', v)}
             placeholder="0"
           />
         </div>
@@ -120,10 +113,7 @@ const EquipmentSection: React.FC = () => {
             <input
               className="text-sm font-medium text-ink bg-transparent outline-none px-0.5 w-full"
               value={data.encumbranceMultiplier}
-              onChange={e => {
-                const val = e.target.value;
-                if (val === '' || /^\d*\.?\d*$/.test(val)) setData(p => ({ ...p, encumbranceMultiplier: parseFloat(val) || 1 }));
-              }}
+              onChange={e => update('encumbranceMultiplier', e.target.value)}
             />
           </div>
 

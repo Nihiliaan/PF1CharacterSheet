@@ -1,20 +1,56 @@
 import { produce } from 'immer';
 import { CharacterData } from '../types';
+import { getHandlerByPath } from '../schema/fieldRegistry';
 
 /**
  * 处理 CharacterData 深层更新的业务逻辑
  */
 export const dataUpdateService = {
   /**
-   * 通用字段更新 (处理 basic, defenses 等)
+   * 统一的路径更新方法
+   * 逻辑：路径 -> 获取 Handler -> 数据转换 -> Immer 更新
    */
-  updateField(data: CharacterData, section: keyof CharacterData, key: string, val: any): CharacterData {
+  updateByPath(data: CharacterData, path: string, value: any): CharacterData {
+    const handler = getHandlerByPath(path);
+    
+    // 如果有对应的处理器，先进行数据转换（如字符串转数字）
+    const finalValue = handler ? handler.update(value) : value;
+
     return produce(data, draft => {
-      const target = draft[section] as any;
-      if (target && typeof target === 'object') {
-        target[key] = val;
+      const parts = path.split('.');
+      let current: any = draft;
+      
+      for (let i = 0; i < parts.length - 1; i++) {
+        const part = parts[i];
+        const arrayMatch = part.match(/(.+)\[(\d+)\]/);
+        
+        if (arrayMatch) {
+          const [, name, index] = arrayMatch;
+          current = current[name][parseInt(index, 10)];
+        } else {
+          current = current[part];
+        }
+        
+        if (current === undefined) return; // 路径不存在
+      }
+
+      const lastPart = parts[parts.length - 1];
+      const arrayMatch = lastPart.match(/(.+)\[(\d+)\]/);
+      
+      if (arrayMatch) {
+        const [, name, index] = arrayMatch;
+        current[name][parseInt(index, 10)] = finalValue;
+      } else {
+        current[lastPart] = finalValue;
       }
     });
+  },
+
+  /**
+   * 通用字段更新 (保留兼容性，但内部调用新逻辑)
+   */
+  updateField(data: CharacterData, section: keyof CharacterData, key: string, val: any): CharacterData {
+    return this.updateByPath(data, `${String(section)}.${key}`, val);
   },
 
   /**

@@ -9,8 +9,8 @@ const SkillsSection: React.FC = () => {
   const { t } = useTranslation();
   const {
     data,
-    setData,
     lastSavedData,
+    update,
     tableActionMode,
     toggleTableActionMode,
     handleTableItemDragStart,
@@ -27,7 +27,7 @@ const SkillsSection: React.FC = () => {
             path="skillsTotal"
             value={String(data.skillsTotal)}
             originalValue={String(lastSavedData.skillsTotal)}
-            onChange={v => setData(prev => ({ ...prev, skillsTotal: parseInt(v) || 0 }))}
+            onChange={v => update('skillsTotal', v)}
             placeholder="0"
           />
         </div>
@@ -37,7 +37,7 @@ const SkillsSection: React.FC = () => {
             path="armorCheckPenalty"
             value={String(data.armorCheckPenalty)}
             originalValue={String(lastSavedData.armorCheckPenalty)}
-            onChange={v => setData(prev => ({ ...prev, armorCheckPenalty: parseInt(v) || 0 }))}
+            onChange={v => update('armorCheckPenalty', v)}
             displayFormatter={(v, isFocused) => (!v || v === '0' || isFocused) ? v : `-${v}`}
             placeholder="0"
           />
@@ -48,11 +48,11 @@ const SkillsSection: React.FC = () => {
           path="skills"
           data={data.skills}
           originalData={lastSavedData.skills}
-          onChange={v => setData(prev => ({ ...prev, skills: v as any }))}
+          onChange={v => update('skills', v)}
           newItemGenerator={() => ({ name: '', total: 0, rank: 0, cs: false, ability: 3, others: '', special: '' })}
           rowDraggable={true}
           rowActionMode={tableActionMode}
-          onRowActionModeToggle={toggleTableActionMode}
+...          onRowActionModeToggle={toggleTableActionMode}
           onRowDragStart={(idx, e) => handleTableItemDragStart('skills', idx, e)}
           onRowDragOver={(idx, e) => handleTableItemDragOver('skills', idx, e)}
           onRowDrop={(idx, e) => handleTableItemDrop('skills', idx, e)}

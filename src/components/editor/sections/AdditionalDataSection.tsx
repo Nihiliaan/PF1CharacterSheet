@@ -13,6 +13,7 @@ const AdditionalDataSection: React.FC = () => {
   const {
     data,
     lastSavedData,
+    update,
     dragEnabledFor,
     setDragEnabledFor,
     tableActionMode,
@@ -20,7 +21,6 @@ const AdditionalDataSection: React.FC = () => {
     handleDragStart,
     handleDragOver,
     handleDrop,
-    updateAdditionalBlock,
     removeAdditionalBlock,
     addAdditionalBlock,
     handleTableItemDragStart,
@@ -51,7 +51,7 @@ const AdditionalDataSection: React.FC = () => {
               <input
                 className="text-lg font-bold font-serif bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 flex-1"
                 value={block.title}
-                onChange={e => updateAdditionalBlock(block.id, { title: e.target.value })}
+                onChange={e => update(`additionalData[${i}].title`, e.target.value)}
               />
               <button
                 onClick={() => {
@@ -71,14 +71,14 @@ const AdditionalDataSection: React.FC = () => {
                 path={`additionalData[${i}].content`}
                 value={block.content || ''}
                 originalValue={lastSavedData.additionalData?.[i]?.content}
-                onChange={v => updateAdditionalBlock(block.id, { content: v })}
+                onChange={v => update(`additionalData[${i}].content`, v)}
                 height="120px"
               />
             ) : block.type === 'image' ? (
               <input
                 className="w-full border rounded px-3 py-2 text-sm outline-none bg-white border-stone-200 focus:border-stone-400"
                 value={block.url || ''}
-                onChange={e => updateAdditionalBlock(block.id, { url: e.target.value })}
+                onChange={e => update(`additionalData[${i}].url`, e.target.value)}
                 placeholder={t('editor.lists.image_url')}
               />
             ) : (
@@ -87,7 +87,7 @@ const AdditionalDataSection: React.FC = () => {
                 columns={block.columns || []}
                 data={block.tableData || {}}
                 originalData={lastSavedData.additionalData?.[i]?.tableData}
-                onChange={v => updateAdditionalBlock(block.id, { tableData: v as any })}
+                onChange={v => update(`additionalData[${i}].tableData`, v as any)}
                 rowDraggable={true}
                 rowActionMode={tableActionMode}
                 onRowActionModeToggle={toggleTableActionMode}

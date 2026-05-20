@@ -10,7 +10,7 @@ import { ATTRIBUTE_NAMES } from '../../../types';
 
 const AttributesSection: React.FC = () => {
   const { t } = useTranslation();
-  const { data, setData, lastSavedData } = useCharacter();
+  const { data, lastSavedData, update } = useCharacter();
 
   const tableData = React.useMemo(() => ({
     ...data.attributes,
@@ -30,12 +30,8 @@ const AttributesSection: React.FC = () => {
           data={tableData}
           originalData={originalTableData}
           onChange={newAttrs => {
-            // 安全地提取 AttributesSoA 需要的字段，排除由 DynamicTable 注入的 'name' 列
-            const attributes: any = {};
-            ['final', 'modifier', 'source', 'status'].forEach(key => {
-              if (newAttrs[key]) attributes[key] = newAttrs[key];
-            });
-            setData(prev => ({ ...prev, attributes }));
+            const { name, ...attributes } = newAttrs as any;
+            update('attributes', attributes);
           }}
           readonlyColumns={['name']}
         />
@@ -51,7 +47,7 @@ const AttributesSection: React.FC = () => {
               path="combatTable"
               data={data.combatTable}
               originalData={lastSavedData.combatTable}
-              onChange={v => setData(prev => ({ ...prev, combatTable: v as any }))}
+              onChange={v => update('combatTable', v)}
               minWidth="0"
             />
           </div>
@@ -62,7 +58,7 @@ const AttributesSection: React.FC = () => {
           path="combatManeuverNotes"
           value={data.combatManeuverNotes || ''}
           originalValue={lastSavedData.combatManeuverNotes}
-          onChange={v => setData(prev => ({ ...prev, combatManeuverNotes: v }))}
+          onChange={v => update('combatManeuverNotes', v)}
           placeholder={t('editor.attributes.maneuver_placeholder')}
           height="100%"
         />

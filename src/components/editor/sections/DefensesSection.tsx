@@ -10,7 +10,7 @@ import { useCharacter } from '../../../contexts/CharacterContext';
 
 const DefensesSection: React.FC = () => {
   const { t } = useTranslation();
-  const { data, lastSavedData, updateDefenses } = useCharacter();
+  const { data, lastSavedData, update } = useCharacter();
 
   return (
     <Section id="defenses" title={t('editor.sections.defenses')}>
@@ -26,7 +26,7 @@ const DefensesSection: React.FC = () => {
                 path="defenses.acTable"
                 data={data.defenses.acTable}
                 originalData={lastSavedData.defenses.acTable}
-                onChange={v => updateDefenses('acTable', v)}
+                onChange={v => update('defenses.acTable', v)}
                 minWidth="0"
               />
             </div>
@@ -37,7 +37,7 @@ const DefensesSection: React.FC = () => {
             path="defenses.acNotes"
             value={data.defenses.acNotes || ''}
             originalValue={lastSavedData.defenses.acNotes}
-            onChange={v => updateDefenses('acNotes', v)}
+            onChange={v => update('defenses.acNotes', v)}
             placeholder={t('editor.defenses.ac_placeholder')}
             height="100%"
           />
@@ -50,7 +50,7 @@ const DefensesSection: React.FC = () => {
               path="defenses.hp"
               value={String(data.defenses.hp)}
               originalValue={String(lastSavedData.defenses.hp)}
-              onChange={v => updateDefenses('hp', v)}
+              onChange={v => update('defenses.hp', v)}
               placeholder="例如：20"
             />
           </div>
@@ -60,7 +60,7 @@ const DefensesSection: React.FC = () => {
               path="defenses.hd"
               value={data.defenses.hd || ''}
               originalValue={lastSavedData.defenses.hd}
-              onChange={v => updateDefenses('hd', v)}
+              onChange={v => update('defenses.hd', v)}
               placeholder="例如：3d8+3"
             />
           </div>
@@ -77,7 +77,7 @@ const DefensesSection: React.FC = () => {
                 path="defenses.savesTable"
                 data={data.defenses.savesTable}
                 originalData={lastSavedData.defenses.savesTable}
-                onChange={v => updateDefenses('savesTable', v)}
+                onChange={v => update('defenses.savesTable', v)}
                 minWidth="0"
               />
             </div>
@@ -88,7 +88,7 @@ const DefensesSection: React.FC = () => {
             path="defenses.savesNotes"
             value={data.defenses.savesNotes || ''}
             originalValue={lastSavedData.defenses.savesNotes}
-            onChange={v => updateDefenses('savesNotes', v)}
+            onChange={v => update('defenses.savesNotes', v)}
             placeholder="抗力加值、对抗恐惧/毒素的额外加值等..."
             height="100%"
           />
@@ -99,7 +99,7 @@ const DefensesSection: React.FC = () => {
           path="defenses.specialDefenses"
           value={data.defenses.specialDefenses || ''}
           originalValue={lastSavedData.defenses.specialDefenses || ''}
-          onChange={v => updateDefenses('specialDefenses', v)}
+          onChange={v => update('defenses.specialDefenses', v)}
           placeholder={t('editor.defenses.special_defenses_placeholder')}
           height="100%"
         />

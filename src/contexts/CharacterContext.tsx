@@ -38,18 +38,12 @@ interface CharacterContextType {
   setDragEnabledFor: (id: string | null) => void;
 
   // Actions
-  updateBasic: (key: string, val: any) => void;
-  updateDefenses: (key: string, val: any) => void;
+  update: (path: string, val: any) => void;
   addBag: () => void;
   removeBag: (id: string) => void;
-  updateBagName: (id: string, name: string) => void;
-  toggleBagWeight: (id: string, ignoreWeight: boolean) => void;
-  updateBagItems: (id: string, items: any[]) => void;
   addMagicBlock: (type: 'text' | 'table' | 'spell', spellType?: number) => void;
-  updateMagicBlock: (id: string, updates: any) => void;
   removeMagicBlock: (id: string) => void;
   addAdditionalBlock: (type: 'text' | 'table' | 'image') => void;
-  updateAdditionalBlock: (id: string, updates: any) => void;
   removeAdditionalBlock: (id: string) => void;
 
   // Persistence
@@ -157,9 +151,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   } = useCharacterDnD(data, setData);
 
   const {
-    updateBasic, updateDefenses, addBag, removeBag, updateBagName, toggleBagWeight, updateBagItems,
-    addMagicBlock, updateMagicBlock, removeMagicBlock,
-    addAdditionalBlock, updateAdditionalBlock, removeAdditionalBlock
+    update, addBag, removeBag,
+    addMagicBlock, removeMagicBlock,
+    addAdditionalBlock, removeAdditionalBlock
   } = useCharacterActions(isReadOnly, setData);
 
   const isEqual = (a: any, b: any): boolean => {
@@ -278,9 +272,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     isSaving,
     isSyncing, setIsSyncing, isDirty, isTemplateDirty,
     tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor,
-    updateBasic, updateDefenses, addBag, removeBag, updateBagName, toggleBagWeight, updateBagItems,
-    addMagicBlock, updateMagicBlock, removeMagicBlock,
-    addAdditionalBlock, updateAdditionalBlock, removeAdditionalBlock,
+    update, addBag, removeBag,
+    addMagicBlock, removeMagicBlock,
+    addAdditionalBlock, removeAdditionalBlock,
     handleSave, handleNew, handleShare, handleExport, handleExportBBCode, selectCharacter, loadSharedCharacter,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
