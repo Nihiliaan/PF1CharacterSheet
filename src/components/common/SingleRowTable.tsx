@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { SingleRowTableProps } from '../../types';
+import { SingleRowTableProps } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
 import DynamicInput from './DynamicInput';
 

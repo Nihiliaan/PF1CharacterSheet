@@ -7,7 +7,7 @@ import InlineInput from '../../common/InlineInput';
 import { useUI } from '../../../contexts/UIContext';
 import { useCharacter } from '../../../contexts/CharacterContext';
 import { getHandlerByPath } from '../../../schema/fieldRegistry';
-import handlers from '../../../schema/dataTypes';
+import handlers from '../../../schema/handlers';
 
 interface MagicBlockItemProps {
   block: any;

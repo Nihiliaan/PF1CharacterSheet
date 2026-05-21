@@ -3,13 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext';
 import { useUI } from './UIContext';
 import { useVault } from './VaultContext';
-import { useCharacterDnD } from '../hooks/useCharacterDnD';
-import { useCharacterActions } from '../hooks/useCharacterActions';
-import { useCharacterPersistence } from '../hooks/useCharacterPersistence';
-import { useCharacterAI } from '../hooks/useCharacterAI';
-import { useDriveSync } from '../hooks/useDriveSync';
-import { CharacterData } from '../types';
-import { DEFAULT_DATA, DEFAULT_BBCODE_TEMPLATE } from '../constants';
+import { useCharacterDnD } from './hooks/useCharacterDnD';
+import { useCharacterActions } from './hooks/useCharacterActions';
+import { useCharacterPersistence } from './hooks/useCharacterPersistence';
+import { useCharacterAI } from './hooks/useCharacterAI';
+import { useDriveSync } from './hooks/useDriveSync';
+import { CharacterData } from '../schema/types';
+import { DEFAULT_DATA, DEFAULT_BBCODE_TEMPLATE } from '../constants/index';
 import { generateBBCode } from '../utils/bbcodeExporter';
 import { getAttributeModifiers, calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../utils/calculations';
 import { saveCharacter as saveCharacterService } from '../services/characterService';
@@ -49,6 +49,7 @@ interface CharacterContextType {
   // Persistence
   saveCharacter: (data: CharacterData, id?: string | null, folderId?: string | null) => Promise<string | undefined>;
   handleSave: () => Promise<string | undefined>;
+  handleSaveAs: () => Promise<void>;
   handleNew: () => void;
   handleShare: () => void;
   handleExport: () => void;
@@ -115,7 +116,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { user } = useAuth();
   const ui = useUI();
   const { setView, setToast, setConfirmModal, addToRecent } = ui;
-  const { refreshCharacterList, currentFolderId, tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor, getItemPath } = useVault();
+  const { refreshCharacterList, currentFolderId, setCurrentFolderId, tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor, getItemPath } = useVault();
 
   const [data, setData] = useState<CharacterData>(DEFAULT_DATA);
   const [lastSavedData, setLastSavedData] = useState<CharacterData>(JSON.parse(JSON.stringify(DEFAULT_DATA)));
@@ -175,6 +176,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const {
     isSaving,
     handleSave,
+    handleSaveAs,
     handleSaveInternal,
     handleNew,
     selectCharacter,
@@ -183,9 +185,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     user, data, setData, lastSavedData, setLastSavedData,
     currentCharacterId, setCurrentCharacterId,
     currentTemplateId, setCurrentTemplateId,
-    setIsReadOnly, setIsSyncing,
+    isReadOnly, setIsReadOnly, setIsSyncing,
     setToast, setConfirmModal, setView, addToRecent, refreshCharacterList,
-    currentFolderId, isDirty, setBbcodeTemplate, setLastSavedTemplate
+    currentFolderId, setCurrentFolderId, isDirty, setBbcodeTemplate, setLastSavedTemplate
   );
 
   const {
@@ -275,7 +277,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     update, addBag, removeBag,
     addMagicBlock, removeMagicBlock,
     addAdditionalBlock, removeAdditionalBlock,
-    handleSave, handleNew, handleShare, handleExport, handleExportBBCode, selectCharacter, loadSharedCharacter,
+    handleSave, handleSaveAs, handleNew, handleShare, handleExport, handleExportBBCode, selectCharacter, loadSharedCharacter,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
     handleItemDragStart, handleItemDragOver, handleItemDrop,

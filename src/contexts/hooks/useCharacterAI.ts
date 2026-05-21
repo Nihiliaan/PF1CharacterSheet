@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { extractCharacterFromText, transformAIData } from '../services/aiService';
-import { useUI } from '../contexts/UIContext';
-import { CharacterData } from '../types';
+import { extractCharacterFromText, transformAIData } from '../../services/aiService';
+import { useUI } from '../UIContext';
+import { CharacterData } from '../../schema/types';
 
 export const useCharacterAI = (setData: (data: CharacterData) => void, setCurrentDocumentId: (id: string | null) => void) => {
   const { setToast, setView } = useUI();
@@ -56,7 +56,7 @@ export const useCharacterAI = (setData: (data: CharacterData) => void, setCurren
       setData(mergedData);
       setToast({ message: "AI 识别并填写成功！" });
       setView('editor');
-      setCurrentId(null);
+      setCurrentDocumentId(null);
       setShowAIModal(false);
       setAiInputText('');
     } catch (e: any) {

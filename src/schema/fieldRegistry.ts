@@ -1,5 +1,5 @@
 import { get } from 'lodash-es';
-import handlers from './dataTypes';
+import handlers from './handlers';
 
 const {
   TextHandler, IntegerHandler, PosIntHandler, BonusHandler, LevelHandler,

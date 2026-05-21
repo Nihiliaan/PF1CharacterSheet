@@ -6,8 +6,8 @@ import { googleProvider } from './lib/firebase';
 
 // Components
 import BBCodeTemplateEditor from './components/BBCodeTemplateEditor';
-import VaultContent from './components/character/VaultContent';
-import AccountSettings from './components/character/AccountSettings';
+import VaultContent from './components/vault/VaultContent';
+import AccountSettings from './components/account/AccountSettings';
 
 // Layout & Editor Components
 import AppHeader from './components/layout/AppHeader';

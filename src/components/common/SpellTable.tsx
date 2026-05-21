@@ -1,10 +1,10 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Column } from '../../types';
+import { Column } from '../../schema/types';
 import DynamicInput from './DynamicInput';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
-import handlers from '../../schema/dataTypes';
+import handlers from '../../schema/handlers';
 
 interface SpellTableProps {
   spellType: number;

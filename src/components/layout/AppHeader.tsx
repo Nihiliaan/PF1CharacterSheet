@@ -6,7 +6,7 @@ import {
   FolderPlus, ChevronRight
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import AccountMenu from '../character/AccountMenu';
+import AccountMenu from '../account/AccountMenu';
 import { googleProvider } from '../../lib/firebase';
 import { logout } from '../../services/authService';
 
@@ -14,7 +14,8 @@ import { useUI, ViewType } from '../../contexts/UIContext';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useVault } from '../../contexts/VaultContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { useCharacterAI } from '../../hooks/useCharacterAI';
+import { useCharacterAI } from '../../contexts/hooks/useCharacterAI';
+import { DEFAULT_BBCODE_TEMPLATE } from '../../constants';
 
 export default function AppHeader() {
   const { t, i18n } = useTranslation();
@@ -53,6 +54,7 @@ export default function AppHeader() {
     isDirty,
     isTemplateDirty,
     handleSave,
+    handleSaveAs,
     handleShare,
     handleExport,
     handleExportBBCode,
@@ -66,6 +68,7 @@ export default function AppHeader() {
     selectCharacter,
     setData,
     setCurrentCharacterId,
+    setCurrentTemplateId,
     getItemPath,
     setShowAIModal
   } = useCharacter();
@@ -111,7 +114,7 @@ export default function AppHeader() {
     : (getItemPath(currentCharacterId) || t('common.new_character'));
   
   const isCurrentDirty = view === 'bbcode-template' ? isTemplateDirty : isDirty;
-  const displayPath = currentPath + (isCurrentDirty ? '*' : '');
+  const displayPath = currentPath + (isCurrentDirty ? '*' : '') + (isReadOnly ? ` (${t('common.read_only') || '只读'})` : '');
 
   const handleBBCodeSave = async () => {
     if (currentTemplateId) {
@@ -279,14 +282,25 @@ export default function AppHeader() {
                   <Save size={16} />
                   <span className="hidden sm:inline">{isSaving ? t('common.saving') : t('common.save')}</span>
                 </button>
-                <button 
-                  onClick={handleShare}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
-                >
-                  <Share2 size={16} />
-                  <span className="hidden sm:inline">{t('common.share')}</span>
-                </button>
               </>
+            )}
+
+            <button 
+              onClick={handleSaveAs}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
+            >
+              <Copy size={16} />
+              <span className="hidden sm:inline">{t('common.save_as') || '另存为'}</span>
+            </button>
+
+            {!isReadOnly && (
+              <button 
+                onClick={handleShare}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+              >
+                <Share2 size={16} />
+                <span className="hidden sm:inline">{t('common.share')}</span>
+              </button>
             )}
 
             <button 
@@ -318,7 +332,7 @@ export default function AppHeader() {
         )}
 
         {view === 'bbcode-template' && (
-          <>
+          <div className="flex items-center gap-2">
             <button 
               onClick={handleNewTemplate}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
@@ -327,38 +341,44 @@ export default function AppHeader() {
               <span className="hidden sm:inline">{t('common.new')}</span>
             </button>
 
-            <button 
-              onClick={handleBBCodeSave}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors"
-            >
-              <Save size={16} />
-              <span className="hidden sm:inline">{t('common.save')}</span>
-            </button>
+            {!isReadOnly && (
+              <button 
+                onClick={handleBBCodeSave}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors"
+              >
+                <Save size={16} />
+                <span className="hidden sm:inline">{t('common.save')}</span>
+              </button>
+            )}
 
             <button 
               onClick={handleBBCodeSaveAs}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
             >
-              <FilePlus size={16} />
+              <Copy size={16} />
               <span className="hidden sm:inline">{t('editor.bbcode.save_as')}</span>
             </button>
 
-            <button 
-              onClick={handleShare}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-            >
-              <Share2 size={16} />
-              <span className="hidden sm:inline">{t('common.share')}</span>
-            </button>
+            {!isReadOnly && (
+              <>
+                <button 
+                  onClick={handleShare}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+                >
+                  <Share2 size={16} />
+                  <span className="hidden sm:inline">{t('common.share')}</span>
+                </button>
 
-            <button 
-              onClick={handleImportDefault}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-            >
-              <RotateCcw size={16} />
-              <span className="hidden sm:inline">{t('common.import_default')}</span>
-            </button>
-          </>
+                <button 
+                  onClick={handleImportDefault}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+                >
+                  <RotateCcw size={16} />
+                  <span className="hidden sm:inline">{t('common.import_default')}</span>
+                </button>
+              </>
+            )}
+          </div>
         )}
 
         {view === 'vault' && (

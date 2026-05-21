@@ -628,8 +628,4 @@ const handlers: any = {
   CurrencyHandler
 };
 
-if (typeof window !== 'undefined') {
-  Object.assign(window, handlers);
-}
-
 export default handlers;

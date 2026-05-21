@@ -5,7 +5,7 @@ import DynamicTable from '../../common/DynamicTable';
 import SingleRowTable from '../../common/SingleRowTable';
 import MultilineInput from '../../common/MultilineInput';
 import { useCharacter } from '../../../contexts/CharacterContext';
-import { ATTRIBUTE_NAMES } from '../../../types';
+import { ATTRIBUTE_NAMES } from '../../../schema/types';
 
 const AttributesSection: React.FC = () => {
   const { t } = useTranslation();

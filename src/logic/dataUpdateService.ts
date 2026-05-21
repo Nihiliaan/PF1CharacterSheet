@@ -1,5 +1,5 @@
 import { produce } from 'immer';
-import { CharacterData } from '../types';
+import { CharacterData } from '../schema/types';
 import { getHandlerByPath } from '../schema/fieldRegistry';
 
 /**

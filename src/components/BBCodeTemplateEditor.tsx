@@ -7,7 +7,7 @@ import { useUI } from '../contexts/UIContext';
 import { BBCODE_SYNTAX_GUIDE, BBCODE_DATA_TREE, BBCodeTreeItem } from '../constants/bbcodeHelp';
 import { DEFAULT_BBCODE_TEMPLATE } from '../constants';
 
-const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeItem; level?: number; defaultOpen?: boolean }) => {
+const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeItem; level?: number; defaultOpen?: boolean; key?: any }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen || level < 1); // 默认展开第一层
   const hasChildren = item.children && item.children.length > 0;
 
@@ -52,11 +52,12 @@ const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeIt
 
 export default function BBCodeTemplateEditor() {
   const { t } = useTranslation();
-  const { bbcodeTemplate, setBbcodeTemplate } = useCharacter();
+  const { bbcodeTemplate, setBbcodeTemplate, isReadOnly } = useCharacter();
   const { setToast } = useUI();
 
   useEffect(() => {
     (window as any).__resetBBCodeTemplate = () => {
+      if (isReadOnly) return;
       setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
       localStorage.removeItem('bbcode_template');
       setToast({ message: t('editor.bbcode.reset_success'), type: 'success' });
@@ -64,7 +65,7 @@ export default function BBCodeTemplateEditor() {
     return () => {
       delete (window as any).__resetBBCodeTemplate;
     };
-  }, [setBbcodeTemplate, setToast, t]);
+  }, [setBbcodeTemplate, setToast, t, isReadOnly]);
 
   return (
     <div className="flex flex-col h-full bg-stone-50 overflow-hidden relative">
@@ -77,7 +78,8 @@ export default function BBCodeTemplateEditor() {
           <textarea
             value={bbcodeTemplate}
             onChange={(e) => setBbcodeTemplate(e.target.value)}
-            className="flex-1 w-full p-4 outline-none resize-none font-mono text-sm leading-relaxed text-stone-700"
+            readOnly={isReadOnly}
+            className={`flex-1 w-full p-4 outline-none resize-none font-mono text-sm leading-relaxed text-stone-700 ${isReadOnly ? 'bg-stone-50/50' : ''}`}
             spellCheck={false}
           />
         </div>

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Image as ImageIcon, ChevronDown, Settings, X, Plus, Trash2 } from 'lucide-react';
 
-import { AvatarsSoA } from '../../types';
+import { AvatarsSoA } from '../../schema/types';
 
 const AvatarGallery = ({ avatars, onUpdate }: { avatars: AvatarsSoA, onUpdate: (a: AvatarsSoA) => void }) => {
   const [index, setIndex] = useState(0);

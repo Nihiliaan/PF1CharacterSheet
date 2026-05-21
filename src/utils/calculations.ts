@@ -1,4 +1,4 @@
-import { CharacterData } from '../types';
+import { CharacterData } from '../schema/types';
 
 export const getModifier = (value: number | string): number => {
   const val = typeof value === 'string' ? parseInt(value) || 10 : value;
@@ -52,7 +52,7 @@ export const calculateTotalWeightNum = (data: CharacterData): number => {
   let total = parseFloat(equipment?.currency?.coinWeight as any) || 0;
   if (equipment && equipment.container) {
     equipment.container.forEach(bag => {
-      if (!bag.ignoreWeight || bag.ignoreWeight === false) {
+      if (!bag.ignoreWeight) {
         if (!bag.item) return;
         bag.item.forEach((_, i) => {
           const weight = parseFloat(bag.weight[i] as any) || 0;

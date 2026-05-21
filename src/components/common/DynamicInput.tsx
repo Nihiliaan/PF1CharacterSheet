@@ -1,11 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ATTRIBUTE_NAMES, InputType } from '../../types';
+import { ATTRIBUTE_NAMES, InputType } from '../../schema/types';
 import MarkdownInlineEditor from './MarkdownInlineEditor';
 import { useNumericStepper } from '../../hooks/useNumericStepper';
 import { getDisplayValue } from '../../utils/formatters';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
-import handlers from '../../schema/dataTypes';
+import handlers from '../../schema/handlers';
 
 const { getHandlerByType } = handlers;
 

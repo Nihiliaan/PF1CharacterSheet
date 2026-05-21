@@ -3,11 +3,11 @@ import { AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import Dialog from '../common/Dialog';
 import Toast from '../common/Toast';
-import AIExtractionModal from '../character/AIExtractionModal';
+import AIExtractionModal from '../editor/AIExtractionModal';
 
 import { useUI } from '../../contexts/UIContext';
 import { useCharacter } from '../../contexts/CharacterContext';
-import { useCharacterAI } from '../../hooks/useCharacterAI';
+import { useCharacterAI } from '../../contexts/hooks/useCharacterAI';
 
 export default function AppOverlays() {
   const { t } = useTranslation();

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { driveSyncService } from '../services/driveSyncService';
-import { useUI } from '../contexts/UIContext';
-import { useAuth } from '../contexts/AuthContext';
-import { useVault } from '../contexts/VaultContext';
+import { driveSyncService } from '../../services/driveSyncService';
+import { useUI } from '../UIContext';
+import { useAuth } from '../AuthContext';
+import { useVault } from '../VaultContext';
 
 export const useDriveSync = () => {
   const { setToast } = useUI();
@@ -65,7 +65,7 @@ export const useDriveSync = () => {
     setIsSyncingDrive(true);
     setToast({ message: "正在备份到 Google 云端硬盘..." });
     try {
-      await driveSyncService.backupToCloud(user, myCharacters, folders);
+      await driveSyncService.backupToCloud(user);
       setToast({ message: "备份成功！所有数据已同步至 PF1CharacterSheet 文件夹" });
     } catch (e: any) {
       console.error(e);

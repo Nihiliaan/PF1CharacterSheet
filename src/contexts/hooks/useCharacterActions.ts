@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
-import { CharacterData } from '../types';
-import { dataUpdateService } from '../services/dataUpdateService';
+import { CharacterData } from '../../schema/types';
+import { dataUpdateService } from '../../logic/dataUpdateService';
 
 /**
  * 角色数据更新操作的封装 Hook

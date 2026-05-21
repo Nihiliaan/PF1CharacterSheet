@@ -6,7 +6,7 @@ import {
   Copy, Move, Settings, Cloud, Link, FileText
 } from 'lucide-react';
 import { getCharacterById } from '../../services/characterService';
-import { FirebaseUser, FolderMetadata } from '../../types';
+import { FirebaseUser, FolderMetadata } from '../../schema/types';
 import Toast from '../common/Toast';
 import Dialog from '../common/Dialog';
 import ContextMenu from '../common/ContextMenu';
@@ -16,8 +16,8 @@ import MarkdownPreview from '../common/MarkdownPreview';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useUI } from '../../contexts/UIContext';
 import { useVault } from '../../contexts/VaultContext';
-import { useDriveSync } from '../../hooks/useDriveSync';
-import { useCharacterAI } from '../../hooks/useCharacterAI';
+import { useDriveSync } from '../../contexts/hooks/useDriveSync';
+import { useCharacterAI } from '../../contexts/hooks/useCharacterAI';
 
 const VaultContent = ({
   user,

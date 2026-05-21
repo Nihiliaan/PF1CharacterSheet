@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getComputedEncumbrance, calculateTotalWeightNum } from '../../../utils/calculations';
-import { CharacterData } from '../../../types';
+import { CharacterData } from '../../../schema/types';
 
 interface EncumbranceBarProps {
   data: CharacterData;

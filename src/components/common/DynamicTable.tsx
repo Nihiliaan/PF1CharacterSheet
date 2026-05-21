@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
-import { DynamicTableProps } from '../../types';
+import { DynamicTableProps } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
 import DynamicInput from './DynamicInput';
 

@@ -10,6 +10,8 @@
     "login": "登录",
     "logout": "退出",
     "ai_identify": "AI 识别",
+    "read_only": "只读",
+    "save_as": "另存为",
     "create_new": "创建新角色",
     "new_character": "新建角色卡",
     "new_template": "新建模板",
@@ -56,6 +58,8 @@
       "cs_localized": "本职技能",
       "cs_short": "本职"
     },
+    "save_as_prompt": "请输入新人物卡的名称",
+    "save_as_default_name": "人物卡副本",
     "basic": {
       "name": "角色名",
       "classes": "职业与等级",

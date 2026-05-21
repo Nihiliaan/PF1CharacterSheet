@@ -1,10 +1,10 @@
 import Handlebars from 'handlebars';
 import { get } from 'lodash-es';
-import { CharacterData, ATTRIBUTE_NAMES } from '../types';
+import { CharacterData, ATTRIBUTE_NAMES } from '../schema/types';
 import { getExportValue } from './formatters';
 import { getHandlerByPath } from '../schema/fieldRegistry';
 import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from './calculations';
-import handlers from '../schema/dataTypes';
+import handlers from '../schema/handlers';
 
 // 创建隔离的 Handlebars 实例
 const hbs = Handlebars.create();

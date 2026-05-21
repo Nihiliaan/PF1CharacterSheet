@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { produce } from 'immer';
-import { dataUpdateService } from '../services/dataUpdateService';
-import { CharacterData } from '../types';
+import { dataUpdateService } from '../../logic/dataUpdateService';
+import { CharacterData } from '../../schema/types';
 
 /**
  * 专门处理角色表拖拽排序和跨容器移动的交互逻辑

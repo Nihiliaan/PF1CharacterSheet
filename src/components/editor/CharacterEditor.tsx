@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { User as FirebaseUser } from 'firebase/auth';
-import TableOfContents from '../character/TableOfContents';
+import TableOfContents from './TableOfContents';
 
 import { useCharacter } from '../../contexts/CharacterContext';
 
@@ -44,27 +44,6 @@ export default function CharacterEditor({
       exit={{ opacity: 0, x: 20 }}
       className="h-full overflow-y-auto"
     >
-      {/* Read-Only Notice */}
-      {isReadOnly && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-center gap-3 text-amber-800 text-sm font-medium sticky top-0 z-[55]">
-          <ShieldCheck size={18} />
-          <span>{t('editor.read_only_notice_text')}</span>
-          {user && (
-            <button
-              onClick={async () => {
-                const id = await saveCharacter(data, null);
-                if (id) {
-                  window.location.href = `?id=${id}`;
-                }
-              }}
-              className="px-2 py-1 bg-amber-200 hover:bg-amber-300 rounded text-xs transition-colors"
-            >
-              {t('editor.read_only_notice_copy')}
-            </button>
-          )}
-        </div>
-      )}
-
       <TableOfContents />
       <main className={`max-w-5xl mx-auto py-12 px-4 sm:px-8 pb-32 transition-all duration-300 ${isReadOnly ? 'pointer-events-none opacity-90 grayscale-[0.2]' : ''}`}>
         <BasicInfoSection />

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Section from '../../common/Section';
 import InlineInput from '../../common/InlineInput';
 import MultilineInput from '../../common/MultilineInput';
-import AvatarGallery from '../../character/AvatarGallery';
+import AvatarGallery from '../AvatarGallery';
 import { useCharacter } from '../../../contexts/CharacterContext';
 
 const BasicInfoSection: React.FC = () => {

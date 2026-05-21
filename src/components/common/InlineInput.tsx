@@ -1,6 +1,6 @@
 import React from 'react';
 import DynamicInput from './DynamicInput';
-import { InputType } from '../../types';
+import { InputType } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
 
 interface InlineInputProps {

@@ -10,6 +10,8 @@
     "login": "Login",
     "logout": "Logout",
     "ai_identify": "AI Extract",
+    "read_only": "Read-Only",
+    "save_as": "Save As",
     "create_new": "Create New",
     "new_character": "New Character",
     "new_template": "New Template",
@@ -56,6 +58,8 @@
       "cs_localized": "Class Skill",
       "cs_short": "CS"
     },
+    "save_as_prompt": "Please enter a name for the new character",
+    "save_as_default_name": "Character Copy",
     "basic": {
       "name": "Name",
       "classes": "Classes & Levels",

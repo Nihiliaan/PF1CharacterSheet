@@ -8,18 +8,21 @@ import {
   deleteDoc, 
   query, 
   where, 
-  serverTimestamp, 
-  Timestamp 
+  serverTimestamp,
+  Timestamp,
+  orderBy
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import { CharacterData } from '../schema/types';
 
-enum OperationType {
+export enum OperationType {
   CREATE = 'create',
   UPDATE = 'update',
   DELETE = 'delete',
   LIST = 'list',
   GET = 'get',
   WRITE = 'write',
+  CREATE_FOLDER = 'create_folder'
 }
 
 interface FirestoreErrorInfo {
@@ -48,17 +51,26 @@ export const EXT_CHAR = '.pf1';
 export const EXT_TEMPLATE = '.bbc';
 export const EXT_LINK = '.lnk';
 
-async function checkUniqueName(name: string, folderId: string | null, userId: string, excludeId?: string, isFolder: boolean = false) {
-  const collectionName = isFolder ? 'folders' : 'characters';
-  const q = query(
-    collection(db, collectionName),
-    where('ownerId', '==', userId),
-    where('folderId', '==', folderId), // For folders, this field is actually 'parentId' in current schema, let's fix checkUniqueName to handle both
-    where('name', '==', name)
-  );
-  // Wait, let's be more precise. Folders use parentId, Characters use folderId.
-  // And we want to check BOTH folders and characters for name collision in the same space.
+export interface Character {
+  id: string;
+  isLink: boolean;
+  isTemplate: boolean;
+  data: any;
+  name?: string;
+  folderId?: string | null;
+  updatedAt?: any;
+}
 
+export interface Folder {
+  id: string;
+  name: string;
+  parentId: string | null;
+  ownerId: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+async function checkUniqueName(name: string, folderId: string | null, userId: string, excludeId?: string, isFolder: boolean = false) {
   const folderQuery = query(
     collection(db, 'folders'),
     where('ownerId', '==', userId),
@@ -85,13 +97,20 @@ function ensureExtension(name: string, ext: string) {
   return name + ext;
 }
 
-export async function saveCharacter(characterData: any, id?: string, folderId?: string | null, isTemplate: boolean = false) {
+export async function saveCharacter(characterData: any, id?: string | null, folderId?: string | null, isTemplate: boolean = false) {
   if (!auth.currentUser) throw new Error("Must be logged in to save characters");
 
   const path = 'characters';
   try {
     const ext = isTemplate ? EXT_TEMPLATE : EXT_CHAR;
-    let filename = characterData.filename || characterData.name || (isTemplate ? "新模板" : '新角色');
+    
+    // Improved filename extraction
+    let filename = '';
+    if (isTemplate) {
+      filename = characterData.name || characterData.filename || "新模板";
+    } else {
+      filename = characterData.basic?.name || characterData.filename || characterData.name || '新角色';
+    }
     filename = ensureExtension(filename, ext);
 
     // If new or renaming, ensure unique
@@ -197,7 +216,7 @@ export async function moveCharacter(id: string, folderId: string | null) {
   const path = `characters/${id}`;
   try {
     const char = await getCharacterById(id);
-    if (char && !(await checkUniqueName(char.name, folderId, auth.currentUser!.uid, id))) {
+    if (char && !(await checkUniqueName(char.name!, folderId, auth.currentUser!.uid, id))) {
       throw new Error(`目标文件夹已存在名为 "${char.name}" 的文件`);
     }
     await updateDoc(doc(db, 'characters', id), { folderId, updatedAt: serverTimestamp() });
@@ -214,7 +233,7 @@ export async function moveFolder(id: string, parentId: string | null) {
     if (folder && !(await checkUniqueName(folder.name, parentId, auth.currentUser!.uid, id, true))) {
       throw new Error(`目标位置已存在名为 "${folder.name}" 的文件夹`);
     }
-    await updateDoc(doc(db, 'folders', id), { 
+    await updateDoc(doc(db, 'folders', id), {
       parentId,
       updatedAt: serverTimestamp()
     });
@@ -235,31 +254,35 @@ export async function copyCharacter(id: string) {
   }
 }
 
-export async function getFolders() {
-  if (!auth.currentUser) return [];
+export async function getFolders(uid?: string) {
+  const userId = uid || auth.currentUser?.uid;
+  if (!userId) return [];
   const path = 'folders';
   try {
     const q = query(
-      collection(db, path), 
-      where('ownerId', '==', auth.currentUser.uid)
+      collection(db, path),
+      where('ownerId', '==', userId),
+      orderBy('name', 'asc')
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Folder[];
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
+    return [];
   }
 }
 
-export async function createFolder(name: string, parentId: string | null = null) {
-  if (!auth.currentUser) throw new Error("Must be logged in");
+export async function createFolder(name: string, parentId: string | null = null, uid?: string) {
+  const userId = uid || auth.currentUser?.uid;
+  if (!userId) throw new Error("Must be logged in");
   const path = 'folders';
   try {
-    if (!(await checkUniqueName(name, parentId, auth.currentUser.uid, undefined, true))) {
+    if (!(await checkUniqueName(name, parentId, userId, undefined, true))) {
       throw new Error(`当前文件夹已存在名为 "${name}" 的文件夹`);
     }
     const docRef = await addDoc(collection(db, path), {
       name,
-      ownerId: auth.currentUser.uid,
+      ownerId: userId,
       parentId,
       createdAt: serverTimestamp(),
     });
@@ -300,8 +323,8 @@ export async function renameItem(id: string, type: 'character' | 'folder', newNa
         throw new Error(`该目录下已存在名为 "${finalName}" 的项目`);
     }
 
-    await updateDoc(doc(db, type === 'folder' ? 'folders' : 'characters', id), { 
-      name: finalName, 
+    await updateDoc(doc(db, type === 'folder' ? 'folders' : 'characters', id), {
+      name: finalName,
       updatedAt: serverTimestamp()
     });
   } catch (error) {
@@ -310,8 +333,6 @@ export async function renameItem(id: string, type: 'character' | 'folder', newNa
 }
 
 export async function findFolderByName(name: string, parentId: string | null, userId: string) {
-  // Fix: parentId === null query in Firestore can be tricky if not indexed correctly.
-  // Actually, where('parentId', '==', null) works fine.
   const q = query(
     collection(db, 'folders'),
     where('ownerId', '==', userId),
@@ -319,37 +340,46 @@ export async function findFolderByName(name: string, parentId: string | null, us
     where('parentId', '==', parentId)
   );
   const snap = await getDocs(q);
-  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+  return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() } as Folder;
 }
 
 export async function ensureLocalFolder(name: string, parentId: string | null, userId: string): Promise<string> {
   const existing = await findFolderByName(name, parentId, userId);
   if (existing) return existing.id;
-  return await createFolder(name, parentId);
+  const newId = await createFolder(name, parentId, userId);
+  return newId!;
 }
 
 export async function deleteFolder(id: string) {
   const path = `folders/${id}`;
   try {
-    // Note: In a production app, you might want to also delete/move sub-items.
-    // For now, we allow deleting the folder itself.
     await deleteDoc(doc(db, 'folders', id));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
 
-export async function getMyCharacters() {
-  if (!auth.currentUser) return [];
+export async function getCharacterList(uid: string, folderId?: string | null) {
   const path = 'characters';
   try {
-    const q = query(
-      collection(db, path),
-      where('ownerId', '==', auth.currentUser.uid)
-    );
+    let q;
+    if (folderId !== undefined) {
+      q = query(
+        collection(db, path),
+        where('ownerId', '==', uid),
+        where('folderId', '==', folderId),
+        orderBy('updatedAt', 'desc')
+      );
+    } else {
+      q = query(
+        collection(db, path),
+        where('ownerId', '==', uid),
+        orderBy('updatedAt', 'desc')
+      );
+    }
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
-      const d = doc.data();
+      const d = doc.data() as any;
       return {
         ...d,
         id: doc.id,
@@ -365,10 +395,16 @@ export async function getMyCharacters() {
           isTemplate: !!d.isTemplate
         }
       };
-    });
+    }) as Character[];
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
+    return [];
   }
+}
+
+export async function getMyCharacters() {
+  if (!auth.currentUser) return [];
+  return getCharacterList(auth.currentUser.uid);
 }
 
 export async function getCharacterById(id: string) {
@@ -377,7 +413,7 @@ export async function getCharacterById(id: string) {
     const docRef = doc(db, 'characters', id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      const d = docSnap.data();
+      const d = docSnap.data() as any;
       return {
         ...d,
         id: docSnap.id,
@@ -392,13 +428,17 @@ export async function getCharacterById(id: string) {
           isLink: !!d.targetId,
           isTemplate: !!d.isTemplate
         }
-      };
+      } as Character;
     }
     return null;
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
+    return null;
   }
 }
+
+// Alias for compatibility
+export const getCharacter = getCharacterById;
 
 export async function deleteCharacter(id: string) {
   const path = `characters/${id}`;

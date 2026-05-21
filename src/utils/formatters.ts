@@ -1,5 +1,5 @@
 import { getHandlerByPath } from '../schema/fieldRegistry';
-import handlers from '../schema/dataTypes';
+import handlers from '../schema/handlers';
 
 const { getHandlerByType } = handlers;
 

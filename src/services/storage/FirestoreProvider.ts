@@ -1,6 +1,7 @@
 import { IStorageProvider, StorageItem } from './types';
 import * as characterService from '../characterService';
 import { auth } from '../../lib/firebase';
+import { Character, Folder } from '../characterService';
 
 /**
  * Firebase/Firestore 存储适配器
@@ -11,7 +12,7 @@ export class FirestoreStorageProvider implements IStorageProvider {
   async save(item: Partial<StorageItem>): Promise<string> {
     const isTemplate = item.name?.endsWith('.bbc') || false;
     // characterService.saveCharacter handles both new and update
-    return await characterService.saveCharacter(item.data, item.id, item.parentId || undefined, isTemplate);
+    return await characterService.saveCharacter(item.data, item.id, item.parentId || undefined, isTemplate) || '';
   }
 
   async load(id: string): Promise<StorageItem> {
@@ -31,14 +32,14 @@ export class FirestoreStorageProvider implements IStorageProvider {
     const folders = await characterService.getFolders();
     
     const items: StorageItem[] = [
-      ...(folders || []).map((f: any) => ({
+      ...folders.map((f: Folder) => ({
         id: f.id,
         name: f.name,
         data: null,
         parentId: f.parentId,
         mimeType: 'application/vnd.google-apps.folder'
       })),
-      ...(characters || []).map((c: any) => ({
+      ...characters.map((c: Character) => ({
         id: c.id,
         name: c.name,
         data: c.data,
@@ -55,3 +56,4 @@ export class FirestoreStorageProvider implements IStorageProvider {
     return await characterService.ensureLocalFolder(name, parentId, auth.currentUser.uid);
   }
 }
+
