@@ -300,16 +300,16 @@ const WeightHandler = new BaseInt({
 
 const BoolHandler = new BaseHandler({
   ui: 'bool',
-  validate: (v: string) => v === 'true' || v === 'false' || v === '',
-  update: (v: string) => v === 'true',
+  validate: (v: any) => typeof v === 'boolean' || v === 'true' || v === 'false' || v === '',
+  update: (v: any) => v === true || v === 'true',
   formatDisplay: (v: any) => (v ? '是' : '否'),
   formatInteractive: (v: any) => (v ? 'true' : 'false')
 });
 
 const ClassSkillHandler = new BaseHandler({
   ui: 'bool',
-  validate: (v: string) => v === 'true' || v === 'false' || v === '',
-  update: (v: string) => v === 'true',
+  validate: (v: any) => typeof v === 'boolean' || v === 'true' || v === 'false' || v === '',
+  update: (v: any) => v === true || v === 'true',
   formatInteractive: (v: any) => (v ? 'true' : 'false'),
   formatDisplay: (v: any, context?: any) => {
     const isCS = v === true || v === 'true';
@@ -450,12 +450,12 @@ const AttributesTableHandler = new BaseTable({
 
 const MeleeAttackTableHandler = new BaseTable({
   columns: [
-    { key: 'weapon', label: 'editor.attacks.weapon', width: '20%' },
+    { key: 'weapon', label: 'editor.attacks.melee', width: '20%' },
     { key: 'hit', label: 'editor.attacks.hit', width: '8%', type: 'bonus' },
     { key: 'damage', label: 'editor.attacks.damage', width: '12%' },
     { key: 'critRange', label: 'editor.attacks.crit_range', width: '8%', type: 'critRange' },
     { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '8%', type: 'critMultiplier' },
-    { key: 'touch', label: 'editor.attacks.range', width: '8%', type: 'distance' },
+    { key: 'touch', label: 'editor.attacks.reach', width: '8%', type: 'distance' },
     { key: 'damageType', label: 'editor.attacks.damage_type', width: '10%' },
     { key: 'special', label: 'editor.attacks.special', width: '26%' }
   ]
@@ -463,7 +463,7 @@ const MeleeAttackTableHandler = new BaseTable({
 
 const RangedAttackTableHandler = new BaseTable({
   columns: [
-    { key: 'weapon', label: 'editor.attacks.weapon', width: '20%' },
+    { key: 'weapon', label: 'editor.attacks.ranged', width: '20%' },
     { key: 'hit', label: 'editor.attacks.hit', width: '8%', type: 'bonus' },
     { key: 'damage', label: 'editor.attacks.damage', width: '12%' },
     { key: 'critRange', label: 'editor.attacks.crit_range', width: '8%', type: 'critRange' },

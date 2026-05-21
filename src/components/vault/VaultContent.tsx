@@ -236,11 +236,19 @@ const VaultContent = ({
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (!file.name.endsWith('.json')) continue;
+      const isPf1 = file.name.endsWith('.pf1');
+      const isBbc = file.name.endsWith('.bbc');
+      if (!isPf1 && !isBbc) continue;
 
       try {
         const text = await file.text();
-        const content = JSON.parse(text);
+        let content;
+        try {
+          content = JSON.parse(text);
+        } catch (e) {
+          if (isBbc) content = { content: text };
+          else continue;
+        }
         
         let folderId = currentFolderId;
         if ((file as any).webkitRelativePath) {
@@ -250,7 +258,12 @@ const VaultContent = ({
           }
         }
 
-        const processImportedData = (content: any) => {
+        if (isBbc) {
+          const templateContent = content.content || (typeof content === 'string' ? content : text);
+          const templateName = content.name || file.name.replace('.bbc', '');
+          await (saveCharacter as any)({ content: templateContent, name: templateName }, undefined, folderId, true);
+        } else {
+          // pf1
           const finalData = { ...content };
           // Migrate avatars to SoA if needed
           if (finalData.basic?.avatars && Array.isArray(finalData.basic.avatars)) {
@@ -261,30 +274,35 @@ const VaultContent = ({
           }
           finalData.basic = {
             ...finalData.basic,
-            name: finalData.basic?.name || file.name.replace('.json', '')
+            name: finalData.basic?.name || file.name.replace('.pf1', '')
           };
-          return finalData;
-        };
-
-        const finalData = processImportedData(content);
-        await saveCharacter(finalData, undefined, folderId);
+          await (saveCharacter as any)(finalData, undefined, folderId, false);
+        }
         importCount++;
       } catch (e) {
         console.error("Failed to parse local file", e);
       }
     }
     onRefresh();
-    setToast({ message: `本地导入成功！共导入 ${importCount} 个人物卡` });
+    setToast({ message: `本地导入成功！共导入 ${importCount} 个项目` });
   };
 
   const handleImportClipboard = async () => {
     try {
       const text = await navigator.clipboard.readText();
       const content = JSON.parse(text);
-      if (!content.basic || !content.attributes) throw new Error("无效的人物卡格式");
+      
+      // Determine type based on content
+      const isTemplate = !!content.content && !content.basic;
 
-      const processImportedData = (data: any) => {
-        const finalData = { ...data };
+      if (isTemplate) {
+        await (saveCharacter as any)({ 
+          content: content.content, 
+          name: content.name || "从剪贴板导入的模板" 
+        }, undefined, currentFolderId, true);
+      } else {
+        if (!content.basic || !content.attributes) throw new Error("无效的人物卡格式");
+        const finalData = { ...content };
         if (finalData.basic?.avatars && Array.isArray(finalData.basic.avatars)) {
           finalData.basic.avatars = {
             url: finalData.basic.avatars.map((a: any) => a.url || ''),
@@ -295,10 +313,9 @@ const VaultContent = ({
           ...finalData.basic,
           name: finalData.basic?.name || "剪贴板导入"
         };
-        return finalData;
-      };
-
-      await saveCharacter(processImportedData(content), undefined, currentFolderId);
+        await (saveCharacter as any)(finalData, undefined, currentFolderId, false);
+      }
+      
       onRefresh();
       setToast({ message: "剪贴板导入成功！" });
     } catch (e: any) {
@@ -388,7 +405,7 @@ const VaultContent = ({
         if (!item.targetId) return;
         const targetChar = await getCharacterById(item.targetId);
         if (targetChar) {
-          await saveCharacter(targetChar.data, null, currentFolderId);
+          await (saveCharacter as any)(targetChar.data, null, currentFolderId, targetChar.isTemplate);
           setToast({ message: "已创建可编辑副本" });
         } else {
           setToast({ message: "原角色不存在或无法访问", type: 'error' });
@@ -429,7 +446,7 @@ const VaultContent = ({
         id="local-import-input"
         type="file" 
         multiple 
-        accept=".json"
+        accept=".pf1,.bbc"
         className="hidden"
         onChange={(e) => handleImportLocal(e.target.files)}
       />
@@ -438,6 +455,7 @@ const VaultContent = ({
         type="file" 
         /* @ts-ignore */
         webkitdirectory=""
+        accept=".pf1,.bbc"
         className="hidden"
         onChange={(e) => handleImportLocal(e.target.files)}
       />
