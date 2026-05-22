@@ -137,7 +137,7 @@
       "weapon": "攻击/武器",
       "melee": "近战武器",
       "ranged": "远程武器",
-      "hit": "命中",
+      "hit": "攻击加值",
       "damage": "伤害",
       "crit_range": "重击范围",
       "crit_multiplier": "重击倍率",
