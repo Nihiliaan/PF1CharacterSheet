@@ -37,6 +37,7 @@ interface VaultContextType {
   getItemPath: (charId: string | null) => string;
 
   // Clipboard functionality
+  importFromClipboard: () => Promise<void>;
   cutItems: string[];
   onCut: (ids: string[]) => void;
   onPaste: (targetFolderId: string | null) => Promise<void>;
@@ -104,6 +105,46 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const clearClipboard = () => setCutItems([]);
+
+  const importFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const content = JSON.parse(text);
+      
+      // Determine type based on content
+      const isTemplate = !!content.content && !content.basic;
+
+      if (isTemplate) {
+        await saveCharacterService({ 
+           content: content.content, 
+           name: content.name || "从剪贴板导入的模板" 
+        }, undefined, currentFolderId, true);
+      } else {
+        if (!content.basic || !content.attributes) throw new Error("无效的人物卡格式");
+        
+        // 彻底剥离元数据，确保作为新文档创建
+        const { id, ownerId, targetId, folderId: oldFolderId, ...cleanData } = content;
+        const finalData = { ...cleanData };
+
+        if (finalData.basic?.avatars && Array.isArray(finalData.basic.avatars)) {
+          finalData.basic.avatars = {
+            url: finalData.basic.avatars.map((a: any) => a.url || ''),
+            note: finalData.basic.avatars.map((a: any) => a.note || '')
+          };
+        }
+        finalData.basic = {
+          ...finalData.basic,
+          name: finalData.basic?.name || "剪贴板导入"
+        };
+        await saveCharacterService(finalData, undefined, currentFolderId, false);
+      }
+      
+      await refreshCharacterList();
+      setToast({ message: "剪贴板导入成功！" });
+    } catch (e: any) {
+      setToast({ message: "剪贴板导入失败: " + e.message, type: 'error' });
+    }
+  };
 
   const onPaste = async (targetFolderId: string | null) => {
     if (cutItems.length === 0) return;
@@ -180,6 +221,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor,
     moveCharacter, moveFolder, createFolder, deleteFolder, deleteCharacter, renameItem, copyCharacter, ensureLocalFolder,
     getItemPath,
+    importFromClipboard,
     cutItems, onCut, onPaste, clearClipboard,
     search, setSearch, viewMode, setViewMode
   };

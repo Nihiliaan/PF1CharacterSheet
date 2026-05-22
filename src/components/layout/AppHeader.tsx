@@ -88,7 +88,9 @@ export default function AppHeader() {
     viewMode,
     setViewMode,
     createFolder,
-    refreshCharacterList
+    refreshCharacterList,
+    importFromClipboard,
+    onPaste // Although not needed for import, good to keep context synced
   } = useVault();
 
   const toggleLanguage = () => {
@@ -439,6 +441,12 @@ export default function AppHeader() {
                   className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
                 >
                   <Folder size={14} /> 本地文件夹
+                </button>
+                <button 
+                  onClick={importFromClipboard}
+                  className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
+                >
+                  <Check size={14} /> 剪贴板内容
                 </button>
                 <div className="h-px bg-stone-100 my-1"></div>
                 <button 
