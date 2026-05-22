@@ -63,25 +63,31 @@ export const useDriveSync = () => {
       );
       
       if (selectedDocs.length > 0) {
-        setToast({ message: `正在导入 ${selectedDocs.length} 个项目...` });
-        let successCount = 0;
-        for (const doc of selectedDocs) {
-           if (doc.mimeType === 'application/vnd.google-apps.folder') {
-             // 如果选中的是文件夹，执行同步逻辑
-             await driveSyncService.importItems(doc, user, currentFolderId);
-           } else {
-             // 如果是文件，直接加载内容并保存
-             const fullItem = await driveService.getFileContent(token, doc.id);
-             await driveSyncService.importSingleFile({
-               id: doc.id,
-               name: doc.name,
-               data: fullItem
-             }, user, currentFolderId);
-           }
-           successCount++;
-        }
-        await refreshCharacterList();
-        setToast({ message: `导入成功！共导入 ${successCount} 个项目` });
+        // 先给用户反馈，并稍微延迟执行，让 Picker 的回调能干净地结束，避免阻塞 UI
+        setToast({ message: `正在准备导入 ${selectedDocs.length} 个项目...` });
+        
+        setTimeout(async () => {
+          try {
+            let successCount = 0;
+            for (const doc of selectedDocs) {
+               if (doc.mimeType === 'application/vnd.google-apps.folder') {
+                 await driveSyncService.importItems(doc, user, currentFolderId);
+               } else {
+                 const fullItem = await driveService.getFileContent(token, doc.id);
+                 await driveSyncService.importSingleFile({
+                   id: doc.id,
+                   name: doc.name,
+                   data: fullItem
+                 }, user, currentFolderId);
+               }
+               successCount++;
+            }
+            await refreshCharacterList();
+            setToast({ message: `导入成功！共导入 ${successCount} 个项目` });
+          } catch (error: any) {
+            setToast({ message: "导入过程出错: " + error.message, type: 'error' });
+          }
+        }, 100);
       }
     } catch (e: any) {
       console.error("Picker failed:", e);

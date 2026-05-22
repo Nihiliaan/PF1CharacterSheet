@@ -41,25 +41,21 @@ export async function openGooglePicker(accessToken: string, apiKey: string, appI
           .setOAuthToken(accessToken)
           .setDeveloperKey(apiKey)
           .setAppId(appId)
-          // 启用多选功能
+          // 启用核心特性
           .enableFeature((window as any).google.picker.Feature.MULTISELECT_ENABLED)
-          // 允许在选择器中看到文件夹
-          .enableFeature((window as any).google.picker.Feature.SUPPORT_FOLDERS);
+          .enableFeature((window as any).google.picker.Feature.SUPPORT_FOLDERS)
+          .enableFeature((window as any).google.picker.Feature.SUPPORT_DRIVES);
 
-        // 视图 1：主视图，允许同时选择文件和文件夹
-        const docsView = new (window as any).google.picker.DocsView()
-          .setParent('root')
+        // 使用通用文档视图，并配置文件夹选中支持
+        const docsView = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS)
           .setIncludeFolders(true)
-          .setSelectableMimeTypes('application/vnd.google-apps.folder,application/json,application/octet-stream');
-        
-        // 视图 2：纯文件夹视图
-        const foldersView = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.FOLDERS)
-          .setSelectableMimeTypes('application/vnd.google-apps.folder');
+          .setSelectFolderEnabled(true)
+          .setMimeTypes('application/vnd.google-apps.folder,application/json,text/plain,application/octet-stream');
 
         const picker = pickerBuilder
           .addView(docsView)
-          .addView(foldersView)
           .setCallback((data: any) => {
+            console.log("[GooglePicker] Callback data:", data);
             if (data.action === (window as any).google.picker.Action.PICKED) {
               resolve(data.docs);
             } else if (data.action === (window as any).google.picker.Action.CANCEL) {
