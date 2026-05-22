@@ -70,7 +70,13 @@ export default function AppHeader() {
     setCurrentCharacterId,
     setCurrentTemplateId,
     getItemPath,
-    setShowAIModal
+    setShowAIModal,
+    // 从 CharacterContext 获取 Drive 相关
+    handleBrowseDrive,
+    handleBrowseDriveRoot,
+    handleCloudBackup,
+    handleCloudRestore,
+    isSyncingDrive
   } = useCharacter();
 
   const {
@@ -81,10 +87,6 @@ export default function AppHeader() {
     setSearch,
     viewMode,
     setViewMode,
-    handleCloudBackup,
-    handleCloudRestore,
-    isSyncingDrive,
-    handleBrowseDrive,
     createFolder,
     refreshCharacterList
   } = useVault();
@@ -443,7 +445,13 @@ export default function AppHeader() {
                   onClick={handleBrowseDrive}
                   className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2 font-bold text-primary"
                 >
-                  <Search size={14} /> 浏览云端导入...
+                  <Search size={14} /> 浏览云端备份...
+                </button>
+                <button 
+                  onClick={handleBrowseDriveRoot}
+                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2 font-bold text-indigo-600"
+                >
+                  <Grid size={14} /> 浏览全部云端文件...
                 </button>
                 <button 
                   onClick={handleCloudRestore}

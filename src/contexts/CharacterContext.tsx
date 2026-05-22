@@ -75,6 +75,7 @@ interface CharacterContextType {
   setDriveModal: (modal: any) => void;
   isSyncingDrive: boolean;
   handleBrowseDrive: () => Promise<void>;
+  handleBrowseDriveRoot: () => Promise<void>;
   navigateDrive: (folderId: string, folderName: string) => Promise<void>;
   navigateToPathIndex: (index: number) => Promise<void>;
   importFromDrive: (item: any) => Promise<void>;
@@ -198,7 +199,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const {
     driveModal, setDriveModal, isSyncingDrive,
-    handleBrowseDrive, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore
+    handleBrowseDrive, handleBrowseDriveRoot, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore
   } = useDriveSync();
 
   const handleShare = () => {
@@ -290,7 +291,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     isAILoading, aiStatusMsg, handleAIExtract,
     // Drive Sync
     driveModal, setDriveModal, isSyncingDrive,
-    handleBrowseDrive, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore,
+    handleBrowseDrive, handleBrowseDriveRoot, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore,
     getItemPath
   };
 

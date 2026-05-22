@@ -1,16 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { driveSyncService } from '../../services/driveSyncService';
 import { useUI } from '../UIContext';
 import { useAuth } from '../AuthContext';
 import { useVault } from '../VaultContext';
+import * as driveService from '../../services/googleDriveService';
 
 export const useDriveSync = () => {
   const { setToast } = useUI();
   const { user } = useAuth();
-  const { refreshCharacterList, myCharacters, folders, currentFolderId } = useVault();
+  const { refreshCharacterList, currentFolderId } = useVault();
 
   const [driveModal, setDriveModal] = useState<{ isOpen: boolean, currentPath: { id: string, name: string }[], items: any[] } | null>(null);
   const [isSyncingDrive, setIsSyncingDrive] = useState(false);
+
+  // 初始化 Google API
+  useEffect(() => {
+    driveService.loadGoogleApi().catch(console.error);
+  }, []);
 
   const handleBrowseDrive = async () => {
     console.log("[useDriveSync] handleBrowseDrive triggered");
@@ -31,6 +37,55 @@ export const useDriveSync = () => {
     } catch (e: any) {
       console.error("[useDriveSync] Connection failed:", e);
       setToast({ message: "连接失败: " + e.message, type: 'error' });
+    }
+  };
+
+  /**
+   * 使用 Google Picker 浏览整个云端硬盘 (根目录)
+   */
+  const handleBrowseDriveRoot = async () => {
+    if (!user) return;
+    setToast({ message: "正在启动文件选择器..." });
+    try {
+      const extraScopes = ['https://www.googleapis.com/auth/drive.readonly'];
+      const token = await driveService.getDriveAccessToken(extraScopes);
+      
+      // 获取配置
+      const response = await fetch('/firebase-applet-config.json');
+      const config = await response.json();
+      
+      console.log("[useDriveSync] Launching Picker with AppID:", config.messagingSenderId);
+
+      const selectedDocs = await driveService.openGooglePicker(
+        token, 
+        config.apiKey, 
+        config.messagingSenderId // Picker App ID 通常就是项目编号 (Project Number)
+      );
+      
+      if (selectedDocs.length > 0) {
+        setToast({ message: `正在导入 ${selectedDocs.length} 个项目...` });
+        let successCount = 0;
+        for (const doc of selectedDocs) {
+           if (doc.mimeType === 'application/vnd.google-apps.folder') {
+             // 如果选中的是文件夹，执行同步逻辑
+             await driveSyncService.importItems(doc, user, currentFolderId);
+           } else {
+             // 如果是文件，直接加载内容并保存
+             const fullItem = await driveService.getFileContent(token, doc.id);
+             await driveSyncService.importSingleFile({
+               id: doc.id,
+               name: doc.name,
+               data: fullItem
+             }, user, currentFolderId);
+           }
+           successCount++;
+        }
+        await refreshCharacterList();
+        setToast({ message: `导入成功！共导入 ${successCount} 个项目` });
+      }
+    } catch (e: any) {
+      console.error("Picker failed:", e);
+      setToast({ message: "浏览失败: " + e.message, type: 'error' });
     }
   };
 
@@ -98,6 +153,6 @@ export const useDriveSync = () => {
   return {
     driveModal, setDriveModal,
     isSyncingDrive,
-    handleBrowseDrive, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore
+    handleBrowseDrive, handleBrowseDriveRoot, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore
   };
 };

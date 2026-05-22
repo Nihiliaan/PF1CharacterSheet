@@ -4,22 +4,80 @@ import { googleProvider } from '../lib/firebase';
 // 核心权限：只能访问、修改和删除由本应用创建的文件/文件夹
 // 这是一个“非敏感权限”，不需要 Google 审核应用即可发布。
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const PICKER_SCOPE = 'https://www.googleapis.com/auth/drive.readonly'; // Picker typically needs this for full browsing
 
 /**
- * 将来可能的扩展功能说明：
- * 如果需要让用户能够浏览并在云端硬盘中搜索“非本应用创建”的文件（例如用户手动上传的 JSON）
- * 需要使用 'https://www.googleapis.com/auth/drive.readonly' 权限。
- * 但是，该权限属于“敏感权限 (Sensitive Scopes)”，实装前需要：
- * 1. 在 Google Cloud Console 提交应用审核。
- * 2. 否则会显示“应用未经验证”的警告，并直接暴露开发者邮箱给最终用户。
- * 3. 考虑到隐私和审核流程，目前仅保留 drive.file 权限。
- * 不要删除此注释，以备将来升级版本时查阅。
+ * 动态加载 Google API 脚本
  */
+export async function loadGoogleApi(): Promise<void> {
+  const loadScript = (url: string) => new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${url}"]`)) return resolve(true);
+    const script = document.createElement('script');
+    script.src = url;
+    script.async = true;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
 
-export async function getDriveAccessToken() {
+  await Promise.all([
+    loadScript('https://apis.google.com/js/api.js'),
+    loadScript('https://accounts.google.com/gsi/client')
+  ]);
+}
+
+/**
+ * 打开 Google Picker 文件选择器
+ */
+export async function openGooglePicker(accessToken: string, apiKey: string, appId: string): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    const gapi = (window as any).gapi;
+    if (!gapi) return reject(new Error("Google API not loaded"));
+
+    gapi.load('picker', {
+      callback: () => {
+        const pickerBuilder = new (window as any).google.picker.PickerBuilder()
+          .setOAuthToken(accessToken)
+          .setDeveloperKey(apiKey)
+          .setAppId(appId)
+          // 启用多选功能
+          .enableFeature((window as any).google.picker.Feature.MULTISELECT_ENABLED)
+          // 允许在选择器中看到文件夹
+          .enableFeature((window as any).google.picker.Feature.SUPPORT_FOLDERS);
+
+        // 视图 1：主视图，允许同时选择文件和文件夹
+        const docsView = new (window as any).google.picker.DocsView()
+          .setParent('root')
+          .setIncludeFolders(true)
+          .setSelectableMimeTypes('application/vnd.google-apps.folder,application/json,application/octet-stream');
+        
+        // 视图 2：纯文件夹视图
+        const foldersView = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.FOLDERS)
+          .setSelectableMimeTypes('application/vnd.google-apps.folder');
+
+        const picker = pickerBuilder
+          .addView(docsView)
+          .addView(foldersView)
+          .setCallback((data: any) => {
+            if (data.action === (window as any).google.picker.Action.PICKED) {
+              resolve(data.docs);
+            } else if (data.action === (window as any).google.picker.Action.CANCEL) {
+              resolve([]);
+            }
+          })
+          .build();
+        picker.setVisible(true);
+      }
+    });
+  });
+}
+
+export async function getDriveAccessToken(extraScopes: string[] = []) {
   console.log("[googleDriveService] getDriveAccessToken called");
   // Try to get cached token
-  const cached = localStorage.getItem('google_drive_token_v2');
+  const cacheKey = 'google_drive_token_v3_' + extraScopes.join('_');
+  const cached = localStorage.getItem(cacheKey);
   if (cached) {
     const { token, expiry } = JSON.parse(cached);
     if (Date.now() < expiry) {
@@ -31,6 +89,7 @@ export async function getDriveAccessToken() {
   console.log("[googleDriveService] No valid cached token, starting popup...");
   const provider = new GoogleAuthProvider();
   provider.addScope(DRIVE_SCOPE);
+  extraScopes.forEach(scope => provider.addScope(scope));
   
   const auth = getAuth();
   try {
@@ -40,9 +99,9 @@ export async function getDriveAccessToken() {
     const token = credential?.accessToken;
     
     if (token) {
-      // Cache token for 55 minutes (standard Google tokens last 60m)
+      // Cache token for 55 minutes
       const expiry = Date.now() + 55 * 60 * 1000;
-      localStorage.setItem('google_drive_token_v2', JSON.stringify({ token, expiry }));
+      localStorage.setItem(cacheKey, JSON.stringify({ token, expiry }));
       console.log("[googleDriveService] token cached");
     }
     

@@ -100,5 +100,14 @@ export const driveSyncService = {
         parentId: currentFolderId
       });
     }
+  },
+
+  async importSingleFile(fullItem: { id: string, name: string, data: any }, user: FirebaseUser, currentFolderId: string | null) {
+    const firestore = new FirestoreStorageProvider();
+    await firestore.save({
+      name: fullItem.name,
+      data: fullItem.data,
+      parentId: currentFolderId
+    });
   }
 };

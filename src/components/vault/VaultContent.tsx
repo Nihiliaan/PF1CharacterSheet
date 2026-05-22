@@ -33,6 +33,7 @@ const VaultContent = ({
     driveModal,
     setDriveModal,
     handleBrowseDrive,
+    handleBrowseDriveRoot,
     navigateDrive,
     importFromDrive,
     handleCloudBackup,
@@ -737,9 +738,13 @@ const VaultContent = ({
                 ...(cutItems.length > 0 ? [{ label: '粘贴在此', icon: Check, onClick: () => handleAction('paste', null, false) }] : []),
                 { label: '从本地导入', icon: Download, onClick: () => document.getElementById('local-import-input')?.click() },
                 { label: '从剪贴板导入', icon: Check, onClick: handleImportClipboard },
-                { label: '浏览云端导入', icon: Search, onClick: () => {
-                  console.log("[VaultContent] ContextMenu: Browse Cloud Import clicked");
+                { label: '浏览云端备份', icon: Search, onClick: () => {
+                  console.log("[VaultContent] ContextMenu: Browse Cloud Backup clicked");
                   handleBrowseDrive();
+                } },
+                { label: '浏览全部云端文件', icon: Grid, onClick: () => {
+                  console.log("[VaultContent] ContextMenu: Browse All Cloud clicked");
+                  handleBrowseDriveRoot();
                 } },
               ]
           } 
