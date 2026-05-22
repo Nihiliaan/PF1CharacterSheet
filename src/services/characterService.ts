@@ -122,19 +122,22 @@ export async function saveCharacter(characterData: any, id?: string | null, fold
       }
     }
 
+    const currentUid = auth.currentUser.uid;
+    const finalOwnerId = id ? (characterData.ownerId || currentUid) : currentUid;
+
     const payload: any = {
       name: filename,
       data: {
         ...characterData,
-        id: id || characterData.id || '',
+        id: id || '', // Will be updated after creation if new
         folderId: folderId !== undefined ? folderId : (characterData.folderId || null),
-        ownerId: characterData.ownerId || auth.currentUser.uid,
+        ownerId: finalOwnerId,
         targetId: characterData.targetId || ''
       },
       isPublic: true,
       updatedAt: serverTimestamp(),
       isTemplate: isTemplate,
-      ownerId: characterData.ownerId || auth.currentUser.uid,
+      ownerId: finalOwnerId,
       folderId: folderId !== undefined ? folderId : (characterData.folderId || null),
       targetId: characterData.targetId || ''
     };
@@ -367,18 +370,16 @@ export async function getCharacterList(uid: string, folderId?: string | null) {
       q = query(
         collection(db, path),
         where('ownerId', '==', uid),
-        where('folderId', '==', folderId),
-        orderBy('updatedAt', 'desc')
+        where('folderId', '==', folderId)
       );
     } else {
       q = query(
         collection(db, path),
-        where('ownerId', '==', uid),
-        orderBy('updatedAt', 'desc')
+        where('ownerId', '==', uid)
       );
     }
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
+    const items = snapshot.docs.map(doc => {
       const d = doc.data() as any;
       return {
         ...d,
@@ -396,6 +397,13 @@ export async function getCharacterList(uid: string, folderId?: string | null) {
         }
       };
     }) as Character[];
+
+    // Manual sort to avoid query failures if updatedAt is missing or for complex mixed queries
+    return items.sort((a, b) => {
+      const timeA = a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0;
+      const timeB = b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0;
+      return timeB - timeA;
+    });
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
     return [];

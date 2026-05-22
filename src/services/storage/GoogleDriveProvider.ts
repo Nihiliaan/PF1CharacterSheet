@@ -35,7 +35,7 @@ export class GoogleDriveProvider implements IStorageProvider {
 
   async list(parentId: string | null): Promise<StorageItem[]> {
     const token = await this.getToken();
-    const driveParentId = parentId || (await driveService.findPF1Root(token)) || 'root';
+    const driveParentId = parentId || 'root';
     const files = await driveService.listDriveFiles(token, driveParentId);
     return files.map((f: any) => ({
       id: f.id,

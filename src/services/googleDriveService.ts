@@ -17,21 +17,25 @@ const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
  */
 
 export async function getDriveAccessToken() {
+  console.log("[googleDriveService] getDriveAccessToken called");
   // Try to get cached token
   const cached = localStorage.getItem('google_drive_token_v2');
   if (cached) {
     const { token, expiry } = JSON.parse(cached);
     if (Date.now() < expiry) {
+      console.log("[googleDriveService] Using cached token");
       return token;
     }
   }
 
+  console.log("[googleDriveService] No valid cached token, starting popup...");
   const provider = new GoogleAuthProvider();
   provider.addScope(DRIVE_SCOPE);
   
   const auth = getAuth();
   try {
     const result = await signInWithPopup(auth, provider);
+    console.log("[googleDriveService] popup result received");
     const credential = GoogleAuthProvider.credentialFromResult(result);
     const token = credential?.accessToken;
     
@@ -39,11 +43,12 @@ export async function getDriveAccessToken() {
       // Cache token for 55 minutes (standard Google tokens last 60m)
       const expiry = Date.now() + 55 * 60 * 1000;
       localStorage.setItem('google_drive_token_v2', JSON.stringify({ token, expiry }));
+      console.log("[googleDriveService] token cached");
     }
     
     return token;
   } catch (error) {
-    console.error("Failed to get Google Drive access token:", error);
+    console.error("[googleDriveService] Failed to get Google Drive access token:", error);
     throw error;
   }
 }

@@ -51,10 +51,11 @@ export const useCharacterAI = (setData: (data: CharacterData) => void, setCurren
       if (!showAIModalRef.current) return;
 
       setAiStatusMsg('正在同步至跑团卡系统...');
-      const mergedData = transformAIData(extracted);
+      const transformed = transformAIData(extracted);
+      const mergedData = dataMigration.mergeWithDefault(transformed);
 
       setData(mergedData);
-      setToast({ message: "AI 识别并填写成功！" });
+      setToast({ message: "AI 识别并填写成功！已自动完成表单校验与合规化。" });
       setView('editor');
       setCurrentDocumentId(null);
       setShowAIModal(false);

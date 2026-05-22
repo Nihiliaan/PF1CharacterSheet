@@ -36,6 +36,12 @@ interface VaultContextType {
   ensureLocalFolder: (name: string, parentId: string | null, userId: string) => Promise<string>;
   getItemPath: (charId: string | null) => string;
 
+  // Clipboard functionality
+  cutItems: string[];
+  onCut: (ids: string[]) => void;
+  onPaste: (targetFolderId: string | null) => Promise<void>;
+  clearClipboard: () => void;
+
   search: string;
   setSearch: (s: string) => void;
   viewMode: 'grid' | 'list';
@@ -64,14 +70,17 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  // Clipboard state
+  const [cutItems, setCutItems] = useState<string[]>([]);
+
   const refreshCharacterList = useCallback(async () => {
     try {
       const [list, folderList] = await Promise.all([
         getMyCharacters(),
         getFolders()
       ]);
-      setMyCharacters(list || []);
-      setFolders(folderList || []);
+      setMyCharacters([...(list || [])]);
+      setFolders([...(folderList || [])]);
     } catch (e) {
       setToast({ message: "刷新数据失败，请检查连接", type: 'error' });
     }
@@ -87,6 +96,36 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const moveFolder = async (id: string, targetId: string | null) => {
     await moveFolderService(id, targetId);
     await refreshCharacterList();
+  };
+
+  const onCut = (ids: string[]) => {
+    setCutItems(ids);
+    setToast({ message: `已剪切 ${ids.length} 个项目` });
+  };
+
+  const clearClipboard = () => setCutItems([]);
+
+  const onPaste = async (targetFolderId: string | null) => {
+    if (cutItems.length === 0) return;
+    
+    try {
+      setToast({ message: "正在移动项目..." });
+      await Promise.all(cutItems.map(async id => {
+        const isFolder = folders.some(f => f.id === id);
+        if (isFolder) {
+          // Check if target is same or child (prevent infinite loop)
+          if (id === targetFolderId) return;
+          await moveFolder(id, targetFolderId);
+        } else {
+          await moveCharacter(id, targetFolderId);
+        }
+      }));
+      setCutItems([]);
+      await refreshCharacterList();
+      setToast({ message: "粘贴成功" });
+    } catch (e) {
+      setToast({ message: "粘贴失败", type: 'error' });
+    }
   };
 
   const createFolder = async (name: string, parentId: string | null) => {
@@ -141,6 +180,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor,
     moveCharacter, moveFolder, createFolder, deleteFolder, deleteCharacter, renameItem, copyCharacter, ensureLocalFolder,
     getItemPath,
+    cutItems, onCut, onPaste, clearClipboard,
     search, setSearch, viewMode, setViewMode
   };
 

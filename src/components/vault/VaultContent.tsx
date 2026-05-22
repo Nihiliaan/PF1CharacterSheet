@@ -16,8 +16,6 @@ import MarkdownPreview from '../common/MarkdownPreview';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useUI } from '../../contexts/UIContext';
 import { useVault } from '../../contexts/VaultContext';
-import { useDriveSync } from '../../contexts/hooks/useDriveSync';
-import { useCharacterAI } from '../../contexts/hooks/useCharacterAI';
 
 const VaultContent = ({
   user,
@@ -30,10 +28,8 @@ const VaultContent = ({
     selectCharacter: onSelect,
     saveCharacter,
     setData,
-    setCurrentCharacterId
-  } = useCharacter();
-
-  const {
+    setCurrentCharacterId,
+    // 从 context 中统一获取 Drive 相关状态和动作
     driveModal,
     setDriveModal,
     handleBrowseDrive,
@@ -42,10 +38,10 @@ const VaultContent = ({
     handleCloudBackup,
     handleCloudRestore,
     isSyncingDrive,
-    navigateToPathIndex
-  } = useDriveSync();
-
-  const { setShowAIModal } = useCharacterAI(setData, setCurrentCharacterId);
+    navigateToPathIndex,
+    // 从 context 中获取 AI 相关动作
+    setShowAIModal
+  } = useCharacter();
 
   const {
     toast,
@@ -67,7 +63,11 @@ const VaultContent = ({
     copyCharacter,
     ensureLocalFolder,
     search,
-    viewMode
+    viewMode,
+    cutItems,
+    onCut,
+    onPaste,
+    clearClipboard
   } = useVault();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: any; isFolder: boolean } | null>(null);
   const [draggedItem, setDraggedItem] = useState<{ id: string; type: 'character' | 'folder' } | null>(null);
@@ -232,10 +232,15 @@ const VaultContent = ({
   const handleImportLocal = async (files: FileList | null) => {
     if (!files || !user) return;
     let importCount = 0;
-    setToast({ message: "正在导入本地文件..." });
+    let failCount = 0;
+    let errorMsgs: string[] = [];
+    setToast({ message: "正在导入本地文件并建立目录结构..." });
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    // 使用 Map 缓存已创建的目录 ID，减少查询并防止并发冲突
+    const folderIdMap = new Map<string, string>();
+
+    // 改为顺序执行，以确保目录结构的稳定性，防止并发创建重复文件夹
+    for (const file of Array.from(files)) {
       const isPf1 = file.name.endsWith('.pf1');
       const isBbc = file.name.endsWith('.bbc');
       if (!isPf1 && !isBbc) continue;
@@ -247,14 +252,30 @@ const VaultContent = ({
           content = JSON.parse(text);
         } catch (e) {
           if (isBbc) content = { content: text };
-          else continue;
+          else {
+            failCount++;
+            errorMsgs.push(`${file.name}: 无效的 JSON 格式`);
+            continue;
+          }
         }
         
         let folderId = currentFolderId;
-        if ((file as any).webkitRelativePath) {
-          const parts = (file as any).webkitRelativePath.split('/');
-          for (let j = 1; j < parts.length - 1; j++) {
-            folderId = await ensureLocalFolder(parts[j], folderId, user.uid);
+        const relativePath = (file as any).webkitRelativePath;
+        if (relativePath) {
+          const parts = relativePath.split('/');
+          // 从 0 开始，包含被选中的根文件夹名称，确保完整结构
+          let currentPathKey = "";
+          for (let j = 0; j < parts.length - 1; j++) {
+            const part = parts[j];
+            currentPathKey += (currentPathKey ? "/" : "") + part;
+            
+            if (folderIdMap.has(currentPathKey)) {
+              folderId = folderIdMap.get(currentPathKey)!;
+            } else {
+              const newFolderId = await ensureLocalFolder(part, folderId, user.uid);
+              folderId = newFolderId;
+              folderIdMap.set(currentPathKey, folderId);
+            }
           }
         }
 
@@ -263,9 +284,10 @@ const VaultContent = ({
           const templateName = content.name || file.name.replace('.bbc', '');
           await (saveCharacter as any)({ content: templateContent, name: templateName }, undefined, folderId, true);
         } else {
-          // pf1
-          const finalData = { ...content };
-          // Migrate avatars to SoA if needed
+          // pf1 - 彻底剥离可能存在的元数据
+          const { id, ownerId, targetId, folderId: oldFolderId, ...cleanData } = content;
+          const finalData = { ...cleanData };
+          
           if (finalData.basic?.avatars && Array.isArray(finalData.basic.avatars)) {
             finalData.basic.avatars = {
               url: finalData.basic.avatars.map((a: any) => a.url || ''),
@@ -279,12 +301,19 @@ const VaultContent = ({
           await (saveCharacter as any)(finalData, undefined, folderId, false);
         }
         importCount++;
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to parse local file", e);
+        failCount++;
+        errorMsgs.push(`${file.name}: ${e.message || '未知错误'}`);
       }
     }
-    onRefresh();
-    setToast({ message: `本地导入成功！共导入 ${importCount} 个项目` });
+
+    await onRefresh();
+    if (failCount > 0) {
+      setToast({ message: `导入完成。成功: ${importCount}, 失败: ${failCount}。\n${errorMsgs.slice(0, 3).join('\n')}${errorMsgs.length > 3 ? '\n...' : ''}`, type: 'error' });
+    } else {
+      setToast({ message: `本地结构化导入成功！共导入 ${importCount} 个项目` });
+    }
   };
 
   const handleImportClipboard = async () => {
@@ -364,6 +393,13 @@ const VaultContent = ({
           }
         });
         return; 
+      } else if (action === 'cut') {
+        const idsToCut = selectedIds.includes(item.id) ? selectedIds : [item.id];
+        onCut(idsToCut);
+        return;
+      } else if (action === 'paste') {
+        await onPaste(isFolder ? item.id : currentFolderId);
+        return;
       } else if (action === 'rename') {
           // Strip extension for editing if it's a file
           let editName = item.name || '';
@@ -520,7 +556,7 @@ const VaultContent = ({
                   data-id={folder.id}
                   className={viewMode === 'grid'
                     ? `group relative flex flex-col p-2 rounded-2xl transition-all cursor-pointer select-none border-2 selectable-item ${isSelected ? 'bg-primary/5 border-primary shadow-md' : 'hover:bg-white hover:shadow-xl border-transparent hover:border-stone-100'}`
-                    : `group relative flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-all selectable-item ${isSelected ? 'bg-primary/5 border-primary shadow-sm' : 'hover:bg-white border-transparent'}`
+                    : `group relative flex items-center gap-4 p-2 rounded-lg cursor-pointer transition-all selectable-item ${isSelected ? 'bg-primary/5 border-primary shadow-sm' : 'hover:bg-white border-transparent'}`
                   }
                   onClick={(e) => handleItemClick(e, folder.id, idx)}
                   onDoubleClick={() => setCurrentFolderId(folder.id)}
@@ -548,7 +584,7 @@ const VaultContent = ({
                     {isSelected && <Check size={14} strokeWidth={3} />}
                   </div>
 
-                  <div className={viewMode === 'grid' ? "mb-3" : ""}>
+                  <div className={viewMode === 'grid' ? "mb-3" : "w-10 h-10 flex items-center justify-center"}>
                     {viewMode === 'grid' ? (
                       <div className="aspect-square w-full bg-stone-100/80 rounded-xl overflow-hidden grid grid-cols-2 gap-0.5 p-0.5 group-hover:bg-amber-100/50 transition-colors relative">
                         {getDeepAvatars(folder.id).map((item, i) => (
@@ -574,7 +610,7 @@ const VaultContent = ({
                         ))}
                       </div>
                     ) : (
-                      <Folder size={24} className="text-amber-400 fill-amber-400/20 group-hover:fill-amber-400 transition-colors" />
+                      <Folder size={28} className="text-amber-400 fill-amber-400/20 group-hover:fill-amber-400 transition-colors" />
                     )}
                   </div>
                   <div className={viewMode === 'grid' ? "flex-1 text-center truncate w-full px-1" : "flex-1 text-left"}>
@@ -591,13 +627,14 @@ const VaultContent = ({
             {filteredChars.map((char, charIdx) => {
               const idx = filteredFolders.length + charIdx;
               const isSelected = selectedIds.includes(char.id);
+              const isCut = cutItems.includes(char.id);
               return (
                 <div 
                   key={char.id}
                   data-id={char.id}
                   className={viewMode === 'grid'
-                    ? `group relative flex flex-col p-2 rounded-2xl bg-white border-2 transition-all cursor-pointer select-none selectable-item ${isSelected ? 'border-primary bg-primary/5 shadow-lg scale-[1.02]' : 'border-stone-100 hover:border-primary hover:shadow-2xl'}`
-                    : `group relative flex items-center gap-4 p-3 bg-white border-2 rounded-lg cursor-pointer transition-all selectable-item ${isSelected ? 'border-primary bg-primary/5' : 'border-stone-100 hover:border-primary'}`
+                    ? `group relative flex flex-col p-2 rounded-2xl bg-white border-2 transition-all cursor-pointer select-none selectable-item ${isSelected ? 'border-primary bg-primary/5 shadow-lg scale-[1.02]' : 'border-stone-100 hover:border-primary hover:shadow-2xl'} ${isCut ? 'opacity-40' : 'opacity-100'}`
+                    : `group relative flex items-center gap-4 p-2 bg-white border-2 rounded-lg cursor-pointer transition-all selectable-item ${isSelected ? 'border-primary bg-primary/5' : 'border-stone-100 hover:border-primary'} ${isCut ? 'opacity-40' : 'opacity-100'}`
                   }
                   onClick={(e) => handleItemClick(e, char.id, idx)}
                   onDoubleClick={() => {
@@ -622,7 +659,7 @@ const VaultContent = ({
                     {isSelected && <Check size={14} strokeWidth={3} />}
                   </div>
 
-                  <div className={viewMode === 'grid' ? "aspect-square rounded-xl overflow-hidden mb-2 relative bg-stone-100 shadow-inner" : "w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-stone-100 relative"}>
+                  <div className={viewMode === 'grid' ? "aspect-square rounded-xl overflow-hidden mb-2 relative bg-stone-100 shadow-inner" : "w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-stone-100 relative"}>
                       {char.isTemplate ? (
                         <div className="w-full h-full flex items-center justify-center bg-indigo-50 text-indigo-400">
                           <FileText size={viewMode === 'grid' ? 48 : 24} />
@@ -690,15 +727,20 @@ const VaultContent = ({
                 ] : [
                    { label: '复制', icon: Copy, onClick: () => handleAction('copy', contextMenu.item, contextMenu.isFolder) }
                 ]),
-                { label: '移动', icon: Move, onClick: () => handleAction('move', contextMenu.item, contextMenu.isFolder) },
+                { label: '剪切', icon: Move, onClick: () => handleAction('cut', contextMenu.item, contextMenu.isFolder) },
+                ...(cutItems.length > 0 ? [{ label: '粘贴', icon: Check, onClick: () => handleAction('paste', contextMenu.item, contextMenu.isFolder) }] : []),
                 { label: '删除', icon: Trash2, onClick: () => handleAction('delete', contextMenu.item, contextMenu.isFolder), danger: true },
               ]
             : [
                 { label: '新建角色', icon: FilePlus, onClick: onAdd },
                 { label: '新建文件夹', icon: FolderPlus, onClick: handleCreateFolder },
+                ...(cutItems.length > 0 ? [{ label: '粘贴在此', icon: Check, onClick: () => handleAction('paste', null, false) }] : []),
                 { label: '从本地导入', icon: Download, onClick: () => document.getElementById('local-import-input')?.click() },
                 { label: '从剪贴板导入', icon: Check, onClick: handleImportClipboard },
-                { label: '浏览云端导入', icon: Search, onClick: handleBrowseDrive },
+                { label: '浏览云端导入', icon: Search, onClick: () => {
+                  console.log("[VaultContent] ContextMenu: Browse Cloud Import clicked");
+                  handleBrowseDrive();
+                } },
               ]
           } 
         />

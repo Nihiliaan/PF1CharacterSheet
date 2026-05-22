@@ -1,7 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { DEFAULT_DATA } from "../constants";
 
-
 export const characterSchema = {
   type: Type.OBJECT,
   properties: {
@@ -10,33 +9,32 @@ export const characterSchema = {
       properties: {
         name: { type: Type.STRING, description: "人物姓名" },
         classes: { type: Type.STRING, description: "职业与等级，例如：战士1" },
-        alignment: { type: Type.STRING, description: "阵营" },
-        size: { type: Type.STRING, description: "体型" },
+        alignment: { type: Type.STRING, description: "阵营 (如：中立善良、混乱邪恶)" },
+        size: { type: Type.STRING, description: "体型 (如：中型、小型)" },
         gender: { type: Type.STRING, description: "性别" },
         race: { type: Type.STRING, description: "种族" },
         age: { type: Type.STRING, description: "年龄" },
         height: { type: Type.STRING, description: "身高" },
         weight: { type: Type.STRING, description: "体重" },
-        speed: { type: Type.STRING, description: "速度" },
+        speed: { type: Type.STRING, description: "速度 (如：30尺)" },
         senses: { type: Type.STRING, description: "感官" },
-        initiative: { type: Type.STRING, description: "先攻" },
-        perception: { type: Type.STRING, description: "察觉" },
+        initiative: { type: Type.STRING, description: "先攻加值" },
+        perception: { type: Type.STRING, description: "察觉加值" },
         languages: { type: Type.STRING, description: "语言" },
         deity: { type: Type.STRING, description: "信仰" },
       }
     },
     story: { type: Type.STRING, description: "背景故事或人物简介" },
     favoredClass: { type: Type.STRING, description: "天赋职业名称" },
-    favoredClassBonus: { type: Type.STRING, description: "天赋职业奖励描述，例如：+1技能点或+1HP" },
+    favoredClassBonus: { type: Type.STRING, description: "天赋职业奖励描述" },
     racialTraits: {
       type: Type.ARRAY,
       description: "种族特性列表",
       items: {
         type: Type.OBJECT,
         properties: {
-          name: { type: Type.STRING, description: "特性名称" },
-          type: { type: Type.STRING, description: "类型 (Sp/Su/Ex)" },
-          desc: { type: Type.STRING, description: "描述/效果说明" }
+          name: { type: Type.STRING },
+          desc: { type: Type.STRING }
         }
       }
     },
@@ -46,9 +44,9 @@ export const characterSchema = {
       items: {
         type: Type.OBJECT,
         properties: {
-          name: { type: Type.STRING, description: "特性名称" },
-          type: { type: Type.STRING, description: "类型" },
-          desc: { type: Type.STRING, description: "效果说明" }
+          name: { type: Type.STRING },
+          type: { type: Type.STRING },
+          desc: { type: Type.STRING }
         }
       }
     },
@@ -58,152 +56,113 @@ export const characterSchema = {
       items: {
         type: Type.OBJECT,
         properties: {
-          name: { type: Type.STRING, description: "属性名称" },
-          final: { type: Type.STRING, description: "最终数值" },
-          modifier: { type: Type.STRING, description: "调整值，如 +2" },
-          source: { type: Type.STRING, description: "基础值" },
-          status: { type: Type.STRING, description: "状态/备注" },
-        },
-        required: ["name", "final"]
+          name: { type: Type.STRING, description: "属性名" },
+          value: { type: Type.STRING, description: "数值" },
+          modifier: { type: Type.STRING, description: "调整值" },
+          source: { type: Type.STRING, description: "基础/来源" },
+        }
       }
     },
-    babCmbCmd: { type: Type.STRING, description: "BAB/CMB/CMD 信息（旧版字段，请优先填写 babTable）" },
-    babTable: {
+    babCmbCmd: {
       type: Type.OBJECT,
-      description: "BAB/CMB/CMD 信息",
       properties: {
-        bab: { type: Type.STRING, description: "基本攻击加值 (BAB)" },
-        cmb: { type: Type.STRING, description: "战技攻击加值 (CMB)" },
-        cmd: { type: Type.STRING, description: "战技防御等级 (CMD)" }
+        bab: { type: Type.STRING },
+        cmb: { type: Type.STRING },
+        cmd: { type: Type.STRING }
       }
     },
-    combatManeuverNotes: { type: Type.STRING, description: "战技相关的通用备注或特殊加值说明" },
     defenses: {
       type: Type.OBJECT,
-      description: "防御信息",
       properties: {
-        hp: { type: Type.STRING, description: "HP（总生命值）" },
-        hd: { type: Type.STRING, description: "HD（生命骰，如 3d8+3）" },
-        acTable: {
-          type: Type.OBJECT,
-          description: "AC 详情",
-          properties: {
-            ac: { type: Type.STRING, description: "综合 AC" },
-            flatFooted: { type: Type.STRING, description: "措手不及 AC" },
-            touch: { type: Type.STRING, description: "接触 AC" }
-          }
-        },
-        acNotes: { type: Type.STRING, description: "防护等级相关的备注（如护甲、盾牌、敏捷等来源）" },
-        savesTable: {
-          type: Type.OBJECT,
-          description: "豁免信息",
-          properties: {
-            fort: { type: Type.STRING, description: "强韧豁免" },
-            ref: { type: Type.STRING, description: "反射豁免" },
-            will: { type: Type.STRING, description: "意志豁免" }
-          }
-        },
-        savesNotes: { type: Type.STRING, description: "豁免相关的备注（如抗力加值等）" },
-        ac: { type: Type.STRING, description: "AC 信息（旧版字段，请优先填写 acTable）" },
-        saves: { type: Type.STRING, description: "豁免信息（旧版字段，请优先填写 savesTable）" },
+        hp: { type: Type.STRING },
+        hd: { type: Type.STRING },
+        ac: { type: Type.STRING },
+        flatFooted: { type: Type.STRING },
+        touch: { type: Type.STRING },
+        acNotes: { type: Type.STRING },
+        fort: { type: Type.STRING },
+        ref: { type: Type.STRING },
+        will: { type: Type.STRING },
+        saveNotes: { type: Type.STRING },
       }
     },
     meleeAttacks: {
       type: Type.ARRAY,
-      description: "近战攻击列表",
       items: {
         type: Type.OBJECT,
-        minItems: 1,
         properties: {
-          weapon: { type: Type.STRING, description: "武器名称" },
-          hit: { type: Type.STRING, description: "命中加值" },
-          damage: { type: Type.STRING, description: "伤害" },
-          crit: { type: Type.STRING, description: "重击范围/倍率" },
-          range: { type: Type.STRING, description: "触及" },
-          type: { type: Type.STRING, description: "伤害类型" },
-          special: { type: Type.STRING, description: "武器特性或特殊说明" }
+          weapon: { type: Type.STRING },
+          hit: { type: Type.STRING },
+          damage: { type: Type.STRING },
+          critRange: { type: Type.STRING },
+          critMultiplier: { type: Type.STRING },
+          damageType: { type: Type.STRING },
+          special: { type: Type.STRING }
         }
       }
     },
     rangedAttacks: {
       type: Type.ARRAY,
-      description: "远程攻击列表",
       items: {
         type: Type.OBJECT,
         properties: {
-          weapon: { type: Type.STRING, description: "武器名称" },
-          hit: { type: Type.STRING, description: "命中加值" },
-          damage: { type: Type.STRING, description: "伤害" },
-          crit: { type: Type.STRING, description: "重击范围/倍率" },
-          range: { type: Type.STRING, description: "射程" },
-          type: { type: Type.STRING, description: "伤害类型" },
-          special: { type: Type.STRING, description: "武器特性或特殊说明" }
+          weapon: { type: Type.STRING },
+          hit: { type: Type.STRING },
+          damage: { type: Type.STRING },
+          critRange: { type: Type.STRING },
+          critMultiplier: { type: Type.STRING },
+          range: { type: Type.STRING },
+          damageType: { type: Type.STRING },
+          special: { type: Type.STRING }
         }
       }
     },
     skills: {
       type: Type.ARRAY,
-      description: "技能列表",
       items: {
         type: Type.OBJECT,
         properties: {
-          name: { type: Type.STRING, description: "技能名称" },
-          total: { type: Type.STRING, description: "总值" },
-          source: { type: Type.STRING, description: "来源/加点细节" },
-          special: { type: Type.STRING, description: "特殊加成或条件" }
+          name: { type: Type.STRING },
+          total: { type: Type.STRING },
+          rank: { type: Type.STRING },
+          special: { type: Type.STRING }
         }
       }
     },
     feats: {
       type: Type.ARRAY,
-      description: "专长列表",
       items: {
         type: Type.OBJECT,
         properties: {
-          level: { type: Type.STRING, description: "获得等级" },
-          name: { type: Type.STRING, description: "专长名称" },
-          type: { type: Type.STRING, description: "类型 (Sp/Su/Ex)" },
-          source: { type: Type.STRING, description: "来源" },
-          desc: { type: Type.STRING, description: "效果说明" }
+          level: { type: Type.STRING },
+          name: { type: Type.STRING },
+          source: { type: Type.STRING },
+          desc: { type: Type.STRING }
         }
       }
     },
     classFeatures: {
       type: Type.ARRAY,
-      description: "职业特性列表",
       items: {
         type: Type.OBJECT,
         properties: {
-          level: { type: Type.STRING, description: "获得等级" },
-          name: { type: Type.STRING, description: "特性名称" },
-          type: { type: Type.STRING, description: "类型 (Sp/Su/Ex)" },
-          desc: { type: Type.STRING, description: "效果说明" }
+          level: { type: Type.STRING },
+          name: { type: Type.STRING },
+          type: { type: Type.STRING },
+          desc: { type: Type.STRING }
         }
       }
     },
     magicBlocks: {
       type: Type.ARRAY,
-      description: "法术、类法术能力或特殊能力块列表",
       items: {
         type: Type.OBJECT,
         properties: {
-          title: { type: Type.STRING, description: "标题，例如：1环法术、每日类法术能力" },
-          type: { type: Type.STRING, description: "类型: text 或 table", enum: ["text", "table"] },
-          content: { type: Type.STRING, description: "如果类型是 text，在此处填写内容" },
-          columns: {
-            type: Type.ARRAY,
-            description: "如果类型是 table，定义列名",
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                key: { type: Type.STRING, description: "内部使用的 key，如 col1, col2..." },
-                label: { type: Type.STRING, description: "显示的列名" }
-              }
-            }
-          },
+          title: { type: Type.STRING },
+          type: { type: Type.STRING, enum: ["text", "table"] },
+          content: { type: Type.STRING },
           tableData: {
             type: Type.ARRAY,
-            description: "如果类型是 table，在此处填写各行的 JSON 对象列表",
             items: {
               type: Type.OBJECT,
               additionalProperties: { type: Type.STRING }
@@ -212,102 +171,182 @@ export const characterSchema = {
         }
       }
     },
-    equipmentBags: {
+    equipment: {
       type: Type.ARRAY,
-      description: "装备容器列表",
       items: {
         type: Type.OBJECT,
         properties: {
-          name: { type: Type.STRING, description: "容器名称，例如：身上、背包、马车" },
-          items: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                item: { type: Type.STRING, description: "物品名称" },
-                quantity: { type: Type.STRING, description: "数量" },
-                cost: { type: Type.STRING, description: "价格(gp)" },
-                weight: { type: Type.STRING, description: "重量(lbs)" },
-                notes: { type: Type.STRING, description: "备注" }
-              }
-            }
-          }
+          item: { type: Type.STRING },
+          quantity: { type: Type.STRING },
+          cost: { type: Type.STRING },
+          weight: { type: Type.STRING },
+          notes: { type: Type.STRING }
         }
       }
     }
-  },
-  required: ["basic", "attributes"]
+  }
 };
 
 /**
- * 将 AI 提取的原始数据转换为符合 CharacterData 结构的格式，并与默认数据合并
+ * 将 AI 提取的原始数据转换为符合 CharacterData (SoA 结构) 的格式
  */
 export function transformAIData(extracted: any) {
-  const mergedData = {
-    ...DEFAULT_DATA,
-    ...extracted,
-    basic: { ...DEFAULT_DATA.basic, ...(extracted.basic || {}) },
-    defenses: { ...DEFAULT_DATA.defenses, ...(extracted.defenses || {}) }
-  };
+  const mergedData = JSON.parse(JSON.stringify(DEFAULT_DATA));
 
-  // 1. 处理属性 (Attributes)
+  // 1. 基本信息
+  if (extracted.basic) {
+    const b = extracted.basic;
+    mergedData.basic.name = b.name || mergedData.basic.name;
+    mergedData.basic.classes = b.classes || '';
+    mergedData.basic.race = b.race || '';
+    mergedData.basic.gender = b.gender === '男' ? 1 : (b.gender === '女' ? 2 : 0);
+    mergedData.basic.age = parseInt(b.age) || 0;
+    mergedData.basic.height = parseFloat(b.height) || 0;
+    mergedData.basic.weight = parseFloat(b.weight) || 0;
+    mergedData.basic.senses = b.senses || '';
+    mergedData.basic.languages = b.languages || '';
+    mergedData.basic.deity = b.deity || '';
+    
+    // 阵营解析
+    const alignmentMap: Record<string, number> = { "守序善良": 0, "中立善良": 1, "混乱善良": 2, "守序中立": 3, "绝对中立": 4, "中立": 4, "混乱中立": 5, "守序邪恶": 6, "中立邪恶": 7, "混乱邪恶": 8 };
+    if (b.alignment) {
+        mergedData.basic.alignment = alignmentMap[b.alignment] ?? 4;
+    }
+
+    // 体型解析
+    const sizeMap: Record<string, number> = { "超微": 0, "微型": 1, "极小": 2, "小型": 3, "中型": 4, "大型": 5, "超大": 6, "极巨": 7, "超巨": 8 };
+    if (b.size) {
+        mergedData.basic.size = sizeMap[b.size] ?? 4;
+    }
+  }
+
+  // 2. 属性 (SoA)
   if (extracted.attributes && Array.isArray(extracted.attributes)) {
-    const newAttributes = JSON.parse(JSON.stringify(DEFAULT_DATA.attributes));
+    const attrNames = ["力量", "敏捷", "体质", "智力", "感知", "魅力"];
     extracted.attributes.forEach((extAttr: any) => {
-      const idx = newAttributes.findIndex((a: any) => a.name === extAttr.name || (extAttr.name && extAttr.name.includes(a.name)));
+      const idx = attrNames.findIndex(n => extAttr.name && (extAttr.name.includes(n) || n.includes(extAttr.name)));
       if (idx !== -1) {
-        newAttributes[idx] = { ...newAttributes[idx], ...extAttr };
+        mergedData.attributes.final[idx] = parseInt(extAttr.value) || 10;
+        mergedData.attributes.modifier[idx] = parseInt(extAttr.modifier) || 0;
+        mergedData.attributes.source[idx] = extAttr.source || '';
       }
     });
-    mergedData.attributes = newAttributes;
   }
 
-  // 2. 处理列表字段
-  const listFields = ['meleeAttacks', 'rangedAttacks', 'skills', 'feats', 'classFeatures', 'racialTraits', 'backgroundTraits'];
-  listFields.forEach(field => {
-    if (extracted[field] && Array.isArray(extracted[field])) {
-      if (field === 'meleeAttacks' || field === 'rangedAttacks') {
-        mergedData.attacks[field] = extracted[field];
-      } else {
-        (mergedData as any)[field] = extracted[field];
-      }
-    } else {
-      if (field === 'meleeAttacks' || field === 'rangedAttacks') {
-        mergedData.attacks[field] = (DEFAULT_DATA.attacks as any)[field] || [];
-      } else {
-        (mergedData as any)[field] = (DEFAULT_DATA as any)[field] || [];
-      }
-    }
-  });
-
-  if (extracted.specialAttacks !== undefined) {
-    mergedData.attacks.specialAttacks = extracted.specialAttacks;
+  // 3. 战斗加值
+  if (extracted.babCmbCmd) {
+    mergedData.combatManeuver.bab = parseInt(extracted.babCmbCmd.bab) || 0;
+    mergedData.combatManeuver.cmb = parseInt(extracted.babCmbCmd.cmb) || 0;
+    mergedData.combatManeuver.cmd = parseInt(extracted.babCmbCmd.cmd) || 10;
   }
 
-  // 3. 处理魔法/特殊能力块
+  // 4. 防御
+  if (extracted.defenses) {
+    const d = extracted.defenses;
+    mergedData.defenses.hp = parseInt(d.hp) || 0;
+    mergedData.defenses.hd = d.hd || '';
+    mergedData.defenses.armorClass.ac = parseInt(d.ac) || 10;
+    mergedData.defenses.armorClass.flatFooted = parseInt(d.flatFooted) || 10;
+    mergedData.defenses.armorClass.touch = parseInt(d.touch) || 10;
+    mergedData.defenses.armorClass.notes = d.acNotes || '';
+    mergedData.defenses.saves.fort = parseInt(d.fort) || 0;
+    mergedData.defenses.saves.ref = parseInt(d.ref) || 0;
+    mergedData.defenses.saves.will = parseInt(d.will) || 0;
+    mergedData.defenses.saves.notes = d.saveNotes || '';
+  }
+
+  // 5. 攻击 (SoA)
+  if (extracted.meleeAttacks && Array.isArray(extracted.meleeAttacks)) {
+    extracted.meleeAttacks.forEach((a: any) => {
+      mergedData.attacks.melee.weapon.push(a.weapon || '');
+      mergedData.attacks.melee.hit.push(a.hit || '');
+      mergedData.attacks.melee.damage.push(a.damage || '');
+      mergedData.attacks.melee.critRange.push(a.critRange || '20');
+      mergedData.attacks.melee.critMultiplier.push(a.critMultiplier || '2');
+      mergedData.attacks.melee.damageType.push(a.damageType || '');
+      mergedData.attacks.melee.special.push(a.special || '');
+    });
+  }
+  if (extracted.rangedAttacks && Array.isArray(extracted.rangedAttacks)) {
+    extracted.rangedAttacks.forEach((a: any) => {
+      mergedData.attacks.ranged.weapon.push(a.weapon || '');
+      mergedData.attacks.ranged.hit.push(a.hit || '');
+      mergedData.attacks.ranged.damage.push(a.damage || '');
+      mergedData.attacks.ranged.critRange.push(a.critRange || '20');
+      mergedData.attacks.ranged.critMultiplier.push(a.critMultiplier || '2');
+      mergedData.attacks.ranged.range.push(a.range || '');
+      mergedData.attacks.ranged.damageType.push(a.damageType || '');
+      mergedData.attacks.ranged.special.push(a.special || '');
+    });
+  }
+
+  // 6. 特性与专长 (SoA)
+  if (extracted.racialTraits && Array.isArray(extracted.racialTraits)) {
+    extracted.racialTraits.forEach((t: any) => {
+      mergedData.racialTraits.name.push(t.name || '');
+      mergedData.racialTraits.desc.push(t.desc || '');
+    });
+  }
+  if (extracted.backgroundTraits && Array.isArray(extracted.backgroundTraits)) {
+    extracted.backgroundTraits.forEach((t: any) => {
+      mergedData.backgroundTraits.name.push(t.name || '');
+      mergedData.backgroundTraits.type.push(t.type || '');
+      mergedData.backgroundTraits.desc.push(t.desc || '');
+    });
+  }
+  if (extracted.classFeatures && Array.isArray(extracted.classFeatures)) {
+    extracted.classFeatures.forEach((t: any) => {
+      mergedData.classFeatures.level.push(t.level || '');
+      mergedData.classFeatures.name.push(t.name || '');
+      mergedData.classFeatures.type.push(t.type || '');
+      mergedData.classFeatures.desc.push(t.desc || '');
+    });
+  }
+  if (extracted.feats && Array.isArray(extracted.feats)) {
+    extracted.feats.forEach((t: any) => {
+      mergedData.feats.level.push(t.level || '');
+      mergedData.feats.name.push(t.name || '');
+      mergedData.feats.source.push(t.source || '');
+      mergedData.feats.desc.push(t.desc || '');
+    });
+  }
+
+  // 7. 技能 (SoA)
+  if (extracted.skills && Array.isArray(extracted.skills)) {
+    extracted.skills.forEach((s: any) => {
+      mergedData.skills.name.push(s.name || '');
+      mergedData.skills.total.push(parseInt(s.total) || 0);
+      mergedData.skills.rank.push(parseInt(s.rank) || 0);
+      mergedData.skills.special.push(s.special || '');
+      // Fill defaults for others
+      mergedData.skills.cs.push(false);
+      mergedData.skills.ability.push(0);
+      mergedData.skills.others.push(0);
+    });
+  }
+
+  // 8. 装备 (SoA)
+  if (extracted.equipment && Array.isArray(extracted.equipment)) {
+    extracted.equipment.forEach((e: any) => {
+      mergedData.equipment.container[0].item.push(e.item || '');
+      mergedData.equipment.container[0].quantity.push(e.quantity || '1');
+      mergedData.equipment.container[0].cost.push(e.cost || '');
+      mergedData.equipment.container[0].weight.push(e.weight || '');
+      mergedData.equipment.container[0].notes.push(e.notes || '');
+    });
+  }
+
+  // 9. 魔法块 (SoA)
   if (extracted.magicBlocks && Array.isArray(extracted.magicBlocks)) {
     mergedData.magicBlocks = extracted.magicBlocks.map((block: any) => ({
       id: 'mb-' + Math.random().toString(36).substr(2, 9),
-      title: block.title || '特殊能力',
-      type: block.type || 'text',
-      content: block.content || '',
-      columns: block.columns || [{ key: 'col1', label: '信息' }],
-      tableData: block.tableData || []
-    }));
-  }
-
-  // 4. 处理装备容器
-  if (extracted.equipmentBags && Array.isArray(extracted.equipmentBags)) {
-    mergedData.equipmentBags = extracted.equipmentBags.map((bag: any) => ({
-      id: 'bag-' + Math.random().toString(36).substr(2, 9),
-      name: bag.name || '身上',
-      ignoreWeight: false,
-      items: (bag.items || []).map((item: any) => ({
-        item: item.item || '',
-        quantity: item.quantity || '1',
-        cost: item.cost || '',
-        weight: item.weight || '',
-      }))
+      title: block.title || '能力',
+      type: block.type === 'table' ? 5 : 5, // Default to SLA (5) for now as it's most common for AI extraction
+      casterLevel: 1,
+      concentration: 1,
+      uses: [],
+      spells: block.content || '',
+      notes: ''
     }));
   }
 
@@ -318,7 +357,7 @@ export async function extractCharacterFromText(text: string, apiKey: string) {
   try {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "models/gemini-2.5-flash",
+      model: "models/gemini-1.5-flash",
       contents: [
         {
           role: "user",
@@ -326,7 +365,7 @@ export async function extractCharacterFromText(text: string, apiKey: string) {
             {
               text: `你是一个专业的 Pathfinder 1E (PF1) 跑团玩家，擅长从复杂的论坛帖子和 BBCode 文本中提取人物卡信息。
               
-              待处理文本（可能包含 BBCode 标签和表格结构）：
+              待处理文本：
               ---
               ${text}
               ---
@@ -335,17 +374,13 @@ export async function extractCharacterFromText(text: string, apiKey: string) {
               
               关键要求：
               1. **区分特性类型**：
-                 - 种族赋予的特性（如：黑暗视觉、敏捷性等）放入 racialTraits。
-                 - 职业赋予的特性（如：偷袭、破邪斩、回避动作等）放入 classFeatures。
-                 - 背景奖励（如：反制者、寻宝者等）放入 backgroundTraits。
+                 - 种族特性放入 racialTraits。
+                 - 职业特性放入 classFeatures。
+                 - 背景特性放入 backgroundTraits。
               2. **提取完整性**：
-                 - 务必为专长（feats）和特性（traits/features）寻找并填写等级（level）信息及描述（desc/special）。
-                 - 提取所有提及的攻击（melee/ranged）、技能、装备。
-              3. **处理法术和复杂结构**：
-                 - 对于法术、类法术能力（SLA）或其他需要专门呈现的内容，请创建 magicBlocks。
-                 - 如果法术在原帖中是以表格形式列出的，请在 magicBlocks 中创建一个类型为 "table" 的块，并定义相应的列和数据。
-                 - 如果是零散的描述，使用 "text" 类型的块。
-              4. **理解格式**：原文本可能包含 [table]、[tr]、[td] 等 BBCode 标签，请理解这些结构以正确关联数据。
+                 - 提取所有攻击、属性、防御、技能、专长和装备。
+                 - 尝试解析数值，如果无法解析则保留原始字符串。
+              3. **处理复杂结构**：对于法术列表或类法术能力，请使用 magicBlocks。
               
               请严格按照 JSON 格式返回。`
             }

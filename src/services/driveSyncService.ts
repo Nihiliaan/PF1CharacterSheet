@@ -54,25 +54,24 @@ export const driveSyncService = {
     const firestore = new FirestoreStorageProvider();
     const drive = new GoogleDriveProvider();
     
-    const token = await drive.getToken();
-    const pf1RootId = await (new GoogleDriveProvider()).list(null).then(items => items.find(i => i.name === 'PF1CharacterSheet')?.id);
+    const rootId = await drive.list(null).then(items => items.find(i => i.name === 'PF1CharacterSheet')?.id);
     
-    if (pf1RootId) {
-      await SyncService.sync(drive, firestore, pf1RootId, currentFolderId);
+    if (rootId) {
+      await SyncService.sync(drive, firestore, rootId, currentFolderId);
     }
   },
 
   // 保持浏览和导航的兼容性
   async browseDrive(user: FirebaseUser | null) {
     const drive = new GoogleDriveProvider();
-    const items = await drive.list(null);
-    const root = items.find(i => i.name === 'PF1CharacterSheet');
+    const token = await drive.getToken();
+    const rootId = await (new GoogleDriveProvider()).list(null).then(items => items.find(i => i.name === 'PF1CharacterSheet')?.id);
     
-    if (!root) return { needsFolder: true };
+    if (!rootId) return { needsFolder: true };
     
-    const rootItems = await drive.list(root.id);
+    const rootItems = await drive.list(rootId);
     return {
-      currentPath: [{ id: root.id, name: 'PF1CharacterSheet' }],
+      currentPath: [{ id: rootId, name: 'PF1CharacterSheet' }],
       items: rootItems
     };
   },
