@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutGrid, Save, Share2, Download, Copy, FilePlus, Sparkles, Plus, Pin, User, Languages, 
-  ChevronDown, Info, RotateCcw, X, Search, HardDrive, Folder, CloudUpload, Grid, List as ListIcon,
+  ChevronDown, Info, RotateCcw, X, Search, HardDrive, Folder, Check, CloudUpload, Grid, List as ListIcon,
   FolderPlus, ChevronRight
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
