@@ -40,7 +40,6 @@ async function testConnection() {
     // We ignore 'permission-denied' because it means we DID reach the server (which is good!)
     // We only care about connection-level failures
     if (error?.code === 'permission-denied' || error?.message?.includes('permission-denied')) {
-      console.log("Firebase: Connection verified (received expected permission denial).");
       return;
     }
 

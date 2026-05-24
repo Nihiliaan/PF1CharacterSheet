@@ -22,7 +22,6 @@ import { VaultProvider, useVault } from './contexts/VaultContext';
 import { CharacterProvider, useCharacter } from './contexts/CharacterContext';
 
 export default function App() {
-  console.log('>>> [APP] HELLO WORLD - VERSION 0.1 <<<');
   return (
     <AuthProvider>
       <UIProvider>

@@ -30,6 +30,11 @@ export default function AppOverlays() {
     setUserApiKey,
     showApiKeyInput,
     setShowApiKeyInput,
+    aiModel,
+    setAiModel,
+    availableModels,
+    isFetchingModels,
+    fetchAvailableModels,
     aiInputText,
     setAiInputText,
     aiStatusMsg
@@ -74,6 +79,11 @@ export default function AppOverlays() {
             setShowApiKeyInput={setShowApiKeyInput} 
             handleAIExtract={handleAIExtract}
             aiStatusMsg={aiStatusMsg}
+            aiModel={aiModel}
+            setAiModel={setAiModel}
+            availableModels={availableModels}
+            isFetchingModels={isFetchingModels}
+            fetchAvailableModels={fetchAvailableModels}
           />
         )}
       </AnimatePresence>

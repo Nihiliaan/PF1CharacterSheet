@@ -35,7 +35,41 @@ export interface DynamicInputProps {
   row?: any;
 }
 
-export const DynamicInput = ({
+// 极简的 Markdown 链接渲染器，用于提升初始渲染性能
+const MarkdownLinkRenderer = ({ text }: { text: string }) => {
+  if (!text) return null;
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = linkRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    parts.push(
+      <a 
+        key={match.index} 
+        href={match[2]} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="text-indigo-600 hover:underline cursor-pointer"
+        onClick={e => e.stopPropagation()}
+      >
+        {match[1]}
+      </a>
+    );
+    lastIndex = linkRegex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return <>{parts.length > 0 ? parts : text}</>;
+};
+
+export const DynamicInput = React.memo(({
   value,
   originalValue,
   onChange,
@@ -60,11 +94,13 @@ export const DynamicInput = ({
   const characterContext = useCharacter();
   const [isFocused, setIsFocused] = React.useState(false);
 
+  const modifiers = characterContext?.computed?.modifiers;
+
   const context = React.useMemo(() => ({
-    modifiers: characterContext?.computed?.modifiers,
+    modifiers,
     t,
     row
-  }), [characterContext?.computed?.modifiers, t, row]);
+  }), [modifiers, t, row]);
 
   // 优先级：Path 获取的 Handler > Type 获取的兜底 Handler
   const handler = React.useMemo(() => {
@@ -92,11 +128,9 @@ export const DynamicInput = ({
     if (value === originalValue) return false;
 
     // 使用 Schema 定义的 update 函数对两者进行预处理（转换成存储格式）再比较
-    // 这能处理 "0" vs 0, "" vs undefined, "1.0" vs 1 等情况
     const v1 = handler?.update ? handler.update(String(value)) : value;
     const v2 = handler?.update ? handler.update(String(originalValue)) : originalValue;
 
-    // 对于对象或数组（如 SoA 中的某些字段），使用 JSON 比较
     if (typeof v1 === 'object' || typeof v2 === 'object') {
       return JSON.stringify(v1) !== JSON.stringify(v2);
     }
@@ -110,7 +144,7 @@ export const DynamicInput = ({
   }, [value, isFocused]);
 
   const handleStepperChange = (v: string) => {
-    const finalValue = handler?.update ? handler.update(v) : v;
+    const finalValue = handler?.update?.(v) ?? v;
     setTempValue(v);
     onChange(finalValue);
   };
@@ -132,19 +166,16 @@ export const DynamicInput = ({
   const handleChange = (val: string) => {
     setTempValue(val);
 
-    // 优先使用传入的拦截器（CodeMirror 场景）
     if (transactionFilter) {
       if (!transactionFilter({ docChanged: true, nextEvents: [{ text: val }] })) {
         return;
       }
     }
 
-    // 使用 Handler 进行实时拦截
     if (handler?.validate) {
       if (!handler.validate(val)) return;
     }
 
-    // 更新数据 (使用 update 进行存储格式化)
     const finalValue = handler?.update ? handler.update(val) : val;
     onChange(finalValue);
   };
@@ -159,6 +190,7 @@ export const DynamicInput = ({
     const val = e.target.value;
     const finalValue = handler?.update ? handler.update(val) : val;
     onChange(finalValue);
+    setIsFocused(false); // Select 选择后立即失焦触发预览
   };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -170,38 +202,36 @@ export const DynamicInput = ({
     onChange(value === 'true' ? '' : 'true');
   };
 
-  // If we are given explicit height constraints through props, we use those,
-  // Otherwise we use the table default height of min-h-[32px]
   const defaultHeightClass = (height || minHeight || wrapperClassName.includes('h-') || wrapperClassName.includes('min-h-')) ? '' : 'min-h-[32px]';
-
-  // Only apply table-specific padding if not overridden
   const paddingClass = className.includes('p-') ? '' : 'px-2 py-1';
 
-  if (readOnly) {
-    return (
-      <div className={`flex items-center h-full w-full break-words whitespace-pre-wrap ${paddingClass} ${finalInnerClass} ${wrapperClassName}`}>
-        <MarkdownInlineEditor
-          value={value}
-          readOnly={true}
-          onChange={() => { }}
-          className="!bg-transparent !p-0"
-        />
-      </div>
-    );
-  }
+  // 核心样式复用：确保预览和编辑状态的文字位置、间距、字体完全一致
+  const sharedStyles = `w-full h-full break-words whitespace-pre-wrap ${paddingClass} ${finalInnerClass}`;
 
-  return (
-    <div
-      ref={containerRef}
-      className={`grid h-full w-full relative group transition-colors ${defaultHeightClass} ${isChanged && !hideIndicator ? 'bg-amber-100/40' : ''} ${wrapperClassName}`}
-    >
-      {(handler?.ui === 'select') ? (
+  const renderContent = () => {
+    // 预览模式 / 只读模式
+    if (readOnly || !isFocused) {
+      const val = displayValue();
+      return (
+        <div 
+          className={`${sharedStyles} cursor-text min-h-[32px] flex items-start`}
+          onClick={() => !readOnly && setIsFocused(true)}
+        >
+          <div className="w-full">
+            <MarkdownLinkRenderer text={val} />
+          </div>
+        </div>
+      );
+    }
+
+    if (handler?.ui === 'select') {
+      return (
         <div className="relative w-full h-full">
           <select
+            autoFocus
             value={value || (handler.options[handler.defaultIndex] || '')}
             onChange={handleSelectChange}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onBlur={handleBlur}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
             {(handler.options || []).map((opt: any) => (
@@ -210,11 +240,15 @@ export const DynamicInput = ({
               </option>
             ))}
           </select>
-          <div className={`${paddingClass} ${finalInnerClass} flex items-center justify-center ${isChanged ? 'text-amber-700' : 'text-ink'}`}>
+          <div className={`${sharedStyles} flex items-center justify-center ${isChanged ? 'text-amber-700' : 'text-ink'}`}>
             {displayValue() || <span className="text-stone-300">—</span>}
           </div>
         </div>
-      ) : (handler?.ui === 'bool') ? (
+      );
+    }
+
+    if (handler?.ui === 'bool') {
+      return (
         <button
           type="button"
           onClick={(e) => {
@@ -222,44 +256,61 @@ export const DynamicInput = ({
             e.stopPropagation();
             toggleBool();
           }}
-          className={`${paddingClass} ${finalInnerClass} flex items-center justify-center cursor-pointer hover:bg-stone-200/50 transition-colors w-full h-full min-h-[32px] ${isChanged ? 'text-amber-900 bg-amber-50/30' : 'text-ink'}`}
+          className={`${sharedStyles} flex items-center justify-center cursor-pointer hover:bg-stone-200/50 transition-colors ${isChanged ? 'text-amber-900 bg-amber-50/30' : 'text-ink'}`}
         >
           {displayValue()}
         </button>
-      ) : handler?.ui === 'text' ? (
+      );
+    }
+
+    if (handler?.ui === 'text') {
+      return (
         <div className={`${paddingClass} ${finalInnerClass} flex items-center`}>
           <MarkdownInlineEditor
             value={value}
             onChange={handleChange}
+            onBlur={handleBlur}
             placeholder={placeholder}
             singleLine={singleLine}
             transactionFilter={transactionFilter}
             height={height}
             minHeight={minHeight}
             className="!bg-transparent !p-0 w-full"
+            autoFocus={true}
           />
         </div>
-      ) : (
-        <>
-          <div className={`col-start-1 row-start-1 invisible whitespace-pre-wrap break-words ${paddingClass} ${finalInnerClass} pointer-events-none`}>
-            {displayValue() + '\n'}
-          </div>
-          <textarea
-            value={isFocused ? tempValue : displayValue()}
-            onChange={handleTextareaChange}
-            onFocus={() => setIsFocused(true)}
-            onBlur={handleBlur}
-            className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent ${paddingClass} ${finalInnerClass} ${isChanged ? 'text-amber-900' : ''}`}
-            rows={1}
-            placeholder={placeholder}
-          />
-        </>
-      )}
+      );
+    }
+
+    return (
+      <>
+        <div className={`col-start-1 row-start-1 invisible pointer-events-none ${sharedStyles}`}>
+          {displayValue() + '\n'}
+        </div>
+        <textarea
+          autoFocus
+          value={tempValue}
+          onChange={handleTextareaChange}
+          onBlur={handleBlur}
+          className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent ${sharedStyles} ${isChanged ? 'text-amber-900' : ''}`}
+          rows={1}
+          placeholder={placeholder}
+        />
+      </>
+    );
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className={`grid h-full w-full relative group transition-colors ${defaultHeightClass} ${isChanged && !hideIndicator ? 'bg-amber-100/40' : ''} ${wrapperClassName}`}
+    >
+      {renderContent()}
       {isChanged && !hideIndicator && (
         <div className="absolute right-0.5 top-0.5 w-1 h-1 bg-amber-500 rounded-full animate-pulse shadow-sm" />
       )}
     </div>
   );
-};
+});
 
 export default DynamicInput;

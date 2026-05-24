@@ -13,7 +13,7 @@ const Toast = ({ message, type = 'success', onClose }: { message: string; type?:
     initial={{ opacity: 0, y: 50 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, scale: 0.9 }}
-    className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-full shadow-lg flex items-center gap-3 font-medium text-sm ${
+    className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[500] px-6 py-3 rounded-full shadow-lg flex items-center gap-3 font-medium text-sm ${
       type === 'success' ? 'bg-stone-800 text-white' : 'bg-rose-600 text-white'
     }`}
   >

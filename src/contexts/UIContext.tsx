@@ -54,7 +54,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const saved = localStorage.getItem('recent_characters');
     if (saved) {
       try { setRecentCharacters(JSON.parse(saved)); }
-      catch (e) { console.error("Recent chars load failed", e); }
+      catch (e) { console.error("[UIContext] Failed to parse recent characters:", e); }
     }
   }, []);
 

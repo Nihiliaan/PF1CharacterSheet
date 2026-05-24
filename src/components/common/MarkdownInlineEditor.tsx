@@ -79,6 +79,8 @@ const externalLinkHandler = EditorView.domEventHandlers({
 const MarkdownInlineEditor = ({
   value,
   onChange,
+  onBlur,
+  autoFocus = false,
   readOnly = false,
   className = '',
   placeholder = '',
@@ -90,6 +92,16 @@ const MarkdownInlineEditor = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
 
+  const onBlurRef = useRef(onBlur);
+  useEffect(() => { onBlurRef.current = onBlur; }, [onBlur]);
+
+  // Handle autoFocus
+  useEffect(() => {
+    if (autoFocus && viewRef.current && !viewRef.current.hasFocus) {
+        viewRef.current.focus();
+    }
+  }, [autoFocus]);
+
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
 
@@ -100,19 +112,17 @@ const MarkdownInlineEditor = ({
   useEffect(() => {
     if (!editorRef.current) return;
 
-    // Helper to get safe string
-    const getSafeValue = (v: any) => {
-        if (typeof v === 'string') return v;
-        if (v === null || v === undefined) return '';
-        return String(v);
-    };
-
     const state = EditorState.create({
-      doc: getSafeValue(value),
+      doc: String(value ?? ''),
       extensions: [
         markdown({ base: markdownLanguage }),
         markdownConcealPlugin,
         externalLinkHandler,
+        EditorView.domEventHandlers({
+          blur: () => {
+            if (onBlurRef.current) onBlurRef.current();
+          }
+        }),
         EditorState.transactionFilter.of(tr => {
             if (tr.docChanged) {
                 if (tr.annotation(programmaticUpdate)) return tr;

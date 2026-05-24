@@ -62,8 +62,7 @@ export default function SpellTable({
     const newColArray = [...newData[key]];
 
     const cellPath = getCellPath(path || '', index, key);
-    const cellHandler = getHandlerByPath(cellPath);
-    const finalValue = cellHandler?.update ? cellHandler.update(value) : value;
+    const finalValue = getHandlerByPath(cellPath)?.update?.(value) ?? value;
 
     newColArray[index] = finalValue;
     newData[key] = newColArray;
@@ -87,8 +86,7 @@ export default function SpellTable({
       if (c.key === 'level') return;
 
       const cellPath = getCellPath(path || '', 0, c.key);
-      const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
-      const defaultValue = cellHandler?.getDefaultValue ? cellHandler.getDefaultValue() : '';
+      const defaultValue = getHandlerByPath(cellPath)?.getDefaultValue?.() ?? '';
 
       if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill(defaultValue);
       newData[c.key] = [defaultValue, ...newData[c.key]];

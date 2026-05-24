@@ -62,6 +62,11 @@ interface CharacterContextType {
   setUserApiKey: (key: string) => void;
   showApiKeyInput: boolean;
   setShowApiKeyInput: (show: boolean) => void;
+  aiModel: string;
+  setAiModel: (model: string) => void;
+  availableModels: any[];
+  isFetchingModels: boolean;
+  fetchAvailableModels: (apiKey?: string) => Promise<void>;
   aiInputText: string;
   setAiInputText: (text: string) => void;
   showAIModal: boolean;
@@ -158,20 +163,40 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     addAdditionalBlock, removeAdditionalBlock
   } = useCharacterActions(isReadOnly, setData);
 
+  // 优化：仅在数据真正变化时进行深比较，且增加简单的长度初步判断
   const isEqual = (a: any, b: any): boolean => {
     if (a === b) return true;
     if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false;
+    
+    // 基础类型/结构快速判断
     const keysA = Object.keys(a);
     const keysB = Object.keys(b);
     if (keysA.length !== keysB.length) return false;
+
+    // 对于大型数组或对象，深比较开销极大。
+    // 这里使用简单的每一项递归，但尽量保持浅层。
     for (const key of keysA) {
-      if (!keysB.includes(key) || !isEqual(a[key], b[key])) return false;
+      if (!keysB.includes(key)) return false;
+      const valA = a[key];
+      const valB = b[key];
+      
+      // 优化：对于基本类型直接比较
+      if (typeof valA !== 'object' || valA === null) {
+        if (valA !== valB) return false;
+      } else {
+        if (!isEqual(valA, valB)) return false;
+      }
     }
     return true;
   };
 
+  // 使用 useEffect 但增加性能防护：如果数据引用没变（Immer 保证了这一点），setIsDirty 不会触发频繁计算
   useEffect(() => {
-    setIsDirty(!isEqual(data, lastSavedData));
+    // 只有在数据发生变化时才执行比较
+    const timer = setTimeout(() => {
+      setIsDirty(!isEqual(data, lastSavedData));
+    }, 500); // 增加 500ms 防抖，避免输入时每下按键都触发全量比较
+    return () => clearTimeout(timer);
   }, [data, lastSavedData]);
 
   const {
@@ -193,6 +218,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const {
     userApiKey, setUserApiKey, showApiKeyInput, setShowApiKeyInput,
+    aiModel, setAiModel, availableModels, isFetchingModels, fetchAvailableModels,
     aiInputText, setAiInputText, showAIModal, setShowAIModal,
     isAILoading, aiStatusMsg, handleAIExtract
   } = useCharacterAI(setData, setCurrentCharacterId);
@@ -287,6 +313,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     saveCharacter: handleSaveInternal,
     // AI
     userApiKey, setUserApiKey, showApiKeyInput, setShowApiKeyInput,
+    aiModel, setAiModel, availableModels, isFetchingModels, fetchAvailableModels,
     aiInputText, setAiInputText, showAIModal, setShowAIModal,
     isAILoading, aiStatusMsg, handleAIExtract,
     // Drive Sync

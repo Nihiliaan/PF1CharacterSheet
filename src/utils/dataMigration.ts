@@ -136,17 +136,36 @@ export const dataMigration = {
 
   /**
    * 递归地将数据与默认值合并，确保所有必要字段都存在
+   * 优化版：分离迁移逻辑与合并逻辑，避免指数级复杂度
    */
   mergeWithDefault(data: any, defaults: any = DEFAULT_DATA): any {
+    // 1. 仅在顶层执行一次迁移
     const migrated = this.migrate(data);
-    if (typeof migrated !== 'object' || migrated === null) return JSON.parse(JSON.stringify(defaults));
+    
+    // 2. 使用内部高效递归进行合并
+    return this._deepMerge(migrated, defaults);
+  },
 
-    const result = { ...migrated };
-    for (const key in defaults) {
-      if (typeof defaults[key] === 'object' && defaults[key] !== null && !Array.isArray(defaults[key])) {
-        result[key] = this.mergeWithDefault(migrated[key], defaults[key]);
-      } else if (result[key] === undefined) {
-        result[key] = JSON.parse(JSON.stringify(defaults[key]));
+  /**
+   * 内部递归合并函数
+   */
+  _deepMerge(target: any, source: any): any {
+    if (!target || typeof target !== 'object') {
+      return JSON.parse(JSON.stringify(source));
+    }
+
+    const result = { ...target };
+    for (const key in source) {
+      const sourceVal = source[key];
+      const targetVal = target[key];
+
+      if (sourceVal?.constructor === Object) {
+        result[key] = this._deepMerge(targetVal, sourceVal);
+      } else if (targetVal === undefined) {
+        // 仅在目标值不存在时使用默认值
+        result[key] = Array.isArray(sourceVal) 
+          ? [...sourceVal] 
+          : (typeof sourceVal === 'object' && sourceVal !== null ? JSON.parse(JSON.stringify(sourceVal)) : sourceVal);
       }
     }
     return result;

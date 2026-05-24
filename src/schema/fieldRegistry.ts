@@ -232,13 +232,7 @@ export function getHandlerByPath(path: string): any {
       .replace(/\.\d+(\.|$)/g, (match) => match.endsWith('.') ? '.' : '');
 
     const node = get(CharacterPrototype, normalizedPath);
-
-    if (!node) {
-      return null;
-    }
-
-    const handler = node.handler ? node.handler : node;
-    return handler || null;
+    return node?.handler ?? node ?? null;
   } catch (e) {
     console.error(`[Schema ERROR] Fatal error resolving path: "${path}"`, e);
     return null;

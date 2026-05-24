@@ -53,19 +53,6 @@ const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeIt
 export default function BBCodeTemplateEditor() {
   const { t } = useTranslation();
   const { bbcodeTemplate, setBbcodeTemplate, isReadOnly } = useCharacter();
-  const { setToast } = useUI();
-
-  useEffect(() => {
-    (window as any).__resetBBCodeTemplate = () => {
-      if (isReadOnly) return;
-      setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
-      localStorage.removeItem('bbcode_template');
-      setToast({ message: t('editor.bbcode.reset_success'), type: 'success' });
-    };
-    return () => {
-      delete (window as any).__resetBBCodeTemplate;
-    };
-  }, [setBbcodeTemplate, setToast, t, isReadOnly]);
 
   return (
     <div className="flex flex-col h-full bg-stone-50 overflow-hidden relative">

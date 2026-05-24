@@ -153,8 +153,8 @@ export const useCharacterPersistence = (
   const selectCharacter = async (idOrChar: string | any, skipDirtyCheck: boolean = false, shouldSwitchView: boolean = true) => {
     const performSelect = async () => {
       try {
-        if (typeof idOrChar === 'object' && idOrChar !== null && idOrChar.id) {
-          const char = idOrChar;
+        if (idOrChar?.id) {
+          const char = idOrChar as any;
           
           // Set ReadOnly strictly based on extension
           setIsReadOnly(char.name?.endsWith('.lnk') || false);
@@ -356,7 +356,9 @@ export const useCharacterPersistence = (
           if (lastCharId) await selectCharacter(lastCharId, true, false);
           if (lastTempId) await selectCharacter(lastTempId, true, false);
         }
-      } catch (error) {} finally {
+      } catch (error) {
+        console.error("[useCharacterPersistence] Initial load failed:", error);
+      } finally {
         setIsSyncing(false);
       }
     };

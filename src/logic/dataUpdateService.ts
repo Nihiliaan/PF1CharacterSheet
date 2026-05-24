@@ -3,6 +3,18 @@ import { CharacterData } from '../schema/types';
 import { getHandlerByPath } from '../schema/fieldRegistry';
 
 /**
+ * 辅助函数：解析路径片段，支持 prop[index] 格式
+ */
+function resolvePath(obj: any, part: string): any {
+  const match = part.match(/(.+)\[(\d+)\]/);
+  if (match) {
+    const [, name, index] = match;
+    return obj[name]?.[parseInt(index, 10)];
+  }
+  return obj[part];
+}
+
+/**
  * 处理 CharacterData 深层更新的业务逻辑
  */
 export const dataUpdateService = {
@@ -14,26 +26,14 @@ export const dataUpdateService = {
     const handler = getHandlerByPath(path);
     
     // 如果有对应的处理器，先进行数据转换（如字符串转数字）
-    // 增加防御性检查，确保 update 方法存在
-    const finalValue = (handler && typeof handler.update === 'function') 
-      ? handler.update(value) 
-      : value;
+    const finalValue = handler?.update?.(value) ?? value;
 
     return produce(data, draft => {
       const parts = path.split('.');
       let current: any = draft;
       
       for (let i = 0; i < parts.length - 1; i++) {
-        const part = parts[i];
-        const arrayMatch = part.match(/(.+)\[(\d+)\]/);
-        
-        if (arrayMatch) {
-          const [, name, index] = arrayMatch;
-          current = current[name][parseInt(index, 10)];
-        } else {
-          current = current[part];
-        }
-        
+        current = resolvePath(current, parts[i]);
         if (current === undefined) return; // 路径不存在
       }
 
@@ -42,7 +42,7 @@ export const dataUpdateService = {
       
       if (arrayMatch) {
         const [, name, index] = arrayMatch;
-        current[name][parseInt(index, 10)] = finalValue;
+        if (current[name]) current[name][parseInt(index, 10)] = finalValue;
       } else {
         current[lastPart] = finalValue;
       }
@@ -84,16 +84,10 @@ export const dataUpdateService = {
       const parts = path.split('.');
       let list = draft as any;
       for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-        const match = part.match(/(.+)\[(\d+)\]/);
-        if (match) {
-          list = list[match[1]][parseInt(match[2], 10)];
-        } else {
-          list = list[part];
-        }
+        list = resolvePath(list, parts[i]);
       }
 
-      if (list && typeof list === 'object' && !Array.isArray(list)) {
+      if (list && list.constructor === Object) {
         // SoA 模式：对所有数组列进行同步排序
         Object.keys(list).forEach(key => {
           if (Array.isArray(list[key])) {

@@ -14,6 +14,11 @@ interface AIExtractionModalProps {
   aiInputText: string;
   setAiInputText: (v: string) => void;
   aiStatusMsg: string;
+  aiModel: string;
+  setAiModel: (v: string) => void;
+  availableModels: any[];
+  isFetchingModels: boolean;
+  fetchAvailableModels: (apiKey?: string) => Promise<void>;
 }
 
 const AIExtractionModal = ({ 
@@ -27,7 +32,12 @@ const AIExtractionModal = ({
   setShowApiKeyInput, 
   aiInputText, 
   setAiInputText,
-  aiStatusMsg
+  aiStatusMsg,
+  aiModel,
+  setAiModel,
+  availableModels,
+  isFetchingModels,
+  fetchAvailableModels
 }: AIExtractionModalProps) => {
   return (
     <AnimatePresence>
@@ -59,39 +69,71 @@ const AIExtractionModal = ({
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col p-6 gap-4">
-              {/* API Key Section */}
-              <div className="bg-stone-50 border border-stone-200 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-stone-500 uppercase tracking-widest flex items-center gap-2">
-                    <ShieldCheck size={14} className="text-indigo-600" />
-                    Gemini API Key
-                  </label>
-                  <button 
-                    onClick={() => setShowApiKeyInput(!showApiKeyInput)}
-                    className="text-[10px] font-bold text-indigo-600 hover:underline"
-                  >
-                    {showApiKeyInput ? '隐藏设置' : '更换密钥'}
-                  </button>
+              {/* API Key & Model Section */}
+              <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-stone-500 uppercase tracking-widest flex items-center gap-2">
+                      <ShieldCheck size={14} className="text-indigo-600" />
+                      Gemini API Key
+                    </label>
+                    <button 
+                      onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+                      className="text-[10px] font-bold text-indigo-600 hover:underline"
+                    >
+                      {showApiKeyInput ? '隐藏设置' : '更换密钥'}
+                    </button>
+                  </div>
+                  {showApiKeyInput ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input 
+                          type="password"
+                          value={userApiKey}
+                          onChange={e => setUserApiKey(e.target.value)}
+                          placeholder="在此输入您的 API Key"
+                          className="flex-1 px-3 py-2 bg-white border border-stone-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                        />
+                        <button 
+                          onClick={() => fetchAvailableModels()}
+                          disabled={isFetchingModels || !userApiKey}
+                          className="px-3 py-2 bg-white border border-stone-200 rounded-lg text-xs font-bold text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 transition-colors"
+                        >
+                          {isFetchingModels ? <Loader2 size={14} className="animate-spin" /> : '获取模型'}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-stone-400">
+                        您的密钥仅保存在本地浏览器缓存中，不会上传到服务器。
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-stone-600">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <span className="font-mono">已设置 (••••••••••••)</span>
+                    </div>
+                  )}
                 </div>
-                {showApiKeyInput ? (
-                  <div className="space-y-2">
-                    <input 
-                      type="password"
-                      value={userApiKey}
-                      onChange={e => setUserApiKey(e.target.value)}
-                      placeholder="在此输入您的 API Key (AI Studio 提供)"
-                      className="w-full px-3 py-2 bg-white border border-stone-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
-                    />
-                    <p className="text-[10px] text-stone-400">
-                      您的密钥仅保存在本地浏览器缓存中，不会上传到服务器。
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-sm text-stone-600">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="font-mono">已设置 (••••••••••••)</span>
-                  </div>
-                )}
+
+                {/* Model Selection */}
+                <div className="pt-2 border-t border-stone-200">
+                  <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1.5 block">
+                    使用模型 (AI Model)
+                  </label>
+                  <select 
+                    value={aiModel}
+                    onChange={e => setAiModel(e.target.value)}
+                    disabled={availableModels.length === 0}
+                    className="w-full px-2 py-1.5 bg-white border border-stone-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all disabled:bg-stone-50 disabled:text-stone-400"
+                  >
+                    {availableModels.length > 0 ? (
+                      availableModels.map(m => (
+                        <option key={m.name} value={m.name}>{m.displayName} ({m.name.split('/').pop()})</option>
+                      ))
+                    ) : (
+                      <option value="">请先点击“获取模型”</option>
+                    )}
+                  </select>
+                </div>
               </div>
 
               <div className="flex-1 flex flex-col min-h-0">

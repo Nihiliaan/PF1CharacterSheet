@@ -19,23 +19,17 @@ export const useDriveSync = () => {
   }, []);
 
   const handleBrowseDrive = async () => {
-    console.log("[useDriveSync] handleBrowseDrive triggered");
     setToast({ message: "正在连接 Google 云端硬盘..." });
     try {
-      console.log("[useDriveSync] Calling driveSyncService.browseDrive with user:", user?.uid);
       const result = await driveSyncService.browseDrive(user);
-      console.log("[useDriveSync] browseDrive result:", result);
       
       if (result.needsFolder) {
-        console.log("[useDriveSync] PF1 folder not found");
         setToast({ message: "未找到备份文件夹 (PF1CharacterSheet)", type: 'info' });
         return;
       }
       
-      console.log("[useDriveSync] Setting driveModal to open");
       setDriveModal({ isOpen: true, currentPath: result.currentPath!, items: result.items! });
     } catch (e: any) {
-      console.error("[useDriveSync] Connection failed:", e);
       setToast({ message: "连接失败: " + e.message, type: 'error' });
     }
   };
@@ -54,8 +48,6 @@ export const useDriveSync = () => {
       const response = await fetch('/firebase-applet-config.json');
       const config = await response.json();
       
-      console.log("[useDriveSync] Launching Picker with AppID:", config.messagingSenderId);
-
       const selectedDocs = await driveService.openGooglePicker(
         token, 
         config.apiKey, 

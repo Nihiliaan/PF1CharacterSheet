@@ -1,13 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
-import { extractCharacterFromText, transformAIData } from '../../services/aiService';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { extractCharacterFromText, transformAIData, listAvailableModels } from '../../services/aiService';
 import { useUI } from '../UIContext';
 import { CharacterData } from '../../schema/types';
+import { dataMigration } from '../../utils/dataMigration';
 
 export const useCharacterAI = (setData: (data: CharacterData) => void, setCurrentDocumentId: (id: string | null) => void) => {
   const { setToast, setView } = useUI();
 
   const [userApiKey, setUserApiKey] = useState(() => localStorage.getItem('user_gemini_api_key') || '');
   const [showApiKeyInput, setShowApiKeyInput] = useState(!localStorage.getItem('user_gemini_api_key'));
+  const [aiModel, setAiModel] = useState(() => localStorage.getItem('user_gemini_model') || 'models/gemini-1.5-flash');
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState(false);
+  
   const [aiInputText, setAiInputText] = useState('');
   const [showAIModal, setShowAIModal] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
@@ -21,6 +26,41 @@ export const useCharacterAI = (setData: (data: CharacterData) => void, setCurren
   useEffect(() => {
     localStorage.setItem('user_gemini_api_key', userApiKey);
   }, [userApiKey]);
+
+  useEffect(() => {
+    localStorage.setItem('user_gemini_model', aiModel);
+  }, [aiModel]);
+
+  const fetchAvailableModels = useCallback(async (apiKey?: string) => {
+    const key = apiKey || userApiKey;
+    if (!key) return;
+
+    setIsFetchingModels(true);
+    try {
+      const models = await listAvailableModels(key);
+      if (models.length === 0) {
+        setToast({ message: "未发现可用的 Gemini 模型，请检查 API Key 权限", type: 'info' });
+      }
+      setAvailableModels(models);
+      
+      // 如果当前选中的模型不在列表中，且列表不为空，则默认选中第一个
+      if (models.length > 0 && !models.find(m => m.name === aiModel)) {
+        setAiModel(models[0].name);
+      }
+    } catch (e: any) {
+      console.error("Failed to fetch models:", e);
+      setToast({ message: "获取模型列表失败: " + (e.message || "未知错误"), type: 'error' });
+    } finally {
+      setIsFetchingModels(false);
+    }
+  }, [userApiKey, aiModel]);
+
+  // 当用户第一次打开 AI 弹窗或 API Key 变化时尝试获取模型列表
+  useEffect(() => {
+    if (showAIModal && userApiKey && availableModels.length === 0) {
+      fetchAvailableModels();
+    }
+  }, [showAIModal, userApiKey, fetchAvailableModels, availableModels.length]);
 
   const handleAIExtract = async (inputText?: string, apiKey?: string) => {
     const textToProcess = (typeof inputText === 'string' ? inputText : aiInputText) || '';
@@ -43,8 +83,8 @@ export const useCharacterAI = (setData: (data: CharacterData) => void, setCurren
         setTimeout(() => reject(new Error("AI 响应超时，请检查网络连接或 API Key 是否正确。")), 90000)
       );
 
-      setAiStatusMsg('正在传输数据至 Gemini...');
-      const extractionPromise = extractCharacterFromText(textToProcess, keyToUse);
+      setAiStatusMsg(`正在调用 ${aiModel.split('/').pop()} ...`);
+      const extractionPromise = extractCharacterFromText(textToProcess, keyToUse, aiModel);
 
       const extracted = await Promise.race([extractionPromise, timeoutPromise]) as any;
 
@@ -74,6 +114,8 @@ export const useCharacterAI = (setData: (data: CharacterData) => void, setCurren
   return {
     userApiKey, setUserApiKey,
     showApiKeyInput, setShowApiKeyInput,
+    aiModel, setAiModel,
+    availableModels, isFetchingModels, fetchAvailableModels,
     aiInputText, setAiInputText,
     showAIModal, setShowAIModal,
     isAILoading, aiStatusMsg,

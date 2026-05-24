@@ -55,7 +55,6 @@ export async function openGooglePicker(accessToken: string, apiKey: string, appI
         const picker = pickerBuilder
           .addView(docsView)
           .setCallback((data: any) => {
-            console.log("[GooglePicker] Callback data:", data);
             if (data.action === (window as any).google.picker.Action.PICKED) {
               resolve(data.docs);
             } else if (data.action === (window as any).google.picker.Action.CANCEL) {
@@ -70,19 +69,16 @@ export async function openGooglePicker(accessToken: string, apiKey: string, appI
 }
 
 export async function getDriveAccessToken(extraScopes: string[] = []) {
-  console.log("[googleDriveService] getDriveAccessToken called");
   // Try to get cached token
   const cacheKey = 'google_drive_token_v3_' + extraScopes.join('_');
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
     const { token, expiry } = JSON.parse(cached);
     if (Date.now() < expiry) {
-      console.log("[googleDriveService] Using cached token");
       return token;
     }
   }
 
-  console.log("[googleDriveService] No valid cached token, starting popup...");
   const provider = new GoogleAuthProvider();
   provider.addScope(DRIVE_SCOPE);
   extraScopes.forEach(scope => provider.addScope(scope));
@@ -90,7 +86,6 @@ export async function getDriveAccessToken(extraScopes: string[] = []) {
   const auth = getAuth();
   try {
     const result = await signInWithPopup(auth, provider);
-    console.log("[googleDriveService] popup result received");
     const credential = GoogleAuthProvider.credentialFromResult(result);
     const token = credential?.accessToken;
     
@@ -98,7 +93,6 @@ export async function getDriveAccessToken(extraScopes: string[] = []) {
       // Cache token for 55 minutes
       const expiry = Date.now() + 55 * 60 * 1000;
       localStorage.setItem(cacheKey, JSON.stringify({ token, expiry }));
-      console.log("[googleDriveService] token cached");
     }
     
     return token;

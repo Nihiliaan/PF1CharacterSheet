@@ -167,17 +167,14 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
     if (val === null || val === undefined) return val;
 
     if (Array.isArray(val)) {
-      let result;
-      if (val.length > 0 && typeof val[0] === 'object' && val[0] !== null) {
-        result = val.map((item, i) => processNode(item, `${path}.${i}`));
-      } else {
-        result = val.map((item) => getExportValue(item, 'text', t, { path, context }));
-      }
+      const result = (val.length > 0 && val[0]?.constructor === Object)
+        ? val.map((item, i) => processNode(item, `${path}.${i}`))
+        : val.map((item) => getExportValue(item, 'text', t, { path, context }));
       Object.defineProperty(result, '_path', { value: path, enumerable: false, configurable: true });
       return result;
     }
 
-    if (typeof val === 'object') {
+    if (val?.constructor === Object) {
       const keys = Object.keys(val);
       // SoA 判定：至少有两个属性值是数组且长度一致 (排除掉只有一个列表的情况)
       const listKeys = keys.filter(k => Array.isArray(val[k]));
