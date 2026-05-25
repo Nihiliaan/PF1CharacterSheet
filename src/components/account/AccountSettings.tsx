@@ -1,6 +1,7 @@
 import React from 'react';
-import { Settings, ShieldCheck, User, Link as LinkIcon } from 'lucide-react';
-import { useCharacter } from '../../contexts/CharacterContext';
+import { Settings, ShieldCheck, Link as LinkIcon } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useUI } from '../../contexts/UIContext';
 import { googleProvider, githubProvider, discordProvider } from '../../lib/firebase';
 
 interface AccountSettingsProps {}
@@ -8,17 +9,32 @@ interface AccountSettingsProps {}
 const AccountSettings = ({}: AccountSettingsProps) => {
   const { 
     user, 
-    setToast, 
     handleLinkAccount, 
     handleUnlinkProvider 
-  } = useCharacter();
+  } = useAuth();
+  const { setToast } = useUI();
 
   if (!user) return null;
 
   const providers = [
-    { id: 'google.com', name: 'Google', icon: User, provider: googleProvider },
-    { id: 'github.com', name: 'GitHub', icon: User, provider: githubProvider },
-    { id: 'discord.com', name: 'Discord', icon: User, provider: discordProvider }
+    { 
+      id: 'google.com', 
+      name: 'Google', 
+      iconUrl: 'https://cdn.simpleicons.org/google/4285F4', 
+      provider: googleProvider 
+    },
+    { 
+      id: 'github.com', 
+      name: 'GitHub', 
+      iconUrl: 'https://cdn.simpleicons.org/github/181717', 
+      provider: githubProvider 
+    },
+    { 
+      id: 'discord.com', 
+      name: 'Discord', 
+      iconUrl: 'https://cdn.simpleicons.org/discord/5865F2', 
+      provider: discordProvider 
+    }
   ];
 
   const linkedProviders = user.providerData.map(p => p.providerId);
@@ -82,8 +98,8 @@ const AccountSettings = ({}: AccountSettingsProps) => {
               return (
                 <div key={p.id} className="group flex items-center justify-between p-4 bg-white rounded-xl border border-stone-100 hover:border-primary/20 hover:shadow-md transition-all">
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl transition-colors ${isLinked ? 'bg-primary/10 text-primary' : 'bg-stone-100 text-stone-400'}`}>
-                      <p.icon size={20} />
+                    <div className={`w-11 h-11 flex items-center justify-center rounded-xl transition-colors ${isLinked ? 'bg-primary/5' : 'bg-stone-100 grayscale'}`}>
+                      <img src={p.iconUrl} alt={p.name} className="w-6 h-6 object-contain" />
                     </div>
                     <div>
                       <span className="font-bold text-stone-800 block capitalize">{p.name} 登录方式</span>

@@ -55,3 +55,5 @@ testConnection();
 export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();
 export const discordProvider = new OAuthProvider('discord.com');
+discordProvider.addScope('identify');
+discordProvider.addScope('email');
