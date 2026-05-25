@@ -180,17 +180,10 @@ export const DynamicInput = React.memo(({
     onChange(finalValue);
   };
 
-  const handleBlur = () => {
-    setIsFocused(false);
-    const finalValue = handler?.update ? handler.update(tempValue) : tempValue;
-    onChange(finalValue);
-  };
-
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     const finalValue = handler?.update ? handler.update(val) : val;
     onChange(finalValue);
-    setIsFocused(false); // Select 选择后立即失焦触发预览
   };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -213,10 +206,7 @@ export const DynamicInput = React.memo(({
     if (readOnly || !isFocused) {
       const val = displayValue();
       return (
-        <div 
-          className={`${sharedStyles} cursor-text min-h-[32px] flex items-start`}
-          onClick={() => !readOnly && setIsFocused(true)}
-        >
+        <div className={`${sharedStyles} cursor-text min-h-[32px] flex items-start`}>
           <div className="w-full">
             <MarkdownLinkRenderer text={val} />
           </div>
@@ -231,7 +221,6 @@ export const DynamicInput = React.memo(({
             autoFocus
             value={value || (handler.options[handler.defaultIndex] || '')}
             onChange={handleSelectChange}
-            onBlur={handleBlur}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
             {(handler.options || []).map((opt: any) => (
@@ -269,7 +258,6 @@ export const DynamicInput = React.memo(({
           <MarkdownInlineEditor
             value={value}
             onChange={handleChange}
-            onBlur={handleBlur}
             placeholder={placeholder}
             singleLine={singleLine}
             transactionFilter={transactionFilter}
@@ -291,7 +279,6 @@ export const DynamicInput = React.memo(({
           autoFocus
           value={tempValue}
           onChange={handleTextareaChange}
-          onBlur={handleBlur}
           className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent ${sharedStyles} ${isChanged ? 'text-amber-900' : ''}`}
           rows={1}
           placeholder={placeholder}
@@ -303,6 +290,16 @@ export const DynamicInput = React.memo(({
   return (
     <div
       ref={containerRef}
+      tabIndex={readOnly ? undefined : 0}
+      onFocus={() => !readOnly && setIsFocused(true)}
+      onBlur={(e) => {
+        // 利用 focusout 冒泡判断是否真的离开了组件
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsFocused(false);
+          const finalValue = handler?.update ? handler.update(tempValue) : tempValue;
+          onChange(finalValue);
+        }
+      }}
       className={`grid h-full w-full relative group transition-colors ${defaultHeightClass} ${isChanged && !hideIndicator ? 'bg-amber-100/40' : ''} ${wrapperClassName}`}
     >
       {renderContent()}

@@ -110,7 +110,8 @@ export class BaseInt extends BaseHandler {
   }
 
   formatDisplay(v: any) {
-    return (v ?? '') === '' ? '—' : v.toString();
+    const s = String(v ?? '');
+    return s === '' ? '—' : s;
   }
 }
 
@@ -173,10 +174,10 @@ const QuantityHandler = new BaseInt({
   ui: 'quantity',
   min: 1,
   formatDisplay: (v: any) => {
-    const num = parseInt(v, 10);
-    return (isNaN(num) || num <= 1) ? '' : `×${num}`;
+    const n = parseInt(v, 10);
+    return (isNaN(n) || n <= 1) ? '' : `×${n}`;
   },
-  formatInteractive: (v: any) => (parseInt(v, 10) || 0) <= 1 ? '' : String(v)
+  formatInteractive: function(v: any) { return this.formatDisplay!(v); }
 });
 
 const LevelHandler = new BaseInt({
@@ -185,11 +186,12 @@ const LevelHandler = new BaseInt({
   max: 20,
   formatDisplay: (v: any, context?: any) => {
     const n = parseInt(v, 10);
-    return n > 0 ? context.t('editor.lists.level_format', { n }) : '';
+    if (!n || n <= 0) return '';
+    return context?.t ? context.t('editor.lists.level_format', { n }) : n.toString();
   },
-  formatInteractive: (v: any) => {
+  formatInteractive: function(v: any) {
     const n = parseInt(v, 10);
-    return n > 0 ? n.toString() : '';
+    return (!n || n <= 0) ? '' : n.toString();
   }
 });
 
@@ -203,17 +205,21 @@ const DistanceHandler = new BaseInt({
     const n = parseInt(v, 10);
     if (isNaN(n) || n === 0) return '';
     return context?.t ? context.t('editor.lists.distance_format', { v: n }) : `${n} ft`;
-  }
+  },
+  formatInteractive: function(v: any) { return this.formatDisplay!(v); }
 });
 
 const BonusHandler = new BaseInt({
   ui: 'bonus',
   preProcess: (v) => String(v).replace('+', ''),
   formatDisplay: (v: any) => {
-    const num = parseInt(v, 10);
-    if (isNaN(num) || (v ?? '') === '') return '—';
+    const s = String(v ?? '');
+    if (s === '') return '—';
+    const num = parseInt(s, 10);
+    if (isNaN(num)) return '—';
     return num >= 0 ? `+${num}` : `${num}`;
-  }
+  },
+  formatInteractive: function(v: any) { return this.formatDisplay!(v); }
 });
 
 // Float 同样可以基于 BaseInt 的逻辑简单扩展 (如果需要更高精度则单独写)
@@ -236,7 +242,8 @@ const CostHandler = new BaseInt({
     if (isNaN(n) || n === 0) return '—';
     const unit = context?.t ? context.t('editor.items.units.gp') : 'gp';
     return `${n} ${unit}`;
-  }
+  },
+  formatInteractive: function(v: any) { return this.formatDisplay!(v); }
 });
 
 const WeightHandler = new BaseInt({
@@ -247,7 +254,8 @@ const WeightHandler = new BaseInt({
     if (isNaN(n) || n === 0) return '—';
     const unit = context?.t ? context.t('editor.items.units.lbs') : 'lbs';
     return `${n} ${unit}`;
-  }
+  },
+  formatInteractive: function(v: any) { return this.formatDisplay!(v); }
 });
 
 const BoolHandler = new BaseHandler({
