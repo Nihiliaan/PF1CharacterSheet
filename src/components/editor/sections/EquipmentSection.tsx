@@ -123,12 +123,12 @@ const EquipmentSection: React.FC = () => {
 
         <div className="mt-4">
           <MultilineInput
-            label="备注 NOTES"
+            label={t('editor.items.notes')}
             path="equipment.notes"
             value={data.equipment.notes || ''}
             originalValue={lastSavedData.equipment?.notes}
             onChange={v => update('equipment.notes', v)}
-            placeholder="关于装备、资产或其他物品的备注..."
+            placeholder={t('editor.items.notes_placeholder')}
             isAutoHeight={true}
           />
         </div>

@@ -77,7 +77,7 @@ const AccountMenu = ({ user, view, setView, recentCharacters, onSelect, onRemove
               >
                 <div className="flex items-center gap-3">
                   <RotateCcw size={16} className="text-stone-400" />
-                  <span>最近打开的人物卡</span>
+                  <span>{t('common.recent_characters')}</span>
                 </div>
                 <ChevronRight size={14} className="text-stone-300 group-hover:text-stone-500" />
               </button>
@@ -91,7 +91,7 @@ const AccountMenu = ({ user, view, setView, recentCharacters, onSelect, onRemove
                     className="absolute right-full top-0 mr-1 w-72 bg-white border border-stone-200 rounded-xl shadow-xl py-1"
                   >
                     {displayRecent.length === 0 ? (
-                      <div className="px-4 py-3 text-xs text-stone-400 italic text-center">暂无最近记录</div>
+                      <div className="px-4 py-3 text-xs text-stone-400 italic text-center">{t('common.no_recent')}</div>
                     ) : (
                       displayRecent.map((char: any) => (
                         <div key={char.id} className="relative group/item">
@@ -109,13 +109,13 @@ const AccountMenu = ({ user, view, setView, recentCharacters, onSelect, onRemove
                             />
                             <div className="flex-1 min-w-0">
                                <MarkdownPreview text={char.name} className="font-bold truncate text-stone-800 block" />
-                               <MarkdownPreview text={char.classes || '未定义职业'} className="text-[10px] text-stone-400 truncate tracking-tight block" />
+                               <MarkdownPreview text={char.classes || t('common.unknown_class')} className="text-[10px] text-stone-400 truncate tracking-tight block" />
                             </div>
                           </button>
                           <button 
                             onClick={(e) => { e.stopPropagation(); onRemoveRecent(char.id); }}
                             className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-stone-300 hover:text-rose-500 opacity-0 group-hover/item:opacity-100 transition-all rounded-md hover:bg-rose-50"
-                            title="删除记录"
+                            title={t('common.delete_record')}
                           >
                             <X size={14} />
                           </button>

@@ -1,258 +1,258 @@
 export interface BBCodeSyntaxItem {
   code: string;
-  desc: string;
+  descKey: string;
   example?: string;
 }
 
 export interface BBCodeTreeItem {
   key: string;
-  desc: string;
+  descKey: string;
   children?: BBCodeTreeItem[];
   isSoA?: boolean;
 }
 
 export const BBCODE_SYNTAX_GUIDE: BBCodeSyntaxItem[] = [
-  { code: '{{field}}', desc: '输出变量的格式化文本值' },
-  { code: '{{raw "field"}}', desc: '输出变量的原始数值 (常用于计算或逻辑判断)', example: '{{#if (eq (raw "size") 4)}}中型{{/if}}' },
-  { code: '{{raw "../field"}}', desc: '在循环内部访问上一层级原始数据' },
-  { code: '{{#with field}}...{{/with}}', desc: '进入一个对象的作用域' },
-  { code: '{{#each field}}...{{/each}}', desc: '遍历数组或 SoA 结构。在内部可使用当前行字段，也可使用 {{@index}}、{{@first}}、{{@last}}' },
-  { code: '{{#if condition}}...{{else}}...{{/if}}', desc: '条件判断' },
-  { code: '{{#unless condition}}...{{/unless}}', desc: '反向条件判断 (当条件为 false 时显示)' },
-  { code: '(eq a b)', desc: '逻辑 Helper: 相等判断', example: '{{#if (eq (raw "size") 4)}}中型{{/if}}' },
-  { code: '(and a b), (or a b), (not a)', desc: '逻辑 Helper: 与、或、非运算' },
-  { code: '{{md2bb field}}', desc: '将 Markdown 链接 [文字](url) 转换为 BBCode [url=url]文字[/url]' },
-  { code: '{{#md2bb}}...{{/md2bb}}', desc: '块级 Helper: 将内部所有 Markdown 链接转换为 BBCode' },
+  { code: '{{field}}', descKey: 'bbcode_help.syntax.field' },
+  { code: '{{raw "field"}}', descKey: 'bbcode_help.syntax.raw', example: '{{#if (eq (raw "size") 4)}}中型{{/if}}' },
+  { code: '{{raw "../field"}}', descKey: 'bbcode_help.syntax.raw_parent' },
+  { code: '{{#with field}}...{{/with}}', descKey: 'bbcode_help.syntax.with' },
+  { code: '{{#each field}}...{{/each}}', descKey: 'bbcode_help.syntax.each' },
+  { code: '{{#if condition}}...{{else}}...{{/if}}', descKey: 'bbcode_help.syntax.if' },
+  { code: '{{#unless condition}}...{{/unless}}', descKey: 'bbcode_help.syntax.unless' },
+  { code: '(eq a b)', descKey: 'bbcode_help.syntax.eq', example: '{{#if (eq (raw "size") 4)}}中型{{/if}}' },
+  { code: '(and a b), (or a b), (not a)', descKey: 'bbcode_help.syntax.logic' },
+  { code: '{{md2bb field}}', descKey: 'bbcode_help.syntax.md2bb' },
+  { code: '{{#md2bb}}...{{/md2bb}}', descKey: 'bbcode_help.syntax.md2bb_block' },
 ];
 
 export const BBCODE_DATA_TREE: BBCodeTreeItem[] = [
   {
     key: 'basic',
-    desc: '基础信息',
+    descKey: 'bbcode_help.data.basic',
     children: [
-      { key: 'name', desc: '角色名' },
-      { key: 'classes', desc: '职业等级' },
-      { key: 'alignment', desc: '阵营' },
-      { key: 'race', desc: '种族' },
-      { key: 'deity', desc: '信仰' },
-      { key: 'size', desc: '体型' },
-      { key: 'gender', desc: '性别' },
-      { key: 'age', desc: '年龄' },
-      { key: 'height', desc: '身高' },
-      { key: 'weight', desc: '体重' },
-      { key: 'initiative', desc: '先攻加值' },
-      { key: 'perception', desc: '察觉加值' },
-      { key: 'languages', desc: '语言' },
-      { key: 'senses', desc: '感官' },
+      { key: 'name', descKey: 'bbcode_help.data.basic_name' },
+      { key: 'classes', descKey: 'bbcode_help.data.basic_classes' },
+      { key: 'alignment', descKey: 'bbcode_help.data.basic_alignment' },
+      { key: 'race', descKey: 'bbcode_help.data.basic_race' },
+      { key: 'deity', descKey: 'bbcode_help.data.basic_deity' },
+      { key: 'size', descKey: 'bbcode_help.data.basic_size' },
+      { key: 'gender', descKey: 'bbcode_help.data.basic_gender' },
+      { key: 'age', descKey: 'bbcode_help.data.basic_age' },
+      { key: 'height', descKey: 'bbcode_help.data.basic_height' },
+      { key: 'weight', descKey: 'bbcode_help.data.basic_weight' },
+      { key: 'initiative', descKey: 'bbcode_help.data.basic_initiative' },
+      { key: 'perception', descKey: 'bbcode_help.data.basic_perception' },
+      { key: 'languages', descKey: 'bbcode_help.data.basic_languages' },
+      { key: 'senses', descKey: 'bbcode_help.data.basic_senses' },
       {
-        key: 'speed', desc: '速度对象', children: [
-          { key: 'land', desc: '陆地速度' },
-          { key: 'fly', desc: '飞行速度' },
-          { key: 'swim', desc: '游泳速度' },
-          { key: 'climb', desc: '攀爬速度' },
-          { key: 'burrow', desc: '掘地速度' },
-          { key: 'maneuverability', desc: '机动性 (原始值 0-4)' },
+        key: 'speed', descKey: 'bbcode_help.data.basic_speed', children: [
+          { key: 'land', descKey: 'bbcode_help.data.basic_speed_land' },
+          { key: 'fly', descKey: 'bbcode_help.data.basic_speed_fly' },
+          { key: 'swim', descKey: 'bbcode_help.data.basic_speed_swim' },
+          { key: 'climb', descKey: 'bbcode_help.data.basic_speed_climb' },
+          { key: 'burrow', descKey: 'bbcode_help.data.basic_speed_burrow' },
+          { key: 'maneuverability', descKey: 'bbcode_help.data.basic_speed_maneuverability' },
         ]
       },
       {
-        key: 'avatars', desc: '头像 SoA', isSoA: true, children: [
-          { key: 'url', desc: '图片链接' },
-          { key: 'note', desc: '备注' },
+        key: 'avatars', descKey: 'bbcode_help.data.basic_avatars', isSoA: true, children: [
+          { key: 'url', descKey: 'bbcode_help.data.basic_avatars_url' },
+          { key: 'note', descKey: 'bbcode_help.data.basic_avatars_note' },
         ]
       },
     ]
   },
-  { key: 'story', desc: '背景故事 (Markdown 文本)' },
+  { key: 'story', descKey: 'bbcode_help.data.story' },
   {
     key: 'attributes',
-    desc: '属性 SoA',
+    descKey: 'bbcode_help.data.attributes',
     isSoA: true,
     children: [
-      { key: 'name', desc: '属性名' },
-      { key: 'final', desc: '最终值' },
-      { key: 'modifier', desc: '调整值' },
-      { key: 'source', desc: '基础与加值说明' },
-      { key: 'status', desc: '状态/临时修正' },
+      { key: 'name', descKey: 'bbcode_help.data.attributes_name' },
+      { key: 'final', descKey: 'bbcode_help.data.attributes_final' },
+      { key: 'modifier', descKey: 'bbcode_help.data.attributes_modifier' },
+      { key: 'source', descKey: 'bbcode_help.data.attributes_source' },
+      { key: 'status', descKey: 'bbcode_help.data.attributes_status' },
     ]
   },
   {
     key: 'combatManeuver',
-    desc: '战斗属性',
+    descKey: 'bbcode_help.data.combatManeuver',
     children: [
-      { key: 'bab', desc: '基本攻击加值' },
-      { key: 'cmb', desc: '战技加值' },
-      { key: 'cmd', desc: '战技防御' },
-      { key: 'notes', desc: '备注' },
+      { key: 'bab', descKey: 'bbcode_help.data.combatManeuver_bab' },
+      { key: 'cmb', descKey: 'bbcode_help.data.combatManeuver_cmb' },
+      { key: 'cmd', descKey: 'bbcode_help.data.combatManeuver_cmd' },
+      { key: 'notes', descKey: 'bbcode_help.data.combatManeuver_notes' },
     ]
   },
   {
     key: 'attacks',
-    desc: '攻击信息',
+    descKey: 'bbcode_help.data.attacks',
     children: [
       {
-        key: 'melee', desc: '近战攻击 SoA', isSoA: true, children: [
-          { key: 'weapon', desc: '武器名称' },
-          { key: 'hit', desc: '攻击加值' },
-          { key: 'damage', desc: '伤害骰/值' },
-          { key: 'critRange', desc: '暴击威胁范围 (如 20)' },
-          { key: 'critMultiplier', desc: '暴击倍率 (如 2)' },
-          { key: 'touch', desc: '触及范围' },
-          { key: 'damageType', desc: '伤害类型' },
-          { key: 'special', desc: '特殊属性/说明' },
+        key: 'melee', descKey: 'bbcode_help.data.attacks_melee', isSoA: true, children: [
+          { key: 'weapon', descKey: 'bbcode_help.data.attacks_melee_weapon' },
+          { key: 'hit', descKey: 'bbcode_help.data.attacks_melee_hit' },
+          { key: 'damage', descKey: 'bbcode_help.data.attacks_melee_damage' },
+          { key: 'critRange', descKey: 'bbcode_help.data.attacks_melee_critRange' },
+          { key: 'critMultiplier', descKey: 'bbcode_help.data.attacks_melee_critMultiplier' },
+          { key: 'touch', descKey: 'bbcode_help.data.attacks_melee_touch' },
+          { key: 'damageType', descKey: 'bbcode_help.data.attacks_melee_damageType' },
+          { key: 'special', descKey: 'bbcode_help.data.attacks_melee_special' },
         ]
       },
       {
-        key: 'ranged', desc: '远程攻击 SoA', isSoA: true, children: [
-          { key: 'weapon', desc: '武器名称' },
-          { key: 'hit', desc: '攻击加值' },
-          { key: 'damage', desc: '伤害骰/值' },
-          { key: 'critRange', desc: '暴击威胁范围' },
-          { key: 'critMultiplier', desc: '暴击倍率' },
-          { key: 'range', desc: '射程' },
-          { key: 'damageType', desc: '伤害类型' },
-          { key: 'special', desc: '特殊属性/说明' },
+        key: 'ranged', descKey: 'bbcode_help.data.attacks_ranged', isSoA: true, children: [
+          { key: 'weapon', descKey: 'bbcode_help.data.attacks_ranged_weapon' },
+          { key: 'hit', descKey: 'bbcode_help.data.attacks_ranged_hit' },
+          { key: 'damage', descKey: 'bbcode_help.data.attacks_ranged_damage' },
+          { key: 'critRange', descKey: 'bbcode_help.data.attacks_ranged_critRange' },
+          { key: 'critMultiplier', descKey: 'bbcode_help.data.attacks_ranged_critMultiplier' },
+          { key: 'range', descKey: 'bbcode_help.data.attacks_ranged_range' },
+          { key: 'damageType', descKey: 'bbcode_help.data.attacks_ranged_damageType' },
+          { key: 'special', descKey: 'bbcode_help.data.attacks_ranged_special' },
         ]
       },
-      { key: 'specialAttacks', desc: '特殊攻击 (文本)' },
+      { key: 'specialAttacks', descKey: 'bbcode_help.data.attacks_specialAttacks' },
     ]
   },
   {
     key: 'defenses',
-    desc: '防御信息',
+    descKey: 'bbcode_help.data.defenses',
     children: [
-      { key: 'hp', desc: '生命值' },
-      { key: 'hd', desc: '生命骰 (文本, 如 1d10+2)' },
+      { key: 'hp', descKey: 'bbcode_help.data.defenses_hp' },
+      { key: 'hd', descKey: 'bbcode_help.data.defenses_hd' },
       {
-        key: 'armorClass', desc: 'AC 详情', children: [
-          { key: 'ac', desc: '防御等级' },
-          { key: 'touch', desc: '接触' },
-          { key: 'flatFooted', desc: '措手不及' },
-          { key: 'source', desc: 'AC 组成说明' },
-          { key: 'notes', desc: '备注' },
+        key: 'armorClass', descKey: 'bbcode_help.data.defenses_armorClass', children: [
+          { key: 'ac', descKey: 'bbcode_help.data.defenses_armorClass_ac' },
+          { key: 'touch', descKey: 'bbcode_help.data.defenses_armorClass_touch' },
+          { key: 'flatFooted', descKey: 'bbcode_help.data.defenses_armorClass_flatFooted' },
+          { key: 'source', descKey: 'bbcode_help.data.defenses_armorClass_source' },
+          { key: 'notes', descKey: 'bbcode_help.data.defenses_armorClass_notes' },
         ]
       },
       {
-        key: 'saves', desc: '豁免详情', children: [
-          { key: 'fort', desc: '强韧豁免' },
-          { key: 'ref', desc: '反射豁免' },
-          { key: 'will', desc: '意志豁免' },
-          { key: 'notes', desc: '备注' },
+        key: 'saves', descKey: 'bbcode_help.data.defenses_saves', children: [
+          { key: 'fort', descKey: 'bbcode_help.data.defenses_saves_fort' },
+          { key: 'ref', descKey: 'bbcode_help.data.defenses_saves_ref' },
+          { key: 'will', descKey: 'bbcode_help.data.defenses_saves_will' },
+          { key: 'notes', descKey: 'bbcode_help.data.defenses_saves_notes' },
         ]
       },
-      { key: 'specialDefenses', desc: '特殊防御' },
+      { key: 'specialDefenses', descKey: 'bbcode_help.data.defenses_specialDefenses' },
     ]
   },
   {
     key: 'racialTraits',
-    desc: '种族特性 SoA',
+    descKey: 'bbcode_help.data.racialTraits',
     isSoA: true,
     children: [
-      { key: 'name', desc: '特性名' },
-      { key: 'desc', desc: '特性描述' },
+      { key: 'name', descKey: 'bbcode_help.data.racialTraits_name' },
+      { key: 'desc', descKey: 'bbcode_help.data.racialTraits_desc' },
     ]
   },
   {
     key: 'backgroundTraits',
-    desc: '背景特性 SoA',
+    descKey: 'bbcode_help.data.backgroundTraits',
     isSoA: true,
     children: [
-      { key: 'name', desc: '特性名' },
-      { key: 'type', desc: '特性类别' },
-      { key: 'desc', desc: '特性描述' },
+      { key: 'name', descKey: 'bbcode_help.data.backgroundTraits_name' },
+      { key: 'type', descKey: 'bbcode_help.data.backgroundTraits_type' },
+      { key: 'desc', descKey: 'bbcode_help.data.backgroundTraits_desc' },
     ]
   },
   {
     key: 'favoredClass',
-    desc: '天赋职业',
+    descKey: 'bbcode_help.data.favoredClass',
     children: [
-      { key: 'fc', desc: '职业' },
-      { key: 'fcb', desc: '奖励' },
+      { key: 'fc', descKey: 'bbcode_help.data.favoredClass_fc' },
+      { key: 'fcb', descKey: 'bbcode_help.data.favoredClass_fcb' },
     ]
   },
   {
     key: 'classFeatures',
-    desc: '职业特性 SoA',
+    descKey: 'bbcode_help.data.classFeatures',
     isSoA: true,
     children: [
-      { key: 'level', desc: '获得等级' },
-      { key: 'name', desc: '特性名' },
-      { key: 'type', desc: '特性类型 (原始值 0:-, 1:Sp, 2:Su, 3:Ex)' },
-      { key: 'desc', desc: '特性描述' },
+      { key: 'level', descKey: 'bbcode_help.data.classFeatures_level' },
+      { key: 'name', descKey: 'bbcode_help.data.classFeatures_name' },
+      { key: 'type', descKey: 'bbcode_help.data.classFeatures_type' },
+      { key: 'desc', descKey: 'bbcode_help.data.classFeatures_desc' },
     ]
   },
   {
     key: 'feats',
-    desc: '专长 SoA',
+    descKey: 'bbcode_help.data.feats',
     isSoA: true,
     children: [
-      { key: 'level', desc: '获得等级' },
-      { key: 'source', desc: '获得来源' },
-      { key: 'name', desc: '专长名' },
-      { key: 'type', desc: '专长类别' },
-      { key: 'desc', desc: '专长描述' },
+      { key: 'level', descKey: 'bbcode_help.data.feats_level' },
+      { key: 'source', descKey: 'bbcode_help.data.feats_source' },
+      { key: 'name', descKey: 'bbcode_help.data.feats_name' },
+      { key: 'type', descKey: 'bbcode_help.data.feats_type' },
+      { key: 'desc', descKey: 'bbcode_help.data.feats_desc' },
     ]
   },
   {
     key: 'skills',
-    desc: '技能',
+    descKey: 'bbcode_help.data.skills',
     isSoA: true,
     children: [
-      { key: 'name', desc: '技能名' },
-      { key: 'total', desc: '总加值 (数组)' },
-      { key: 'rank', desc: '技能等级' },
-      { key: 'cs', desc: '本职技能 (布尔值)' },
-      { key: 'ability', desc: '关联属性 (原始值 1-6)' },
-      { key: 'others', desc: '其它修正' },
-      { key: 'special', desc: '特殊加值说明' },
-      { key: 'totalPoints', desc: '技能点总数' },
-      { key: 'acp', desc: '防具检定减值 (ACP)' },
-      { key: 'notes', desc: '技能备注' },
+      { key: 'name', descKey: 'bbcode_help.data.skills_name' },
+      { key: 'total', descKey: 'bbcode_help.data.skills_total' },
+      { key: 'rank', descKey: 'bbcode_help.data.skills_rank' },
+      { key: 'cs', descKey: 'bbcode_help.data.skills_cs' },
+      { key: 'ability', descKey: 'bbcode_help.data.skills_ability' },
+      { key: 'others', descKey: 'bbcode_help.data.skills_others' },
+      { key: 'special', descKey: 'bbcode_help.data.skills_special' },
+      { key: 'totalPoints', descKey: 'bbcode_help.data.skills_totalPoints' },
+      { key: 'acp', descKey: 'bbcode_help.data.skills_acp' },
+      { key: 'notes', descKey: 'bbcode_help.data.skills_notes' },
     ]
   },
   {
     key: 'magicBlocks',
-    desc: '施法/能力块数组 (Array)',
+    descKey: 'bbcode_help.data.magicBlocks',
     children: [
-      { key: 'title', desc: '标题' },
-      { key: 'casterLevel', desc: '施法者等级' },
-      { key: 'concentration', desc: '专注加值' },
-      { key: 'type', desc: '类型 (原始值)' },
-      { key: 'notes', desc: '块备注' },
-      { key: 'level', desc: '环位/级别 (虚拟数组)' },
-      { key: 'spells', desc: '法术项 (数组)' },
-      { key: 'uses', desc: '使用次数 (数组)' },
+      { key: 'title', descKey: 'bbcode_help.data.magicBlocks_title' },
+      { key: 'casterLevel', descKey: 'bbcode_help.data.magicBlocks_casterLevel' },
+      { key: 'concentration', descKey: 'bbcode_help.data.magicBlocks_concentration' },
+      { key: 'type', descKey: 'bbcode_help.data.magicBlocks_type' },
+      { key: 'notes', descKey: 'bbcode_help.data.magicBlocks_notes' },
+      { key: 'level', descKey: 'bbcode_help.data.magicBlocks_level' },
+      { key: 'spells', descKey: 'bbcode_help.data.magicBlocks_spells' },
+      { key: 'uses', descKey: 'bbcode_help.data.magicBlocks_uses' },
     ]
   },
   {
     key: 'equipment',
-    desc: '装备与资产',
+    descKey: 'bbcode_help.data.equipment',
     children: [
       {
-        key: 'container', desc: '容器数组 (Array)', children: [
-          { key: 'name', desc: '包名' },
-          { key: 'ignoreWeight', desc: '忽略重量' },
-          { key: 'item', desc: '物品名 (数组)' },
-          { key: 'quantity', desc: '数量 (数组)' },
-          { key: 'cost', desc: '单价 (数组)' },
-          { key: 'weight', desc: '重量 (数组)' },
-          { key: 'notes', desc: '备注 (数组)' },
+        key: 'container', descKey: 'bbcode_help.data.equipment_container', children: [
+          { key: 'name', descKey: 'bbcode_help.data.equipment_container_name' },
+          { key: 'ignoreWeight', descKey: 'bbcode_help.data.equipment_container_ignoreWeight' },
+          { key: 'item', descKey: 'bbcode_help.data.equipment_container_item' },
+          { key: 'quantity', descKey: 'bbcode_help.data.equipment_container_quantity' },
+          { key: 'cost', descKey: 'bbcode_help.data.equipment_container_cost' },
+          { key: 'weight', descKey: 'bbcode_help.data.equipment_container_weight' },
+          { key: 'notes', descKey: 'bbcode_help.data.equipment_container_notes' },
         ]
       },
-      { key: 'encumbranceMultiplier', desc: '负重倍率' },
+      { key: 'encumbranceMultiplier', descKey: 'bbcode_help.data.equipment_encumbranceMultiplier' },
       {
-        key: 'currency', desc: '货币', children: [
-          { key: 'pp', desc: 'pp' },
-          { key: 'gp', desc: 'gp' },
-          { key: 'sp', desc: 'sp' },
-          { key: 'cp', desc: 'cp' },
-          { key: 'coinWeight', desc: '货币重' },
+        key: 'currency', descKey: 'bbcode_help.data.equipment_currency', children: [
+          { key: 'pp', descKey: 'bbcode_help.data.equipment_currency_pp' },
+          { key: 'gp', descKey: 'bbcode_help.data.equipment_currency_gp' },
+          { key: 'sp', descKey: 'bbcode_help.data.equipment_currency_sp' },
+          { key: 'cp', descKey: 'bbcode_help.data.equipment_currency_cp' },
+          { key: 'coinWeight', descKey: 'bbcode_help.data.equipment_currency_coinWeight' },
         ]
       },
-      { key: 'notes', desc: '总备注' },
+      { key: 'notes', descKey: 'bbcode_help.data.equipment_notes' },
+      { key: 'totalCost', descKey: 'bbcode_help.data.equipment_totalCost' },
+      { key: 'totalWeight', descKey: 'bbcode_help.data.equipment_totalWeight' },
+      { key: 'encumbrance', descKey: 'bbcode_help.data.equipment_encumbrance' },
     ]
   },
-  { key: 'totalCost', desc: '总资产 (gp)' },
-  { key: 'totalWeight', desc: '负重总重 (lbs)' },
-  { key: 'encumbrance', desc: '负重状态' },
-  { key: 'additionalData', desc: '附加数据数组' },
+  { key: 'additionalData', descKey: 'bbcode_help.data.additionalData' },
 ];

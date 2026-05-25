@@ -31,7 +31,7 @@ const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeIt
         {item.isSoA && (
           <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded font-bold uppercase tracking-tighter">SoA</span>
         )}
-        <span className="text-[11px] text-stone-500 truncate">{item.desc}</span>
+        <span className="text-[11px] text-stone-500 truncate">{t(item.descKey)}</span>
       </div>
 
       {hasChildren && (
@@ -84,7 +84,7 @@ export default function BBCodeTemplateEditor() {
                 {BBCODE_SYNTAX_GUIDE.map((item, idx) => (
                   <div key={idx} className="flex flex-col gap-1">
                     <code className="text-xs font-bold text-amber-800 bg-amber-50 self-start px-1 rounded">{item.code}</code>
-                    <p className="text-[11px] text-stone-600 leading-tight">{item.desc}</p>
+                    <p className="text-[11px] text-stone-600 leading-tight">{t(item.descKey)}</p>
                     {item.example && (
                       <code className="text-[10px] text-stone-400 italic mt-0.5">{item.example}</code>
                     )}
@@ -96,7 +96,7 @@ export default function BBCodeTemplateEditor() {
             {/* Data Tree */}
             <div>
               <h4 className="text-xs font-bold text-indigo-700 mb-4 uppercase tracking-widest border-l-2 border-indigo-600 pl-2">
-                数据结构参考
+                {t('editor.bbcode.var_ref')}
               </h4>
               <div className="bg-stone-50 rounded-lg border border-stone-100 p-2 max-h-[600px] overflow-y-auto custom-scrollbar">
                 {BBCODE_DATA_TREE.map((item) => (

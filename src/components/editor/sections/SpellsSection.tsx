@@ -49,7 +49,7 @@ const SpellsSection: React.FC = () => {
             onClick={() => addMagicBlock('spell', 2)}
             className="flex items-center gap-1 text-sm bg-stone-50 text-stone-600 border border-stone-200 hover:border-stone-400 hover:text-stone-900 rounded px-3 py-1.5 transition-colors"
           >
-            <Plus size={14} /> 添加施法块 Add Spell Block
+            <Plus size={14} /> {t('editor.spells.add_spell_block')}
           </button>
         </div>
       </div>

@@ -43,7 +43,12 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  // 权限错误通常是由于文档不存在或已停止分享，不需要在控制台报 error
+  if (errInfo.error.includes('permissions')) {
+    console.warn('Firestore Permission Access Denied:', path);
+  } else {
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+  }
   throw new Error(JSON.stringify(errInfo));
 }
 

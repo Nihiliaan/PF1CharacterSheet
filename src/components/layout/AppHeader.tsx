@@ -94,8 +94,30 @@ export default function AppHeader() {
   } = useVault();
 
   const toggleLanguage = () => {
-    const newLang = i18n.language.startsWith('zh') ? 'en' : 'zh';
-    i18n.changeLanguage(newLang);
+    const current = i18n.language;
+    let next = 'zh';
+    if (current.startsWith('zh-TW') || current.startsWith('zh-HK')) {
+      next = 'en';
+    } else if (current.startsWith('zh')) {
+      next = 'zh-TW';
+    } else {
+      next = 'zh';
+    }
+    i18n.changeLanguage(next);
+  };
+
+  const getLanguageLabel = () => {
+    const lng = i18n.language;
+    if (lng.startsWith('zh-TW') || lng.startsWith('zh-HK')) return '繁体';
+    if (lng.startsWith('zh')) return '简体';
+    return 'EN';
+  };
+
+  const getLanguageTitle = () => {
+    const lng = i18n.language;
+    if (lng.startsWith('zh-TW') || lng.startsWith('zh-HK')) return '切换至英文 / Switch to English';
+    if (lng.startsWith('zh')) return '切换至繁体 / Switch to Traditional';
+    return 'Switch to Chinese / 切换至中文';
   };
 
   useEffect(() => {
@@ -118,7 +140,7 @@ export default function AppHeader() {
     : (getItemPath(currentCharacterId) || t('common.new_character'));
   
   const isCurrentDirty = view === 'bbcode-template' ? isTemplateDirty : isDirty;
-  const displayPath = currentPath + (isCurrentDirty ? '*' : '') + (isReadOnly ? ` (${t('common.read_only') || '只读'})` : '');
+  const displayPath = currentPath + (isCurrentDirty ? '*' : '') + (isReadOnly ? ` (${t('common.read_only')})` : '');
 
   const handleBBCodeSave = async () => {
     if (currentTemplateId) {
@@ -145,7 +167,7 @@ export default function AppHeader() {
   };
 
   const handleNewTemplate = () => {
-    if (isTemplateDirty && !window.confirm(t('editor.bbcode.confirm_new_template') || "确定要创建新模板吗？未保存的修改将丢失。")) {
+    if (isTemplateDirty && !window.confirm(t('editor.bbcode.confirm_new_template'))) {
       return;
     }
     setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
@@ -166,14 +188,14 @@ export default function AppHeader() {
   })();
 
   const handleCreateFolder = async () => {
-    const name = window.prompt('新建文件夹', '新文件夹');
+    const name = window.prompt(t('common.new_folder'), t('common.new_folder'));
     if (name && name.trim()) {
       const trimmedName = name.trim();
       try {
         await createFolder(trimmedName, currentFolderId);
         refreshCharacterList();
       } catch (e: any) {
-        alert(e.message || "创建文件夹失败");
+        alert(e.message || t('common.failed_to_create_folder'));
       }
     }
   };
@@ -294,7 +316,7 @@ export default function AppHeader() {
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
             >
               <Copy size={16} />
-              <span className="hidden sm:inline">{t('common.save_as') || '另存为'}</span>
+              <span className="hidden sm:inline">{t('common.save_as')}</span>
             </button>
 
             {!isReadOnly && (
@@ -427,45 +449,45 @@ export default function AppHeader() {
               <button 
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 rounded-lg transition-colors text-xs font-bold"
               >
-                <Download size={16} /> 导入
+                <Download size={16} /> {t('common.import')}
               </button>
               <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-stone-200 shadow-xl rounded-xl py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                 <button 
                   onClick={() => document.getElementById('local-import-input')?.click()}
                   className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
                 >
-                  <HardDrive size={14} /> 本地文件
+                  <HardDrive size={14} /> {t('common.local_file')}
                 </button>
                 <button 
                   onClick={() => document.getElementById('local-folder-import-input')?.click()}
                   className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
                 >
-                  <Folder size={14} /> 本地文件夹
+                  <Folder size={14} /> {t('common.local_folder')}
                 </button>
                 <button 
                   onClick={importFromClipboard}
                   className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
                 >
-                  <Check size={14} /> 剪贴板内容
+                  <Check size={14} /> {t('common.clipboard_content')}
                 </button>
                 <div className="h-px bg-stone-100 my-1"></div>
                 <button 
                   onClick={handleBrowseDrive}
                   className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2 font-bold text-primary"
                 >
-                  <Search size={14} /> 浏览云端备份...
+                  <Search size={14} /> {t('common.browse_cloud_backup')}
                 </button>
                 <button 
                   onClick={handleBrowseDriveRoot}
                   className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2 font-bold text-indigo-600"
                 >
-                  <Grid size={14} /> 浏览全部云端文件...
+                  <Grid size={14} /> {t('common.browse_all_cloud_files')}
                 </button>
                 <button 
                   onClick={handleCloudRestore}
                   className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
                 >
-                  <RotateCcw size={14} /> 云端备份还原
+                  <RotateCcw size={14} /> {t('common.cloud_restore')}
                 </button>
               </div>
             </div>
@@ -478,7 +500,7 @@ export default function AppHeader() {
                 ? 'text-blue-400 animate-pulse' 
                 : 'text-stone-400 hover:bg-stone-700 hover:text-blue-400'
               }`}
-              title="云端快速备份"
+              title={t('common.cloud_backup')}
             >
               <CloudUpload size={18} />
             </button>
@@ -486,7 +508,7 @@ export default function AppHeader() {
             <button 
               onClick={handleCreateFolder}
               className="p-2 text-stone-400 hover:bg-stone-700 hover:text-white rounded-lg transition-colors"
-              title="新建文件夹"
+              title={t('common.new_folder')}
             >
               <FolderPlus size={18} />
             </button>
@@ -515,10 +537,10 @@ export default function AppHeader() {
           <button
             onClick={toggleLanguage}
             className="p-2 text-stone-400 hover:bg-stone-700 hover:text-white rounded-full transition-colors flex items-center gap-1"
-            title={i18n.language.startsWith('zh') ? 'Switch to English' : '切换至中文'}
+            title={getLanguageTitle()}
           >
             <Languages size={16} />
-            <span className="text-[10px] font-bold uppercase">{i18n.language.startsWith('zh') ? 'EN' : '中文'}</span>
+            <span className="text-[10px] font-bold uppercase">{getLanguageLabel()}</span>
           </button>
 
           <button

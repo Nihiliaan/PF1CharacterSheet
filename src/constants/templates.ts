@@ -94,6 +94,6 @@ hp {{hp}} ({{hd}})
 [/table]
 [/quote]
 {{/each}}
-[b]总资产 {{totalCost}}gp，总重 {{totalWeight}}lbs[/b]
+[b]总资产 {{equipment.totalCost}}gp，总重 {{equipment.totalWeight}}lbs[/b]
 {{/md2bb}}
 `;

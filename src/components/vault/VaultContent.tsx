@@ -13,6 +13,7 @@ import ContextMenu from '../common/ContextMenu';
 import DriveBrowser from './DriveBrowser';
 import MarkdownPreview from '../common/MarkdownPreview';
 
+import { useTranslation } from 'react-i18next';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useUI } from '../../contexts/UIContext';
 import { useVault } from '../../contexts/VaultContext';
@@ -24,6 +25,7 @@ const VaultContent = ({
   user: FirebaseUser,
   onAdd: () => void
 }) => {
+  const { t } = useTranslation();
   const {
     selectCharacter: onSelect,
     saveCharacter,
@@ -121,17 +123,17 @@ const VaultContent = ({
           if (isFolder) await moveFolder(id, targetId);
           else await moveCharacter(id, targetId);
         }));
-        setToast({ message: `已移动 ${itemsToMove.length} 个项目` });
+        setToast({ message: t('common.moved_items', { n: itemsToMove.length }) });
       } else {
         if (draggedItem.id === targetId) return;
         if (draggedItem.type === 'character') await moveCharacter(draggedItem.id, targetId);
         else await moveFolder(draggedItem.id, targetId);
-        setToast({ message: "已移动项目" });
+        setToast({ message: t('common.moved_item') });
       }
       setSelectedIds([]);
       onRefresh();
     } catch (e) {
-      setToast({ message: "移动失败", type: 'error' });
+      setToast({ message: t('common.move_failed'), type: 'error' });
     }
     setDraggedItem(null);
   };
@@ -235,7 +237,7 @@ const VaultContent = ({
     let importCount = 0;
     let failCount = 0;
     let errorMsgs: string[] = [];
-    setToast({ message: "正在导入本地文件并建立目录结构..." });
+    setToast({ message: t('common.importing_local') });
 
     // 使用 Map 缓存已创建的目录 ID，减少查询并防止并发冲突
     const folderIdMap = new Map<string, string>();
@@ -285,7 +287,7 @@ const VaultContent = ({
           const templateName = content.name || file.name.replace('.bbc', '');
           await (saveCharacter as any)({ content: templateContent, name: templateName }, undefined, folderId, true);
         } else {
-          // pf1 - 彻底剥离可能存在的元数据
+          // pf1 -彻底剥离可能存在的元数据
           const { id, ownerId, targetId, folderId: oldFolderId, ...cleanData } = content;
           const finalData = { ...cleanData };
           
@@ -313,7 +315,7 @@ const VaultContent = ({
     if (failCount > 0) {
       setToast({ message: `导入完成。成功: ${importCount}, 失败: ${failCount}。\n${errorMsgs.slice(0, 3).join('\n')}${errorMsgs.length > 3 ? '\n...' : ''}`, type: 'error' });
     } else {
-      setToast({ message: `本地结构化导入成功！共导入 ${importCount} 个项目` });
+      setToast({ message: t('common.import_success', { n: importCount }) });
     }
   };
 
@@ -328,7 +330,7 @@ const VaultContent = ({
       if (isTemplate) {
         await (saveCharacter as any)({ 
           content: content.content, 
-          name: content.name || "从剪贴板导入的模板" 
+          name: content.name || t('common.clipboard_content') 
         }, undefined, currentFolderId, true);
       } else {
         if (!content.basic || !content.attributes) throw new Error("无效的人物卡格式");
@@ -341,32 +343,32 @@ const VaultContent = ({
         }
         finalData.basic = {
           ...finalData.basic,
-          name: finalData.basic?.name || "剪贴板导入"
+          name: finalData.basic?.name || t('common.clipboard_content')
         };
         await (saveCharacter as any)(finalData, undefined, currentFolderId, false);
       }
       
       onRefresh();
-      setToast({ message: "剪贴板导入成功！" });
+      setToast({ message: t('common.clipboard_import_success') });
     } catch (e: any) {
-      setToast({ message: "剪贴板导入失败: " + e.message, type: 'error' });
+      setToast({ message: t('common.clipboard_import_failed') + ": " + e.message, type: 'error' });
     }
   };
 
   const handleCreateFolder = async () => {
     setModal({
       type: 'prompt',
-      title: '新建文件夹',
-      defaultValue: '新文件夹',
+      title: t('common.new_folder'),
+      defaultValue: t('common.new_folder'),
       onConfirm: async (name) => {
         if (name && name.trim()) {
           const trimmedName = name.trim();
           try {
             await createFolder(trimmedName, currentFolderId);
             onRefresh();
-            setToast({ message: "文件夹创建成功" });
+            setToast({ message: t('common.new_folder') + " " + t('common.save') });
           } catch (e: any) {
-            setToast({ message: e.message || "创建文件夹失败", type: 'error' });
+            setToast({ message: e.message || t('common.failed_to_create_folder'), type: 'error' });
           }
         }
       }
@@ -379,8 +381,8 @@ const VaultContent = ({
         const idsToDelete = (item.id === 'multiple' || selectedIds.includes(item.id)) ? selectedIds : [item.id];
         setModal({
           type: 'confirm',
-          title: `确定要删除这 ${idsToDelete.length} 个项目吗？`,
-          confirmLabel: '确认删除',
+          title: t('common.delete_confirm', { n: idsToDelete.length }),
+          confirmLabel: t('common.delete_selected'),
           confirmClassName: 'text-rose-600',
           onConfirm: async () => {
             await Promise.all(idsToDelete.map(async id => {
@@ -388,7 +390,7 @@ const VaultContent = ({
               if (isF) await deleteFolder(id);
               else await deleteCharacter(id);
             }));
-            setToast({ message: "已删除所选项目" });
+            setToast({ message: t('common.delete') + " " + t('common.save') });
             setSelectedIds([]);
             onRefresh();
           }
@@ -423,17 +425,17 @@ const VaultContent = ({
 
           setModal({
             type: 'prompt',
-            title: isFolder ? '重命名文件夹' : '重命名文件',
+            title: isFolder ? t('common.rename_folder') : t('common.rename_file'),
             defaultValue: editName,
             onConfirm: async (newName) => {
               const trimmed = newName.trim();
               if (!trimmed || trimmed === editName) return;
               try {
                 await renameItem(item.id, isFolder ? 'folder' : 'character', trimmed);
-                setToast({ message: "重命名成功" });
+                setToast({ message: t('common.rename_success') });
                 onRefresh();
               } catch (e: any) {
-                setToast({ message: e.message || "重命名失败", type: 'error' });
+                setToast({ message: e.message || t('common.rename_failed'), type: 'error' });
               }
             }
           });
@@ -443,9 +445,9 @@ const VaultContent = ({
         const targetChar = await getCharacterById(item.targetId);
         if (targetChar) {
           await (saveCharacter as any)(targetChar.data, null, currentFolderId, targetChar.isTemplate);
-          setToast({ message: "已创建可编辑副本" });
+          setToast({ message: t('common.create_editable_copy') });
         } else {
-          setToast({ message: "原角色不存在或无法访问", type: 'error' });
+          setToast({ message: t('common.original_not_found'), type: 'error' });
         }
       } else if (action === 'copy') {
         if (selectedIds.includes(item.id)) {
@@ -453,15 +455,15 @@ const VaultContent = ({
         } else {
           await copyCharacter(item.id);
         }
-        setToast({ message: "已创建副本" });
+        setToast({ message: t('common.copy') });
       } else if (action === 'share') {
         const shareUrl = `${window.location.origin}${window.location.pathname}?id=${item.id}`;
         navigator.clipboard.writeText(shareUrl);
-        setToast({ message: "分享链接已复制！" });
+        setToast({ message: t('common.share') });
       }
       onRefresh();
     } catch (e) {
-      setToast({ message: "操作失败", type: 'error' });
+      setToast({ message: t('common.move_failed'), type: 'error' });
     }
   };
 
@@ -538,7 +540,7 @@ const VaultContent = ({
             data-context-bg="true"
           >
             <RotateCcw size={64} className="mb-4 animate-reverse-spin-slow" />
-            <p className="font-serif italic">这里空空如也...</p>
+            <p className="font-serif italic">{t('common.empty_vault')}</p>
           </div>
         ) : (
           <div 
@@ -617,7 +619,7 @@ const VaultContent = ({
                   <div className={viewMode === 'grid' ? "flex-1 text-center truncate w-full px-1" : "flex-1 text-left"}>
                       <p className={`text-xs font-bold line-clamp-1 ${isSelected ? 'text-primary' : 'text-stone-800'}`}>{folder.name}</p>
                       <p className="text-[9px] text-stone-400 font-medium">
-                        {folders.filter(f => f.parentId === folder.id).length} 文件夹 · {characters.filter(c => c.folderId === folder.id).length} 人物
+                        {folders.filter(f => f.parentId === folder.id).length} {t('common.local_folder')} · {characters.filter(c => c.folderId === folder.id).length} {t('editor.title')}
                       </p>
                   </div>
                 </div>
@@ -674,7 +676,7 @@ const VaultContent = ({
                         />
                       )}
                       {char.data?.targetId && (
-                        <div className="absolute top-1 right-1 bg-white/90 backdrop-blur text-blue-600 p-1 rounded border border-blue-100 shadow-sm" title="分享链接">
+                        <div className="absolute top-1 right-1 bg-white/90 backdrop-blur text-blue-600 p-1 rounded border border-blue-100 shadow-sm" title={t('common.share')}>
                           <Link size={12} strokeWidth={2.5} />
                         </div>
                       )}
@@ -685,13 +687,13 @@ const VaultContent = ({
                         className={`text-xs font-bold line-clamp-1 block ${isSelected ? 'text-primary' : 'text-stone-800'}`} 
                       />
                       <div className="text-[9px] text-stone-400 font-medium truncate mt-0.5">
-                        {char.isTemplate ? 'BBCode 导出模板' : (
+                        {char.isTemplate ? t('common.bbcode_editor') : (
                           <>
-                            <MarkdownPreview text={char.data?.basic?.name || '未命名角色'} className="inline text-stone-500" />
+                            <MarkdownPreview text={char.data?.basic?.name || t('common.none')} className="inline text-stone-500" />
                             {' • '}
-                            <MarkdownPreview text={char.data?.basic?.race || '未知种族'} className="inline" />
+                            <MarkdownPreview text={char.data?.basic?.race || t('common.none')} className="inline" />
                             {' · '}
-                            <MarkdownPreview text={char.data?.basic?.classes || '未知职业'} className="inline" />
+                            <MarkdownPreview text={char.data?.basic?.classes || t('common.none')} className="inline" />
                           </>
                         )}
                       </div>
@@ -712,7 +714,7 @@ const VaultContent = ({
             contextMenu.item 
             ? [
                 { 
-                  label: contextMenu.isFolder ? '打开' : (contextMenu.item.isTemplate ? '查看模板' : '打开人物卡'), 
+                  label: contextMenu.isFolder ? t('common.open') : (contextMenu.item.isTemplate ? t('common.view_template') : t('common.open_character')), 
                   icon: contextMenu.isFolder ? Folder : (contextMenu.item.isTemplate ? FileText : User), 
                   onClick: () => {
                     if (contextMenu.isFolder) {
@@ -722,20 +724,20 @@ const VaultContent = ({
                     }
                   } 
                 },
-                { label: '重命名', icon: Settings, onClick: () => handleAction('rename', contextMenu.item, contextMenu.isFolder) },
+                { label: t('common.rename'), icon: Settings, onClick: () => handleAction('rename', contextMenu.item, contextMenu.isFolder) },
                 ...(contextMenu.item.data?.targetId && !contextMenu.isFolder ? [
-                   { label: '创建可编辑副本', icon: Copy, onClick: () => handleAction('create_from_link', contextMenu.item, false) }
+                   { label: t('common.create_editable_copy'), icon: Copy, onClick: () => handleAction('create_from_link', contextMenu.item, false) }
                 ] : [
-                   { label: '复制', icon: Copy, onClick: () => handleAction('copy', contextMenu.item, contextMenu.isFolder) }
+                   { label: t('common.copy'), icon: Copy, onClick: () => handleAction('copy', contextMenu.item, contextMenu.isFolder) }
                 ]),
-                { label: '剪切', icon: Move, onClick: () => handleAction('cut', contextMenu.item, contextMenu.isFolder) },
-                ...(cutItems.length > 0 ? [{ label: '粘贴', icon: Check, onClick: () => handleAction('paste', contextMenu.item, contextMenu.isFolder) }] : []),
-                { label: '删除', icon: Trash2, onClick: () => handleAction('delete', contextMenu.item, contextMenu.isFolder), danger: true },
+                { label: t('common.cut'), icon: Move, onClick: () => handleAction('cut', contextMenu.item, contextMenu.isFolder) },
+                ...(cutItems.length > 0 ? [{ label: t('common.paste'), icon: Check, onClick: () => handleAction('paste', contextMenu.item, contextMenu.isFolder) }] : []),
+                { label: t('common.delete'), icon: Trash2, onClick: () => handleAction('delete', contextMenu.item, contextMenu.isFolder), danger: true },
               ]
             : [
-                { label: '新建角色', icon: FilePlus, onClick: onAdd },
-                { label: '新建文件夹', icon: FolderPlus, onClick: handleCreateFolder },
-                ...(cutItems.length > 0 ? [{ label: '粘贴在此', icon: Check, onClick: () => handleAction('paste', null, false) }] : []),
+                { label: t('common.new_character'), icon: FilePlus, onClick: onAdd },
+                { label: t('common.new_folder'), icon: FolderPlus, onClick: handleCreateFolder },
+                ...(cutItems.length > 0 ? [{ label: t('common.paste_here'), icon: Check, onClick: () => handleAction('paste', null, false) }] : []),
               ]
           } 
         />

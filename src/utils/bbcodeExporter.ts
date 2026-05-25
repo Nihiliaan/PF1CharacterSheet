@@ -225,15 +225,17 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
   }
 
   // 注入计算属性
-  view.totalCost = calculateTotalCost(data);
-  view.totalWeight = calculateTotalWeightNum(data).toFixed(1);
-  view.encumbrance = getComputedEncumbrance(data);
+  if (view.equipment) {
+    view.equipment.totalCost = calculateTotalCost(data);
+    view.equipment.totalWeight = calculateTotalWeightNum(data).toFixed(1);
+    view.equipment.encumbrance = getComputedEncumbrance(data);
+  }
 
   // 处理法术块 (注入虚拟 level 数组以支持 SoA 遍历)
   if (view.magicBlocks && Array.isArray(view.magicBlocks)) {
     view.magicBlocks.forEach((block: any, blockIdx: number) => {
       const rawBlock = data.magicBlocks[blockIdx] as any;
-      if (!rawBlock || rawBlock.type !== 5 && rawBlock.type !== 'spell') return;
+      if (!rawBlock || (rawBlock.type !== 5 && rawBlock.type !== 'spell')) return;
 
       const rowCount = Math.max(
         Array.isArray(rawBlock.uses) ? rawBlock.uses.length : 0,

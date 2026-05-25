@@ -334,27 +334,55 @@ export const useCharacterPersistence = (
           
           // Then try to restore the "other" type in the background if it's different
           if (lastCharId && lastCharId !== charId) {
-             const c = await getCharacterById(lastCharId);
-             if (c && !c.isTemplate) {
-                const merged = dataMigration.mergeWithDefault(c.data);
-                setData(merged);
-                setLastSavedData(JSON.parse(JSON.stringify(merged)));
-                setCurrentCharacterId(c.id);
+             try {
+               const c = await getCharacterById(lastCharId);
+               if (c && !c.isTemplate) {
+                  const merged = dataMigration.mergeWithDefault(c.data);
+                  setData(merged);
+                  setLastSavedData(JSON.parse(JSON.stringify(merged)));
+                  setCurrentCharacterId(c.id);
+               }
+             } catch (e: any) {
+               if (e.message?.includes('permission')) {
+                 localStorage.removeItem(KEY_LAST_CHAR);
+               }
              }
           }
           if (lastTempId && lastTempId !== charId) {
-             const t = await getCharacterById(lastTempId);
-             if (t && t.isTemplate) {
-                const content = t.data.content || '';
-                setBbcodeTemplate(content);
-                setLastSavedTemplate(content);
-                setCurrentTemplateId(t.id);
+             try {
+               const t = await getCharacterById(lastTempId);
+               if (t && t.isTemplate) {
+                  const content = t.data.content || '';
+                  setBbcodeTemplate(content);
+                  setLastSavedTemplate(content);
+                  setCurrentTemplateId(t.id);
+               }
+             } catch (e: any) {
+               if (e.message?.includes('permission')) {
+                 localStorage.removeItem(KEY_LAST_TEMP);
+               }
              }
           }
         } else {
           // No ID in URL, restore both
-          if (lastCharId) await selectCharacter(lastCharId, true, false);
-          if (lastTempId) await selectCharacter(lastTempId, true, false);
+          if (lastCharId) {
+            try {
+              await selectCharacter(lastCharId, true, false);
+            } catch (e: any) {
+              if (e.message?.includes('permission')) {
+                localStorage.removeItem(KEY_LAST_CHAR);
+              }
+            }
+          }
+          if (lastTempId) {
+            try {
+              await selectCharacter(lastTempId, true, false);
+            } catch (e: any) {
+              if (e.message?.includes('permission')) {
+                localStorage.removeItem(KEY_LAST_TEMP);
+              }
+            }
+          }
         }
       } catch (error) {
         console.error("[useCharacterPersistence] Initial load failed:", error);
