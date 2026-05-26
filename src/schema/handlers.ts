@@ -116,6 +116,35 @@ export class BaseInt extends BaseHandler {
 }
 
 /**
+ * 浮点数处理器基类
+ */
+export class BaseFloat extends BaseInt {
+  validate(v: string) {
+    if (v === '') return true;
+    const cleanV = this.preProcess ? this.preProcess(v) : v;
+    return REGEX_PATTERNS.float.test(cleanV);
+  }
+
+  update(v: any): number {
+    if (typeof v === 'number') return Math.min(this.max, Math.max(this.min, v));
+    if ((v ?? '') === '') return this.defaultValue;
+
+    let strV = String(v);
+    if (this.preProcess) strV = this.preProcess(strV);
+
+    const num = parseFloat(strV);
+    if (isNaN(num)) {
+      console.error(`[Schema Error] Invalid float input: "${v}" for UI: ${this.ui}`);
+      return this.defaultValue;
+    }
+
+    // 约束范围并保留两位小数
+    const constrained = Math.min(this.max, Math.max(this.min, num));
+    return Math.round(constrained * 100) / 100;
+  }
+}
+
+/**
  * 选择处理器基类
  */
 export class BaseSelect extends BaseHandler {
@@ -222,23 +251,16 @@ const BonusHandler = new BaseInt({
   formatInteractive: function(v: any) { return this.formatDisplay!(v); }
 });
 
-// Float 同样可以基于 BaseInt 的逻辑简单扩展 (如果需要更高精度则单独写)
-const FloatHandler = new BaseInt({
-  ui: 'float',
-  update: function (v: any) {
-    if (typeof v === 'number') return v;
-    if ((v ?? '') === '') return this.defaultValue;
-    const num = parseFloat(String(v));
-    if (isNaN(num)) return this.defaultValue;
-    return Math.min(this.max, Math.max(this.min, Math.round(num * 100) / 100));
-  }
-} as any);
+// Float 同样可以基于 BaseFloat 的逻辑简单扩展
+const FloatHandler = new BaseFloat({
+  ui: 'float'
+});
 
-const CostHandler = new BaseInt({
+const CostHandler = new BaseFloat({
   ui: 'cost',
   min: 0,
   formatDisplay: (v: any, context?: any) => {
-    const n = parseInt(v, 10);
+    const n = parseFloat(v);
     if (isNaN(n) || n === 0) return '—';
     const unit = context?.t ? context.t('editor.items.units.gp') : 'gp';
     return `${n} ${unit}`;
@@ -246,11 +268,11 @@ const CostHandler = new BaseInt({
   formatInteractive: function(v: any) { return this.formatDisplay!(v); }
 });
 
-const WeightHandler = new BaseInt({
+const WeightHandler = new BaseFloat({
   ui: 'weight',
   min: 0,
   formatDisplay: (v: any, context?: any) => {
-    const n = parseInt(v, 10);
+    const n = parseFloat(v);
     if (isNaN(n) || n === 0) return '—';
     const unit = context?.t ? context.t('editor.items.units.lbs') : 'lbs';
     return `${n} ${unit}`;

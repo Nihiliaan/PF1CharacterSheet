@@ -8,6 +8,7 @@ import { BBCODE_SYNTAX_GUIDE, BBCODE_DATA_TREE, BBCodeTreeItem } from '../consta
 import { DEFAULT_BBCODE_TEMPLATE } from '../constants';
 
 const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeItem; level?: number; defaultOpen?: boolean; key?: any }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultOpen || level < 1); // 默认展开第一层
   const hasChildren = item.children && item.children.length > 0;
 

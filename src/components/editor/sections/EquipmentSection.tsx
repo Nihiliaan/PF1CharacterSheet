@@ -107,16 +107,15 @@ const EquipmentSection: React.FC = () => {
               <span className="text-xs font-normal text-stone-500 ml-1">gp</span>
             </div>
           </div>
-          <div className="flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 w-24 shrink-0 justify-center">
-            <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">
-              {t('editor.items.encumbrance_multiplier')}
-            </label>
-            <input
-              className="text-sm font-medium text-ink bg-transparent outline-none px-0.5 w-full"
-              value={data.equipment.encumbranceMultiplier}
-              onChange={e => update('equipment.encumbranceMultiplier', e.target.value)}
-            />
-          </div>
+          <InlineInput
+            className="w-32 shrink-0"
+            label={t('editor.items.encumbrance_multiplier')}
+            path="equipment.encumbranceMultiplier"
+            value={data.equipment.encumbranceMultiplier}
+            originalValue={lastSavedData.equipment?.encumbranceMultiplier}
+            onChange={v => update('equipment.encumbranceMultiplier', v)}
+            placeholder="1.0"
+          />
 
           <EncumbranceBar data={data} />
         </div>
