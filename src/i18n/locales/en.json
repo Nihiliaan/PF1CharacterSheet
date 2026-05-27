@@ -169,9 +169,9 @@
       "combat_stats": "Combat Stats",
       "maneuver_notes": "Combat Maneuver Notes",
       "maneuver_placeholder": "Enter bonuses or notes for combat maneuvers...",
-      "bab": "Base Attack Bonus (BAB)",
-      "cmb": "Combat Maneuver Bonus (CMB)",
-      "cmd": "Combat Maneuver Defense (CMD)"
+      "bab": "BAB",
+      "cmb": "CMB",
+      "cmd": "CMD"
     },
     "attacks": {
       "melee": "Melee Weapons",

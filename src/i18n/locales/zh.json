@@ -169,9 +169,9 @@
       "combat_stats": "战斗数值",
       "maneuver_notes": "战技备注",
       "maneuver_placeholder": "在此输入战技相关的特殊加值或备注...",
-      "bab": "基础攻击加值 (BAB)",
-      "cmb": "战技加值 (CMB)",
-      "cmd": "战技防御 (CMD)"
+      "bab": "基础攻击加",
+      "cmb": "战技加值",
+      "cmd": "战技防御"
     },
     "attacks": {
       "weapon": "攻击/武器",
@@ -189,11 +189,11 @@
     },
     "defenses": {
       "ac_details": "防御等级",
-      "ac": "防御等级 (AC)",
+      "ac": "防御等级",
       "ac_source": "来源",
       "touch": "接触",
       "flat_footed": "措手不及",
-      "ac_notes": "AC 备注",
+      "ac_notes": "防御备注",
       "ac_placeholder": "特殊情况加值减值，如在对抗巨人亚种的怪物时，AC 获得+4 闪避加值",
       "hp": "生命值",
       "hd": "生命骰",
