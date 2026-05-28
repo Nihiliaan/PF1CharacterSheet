@@ -225,7 +225,6 @@ export const DynamicInput = React.memo(({
             value={value || (handler.options[handler.defaultIndex] || '')}
             onChange={handleSelectChange}
             onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
             {(handler.options || []).map((opt: any) => (
@@ -301,6 +300,9 @@ export const DynamicInput = React.memo(({
       }}
       onFocus={() => !readOnly && setIsFocused(true)}
       onBlur={(e) => {
+        // 如果窗口失去焦点（如切换到其他应用），保留编辑状态，方便切回
+        if (!document.hasFocus()) return;
+
         // 利用 focusout 冒泡判断是否真的离开了组件
         if (!e.currentTarget.contains(e.relatedTarget as Node)) {
           setIsFocused(false);
