@@ -11,7 +11,7 @@ const converter = OpenCC.Converter({ from: 'cn', to: 'tw' });
 
 const openCCProcessor = {
   name: 'openCC',
-  type: 'postProcessor',
+  type: 'postProcessor' as const,
   process(value: string, key: string | string[], options: any, translator: any) {
     const lng = translator.language;
     if (lng === 'zh-TW' || lng === 'zh-HK') {

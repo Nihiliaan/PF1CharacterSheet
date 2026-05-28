@@ -9,6 +9,9 @@ const programmaticUpdate = Annotation.define<boolean>();
 interface MarkdownInlineEditorProps {
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
+  autoFocus?: boolean;
+  initialClickCoords?: { x: number, y: number } | null;
   readOnly?: boolean;
   className?: string;
   placeholder?: string;
@@ -81,6 +84,7 @@ const MarkdownInlineEditor = ({
   onChange,
   onBlur,
   autoFocus = false,
+  initialClickCoords = null,
   readOnly = false,
   className = '',
   placeholder = '',
@@ -94,13 +98,6 @@ const MarkdownInlineEditor = ({
 
   const onBlurRef = useRef(onBlur);
   useEffect(() => { onBlurRef.current = onBlur; }, [onBlur]);
-
-  // Handle autoFocus
-  useEffect(() => {
-    if (autoFocus && viewRef.current && !viewRef.current.hasFocus) {
-        viewRef.current.focus();
-    }
-  }, [autoFocus]);
 
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -167,6 +164,24 @@ const MarkdownInlineEditor = ({
 
     const view = new EditorView({ state, parent: editorRef.current });
     viewRef.current = view;
+
+    if (autoFocus && !view.hasFocus) {
+        // Use requestAnimationFrame to ensure the focus happens after the DOM is fully updated
+        requestAnimationFrame(() => {
+            if (viewRef.current) {
+                viewRef.current.focus();
+                if (initialClickCoords) {
+                    const pos = viewRef.current.posAtCoords(initialClickCoords);
+                    if (pos !== null) {
+                        viewRef.current.dispatch({
+                            selection: { anchor: pos, head: pos },
+                            scrollIntoView: true
+                        });
+                    }
+                }
+            }
+        });
+    }
 
     return () => {
         view.destroy();

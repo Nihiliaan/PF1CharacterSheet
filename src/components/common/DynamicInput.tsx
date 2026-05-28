@@ -55,6 +55,7 @@ const MarkdownLinkRenderer = ({ text }: { text: string }) => {
         rel="noopener noreferrer"
         className="text-indigo-600 hover:underline cursor-pointer"
         onClick={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
       >
         {match[1]}
       </a>
@@ -93,6 +94,7 @@ export const DynamicInput = React.memo(({
   const { t } = useTranslation();
   const characterContext = useCharacter();
   const [isFocused, setIsFocused] = React.useState(false);
+  const lastClickCoords = React.useRef<{ x: number, y: number } | null>(null);
 
   const modifiers = characterContext?.computed?.modifiers;
 
@@ -182,6 +184,7 @@ export const DynamicInput = React.memo(({
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
+    setTempValue(val);
     const finalValue = handler?.update ? handler.update(val) : val;
     onChange(finalValue);
   };
@@ -202,11 +205,11 @@ export const DynamicInput = React.memo(({
   const sharedStyles = `w-full h-full break-words whitespace-pre-wrap ${paddingClass} ${finalInnerClass}`;
 
   const renderContent = () => {
-    // 预览模式 / 只读模式
-    if (readOnly || !isFocused) {
+    // 只读模式直接返回预览
+    if (readOnly) {
       const val = displayValue();
       return (
-        <div className={`${sharedStyles} cursor-text min-h-[32px] flex items-start`}>
+        <div className={`${sharedStyles} flex items-start`}>
           <div className="w-full">
             <MarkdownLinkRenderer text={val} />
           </div>
@@ -214,13 +217,15 @@ export const DynamicInput = React.memo(({
       );
     }
 
+    // Select 类型：始终渲染透明 select 以捕获初次点击，但根据 focus 状态显示预览或样式
     if (handler?.ui === 'select') {
       return (
         <div className="relative w-full h-full">
           <select
-            autoFocus
             value={value || (handler.options[handler.defaultIndex] || '')}
             onChange={handleSelectChange}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
             {(handler.options || []).map((opt: any) => (
@@ -229,13 +234,14 @@ export const DynamicInput = React.memo(({
               </option>
             ))}
           </select>
-          <div className={`${sharedStyles} flex items-center justify-center ${isChanged ? 'text-amber-700' : 'text-ink'}`}>
+          <div className={`${sharedStyles} flex items-center justify-center ${isChanged ? 'text-amber-700' : 'text-ink'} ${isFocused ? 'bg-stone-50' : ''}`}>
             {displayValue() || <span className="text-stone-300">—</span>}
           </div>
         </div>
       );
     }
 
+    // Bool 类型：点击切换
     if (handler?.ui === 'bool') {
       return (
         <button
@@ -252,38 +258,34 @@ export const DynamicInput = React.memo(({
       );
     }
 
-    if (handler?.ui === 'text') {
+    // 预览模式：非焦点状态下显示预览
+    if (!isFocused) {
+      const val = displayValue();
       return (
-        <div className={`${paddingClass} ${finalInnerClass} flex items-center`}>
-          <MarkdownInlineEditor
-            value={value}
-            onChange={handleChange}
-            placeholder={placeholder}
-            singleLine={singleLine}
-            transactionFilter={transactionFilter}
-            height={height}
-            minHeight={minHeight}
-            className="!bg-transparent !p-0 w-full"
-            autoFocus={true}
-          />
+        <div className={`${sharedStyles} cursor-text min-h-[32px] flex items-start`}>
+          <div className="w-full">
+            <MarkdownLinkRenderer text={val} />
+          </div>
         </div>
       );
     }
 
+    // 编辑模式：所有非 select/bool 类型统一使用增强的 MarkdownInlineEditor 以支持精准光标定位
     return (
-      <>
-        <div className={`col-start-1 row-start-1 invisible pointer-events-none ${sharedStyles}`}>
-          {displayValue() + '\n'}
-        </div>
-        <textarea
-          autoFocus
-          value={tempValue}
-          onChange={handleTextareaChange}
-          className={`col-start-1 row-start-1 w-full h-full resize-none overflow-hidden outline-none bg-transparent ${sharedStyles} ${isChanged ? 'text-amber-900' : ''}`}
-          rows={1}
+      <div className={`${paddingClass} ${finalInnerClass} flex items-center w-full h-full`}>
+        <MarkdownInlineEditor
+          value={value}
+          onChange={handleChange}
           placeholder={placeholder}
+          singleLine={singleLine}
+          transactionFilter={transactionFilter}
+          height={height}
+          minHeight={minHeight}
+          className="!bg-transparent !p-0 w-full"
+          autoFocus={true}
+          initialClickCoords={lastClickCoords.current}
         />
-      </>
+      </div>
     );
   };
 
@@ -291,6 +293,12 @@ export const DynamicInput = React.memo(({
     <div
       ref={containerRef}
       tabIndex={readOnly ? undefined : 0}
+      onMouseDown={(e) => {
+        if (!readOnly) {
+          lastClickCoords.current = { x: e.clientX, y: e.clientY };
+          setIsFocused(true);
+        }
+      }}
       onFocus={() => !readOnly && setIsFocused(true)}
       onBlur={(e) => {
         // 利用 focusout 冒泡判断是否真的离开了组件

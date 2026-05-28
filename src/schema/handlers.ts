@@ -392,6 +392,7 @@ export class BaseTable extends BaseHandler {
 export class CompositeHandler extends BaseHandler {
   ui = 'composite';
   view: string = 'CompositeView';
+  columns?: any[];
 
   constructor(config: Partial<CompositeHandler> = {}) {
     super();

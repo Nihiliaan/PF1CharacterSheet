@@ -64,6 +64,7 @@ export interface Character {
   name?: string;
   folderId?: string | null;
   updatedAt?: any;
+  createdAt?: any;
 }
 
 export interface Folder {

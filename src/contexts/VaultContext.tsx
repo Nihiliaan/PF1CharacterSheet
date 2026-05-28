@@ -11,7 +11,8 @@ import {
   moveFolder as moveFolderService,
   createFolder as createFolderService,
   copyCharacter as copyCharacterService,
-  ensureLocalFolder as ensureLocalFolderService
+  ensureLocalFolder as ensureLocalFolderService,
+  saveCharacter as saveCharacterService
 } from '../services/characterService';
 
 interface VaultContextType {
