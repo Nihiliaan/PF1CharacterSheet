@@ -2,7 +2,7 @@ import { get } from 'lodash-es';
 import handlers from './handlers';
 
 const {
-  TextHandler, IntegerHandler, PosIntHandler, BonusHandler, LevelHandler,
+  TextHandler, IntegerHandler, PosIntHandler, NonNegativeIntHandler, BonusHandler, LevelHandler,
   FloatHandler, BoolHandler, ClassSkillHandler, SkillAttributeHandler, QuantityHandler,
   CostHandler, WeightHandler, CritRangeHandler, CritMultiplierHandler,
   DistanceHandler, AbilityTypeHandler, SpellTypeHandler, CompositeHandler,
@@ -194,11 +194,11 @@ export const CharacterPrototype: any = {
     encumbranceMultiplier: FloatHandler,
     currency: {
       handler: CurrencyHandler,
-      pp: IntegerHandler,
-      gp: IntegerHandler,
-      sp: IntegerHandler,
-      cp: IntegerHandler,
-      coinWeight: FloatHandler
+      pp: NonNegativeIntHandler,
+      gp: NonNegativeIntHandler,
+      sp: NonNegativeIntHandler,
+      cp: NonNegativeIntHandler,
+      coinWeight: WeightHandler
     },
     notes: TextHandler
   },

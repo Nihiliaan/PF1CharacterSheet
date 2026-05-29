@@ -195,7 +195,9 @@ export const DynamicInput = React.memo(({
 
   const toggleBool = () => {
     if (readOnly) return;
-    onChange(value === 'true' ? '' : 'true');
+    const next = value === 'true' ? '' : 'true';
+    setTempValue(next);
+    onChange(next);
   };
 
   const defaultHeightClass = (height || minHeight || wrapperClassName.includes('h-') || wrapperClassName.includes('min-h-')) ? '' : 'min-h-[32px]';

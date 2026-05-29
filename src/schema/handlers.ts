@@ -533,7 +533,9 @@ export function getHandlerByType(type: string): BaseHandler {
     case 'level': return LevelHandler;
     case 'distance': return DistanceHandler;
     case 'bonus': return BonusHandler;
-    case 'float': case 'cost': case 'weight': return FloatHandler;
+    case 'float': return FloatHandler;
+    case 'cost': return CostHandler;
+    case 'weight': return WeightHandler;
     case 'bool': case 'checkbox': return BoolHandler;
     case 'classSkill': return ClassSkillHandler;
     case 'critRange': return CritRangeHandler;
