@@ -12,9 +12,9 @@ const { getHandlerByType } = handlers;
 import { useCharacter } from '../../contexts/CharacterContext';
 
 export interface DynamicInputProps {
-  value: string;
-  originalValue?: string;
-  onChange: (v: string) => void;
+  value: string | number;
+  originalValue?: string | number;
+  onChange: (v: string | number) => void;
   path?: string;
   className?: string; // Applied to inner element
   wrapperClassName?: string; // Applied to outermost div
@@ -48,10 +48,10 @@ const MarkdownLinkRenderer = ({ text }: { text: string }) => {
       parts.push(text.substring(lastIndex, match.index));
     }
     parts.push(
-      <a 
-        key={match.index} 
-        href={match[2]} 
-        target="_blank" 
+      <a
+        key={match.index}
+        href={match[2]}
+        target="_blank"
         rel="noopener noreferrer"
         className="text-indigo-600 hover:underline cursor-pointer"
         onClick={e => e.stopPropagation()}
@@ -94,6 +94,7 @@ export const DynamicInput = React.memo(({
   const { t } = useTranslation();
   const characterContext = useCharacter();
   const [isFocused, setIsFocused] = React.useState(false);
+  const [isEditing, setIsEditing] = React.useState(false);
   const lastClickCoords = React.useRef<{ x: number, y: number } | null>(null);
 
   const modifiers = characterContext?.computed?.modifiers;
@@ -130,8 +131,8 @@ export const DynamicInput = React.memo(({
     if (value === originalValue) return false;
 
     // 使用 Schema 定义的 update 函数对两者进行预处理（转换成存储格式）再比较
-    const v1 = handler?.update ? handler.update(String(value)) : value;
-    const v2 = handler?.update ? handler.update(String(originalValue)) : originalValue;
+    const v1 = handler?.update ? handler.update(value) : value;
+    const v2 = handler?.update ? handler.update(originalValue) : originalValue;
 
     if (typeof v1 === 'object' || typeof v2 === 'object') {
       return JSON.stringify(v1) !== JSON.stringify(v2);
@@ -229,7 +230,7 @@ export const DynamicInput = React.memo(({
             onFocus={() => setIsFocused(true)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
-            {(handler.options || []).map((opt: any) => (
+            {(options || handler.options || []).map((opt: any) => (
               <option key={opt} value={opt}>
                 {handler?.formatDisplay ? handler.formatDisplay(opt, context) : opt}
               </option>
@@ -275,7 +276,7 @@ export const DynamicInput = React.memo(({
     return (
       <div className={`${paddingClass} ${finalInnerClass} flex items-center w-full h-full`}>
         <MarkdownInlineEditor
-          value={value}
+          value={String(value ?? '')}
           onChange={handleChange}
           placeholder={placeholder}
           singleLine={singleLine}

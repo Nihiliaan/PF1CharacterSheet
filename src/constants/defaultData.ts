@@ -132,6 +132,7 @@ export const DEFAULT_DATA: CharacterData = {
     ability: [],
     others: [],
     special: [],
+    category: [],
     totalPoints: 0,
     acp: 0,
     notes: '',

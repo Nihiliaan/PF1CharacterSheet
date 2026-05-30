@@ -2,13 +2,13 @@ import { get } from 'lodash-es';
 import handlers from './handlers';
 
 const {
-  TextHandler, IntegerHandler, PosIntHandler, NonNegativeIntHandler, BonusHandler, LevelHandler,
+  TextHandler, SkillNameHandler, IntegerHandler, PosIntHandler, NonNegativeIntHandler, BonusHandler, LevelHandler,
   FloatHandler, BoolHandler, ClassSkillHandler, SkillAttributeHandler, QuantityHandler,
   CostHandler, WeightHandler, CritRangeHandler, CritMultiplierHandler,
   DistanceHandler, AbilityTypeHandler, SpellTypeHandler, CompositeHandler,
   DailyUsesHandler, AgeHandler, HeightHandler,
   // 业务表格 Handler
-  AttributesTableHandler, AttackTableHandler, DefensesTableHandler,
+  AttributesTableHandler, MeleeAttackTableHandler, RangedAttackTableHandler, DefensesTableHandler,
   SavesTableHandler, SkillsTableHandler, SimpleListHandler,
   BackgroundTraitsTableHandler, ClassFeaturesTableHandler, FeatsTableHandler,
   SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler,
@@ -83,7 +83,7 @@ export const CharacterPrototype: any = {
   attacks: {
     handler: CompositeHandler,
     melee: {
-      handler: handlers.MeleeAttackTableHandler,
+      handler: MeleeAttackTableHandler,
       weapon: TextHandler,
       hit: BonusHandler,
       damage: TextHandler,
@@ -94,7 +94,7 @@ export const CharacterPrototype: any = {
       special: TextHandler
     },
     ranged: {
-      handler: handlers.RangedAttackTableHandler,
+      handler: RangedAttackTableHandler,
       weapon: TextHandler,
       hit: BonusHandler,
       damage: TextHandler,
@@ -165,16 +165,16 @@ export const CharacterPrototype: any = {
   // 7. 技能 (User structure: skills)
   skills: {
     handler: SkillsTableHandler,
-    name: TextHandler,
-    total: BonusHandler, // 表格中的总计
+    name: SkillNameHandler,
+    category: IntegerHandler,
+    total: BonusHandler,
     rank: LevelHandler,
     cs: ClassSkillHandler,
     ability: SkillAttributeHandler,
     others: TextHandler,
     special: TextHandler,
-    // 技能区块配置 (重命名以避开冲突)
-    totalPoints: handlers.NonNegativeIntHandler,
-    acp: handlers.NonNegativeIntHandler,
+    totalPoints: NonNegativeIntHandler,
+    acp: NonNegativeIntHandler,
     notes: TextHandler
   },
 

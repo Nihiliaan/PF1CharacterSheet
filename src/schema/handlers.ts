@@ -7,6 +7,8 @@ export const REGEX_PATTERNS = {
   float: /^-?\d*\.?\d*$/,
 };
 
+import { KNOWLEDGE_IDS, CRAFT_IDS, PERFORM_IDS, PROFESSION_IDS, SKILL_REGISTRY } from '../constants/skills';
+
 /**
  * 核心数据枚举
  */
@@ -23,6 +25,10 @@ const ABILITY_TYPES = ['—', 'Sp', 'Su', 'Ex'];
 export class BaseHandler {
   ui: string = 'text';
   defaultValue: any = '';
+  options?: any[];
+  min?: number;
+  max?: number;
+  step?: number;
 
   constructor(config: Partial<BaseHandler> = {}) {
     Object.assign(this, config);
@@ -58,8 +64,7 @@ export class BaseText extends BaseHandler {
 }
 
 /**
- * 数值处理器基类 (The Source of Truth for Numbers)
- * 职责：处理 String -> Number 的解析、范围约束、错误报错
+ * 数值处理器基类
  */
 export class BaseInt extends BaseHandler {
   ui = 'number';
@@ -68,15 +73,11 @@ export class BaseInt extends BaseHandler {
   max = Infinity;
   defaultValue = 0;
   
-  /**
-   * 预处理钩子：在解析前清理字符串 (如移除 '+' 或 'ft')
-   */
   preProcess?(v: string): string;
 
   constructor(config: Partial<BaseInt> = {}) {
     super();
     Object.assign(this, config);
-    // 初始化检查：如果默认值越界，自动调整
     this.defaultValue = Math.min(this.max, Math.max(this.min, this.defaultValue));
   }
 
@@ -87,25 +88,12 @@ export class BaseInt extends BaseHandler {
   }
 
   update(v: any): number {
-    // 1. 已经是数字：直接约束返回
     if (typeof v === 'number') return Math.min(this.max, Math.max(this.min, v));
-    
-    // 2. 空值处理
     if ((v ?? '') === '') return this.defaultValue;
-
-    // 3. 字符串处理
     let strV = String(v);
     if (this.preProcess) strV = this.preProcess(strV);
-
     const num = parseInt(strV, 10);
-
-    // 4. Fail Fast：非法输入报错
-    if (isNaN(num)) {
-      console.error(`[Schema Error] Invalid integer input: "${v}" for UI: ${this.ui}`);
-      return this.defaultValue;
-    }
-
-    // 5. 范围约束
+    if (isNaN(num)) return this.defaultValue;
     return Math.min(this.max, Math.max(this.min, num));
   }
 
@@ -128,17 +116,10 @@ export class BaseFloat extends BaseInt {
   update(v: any): number {
     if (typeof v === 'number') return Math.min(this.max, Math.max(this.min, v));
     if ((v ?? '') === '') return this.defaultValue;
-
     let strV = String(v);
     if (this.preProcess) strV = this.preProcess(strV);
-
     const num = parseFloat(strV);
-    if (isNaN(num)) {
-      console.error(`[Schema Error] Invalid float input: "${v}" for UI: ${this.ui}`);
-      return this.defaultValue;
-    }
-
-    // 约束范围并保留两位小数
+    if (isNaN(num)) return this.defaultValue;
     const constrained = Math.min(this.max, Math.max(this.min, num));
     return Math.round(constrained * 100) / 100;
   }
@@ -150,7 +131,7 @@ export class BaseFloat extends BaseInt {
 export class BaseSelect extends BaseHandler {
   ui = 'select';
   optionValues: any[] = [];
-  options: number[] = [];
+  options: any[] = [];
   defaultIndex: number = 0;
   i18nPrefix: string = '';
 
@@ -165,11 +146,10 @@ export class BaseSelect extends BaseHandler {
     return this.defaultIndex;
   }
 
-  update(v: any): number {
+  update(v: any): any {
     if (typeof v === 'number') return v;
     const idx = this.optionValues.indexOf(v);
     if (idx !== -1) return idx;
-    
     const num = parseInt(v, 10);
     return isNaN(num) ? this.defaultIndex : num;
   }
@@ -182,10 +162,66 @@ export class BaseSelect extends BaseHandler {
 }
 
 /**
- * 业务 Handler 实例与子类 (不再重写 update)
+ * 自定义选择处理器 (Custom Select Handler)
+ * 职责：处理 ID (number) 和 自定义文本 (string) 的混合场景。
+ */
+export class CustomSelectHandler extends BaseSelect {
+  ui = 'select'; // 默认表现为下拉框
+
+  update(v: any): any {
+    if (typeof v === 'number') return v;
+    const num = parseInt(v, 10);
+    // 判定逻辑：如果是纯数字字符串，且该 ID 在官方库中存在，则存为 number 类型以触发翻译
+    if (!isNaN(num) && String(num) === String(v)) {
+      if (SKILL_REGISTRY.some(s => s.id === num)) return num;
+    }
+    return v;
+  }
+
+  formatDisplay(v: any, context?: any): string {
+    const t = context?.t;
+    if (!t || (v ?? '') === '') return '—';
+
+    if (typeof v === 'number') {
+      const cat = Math.floor(v / 1000);
+      const idx = v % 1000;
+      const name = t(`${this.i18nPrefix}${cat}.${idx}`);
+      // 如果不是在渲染下拉选项（isOption 为假），且属于分类 2-5，则添加大类前缀
+      if (cat >= 2 && cat <= 5 && !context?.isOption) {
+        const catName = t(`editor.skills.categories.${cat}`);
+        return `${catName}（${name}）`;
+      }
+      return name;
+    }
+    return String(v);
+  }
+}
+
+/**
+ * 业务 Handler 实例与子类
  */
 
 const TextHandler = new BaseText();
+
+/**
+ * 统一技能名称处理器
+ * 集成了所有分类的逻辑判定：选项获取、翻译合成、锁定状态
+ */
+const SkillNameHandler = new CustomSelectHandler({
+  i18nPrefix: 'editor.skills.names.',
+  // 根据分类获取选项列表
+  getOptions: (cat: number) => {
+    switch (cat) {
+      case 2: return KNOWLEDGE_IDS;
+      case 3: return CRAFT_IDS;
+      case 4: return PERFORM_IDS;
+      case 5: return PROFESSION_IDS;
+      default: return [];
+    }
+  },
+  // 判定该类目下的技能名是否固定（不可手动编辑文本）
+  isFixed: (cat: number) => cat <= 2
+} as any);
 
 const IntegerHandler = new BaseInt();
 
@@ -251,7 +287,6 @@ const BonusHandler = new BaseInt({
   formatInteractive: function(v: any) { return this.formatDisplay!(v); }
 });
 
-// Float 同样可以基于 BaseFloat 的逻辑简单扩展
 const FloatHandler = new BaseFloat({
   ui: 'float'
 });
@@ -461,6 +496,7 @@ const SavesTableHandler = new BaseTable({
 const SkillsTableHandler = new BaseTable({
   columns: [
     { key: 'name', label: 'editor.skills.headers.skill', width: '15%' },
+    { key: 'category', label: 'editor.lists.category', width: '0%', type: 'int' },
     { key: 'total', label: 'editor.skills.headers.total', width: '5%', type: 'bonus' },
     { key: 'rank', label: 'editor.skills.headers.rank', width: '5%', type: 'level' },
     { key: 'cs', label: 'editor.skills.headers.cs', width: '5%', type: 'classSkill' },
@@ -541,18 +577,20 @@ export function getHandlerByType(type: string): BaseHandler {
     case 'critRange': return CritRangeHandler;
     case 'critMultiplier': return CritMultiplierHandler;
     case 'abilityType': return AbilityTypeHandler;
+    case 'skillName': return SkillNameHandler;
     default: return TextHandler;
   }
 }
 
 const handlers: any = {
-  TextHandler, IntegerHandler, PosIntHandler, NonNegativeIntHandler, QuantityHandler, LevelHandler,
+  TextHandler, SkillNameHandler,
+  IntegerHandler, PosIntHandler, NonNegativeIntHandler, QuantityHandler, LevelHandler,
   DistanceHandler, SkillAttributeHandler, CostHandler, WeightHandler,
   ManeuverabilityHandler, AlignmentHandler, SizeHandler, GenderHandler,
   HeightHandler, AgeHandler, CritRangeHandler, CritMultiplierHandler, BonusHandler,
   FloatHandler, BoolHandler, ClassSkillHandler, AbilityTypeHandler, SpellTypeHandler,
   DailyUsesHandler, getHandlerByType,
-  BaseHandler, BaseText, BaseInt, BaseSelect, BaseTable, CompositeHandler,
+  BaseHandler, BaseText, BaseInt, BaseSelect, BaseTable, CompositeHandler, CustomSelectHandler,
   AttributesTableHandler, MeleeAttackTableHandler, RangedAttackTableHandler, DefensesTableHandler,
   SavesTableHandler, SkillsTableHandler, SimpleListHandler, BackgroundTraitsTableHandler,
   ClassFeaturesTableHandler, FeatsTableHandler, SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler,

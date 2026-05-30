@@ -1,3 +1,4 @@
+import i18n from '../i18n/config';
 import Handlebars from 'handlebars';
 import { get } from 'lodash-es';
 import { CharacterData, ATTRIBUTE_NAMES } from '../schema/types';
@@ -8,6 +9,14 @@ import handlers from '../schema/handlers';
 
 // 创建隔离的 Handlebars 实例
 const hbs = Handlebars.create();
+
+// 注册技能名辅助函数，处理 ID 到文本的转换
+hbs.registerHelper('skillName', function (name: string | number) {
+  if (typeof name === 'number') {
+    return i18n.t(`editor.skills.names.${name}`);
+  }
+  return name;
+});
 
 /**
  * 辅助函数：根据路径安全从 SoA 取原始值

@@ -39,6 +39,8 @@ export interface DynamicTableProps {
   onRowDrop?: (index: number, e: any) => void;
   readOnly?: boolean;
   path?: string;
+  showAll?: boolean;
+  minWidth?: string;
 }
 
 export interface SingleRowTableProps {
@@ -130,13 +132,14 @@ export interface FeatsSoA {
 }
 
 export interface SkillsData extends Record<string, any> {
-  name: string[];
+  name: (number | string)[];
   total: number[];
   rank: number[];
   cs: boolean[];
   ability: number[];
   others: string[];
   special: string[];
+  category: number[];
   totalPoints: number; // 对应 DEFAULT_DATA 中的 total (重命名以避开冲突)
   acp: number;
   notes: string;

@@ -1,5 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { DEFAULT_DATA } from "../constants";
+import i18n from '../i18n/config';
+import { SKILL_REGISTRY } from '../constants/skills';
 
 export const characterSchema = {
   type: Type.OBJECT,
@@ -346,13 +348,51 @@ export function transformAIData(extracted: any) {
   // 7. 技能
   if (extracted.skills && Array.isArray(extracted.skills)) {
     const attrNames = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
+    
+    // 获取 i18n 资源用于反向查找
+    const zhNames = i18n.getResourceBundle('zh', 'translation')?.editor?.skills?.names || {};
+    const enNames = i18n.getResourceBundle('en', 'translation')?.editor?.skills?.names || {};
+    
     extracted.skills.forEach((s: any) => {
-      mergedData.skills.name.push(s.name || '');
+      const rawName = String(s.name || '').trim();
+      let finalName: string | number = rawName;
+      let finalCategory: number = 0; // 默认通用
+      let finalAbility: number = -1;
+
+      // 尝试匹配内置技能 (中文或英文名)
+      const matchedId = Object.keys(zhNames).find(id => zhNames[id] === rawName) || 
+                        Object.keys(enNames).find(id => enNames[id] === rawName);
+      
+      if (matchedId) {
+        const idNum = parseInt(matchedId);
+        const registryEntry = SKILL_REGISTRY.find(r => r.id === idNum);
+        if (registryEntry) {
+          finalName = idNum;
+          finalCategory = registryEntry.category;
+          finalAbility = registryEntry.defaultAbility;
+        }
+      } else {
+        // 自定义技能尝试根据名字猜测大类
+        if (rawName.includes('知识') || rawName.includes('Knowledge')) finalCategory = 2;
+        else if (rawName.includes('工艺') || rawName.includes('Craft')) finalCategory = 3;
+        else if (rawName.includes('表演') || rawName.includes('Perform')) finalCategory = 4;
+        else if (rawName.includes('专业') || rawName.includes('Profession')) finalCategory = 5;
+      }
+
+      mergedData.skills.name.push(finalName);
+      mergedData.skills.category.push(finalCategory);
       mergedData.skills.total.push(parseInt(s.total) || 0);
       mergedData.skills.rank.push(parseInt(s.rank) || 0);
       mergedData.skills.cs.push(s.isClassSkill === true);
+      
+      // 属性处理
       const attrIdx = attrNames.indexOf(String(s.abilityAttribute).toUpperCase());
-      mergedData.skills.ability.push(attrIdx !== -1 ? attrIdx : 0);
+      if (attrIdx !== -1) {
+        mergedData.skills.ability.push(attrIdx);
+      } else {
+        mergedData.skills.ability.push(finalAbility !== -1 ? finalAbility : 0);
+      }
+
       mergedData.skills.others.push(String(s.otherBonus || '0'));
       mergedData.skills.special.push(bbcodeToMarkdown(s.special));
     });
