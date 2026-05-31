@@ -68,7 +68,7 @@ export default function SingleRowTable(props: SingleRowTableProps) {
                     readOnly={readOnly || readonlyColumns?.includes(c.key)}
                     columnKey={c.key}
                     type={cellHandler?.ui || c.type}
-                    options={cellHandler?.options || c.options}
+                    optionIndices={cellHandler?.optionIndices || c.optionIndices}
                     displayFormatter={c.displayFormatter}
                     align={c.align || 'center'}
                     row={data}

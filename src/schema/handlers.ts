@@ -25,10 +25,6 @@ const ABILITY_TYPES = ['—', 'Sp', 'Su', 'Ex'];
 export class BaseHandler {
   ui: string = 'text';
   defaultValue: any = '';
-  options?: any[];
-  min?: number;
-  max?: number;
-  step?: number;
 
   constructor(config: Partial<BaseHandler> = {}) {
     Object.assign(this, config);
@@ -72,7 +68,7 @@ export class BaseInt extends BaseHandler {
   min = -Infinity;
   max = Infinity;
   defaultValue = 0;
-  
+
   preProcess?(v: string): string;
 
   constructor(config: Partial<BaseInt> = {}) {
@@ -131,15 +127,15 @@ export class BaseFloat extends BaseInt {
 export class BaseSelect extends BaseHandler {
   ui = 'select';
   optionValues: any[] = [];
-  options: any[] = [];
+  optionIndices: number[] = [];
   defaultIndex: number = 0;
   i18nPrefix: string = '';
 
   constructor(config: Partial<BaseSelect> = {}) {
     super();
-    const { options, ...rest } = config;
+    const { optionIndices, ...rest } = config;
     Object.assign(this, rest);
-    this.options = options || [...this.optionValues.keys()];
+    this.optionIndices = optionIndices || [...this.optionValues.keys()];
   }
 
   getDefaultValue(): any {
@@ -162,16 +158,16 @@ export class BaseSelect extends BaseHandler {
 }
 
 /**
- * 自定义选择处理器 (Custom Select Handler)
- * 职责：处理 ID (number) 和 自定义文本 (string) 的混合场景。
+ * 技能名称处理器
+ * 职责：处理 ID (number) 和 自定义文本 (string) 的混合场景，并管理分类规则。
  */
-export class CustomSelectHandler extends BaseSelect {
-  ui = 'select'; // 默认表现为下拉框
+export class SkillNameHandlerClass extends BaseSelect {
+  ui = 'select';
+  i18nPrefix = 'editor.skills.names.';
 
   update(v: any): any {
     if (typeof v === 'number') return v;
     const num = parseInt(v, 10);
-    // 判定逻辑：如果是纯数字字符串，且该 ID 在官方库中存在，则存为 number 类型以触发翻译
     if (!isNaN(num) && String(num) === String(v)) {
       if (SKILL_REGISTRY.some(s => s.id === num)) return num;
     }
@@ -195,6 +191,27 @@ export class CustomSelectHandler extends BaseSelect {
     }
     return String(v);
   }
+
+  // 根据大类获取对应选项序号列表
+  getOptionIndices(cat: number): number[] {
+    switch (cat) {
+      case 2: return KNOWLEDGE_IDS;
+      case 3: return CRAFT_IDS;
+      case 4: return PERFORM_IDS;
+      case 5: return PROFESSION_IDS;
+      default: return [];
+    }
+  }
+
+  // 判定是否为固定技能名
+  isFixed(cat: number) {
+    return cat <= 2;
+  }
+
+  // 获取下拉列表列数（专业类设为 3 列）
+  getColumnCount(cat: number) {
+    return cat === 5 ? 3 : 1;
+  }
 }
 
 /**
@@ -203,25 +220,7 @@ export class CustomSelectHandler extends BaseSelect {
 
 const TextHandler = new BaseText();
 
-/**
- * 统一技能名称处理器
- * 集成了所有分类的逻辑判定：选项获取、翻译合成、锁定状态
- */
-const SkillNameHandler = new CustomSelectHandler({
-  i18nPrefix: 'editor.skills.names.',
-  // 根据分类获取选项列表
-  getOptions: (cat: number) => {
-    switch (cat) {
-      case 2: return KNOWLEDGE_IDS;
-      case 3: return CRAFT_IDS;
-      case 4: return PERFORM_IDS;
-      case 5: return PROFESSION_IDS;
-      default: return [];
-    }
-  },
-  // 判定该类目下的技能名是否固定（不可手动编辑文本）
-  isFixed: (cat: number) => cat <= 2
-} as any);
+const SkillNameHandler = new SkillNameHandlerClass();
 
 const IntegerHandler = new BaseInt();
 
@@ -242,7 +241,7 @@ const QuantityHandler = new BaseInt({
     const n = parseInt(v, 10);
     return (isNaN(n) || n <= 1) ? '' : `×${n}`;
   },
-  formatInteractive: function(v: any) { return this.formatDisplay!(v); }
+  formatInteractive: function (v: any) { return this.formatDisplay!(v); }
 });
 
 const LevelHandler = new BaseInt({
@@ -254,7 +253,7 @@ const LevelHandler = new BaseInt({
     if (!n || n <= 0) return '';
     return context?.t ? context.t('editor.lists.level_format', { n }) : n.toString();
   },
-  formatInteractive: function(v: any) {
+  formatInteractive: function (v: any) {
     const n = parseInt(v, 10);
     return (!n || n <= 0) ? '' : n.toString();
   }
@@ -271,7 +270,7 @@ const DistanceHandler = new BaseInt({
     if (isNaN(n) || n === 0) return '';
     return context?.t ? context.t('editor.lists.distance_format', { v: n }) : `${n} ft`;
   },
-  formatInteractive: function(v: any) { return this.formatDisplay!(v); }
+  formatInteractive: function (v: any) { return this.formatDisplay!(v); }
 });
 
 const BonusHandler = new BaseInt({
@@ -284,7 +283,7 @@ const BonusHandler = new BaseInt({
     if (isNaN(num)) return '—';
     return num >= 0 ? `+${num}` : `${num}`;
   },
-  formatInteractive: function(v: any) { return this.formatDisplay!(v); }
+  formatInteractive: function (v: any) { return this.formatDisplay!(v); }
 });
 
 const FloatHandler = new BaseFloat({
@@ -300,7 +299,7 @@ const CostHandler = new BaseFloat({
     const unit = context?.t ? context.t('editor.items.units.gp') : 'gp';
     return `${n} ${unit}`;
   },
-  formatInteractive: function(v: any) { return this.formatDisplay!(v); }
+  formatInteractive: function (v: any) { return this.formatDisplay!(v); }
 });
 
 const WeightHandler = new BaseFloat({
@@ -312,7 +311,7 @@ const WeightHandler = new BaseFloat({
     const unit = context?.t ? context.t('editor.items.units.lbs') : 'lbs';
     return `${n} ${unit}`;
   },
-  formatInteractive: function(v: any) { return this.formatDisplay!(v); }
+  formatInteractive: function (v: any) { return this.formatDisplay!(v); }
 });
 
 const BoolHandler = new BaseHandler({
@@ -354,7 +353,7 @@ const SpellTypeHandler = new BaseSelect({
 
 const SkillAttributeHandler = new BaseSelect({
   optionValues: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'],
-  options: [0, 1, 3, 4, 5],
+  optionIndices: [0, 1, 3, 4, 5],
   formatDisplay: function (v: any, context?: any) {
     const mod = context.modifiers[this.optionValues[v]];
     return `${mod >= 0 ? '+' : ''}${mod}${context.t('editor.attributes.' + this.optionValues[v])}`;
@@ -363,7 +362,7 @@ const SkillAttributeHandler = new BaseSelect({
 
 const ManeuverabilityHandler = new BaseSelect({ optionValues: MANEUVERABILITY, i18nPrefix: 'editor.basic.maneuverability_options.' });
 const AlignmentHandler = new BaseSelect({ optionValues: ALIGNMENTS, i18nPrefix: 'editor.basic.alignment_options.' });
-const SizeHandler = new BaseSelect({ optionValues: SIZES, options: [3, 4], i18nPrefix: 'editor.basic.size_options.' });
+const SizeHandler = new BaseSelect({ optionValues: SIZES, optionIndices: [3, 4], i18nPrefix: 'editor.basic.size_options.' });
 const GenderHandler = new BaseSelect({ optionValues: GENDERS, i18nPrefix: 'editor.basic.gender_options.' });
 
 const AgeHandler = new BaseInt({
@@ -590,7 +589,7 @@ const handlers: any = {
   HeightHandler, AgeHandler, CritRangeHandler, CritMultiplierHandler, BonusHandler,
   FloatHandler, BoolHandler, ClassSkillHandler, AbilityTypeHandler, SpellTypeHandler,
   DailyUsesHandler, getHandlerByType,
-  BaseHandler, BaseText, BaseInt, BaseSelect, BaseTable, CompositeHandler, CustomSelectHandler,
+  BaseHandler, BaseText, BaseInt, BaseSelect, BaseTable, CompositeHandler, SkillNameHandlerClass,
   AttributesTableHandler, MeleeAttackTableHandler, RangedAttackTableHandler, DefensesTableHandler,
   SavesTableHandler, SkillsTableHandler, SimpleListHandler, BackgroundTraitsTableHandler,
   ClassFeaturesTableHandler, FeatsTableHandler, SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler,

@@ -54,12 +54,12 @@ const SkillsTableRow = memo(({
         const isNameColumn = c.key === 'name';
         const catId = row.category;
         
-        // 核心逻辑转移至 Handler：调用 handler.isFixed 和 handler.getOptions
+        // 核心逻辑转移至 Handler：调用 handler.isFixed 和 handler.getOptionIndices
         const isActuallyReadOnly = readOnly || readonlyColumns?.includes(c.key) || 
                                    (isNameColumn && cellHandler?.isFixed?.(catId)) || 
                                    (isGhost && c.key === 'total');
 
-        const options = (isNameColumn && cellHandler?.getOptions) ? cellHandler.getOptions(catId) : (c.options || cellHandler?.options);
+        const optionIndices = (isNameColumn && cellHandler?.getOptionIndices) ? cellHandler.getOptionIndices(catId) : (c.optionIndices || cellHandler?.optionIndices);
 
         return (
           <td key={c.key} className={`p-0 relative align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0 border-stone-300'}`}>
@@ -70,7 +70,7 @@ const SkillsTableRow = memo(({
               path={effectivePath}
               readOnly={isActuallyReadOnly}
               columnKey={c.key}
-              options={options}
+              optionIndices={optionIndices}
               displayFormatter={c.displayFormatter}
               align={c.align || (isDescriptionCol(c.key, cellHandler) ? 'left' : 'center')}
               row={row}

@@ -16,7 +16,7 @@ export interface Column {
   label: string;
   width?: string;
   type?: InputType;
-  options?: string[];
+  optionIndices?: number[];
   displayFormatter?: (v: string, isFocused: boolean) => string;
   hideRightBorder?: boolean;
   className?: string;

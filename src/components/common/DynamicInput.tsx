@@ -21,7 +21,7 @@ export interface DynamicInputProps {
   readOnly?: boolean;
   columnKey?: string;
   type?: InputType;
-  options?: string[];
+  optionIndices?: number[];
   displayFormatter?: (v: string, isFocused: boolean) => string;
 
   // Extended props for broader use
@@ -80,7 +80,7 @@ export const DynamicInput = React.memo(({
   readOnly = false,
   columnKey,
   type = 'text',
-  options,
+  optionIndices,
   displayFormatter,
   placeholder = '',
   singleLine = false,
@@ -225,12 +225,13 @@ export const DynamicInput = React.memo(({
       return (
         <div className="relative w-full h-full">
           <select
-            value={value || (handler.options[handler.defaultIndex] || '')}
+            value={value || ''}
             onChange={handleSelectChange}
             onFocus={() => setIsFocused(true)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
-            {(options || handler.options || []).map((opt: any) => (
+            <option value="">{t('common.select_option')}...</option>
+            {(optionIndices || handler.optionIndices || []).map((opt: number) => (
               <option key={opt} value={opt}>
                 {handler?.formatDisplay ? handler.formatDisplay(opt, context) : opt}
               </option>
