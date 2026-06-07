@@ -182,6 +182,7 @@ export default function SpellTable({
                           type={cellHandler?.ui || (c.key === 'uses' ? 'dailyUses' : 'text')}
                           displayFormatter={c.displayFormatter}
                           align={c.key === 'spells' ? 'left' : 'center'}
+                          singleLine={c.key !== 'notes' && c.key !== 'desc'}
                           className={readOnly ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"}
                         />
                       )}

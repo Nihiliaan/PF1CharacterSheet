@@ -33,6 +33,7 @@ interface ComboboxProps {
   multiSelect?: boolean
   onOpenChange?: (open: boolean) => void
   singleLine?: boolean
+  disablePadding?: boolean
 }
 
 export function Combobox({
@@ -46,6 +47,7 @@ export function Combobox({
   multiSelect = false,
   onOpenChange,
   singleLine = false,
+  disablePadding = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -205,7 +207,8 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "flex h-full min-h-[32px] items-center cursor-pointer transition-colors px-2 py-1",
+            "flex h-full min-h-[32px] items-center cursor-pointer transition-colors",
+            !disablePadding && "px-2 py-1",
             !singleLine && "w-full",
             singleLine && "w-max min-w-full whitespace-nowrap",
             !isCentered && "justify-between",

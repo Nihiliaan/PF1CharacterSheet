@@ -57,6 +57,8 @@ const SkillsTableRow = memo(({
         const isFixedCategory = catId <= 2;
         const isActuallyReadOnly = readOnly || readonlyColumns?.includes(c.key) || (isFixedCategory && isNameColumn) || (isGhost && c.key === 'total');
 
+        const isDesc = isDescriptionCol(c.key, cellHandler);
+
         return (
           <td key={c.key} className={`p-0 relative align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0 border-stone-300'}`}>
             <DynamicInput
@@ -68,7 +70,8 @@ const SkillsTableRow = memo(({
               columnKey={c.key}
               optionIndices={(isNameColumn && cellHandler?.getOptionIndices) ? cellHandler.getOptionIndices(catId) : (c.optionIndices || cellHandler?.optionIndices)}
               displayFormatter={c.displayFormatter}
-              align={c.align || (isDescriptionCol(c.key, cellHandler) ? 'left' : 'center')}
+              align={c.align || (isDesc ? 'left' : 'center')}
+              singleLine={!isDesc}
               row={row}
               className={`${isActuallyReadOnly ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}
             />

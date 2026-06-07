@@ -1,39 +1,43 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, placeholder as cmPlaceholder, drawSelection, dropCursor } from '@codemirror/view';
-import { EditorState, RangeSetBuilder, Annotation } from '@codemirror/state';
+import { EditorState, RangeSetBuilder, Annotation, StateEffect, StateField } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { cn } from '../../lib/utils';
 
 const programmaticUpdate = Annotation.define<boolean>();
+const setConcealActive = StateEffect.define<boolean>();
 
-// 极简预览渲染器：仅处理链接，节省初次渲染开销
+// Conceal 控制状态：允许动态开启/关闭链接隐藏功能
+const concealActiveField = StateField.define<boolean>({
+  create: () => false, // 默认初始时不激活展开逻辑
+  update(value, tr) {
+    for (let e of tr.effects) if (e.is(setConcealActive)) return e.value;
+    return value;
+  }
+});
+
+// 极简预览渲染器
 const MarkdownPreviewer = ({ text, placeholder }: { text: string, placeholder?: string }) => {
   if (!text) return <span className="text-stone-300 italic pointer-events-none select-none">{placeholder}</span>;
-  
   const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   const parts = [];
   let lastIndex = 0;
   let match;
-
   while ((match = linkRegex.exec(text)) !== null) {
     if (match.index > lastIndex) parts.push(text.substring(lastIndex, match.index));
-    parts.push(
-      <span key={match.index} className="text-primary underline cursor-pointer">
-        {match[1]}
-      </span>
-    );
+    parts.push(<span key={match.index} className="text-primary underline cursor-pointer">{match[1]}</span>);
     lastIndex = linkRegex.lastIndex;
   }
   if (lastIndex < text.length) parts.push(text.substring(lastIndex));
   return <>{parts}</>;
 };
 
-// 链接隐藏插件
+// 核心插件：增强版链接隐藏逻辑，支持动态开关
 const markdownConcealPlugin = ViewPlugin.fromClass(class {
   decorations: DecorationSet;
   constructor(view: EditorView) { this.decorations = this.getDecorations(view); }
   update(update: ViewUpdate) {
-    if (update.docChanged || update.selectionSet || update.viewportChanged) {
+    if (update.docChanged || update.selectionSet || update.viewportChanged || update.startState.field(concealActiveField) !== update.state.field(concealActiveField)) {
       this.decorations = this.getDecorations(update.view);
     }
   }
@@ -41,13 +45,14 @@ const markdownConcealPlugin = ViewPlugin.fromClass(class {
     const builder = new RangeSetBuilder<Decoration>();
     const doc = view.state.doc.toString();
     const selection = view.state.selection.main;
+    const isActive = view.state.field(concealActiveField);
     const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
     let match;
     while ((match = regex.exec(doc)) !== null) {
       const start = match.index;
       const end = match.index + match[0].length;
       const label = match[1];
-      const isCursorInside = (selection.from >= start && selection.from <= end) || (selection.to >= start && selection.to <= end);
+      const isCursorInside = isActive && ((selection.from >= start && selection.from <= end) || (selection.to >= start && selection.to <= end));
       if (!isCursorInside) {
         builder.add(start, start + 1, Decoration.replace({}));
         builder.add(start + 1, start + 1 + label.length, Decoration.mark({
@@ -65,8 +70,8 @@ interface MarkdownInlineEditorProps {
   value: string;
   onChange: (v: string) => void;
   onBlur?: () => void;
-  isFocused?: boolean; // 由父组件控制
-  onFocus?: () => void; // 通知父组件已聚焦
+  isFocused?: boolean;
+  onFocus?: () => void;
   placeholder?: string;
   height?: string;
   minHeight?: string;
@@ -95,32 +100,33 @@ const MarkdownInlineEditor = ({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  // 核心：处理编辑器的挂载与销毁
+  const fontStack = "Inter, 'Noto Sans SC', system-ui, -apple-system, sans-serif";
+
   useEffect(() => {
     if (isFocused && containerRef.current && !viewRef.current) {
-      // 进入编辑模式：原地启动 CodeMirror
       const state = EditorState.create({
         doc: String(value ?? ''),
         extensions: [
+          concealActiveField,
           markdown({ base: markdownLanguage }),
           markdownConcealPlugin,
           drawSelection(),
           dropCursor(),
           EditorView.lineWrapping,
           EditorView.theme({
-            "&": { height: "100%", backgroundColor: "transparent" },
+            "&": { height: "100%", backgroundColor: "transparent", fontSize: "inherit" },
             "&.cm-focused": { outline: "none" },
             ".cm-content": {
               padding: "0",
-              fontFamily: "inherit",
+              fontFamily: fontStack,
               lineHeight: "1.625",
               caretColor: "#854d0e !important",
               minHeight: "1.625em"
             },
             ".cm-line": { display: "block", padding: "0", minHeight: "1.625em" },
+            ".cm-line:empty::before": { content: '"\\200b"', display: "inline-block", width: "0" },
             ".cm-cursor": { borderLeft: "2px solid #854d0e !important" },
-            ".cm-cursorLayer": { zIndex: "1000 !important", opacity: "1 !important" },
-            ".cm-placeholder": { color: "#a8a29e", fontStyle: "italic" },
+            ".cm-placeholder": { color: "#a8a29e", fontStyle: "italic", fontFamily: fontStack },
             "&.cm-focused .cm-placeholder": { display: "none" }
           }),
           EditorView.updateListener.of((update) => {
@@ -135,11 +141,12 @@ const MarkdownInlineEditor = ({
       const view = new EditorView({ state, parent: containerRef.current });
       viewRef.current = view;
 
-      // 精准聚焦与定位
       requestAnimationFrame(() => {
         if (!viewRef.current) return;
         viewRef.current.focus();
+        
         if (initialClickCoords) {
+          // 此时 concealActiveField 默认为 false，内容结构与预览态 100% 一致
           const pos = viewRef.current.posAtCoords(initialClickCoords);
           if (pos !== null) {
             viewRef.current.dispatch({
@@ -148,15 +155,20 @@ const MarkdownInlineEditor = ({
             });
           }
         }
+
+        // 定位完成后，开启“光标进入即展开”逻辑
+        setTimeout(() => {
+          if (viewRef.current) {
+            viewRef.current.dispatch({ effects: setConcealActive.of(true) });
+          }
+        }, 50);
       });
     } else if (!isFocused && viewRef.current) {
-      // 退出编辑模式：销毁实例节省算力
       viewRef.current.destroy();
       viewRef.current = null;
     }
   }, [isFocused]);
 
-  // 同步外部 Value 变化
   useEffect(() => {
     if (viewRef.current) {
       const safeValue = String(value ?? '');
@@ -177,18 +189,8 @@ const MarkdownInlineEditor = ({
 
   return (
     <div 
-      className={cn(
-        "w-full h-full min-h-[1.625em] flex items-start cursor-text",
-        textAlignClass,
-        className
-      )}
-      onMouseDown={(e) => {
-        if (!isFocused && onFocus) {
-          // 捕获点击瞬时坐标并开启编辑
-          onFocus();
-        }
-      }}
-      style={{ height: isFocused ? height : 'auto', minHeight }}
+      className={cn("w-full h-full min-h-[1.625em] flex items-start cursor-text", textAlignClass, className)}
+      style={{ height: isFocused ? height : 'auto', minHeight, fontFamily: fontStack }}
     >
       <div ref={containerRef} className={cn("w-full", !isFocused && "hidden")} />
       {!isFocused && (
