@@ -456,27 +456,6 @@ const AlignmentHandler = new BaseSelect({ optionValues: ['LG', 'NG', 'CG', 'LN',
 const SizeHandler = new BaseSelect({ optionValues: ['Fine', 'Diminutive', 'Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan', 'Colossal'], optionIndices: [3, 4], i18nPrefix: 'editor.basic.size_options.' });
 const GenderHandler = new BaseSelect({ optionValues: ['Male', 'Female', 'Other'], i18nPrefix: 'editor.basic.gender_options.' });
 
-// 神系名称到 i18n Key 的映射
-const PANTHEON_MAP: Record<string, string> = {
-  'Core Deities': 'core',
-  'Other Deities': 'other',
-  'Archdevils': 'archdevils',
-  'Demon Lords': 'demon_lords',
-  'Eldest': 'eldest',
-  'Empyreal Lords': 'empyreal_lords',
-  'Outer Gods': 'outer_gods',
-  'Dwarven Deities': 'dwarven',
-  'Elven Deities': 'elven',
-  'Gnome Deities': 'gnome',
-  'Halfling Deities': 'halfling',
-  'Orc Deities': 'orc',
-  'Deities of Ancient Osirion': 'osirion',
-  'Deities of Tian Xia': 'tian_xia',
-  'Great Old Ones': 'great_old_ones',
-  'Horsemen': 'horsemen',
-  'Queens of the Night': 'queens_of_night'
-};
-
 const DeityHandler = new BaseSelect({
   isHybrid: true,
   optionValues: ['None', ...Object.values(DEITIES_BY_PANTHEON).flat()],
@@ -485,17 +464,16 @@ const DeityHandler = new BaseSelect({
   getOptions: function(context?: any) {
     const t = context?.t;
     const noneOption = {
-      label: t ? (t(`${this.i18nPrefix}None`) === `${this.i18nPrefix}None` ? 'None' : t(`${this.i18nPrefix}None`)) : 'None',
+      label: t ? t(`${this.i18nPrefix}None`) : 'None',
       value: 0
     };
 
     const groupedOptions = Object.entries(DEITIES_BY_PANTHEON).map(([pantheon, deities]) => {
-      const labelKey = PANTHEON_MAP[pantheon] || pantheon;
       return {
-        label: t ? (t(`${this.i18nPrefix}${labelKey}`) === `${this.i18nPrefix}${labelKey}` ? pantheon : t(`${this.i18nPrefix}${labelKey}`)) : pantheon,
+        label: t ? t(`${this.i18nPrefix}${pantheon}`) : pantheon,
         value: pantheon,
         children: deities.map(name => ({
-          label: t ? (t(`${this.i18nPrefix}${name}`) === `${this.i18nPrefix}${name}` ? name : t(`${this.i18nPrefix}${name}`)) : name,
+          label: t ? t(`${this.i18nPrefix}${name}`) : name,
           value: this.optionValues.indexOf(name)
         }))
       };
