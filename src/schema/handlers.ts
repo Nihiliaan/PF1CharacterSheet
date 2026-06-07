@@ -596,15 +596,18 @@ const FavoredClassHandler = new BaseSelect({ isHybrid: true, isMulti: true });
 const FeatTypeHandler = new BaseSelect({ 
   isHybrid: true, 
   isMulti: true, 
+  i18nPrefix: 'editor.lists.feat_options.',
   optionValues: [
-    'Combat Stamina', 'Achievement', 'Alignment', 'Armor Mastery', 'Armor Style',
-    'Betrayal', 'Blood Hex', 'Called Shot', 'Combat', 'Combination',
-    'Conduit', 'Coven', 'Critical', 'Damnation', 'Esoteric',
-    'Faction', 'Familiar', 'Gathlain Court Title', 'Grit', 'Hero Point',
-    'Item Creation', 'Item Mastery', 'Meditation', 'Metamagic', 'Monster',
-    'Origin', 'Panache', 'Performance', 'Shield Mastery', 'Shield Style',
-    'Stare', 'Story', 'Style', 'Targeting', 'Teamwork', 'Trick',
-    'Weapon Mastery', 'Words of Power'
+    // CRB & Core High Frequency
+    'Combat', 'Item Creation', 'Metamagic', 
+    // Common Supplements (APG, UC, UM, etc.)
+    'Teamwork', 'Critical', 'Style', 'Performance', 'Grit', 'Panache', 'Meditation', 'Conduit', 'Item Mastery',
+    // Specialized / Combat Variants
+    'Achievement', 'Story', 'Monster', 'Armor Mastery', 'Shield Mastery', 'Weapon Mastery', 'Armor Style', 'Shield Style', 'Combat Stamina',
+    // Advanced / Occult / Specific
+    'Alignment', 'Damnation', 'Stare', 'Words of Power', 'Blood Hex', 'Called Shot', 'Combination', 'Targeting', 'Trick',
+    // Social / Niche
+    'Faction', 'Familiar', 'Coven', 'Esoteric', 'Hero Point', 'Origin', 'Gathlain Court Title'
   ] 
 });
 
