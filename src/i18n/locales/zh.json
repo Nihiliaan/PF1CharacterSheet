@@ -117,16 +117,10 @@
       "perception": "察觉",
       "languages": "语言",
       "languages_options": {
-        "Common": "通用语",
-        "Draconic": "龙语",
-        "Dwarven": "矮人语",
-        "Elven": "精灵语",
-        "Gnome": "侏儒语",
-        "Halfling": "半身人语",
-        "Orc": "兽人语",
-        "Abyssal": "深渊语",
-        "Celestial": "天界语",
-        "Infernal": "炼狱语"
+        "Human Languages": "人类语言",
+        "Dead Languages": "古代语言",
+        "Nonhuman Languages": "非人语言",
+        "Planar & Other Languages": "位面及其他语言"
       },
       "senses_options": {
         "Darkvision": "黑暗视觉",
@@ -537,7 +531,17 @@
       "syntax_simple_not_empty": "仅当非空时显示",
       "syntax_simple_empty": "仅当为空时显示",
       "syntax_placeholder": "在分支内代指字段的值",
-      "syntax_escape": "对符号 ? : $ \\\\ 进行转义"
+      "syntax_escape": "对符号 ? : $ \\\\ 进行转义",
+      "view_edit": "编辑",
+      "view_split": "分栏",
+      "view_preview": "预览",
+      "live_preview": "实时预览",
+      "copy_bbcode": "复制 BBCode",
+      "copy_success": "BBCode 已复制到剪贴板",
+      "editor_placeholder": "在这里输入 Handlebars + BBCode 模板...",
+      "help_subtitle": "使用 Handlebars 语法引用角色属性",
+      "example": "示例",
+      "chars": "字符"
     },
     "overlays": {
       "syncing": "正在连接到异世界...",

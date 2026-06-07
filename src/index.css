@@ -24,3 +24,127 @@ body {
   font-family: var(--font-sans);
   background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
 }
+
+/* SMF 2.1.4 BBCode Styles */
+.smf-content {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #333;
+  /* 使用 pre-line：保留换行符，但合并连续的空格（防止模板缩进干扰） */
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+/* 针对需要完全保留空格的元素（如代码块） */
+.smf-content .bbc_code,
+.smf-content pre {
+  white-space: pre;
+}
+
+/* 表格和列表内部的行为 */
+.smf-content .bbc_table td,
+.smf-content .bbc_list li,
+.smf-content blockquote {
+  /* 继承 pre-line 即可，不需要设为 normal */
+}
+
+.smf-content .bbc_link {
+  color: #346;
+  text-decoration: none;
+  border-bottom: 1px solid #a8b6cf;
+}
+
+.smf-content .bbc_link:hover {
+  border-bottom: 1px solid #346;
+}
+
+.smf-content blockquote {
+  margin: 0 0 8px 0;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border: 1px solid #d6dfe2;
+  border-left: 2px solid #aaa;
+  border-right: 2px solid #aaa;
+  background-color: #e0e6f6;
+}
+
+.smf-content blockquote cite {
+  display: block;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 0.9em;
+  margin-bottom: 3px;
+  font-weight: bold;
+  font-style: normal;
+}
+
+.smf-content blockquote cite::before {
+  color: #aaa;
+  font-size: 22px;
+  font-style: normal;
+  content: "\275D";
+  margin-right: 3px;
+  vertical-align: middle;
+}
+
+.smf-content .quoteheader, .smf-content .codeheader {
+  color: #666;
+  font-size: 0.9em;
+  padding: 0 2px;
+  margin-bottom: 2px;
+}
+
+.smf-content .bbc_code {
+  display: block;
+  font-family: "DejaVu Sans Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  background: #f3f3f3;
+  border: 1px solid #dfdfdf;
+  border-top: 2px solid #bbb;
+  border-bottom: 3px solid #aaa;
+  border-radius: 2px;
+  margin: 1px 0 6px 0;
+  padding: 3px 12px;
+  overflow: auto;
+  white-space: pre;
+  max-height: 25em;
+}
+
+.smf-content .bbc_table {
+  border-collapse: collapse;
+  margin: 4px 0;
+  width: auto;
+}
+
+.smf-content .bbc_table td {
+  border: 1px solid #ccc;
+  padding: 4px 8px;
+  vertical-align: top;
+}
+
+.smf-content .bbc_u {
+  text-decoration: underline;
+}
+
+.smf-content .bbc_list {
+  text-align: left;
+  padding: 0 0 0 30px;
+  margin: 8px 0;
+}
+
+.smf-content .bbc_hr {
+  border: 0;
+  border-top: 1px solid #ccc;
+  height: 1px;
+  margin: 8px 0;
+}
+
+.smf-content .bbc_img {
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.smf-content .bbc_center { text-align: center; }
+.smf-content .bbc_left { text-align: left; }
+.smf-content .bbc_right { text-align: right; }
+

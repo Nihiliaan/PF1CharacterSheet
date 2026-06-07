@@ -12,6 +12,8 @@
     "i18n:sync": "tsx scripts/sync-i18n.ts"
   },
   "dependencies": {
+    "@bbob/preset-react": "^4.3.1",
+    "@bbob/react": "^4.3.1",
     "@codemirror/lang-markdown": "^6.3.1",
     "@codemirror/language": "^6.10.8",
     "@codemirror/state": "^6.5.0",

@@ -547,7 +547,17 @@
       "syntax_simple_not_empty": "Show only if not empty",
       "syntax_simple_empty": "Show only if empty",
       "syntax_placeholder": "Refers to the field value within branches",
-      "syntax_escape": "Escape symbols ? : $ \\\\"
+      "syntax_escape": "Escape symbols ? : $ \\\\",
+      "view_edit": "Edit",
+      "view_split": "Split",
+      "view_preview": "Preview",
+      "live_preview": "Live Preview",
+      "copy_bbcode": "Copy BBCode",
+      "copy_success": "BBCode copied to clipboard",
+      "editor_placeholder": "Enter Handlebars + BBCode template here...",
+      "help_subtitle": "Use Handlebars syntax to reference character attributes",
+      "example": "Example",
+      "chars": "chars"
     },
     "overlays": {
       "syncing": "Connecting to the other world...",

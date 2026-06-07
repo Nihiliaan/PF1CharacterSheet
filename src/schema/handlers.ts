@@ -9,7 +9,7 @@ export const REGEX_PATTERNS = {
 
 import { KNOWLEDGE_IDS, CRAFT_IDS, PERFORM_IDS, PROFESSION_IDS, SKILL_REGISTRY } from '../constants/skills';
 import { DEITIES_BY_PANTHEON } from '../database/deities';
-import { ALL_LANGUAGES, LANGUAGES_GROUPED } from '../database/languages';
+import { ALL_LANGUAGES, LANGUAGES_BY_CATEGORY } from '../database/languages';
 
 /**
  * 核心数据枚举
@@ -567,34 +567,14 @@ const LanguagesHandler = new BaseSelect({
   i18nPrefix: 'editor.basic.languages_options.',
   getOptions: function(context?: any) {
     const t = context?.t;
-    const buildGroup = (group: any): any => {
-      // 递归处理嵌套分组（如 Sign languages）
-      const children = group.children.map((item: any) => {
-        if (typeof item === 'object' && item.label) {
-          return {
-            label: item.label, // 暂时不翻译
-            value: item.label,
-            children: item.children.map((subItem: string) => ({
-              label: t ? (t(`${this.i18nPrefix}${subItem}`) === `${this.i18nPrefix}${subItem}` ? subItem : t(`${this.i18nPrefix}${subItem}`)) : subItem,
-              value: this.optionValues.indexOf(subItem)
-            }))
-          };
-        }
-        // 普通项：使用 ALL_LANGUAGES 中的索引作为 value
-        return {
-          label: t ? (t(`${this.i18nPrefix}${item}`) === `${this.i18nPrefix}${item}` ? item : t(`${this.i18nPrefix}${item}`)) : item,
-          value: this.optionValues.indexOf(item)
-        };
-      });
-
-      return {
-        label: group.label, // 暂时不翻译
-        value: group.label,
-        children: children
-      };
-    };
-
-    return LANGUAGES_GROUPED.map(buildGroup);
+    return Object.entries(LANGUAGES_BY_CATEGORY).map(([category, languages]) => ({
+      label: t ? t(`${this.i18nPrefix}${category}`) : category,
+      value: category,
+      children: languages.map(lang => ({
+        label: t ? t(`${this.i18nPrefix}${lang}`) : lang,
+        value: this.optionValues.indexOf(lang)
+      }))
+    }));
   }
 });
 const DamageTypeHandler = new BaseSelect({ 

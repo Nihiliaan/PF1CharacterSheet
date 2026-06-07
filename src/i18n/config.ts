@@ -18,11 +18,19 @@ const lookupInDatabase = (key: string) => {
   // 提取原始名称 (如 editor.basic.deity_options.Abadar -> Abadar)
   const rawName = key.includes('.') ? key.split('.').pop()! : key;
   
-  // 尝试匹配不同的分类
-  return zhDb.deities?.[rawName] || 
-         zhDb.pantheons?.[rawName] || 
-         zhDb.deities?.[key] || 
-         zhDb.pantheons?.[key];
+  // 按照优先级在所有数据库分类中查找
+  const db = zhDb as Record<string, Record<string, string>>;
+  const searchCategories = [
+    'deities', 'pantheons', 
+    'languages', 'language_categories'
+  ];
+
+  for (const cat of searchCategories) {
+    if (db[cat]?.[rawName]) return db[cat][rawName];
+    if (db[cat]?.[key]) return db[cat][key];
+  }
+
+  return null;
 };
 
 /**
@@ -57,15 +65,13 @@ i18n
       'zh-HK': ['zh'],
       'default': ['zh']
     },
-    // 自定义缺失键处理器：这是实现“透明查表”的核心
+    // 自定义缺失键处理器：这是实现“全量透明查表”的核心
     parseMissingKeyHandler: (key) => {
       const lng = i18n.language || 'zh';
       
-      // 仅在中文环境下尝试查表
       if (lng.startsWith('zh')) {
         const found = lookupInDatabase(key);
         if (found) {
-          // 如果是繁体环境，还需要手动跑一次转换，因为 missingKeyHandler 绕过了 postProcessor
           if (lng === 'zh-TW' || lng === 'zh-HK') {
             return converter(found);
           }
@@ -73,7 +79,7 @@ i18n
         }
       }
       
-      // 如果查表也没找到，剥离前缀显示原名，而不是显示完整的路径
+      // 如果查表也没找到，剥离前缀显示原名
       return key.includes('.') ? key.split('.').pop()! : key;
     },
     postProcess: ['openCC'],
