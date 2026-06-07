@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { ChevronRight, ChevronDown, HelpCircle, Copy, Eye, Code, X, GripVertical } from 'lucide-react';
+import { ChevronRight, ChevronDown, HelpCircle, Copy, Eye, Code, X, GripVertical, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useCharacter } from '../contexts/CharacterContext';
@@ -108,6 +108,25 @@ export default function BBCodeTemplateEditor() {
     setToast({ message: t('editor.bbcode.copy_success'), type: 'success' });
   };
 
+  const handleDevSync = async () => {
+    try {
+      const response = await fetch('/api/dev/sync-default', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'template', content: bbcodeTemplate })
+      });
+      if (response.ok) {
+        setToast({ message: "开发者同步：默认模板已更新至源码", type: 'success' });
+      } else {
+        throw new Error("同步失败");
+      }
+    } catch (e) {
+      setToast({ message: "开发者同步失败：请确保项目在开发模式下运行", type: 'error' });
+    }
+  };
+
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
   return (
     <div className="flex flex-col h-full bg-stone-50 overflow-hidden relative">
       {/* Header Toolbar */}
@@ -156,6 +175,18 @@ export default function BBCodeTemplateEditor() {
             <HelpCircle size={16} />
             <span className="hidden sm:inline">{t('common.help')}</span>
           </button>
+          
+          {isLocalhost && (
+            <button 
+              onClick={handleDevSync}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg border border-indigo-200 transition-all"
+              title="将当前模板保存为项目默认模板"
+            >
+              <Save size={16} />
+              <span className="hidden sm:inline">同步至源码</span>
+            </button>
+          )}
+
           <button 
             onClick={handleCopy}
             className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold bg-primary text-white hover:brightness-110 rounded-lg shadow-sm transition-all"

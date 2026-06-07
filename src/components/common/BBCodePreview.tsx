@@ -51,22 +51,26 @@ const smfPreset = presetReact.extend((tags) => ({
     attrs: { label: node.attrs.code },
   }),
   img: (node) => {
-    // In bbob, the content of [img] is the URL
-    const src = node.content ? node.content[0] : '';
+    // 图片地址始终在内容中，属性用于控制宽高
+    const src = Array.isArray(node.content) ? node.content.join('') : '';
     return {
       ...node,
       tag: SMFImage,
-      attrs: { ...node.attrs, src },
-      content: null, // Component handles src
+      attrs: { 
+        ...node.attrs, 
+        src: String(src).trim() 
+      },
+      content: null,
     };
   },
   url: (node) => {
-    const href = node.attrs.url || (node.content ? node.content[0] : '');
+    // 链接地址可能在属性中 [url=link] 或内容中 [url]link[/url]
+    const href = node.attrs.url || Object.keys(node.attrs)[0] || (Array.isArray(node.content) ? node.content.join('') : '');
     return {
       ...node,
       tag: 'a',
       attrs: { 
-        href, 
+        href: String(href).trim() || '#', 
         target: '_blank', 
         rel: 'noopener noreferrer', 
         className: 'bbc_link' 
