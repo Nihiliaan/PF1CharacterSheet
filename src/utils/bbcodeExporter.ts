@@ -244,20 +244,28 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
   if (view.magicBlocks && Array.isArray(view.magicBlocks)) {
     view.magicBlocks.forEach((block: any, blockIdx: number) => {
       const rawBlock = data.magicBlocks[blockIdx] as any;
-      if (!rawBlock || (rawBlock.type !== 5 && rawBlock.type !== 'spell')) return;
+      if (!rawBlock) return;
 
       const rowCount = Math.max(
         Array.isArray(rawBlock.uses) ? rawBlock.uses.length : 0,
         Array.isArray(rawBlock.spells) ? rawBlock.spells.length : 0
       );
 
-      const spellType = rawBlock.spellType || (typeof rawBlock.type === 'number' ? rawBlock.type : 0);
-      const lowestLevel = handlers.SpellTypeHandler.lowestLevel[spellType] || 0;
+      // 类型 5 是类法术，其它通常是法术
+      const isSpellBlock = rawBlock.type !== 5;
+      
+      if (isSpellBlock) {
+        const spellType = typeof rawBlock.type === 'number' ? rawBlock.type : 0;
+        const lowestLevel = handlers.SpellTypeHandler.lowestLevel[spellType] || 0;
 
-      // 注入 level 数组
-      block.level = [];
-      for (let i = 0; i < rowCount; i++) {
-        block.level.push(String(rowCount - 1 - i + lowestLevel));
+        // 注入 level 数组 (法术通常从 lowestLevel 开始递增)
+        block.level = [];
+        for (let i = 0; i < rowCount; i++) {
+          block.level.push(t('editor.spells.computed_level', { n: i + lowestLevel }));
+        }
+      } else {
+        // 类法术能力通常不分环位，或者 level 字段有其它用途
+        block.level = Array(rowCount).fill('—');
       }
     });
   }

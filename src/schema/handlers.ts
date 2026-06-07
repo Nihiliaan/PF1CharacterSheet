@@ -551,7 +551,15 @@ const RaceHandler = new BaseSelect({
   }
 });
 
-const TraitTypeHandler = new BaseSelect({ isHybrid: true, optionValues: ['Combat', 'Faith', 'Magic', 'Social', 'Race', 'Regional', 'Religion', 'Equipment'] });
+const TraitTypeHandler = new BaseSelect({ 
+  isHybrid: true, 
+  i18nPrefix: 'editor.lists.trait_options.',
+  optionValues: [
+    'Combat', 'Faith', 'Magic', 'Social', 'Campaign', 'Cosmic', 
+    'Equipment', 'Exemplar', 'Faction', 'Family', 'Mount', 
+    'Race', 'Region', 'Religion', 'Drawbacks'
+  ] 
+});
 
 const SensesHandler = new BaseSelect({ 
   isHybrid: true, 
@@ -585,7 +593,20 @@ const DamageTypeHandler = new BaseSelect({
   i18nPrefix: 'editor.attacks.damage_types.'
 });
 const FavoredClassHandler = new BaseSelect({ isHybrid: true, isMulti: true });
-const FeatTypeHandler = new BaseSelect({ isHybrid: true, isMulti: true, optionValues: ['Combat', 'General', 'Item Creation', 'Metamagic', 'Skill Focus', 'Teamwork', 'Critical'] });
+const FeatTypeHandler = new BaseSelect({ 
+  isHybrid: true, 
+  isMulti: true, 
+  optionValues: [
+    'Combat Stamina', 'Achievement', 'Alignment', 'Armor Mastery', 'Armor Style',
+    'Betrayal', 'Blood Hex', 'Called Shot', 'Combat', 'Combination',
+    'Conduit', 'Coven', 'Critical', 'Damnation', 'Esoteric',
+    'Faction', 'Familiar', 'Gathlain Court Title', 'Grit', 'Hero Point',
+    'Item Creation', 'Item Mastery', 'Meditation', 'Metamagic', 'Monster',
+    'Origin', 'Panache', 'Performance', 'Shield Mastery', 'Shield Style',
+    'Stare', 'Story', 'Style', 'Targeting', 'Teamwork', 'Trick',
+    'Weapon Mastery', 'Words of Power'
+  ] 
+});
 
 const AgeHandler = new BaseInt({
   min: 0,
