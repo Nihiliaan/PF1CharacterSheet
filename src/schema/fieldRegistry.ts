@@ -36,7 +36,7 @@ export const CharacterPrototype: any = {
     alignment: handlers.AlignmentHandler,
     size: handlers.SizeHandler,
     gender: handlers.GenderHandler,
-    race: TextHandler,
+    race: handlers.RaceHandler,
     age: AgeHandler,
     height: HeightHandler,
     weight: WeightHandler,
@@ -48,11 +48,11 @@ export const CharacterPrototype: any = {
       climb: DistanceHandler,
       burrow: DistanceHandler
     },
-    senses: TextHandler,
+    senses: handlers.SensesHandler,
     initiative: BonusHandler,
     perception: BonusHandler,
-    languages: TextHandler,
-    deity: TextHandler,
+    languages: handlers.LanguagesHandler,
+    deity: handlers.DeityHandler,
     avatars: {
       url: TextHandler,
       note: TextHandler
@@ -90,7 +90,7 @@ export const CharacterPrototype: any = {
       critRange: CritRangeHandler,
       critMultiplier: CritMultiplierHandler,
       touch: DistanceHandler,
-      damageType: TextHandler,
+      damageType: handlers.DamageTypeHandler,
       special: TextHandler
     },
     ranged: {
@@ -101,7 +101,7 @@ export const CharacterPrototype: any = {
       critRange: CritRangeHandler,
       critMultiplier: CritMultiplierHandler,
       range: DistanceHandler,
-      damageType: TextHandler,
+      damageType: handlers.DamageTypeHandler,
       special: TextHandler
     },
     specialAttacks: TextHandler
@@ -139,11 +139,11 @@ export const CharacterPrototype: any = {
   backgroundTraits: {
     handler: BackgroundTraitsTableHandler,
     name: TextHandler,
-    type: TextHandler,
+    type: handlers.TraitTypeHandler,
     desc: TextHandler
   },
   favoredClass: {
-    fc: TextHandler,
+    fc: handlers.FavoredClassHandler,
     fcb: TextHandler
   },
   classFeatures: {
@@ -158,7 +158,7 @@ export const CharacterPrototype: any = {
     level: LevelHandler,
     source: TextHandler,
     name: TextHandler,
-    type: TextHandler,
+    type: handlers.FeatTypeHandler,
     desc: TextHandler
   },
 

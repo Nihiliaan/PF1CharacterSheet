@@ -15,6 +15,7 @@ interface InlineInputProps {
   type?: InputType;
   transactionFilter?: (tr: any) => boolean;
   displayFormatter?: (v: string, isFocused: boolean) => string;
+  align?: 'left' | 'center' | 'right';
 }
 
 const InlineInput = ({
@@ -28,7 +29,8 @@ const InlineInput = ({
   readOnly = false,
   type = 'text',
   transactionFilter,
-  displayFormatter
+  displayFormatter,
+  align = 'center'
 }: InlineInputProps) => {
   // 从 Schema 获取逻辑 (主要用于 UI 样式的 isChanged 判断)
   const handler = path ? getHandlerByPath(path) : null;
@@ -49,24 +51,23 @@ const InlineInput = ({
       <label className={`text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none mb-1 transition-colors ${isChanged ? 'text-amber-700' : 'group-focus-within/input:text-stone-900'}`}>
         {label}
       </label>
-      <div className="h-6 relative">
+      <div className="min-h-[24px] h-auto relative flex items-center w-full">
         <DynamicInput
-          value={String(value ?? '')}
+          value={value ?? ''}
           onChange={onChange}
           path={path}
-          originalValue={originalValue !== undefined ? String(originalValue) : undefined}
+          originalValue={originalValue}
           type={handler?.ui || type}
           readOnly={readOnly}
           placeholder={placeholder}
           singleLine={true}
           transactionFilter={transactionFilter}
           displayFormatter={displayFormatter}
-          align="center"
-          height="24px"
+          align={align}
           minHeight="24px"
           hideIndicator={true}
-          wrapperClassName="w-full h-full"
-          className={`w-full h-full !p-0 ${textClasses}`}
+          wrapperClassName="w-full h-auto"
+          className={`w-full h-auto !p-0 ${textClasses}`}
         />
         {isChanged && (
           <div className="absolute -right-0.5 -top-3 w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.6)] animate-pulse pointer-events-none" />

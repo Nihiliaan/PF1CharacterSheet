@@ -5,10 +5,10 @@ import { getHandlerByPath } from '../../schema/fieldRegistry';
 
 interface MultilineInputProps {
   label: string;
-  value: string;
+  value: any;
   path?: string;
-  originalValue?: string;
-  onChange: (v: string) => void;
+  originalValue?: any;
+  onChange: (v: any) => void;
   placeholder?: string;
   className?: string;
   readOnly?: boolean;

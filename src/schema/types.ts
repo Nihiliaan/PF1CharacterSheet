@@ -9,7 +9,7 @@ export interface FolderMetadata {
   updatedAt: any;
 }
 
-export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight' | 'markdown' | 'dailyUses';
+export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'datalist' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight' | 'markdown' | 'dailyUses';
 
 export interface Column {
   key: string;
@@ -201,10 +201,10 @@ export interface CharacterData {
       climb: number;
       burrow: number;
     };
-    senses: string;
+    senses: (number | string)[];
     initiative: number;
     perception: number;
-    languages: string;
+    languages: (number | string)[];
     deity: string;
     avatars: AvatarsSoA;
   };
@@ -226,7 +226,7 @@ export interface CharacterData {
   racialTraits: TraitsSoA;
   backgroundTraits: BackgroundTraitsSoA;
   favoredClass: {
-    fc: string;
+    fc: (number | string)[];
     fcb: string;
   };
   classFeatures: ClassFeaturesSoA;

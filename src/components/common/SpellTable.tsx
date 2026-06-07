@@ -173,7 +173,7 @@ export default function SpellTable({
                         </div>
                       ) : (
                         <DynamicInput
-                          value={String(row[c.key] || '')}
+                          value={row[c.key] || ''}
                           originalValue={originalData?.[c.key]?.[i]}
                           onChange={(val) => updateData(i, c.key, val)}
                           path={cellPath}

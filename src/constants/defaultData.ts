@@ -24,10 +24,10 @@ export const DEFAULT_DATA: CharacterData = {
       climb: 0,
       burrow: 0
     },
-    senses: '',
+    senses: [],
     initiative: 0,
     perception: 0,
-    languages: '',
+    languages: [],
     deity: '',
     avatars: {
       url: [],
@@ -98,7 +98,7 @@ export const DEFAULT_DATA: CharacterData = {
     desc: []
   },
   favoredClass: {
-    fc: '',
+    fc: [],
     fcb: ''
   },
   classFeatures: {

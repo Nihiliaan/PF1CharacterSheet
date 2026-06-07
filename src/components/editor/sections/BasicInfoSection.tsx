@@ -126,14 +126,14 @@ const BasicInfoSection: React.FC = () => {
             originalValue={lastSavedData.basic.perception}
             onChange={v => update('basic.perception', v)}
           />
-          <MultilineInput
-            className="col-span-12 mt-2"
+          <InlineInput
+            className="col-span-12"
             label={t('editor.basic.languages')}
             path="basic.languages"
             value={data.basic.languages}
             originalValue={lastSavedData.basic.languages}
             onChange={v => update('basic.languages', v)}
-            isAutoHeight={true}
+            align="left"
           />
         </div>
         <div className="w-full md:w-64">

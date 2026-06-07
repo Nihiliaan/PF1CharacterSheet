@@ -1,9 +1,10 @@
-import React, { memo, useState, useMemo, useCallback } from 'react';
+import React, { memo, useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, GripVertical, Minus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Minus, ChevronDown, ChevronRight, Triangle } from 'lucide-react';
 import { DynamicTableProps } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
 import DynamicInput from './DynamicInput';
+import handlers from '../../schema/handlers';
 import { SkillCategory, SKILL_REGISTRY, CATEGORY_IDS, getSkillsByCategory } from '../../constants/skills';
 
 // --- 子组件：技能行 ---
@@ -53,24 +54,19 @@ const SkillsTableRow = memo(({
 
         const isNameColumn = c.key === 'name';
         const catId = row.category;
-        
-        // 核心逻辑转移至 Handler：调用 handler.isFixed 和 handler.getOptionIndices
-        const isActuallyReadOnly = readOnly || readonlyColumns?.includes(c.key) || 
-                                   (isNameColumn && cellHandler?.isFixed?.(catId)) || 
-                                   (isGhost && c.key === 'total');
-
-        const optionIndices = (isNameColumn && cellHandler?.getOptionIndices) ? cellHandler.getOptionIndices(catId) : (c.optionIndices || cellHandler?.optionIndices);
+        const isFixedCategory = catId <= 2;
+        const isActuallyReadOnly = readOnly || readonlyColumns?.includes(c.key) || (isFixedCategory && isNameColumn) || (isGhost && c.key === 'total');
 
         return (
           <td key={c.key} className={`p-0 relative align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0 border-stone-300'}`}>
             <DynamicInput
-              value={typeof row[c.key] === 'number' ? row[c.key] : String(row[c.key] ?? '')}
+              value={row[c.key] ?? ''}
               originalValue={i !== -1 ? originalData?.[c.key]?.[i] : undefined}
               onChange={(val) => { if (isGhost) onActivate?.(c.key, val); else updateData(i, c.key, val); }}
               path={effectivePath}
               readOnly={isActuallyReadOnly}
               columnKey={c.key}
-              optionIndices={optionIndices}
+              optionIndices={(isNameColumn && cellHandler?.getOptionIndices) ? cellHandler.getOptionIndices(catId) : (c.optionIndices || cellHandler?.optionIndices)}
               displayFormatter={c.displayFormatter}
               align={c.align || (isDescriptionCol(c.key, cellHandler) ? 'left' : 'center')}
               row={row}
@@ -100,12 +96,18 @@ const SkillsTableRow = memo(({
 });
 
 export default function SkillsTable(props: DynamicTableProps & { minWidth?: string, showAll?: boolean }) {
-  const { path, columns: propsColumns, data, originalData, onChange, readonlyColumns, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart, onRowDragOver, onRowDrop, readOnly = false, minWidth = '600px', showAll = false } = props;
+  const { path, columns: propsColumns, data, originalData, onChange, readonlyColumns, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart: propsDragStart, onRowDragOver, onRowDrop, readOnly = false, minWidth = '600px', showAll = false } = props;
   const { t } = useTranslation();
+  
   const [collapsedCategories, setCollapsedCategories] = useState<Set<number>>(new Set([2, 3, 4, 5]));
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
   const tableHandler = path ? getHandlerByPath(path) : null;
   const columns = propsColumns || tableHandler?.columns || [];
+  const sortableColumns = tableHandler?.sortableColumns || [];
   const visibleColumns = columns.filter((c: any) => c.key !== 'category');
+
   const rowCount = useMemo(() => {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return 0;
     const firstKey = columns[0]?.key;
@@ -113,6 +115,63 @@ export default function SkillsTable(props: DynamicTableProps & { minWidth?: stri
     const colData = (data as any)[firstKey];
     return Array.isArray(colData) ? colData.length : 0;
   }, [data, columns]);
+
+  // 渲染时总是使用原始物理索引，因为排序已物理化
+  const currentIndices = useMemo(() => Array.from({ length: rowCount }, (_, i) => i), [rowCount]);
+
+  // 全显模式开启时，物理重排数据以保持分类顺序
+  useEffect(() => {
+    if (showAll && rowCount > 0) {
+      const indices = Array.from({ length: rowCount }, (_, i) => i);
+      indices.sort((a, b) => {
+        const valA = (data as any).name[a]; const valB = (data as any).name[b];
+        if (typeof valA === 'number' && typeof valB === 'number') return valA - valB;
+        if (typeof valA === 'number') return -1; if (typeof valB === 'number') return 1;
+        return String(valA ?? '').localeCompare(String(valB ?? ''));
+      });
+      
+      const isAlreadySorted = indices.every((idx, i) => idx === i);
+      if (!isAlreadySorted) {
+        const newData = { ...data };
+        Object.keys(newData).forEach(key => {
+          if (Array.isArray(newData[key])) newData[key] = indices.map(idx => newData[key][idx]);
+        });
+        onChange(newData);
+        setSortKey('name'); // UI 状态同步为按名称排序
+        setSortOrder('asc');
+      }
+    }
+  }, [showAll, rowCount, data, onChange]);
+
+  const handleSort = (key: string) => {
+    if (showAll) return;
+    if (!sortableColumns.includes(key)) return;
+
+    let newOrder: 'asc' | 'desc' = 'asc';
+    if (sortKey === key) newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+
+    const indices = Array.from({ length: rowCount }, (_, i) => i);
+    indices.sort((a, b) => {
+      let valA = (data as any)[key][a]; let valB = (data as any)[key][b];
+      if (typeof valA === 'number' && typeof valB === 'number') return newOrder === 'asc' ? valA - valB : valB - valA;
+      const strA = String(valA ?? ''); const strB = String(valB ?? '');
+      return newOrder === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
+    });
+
+    const newData = { ...data };
+    Object.keys(newData).forEach(k => {
+      if (Array.isArray(newData[k])) newData[k] = indices.map(i => newData[k][i]);
+    });
+
+    onChange(newData);
+    setSortKey(key);
+    setSortOrder(newOrder);
+  };
+
+  const onDragStart = (idx: number, e: React.DragEvent) => {
+    if (sortKey) setSortKey(null);
+    propsDragStart?.(idx, e);
+  };
 
   const toggleCategory = (catId: number) => {
     if (catId === SkillCategory.General || catId === SkillCategory.Trained) return;
@@ -137,22 +196,26 @@ export default function SkillsTable(props: DynamicTableProps & { minWidth?: stri
   const addRow = (initialValues: Record<string, any> = {}) => {
     if (readOnly) return;
     const newData = { ...data };
+    let baseInitialValues = { ...initialValues };
+    if (baseInitialValues.category !== undefined && baseInitialValues.name === undefined) {
+       const registry = getSkillsByCategory(baseInitialValues.category);
+       if (registry.length > 0) {
+         baseInitialValues.name = registry[0].id;
+         const nameHandler = handlers.SkillNameHandler;
+         baseInitialValues.ability = nameHandler?.getDefaultAbility?.(baseInitialValues.category) ?? registry[0].defaultAbility;
+       }
+    }
     columns.forEach((c: any) => {
        if (!Array.isArray(newData[c.key])) newData[c.key] = new Array(rowCount).fill('');
        const cellPath = `${path || ''}.${c.key}[0]`;
        const cellHandler = getHandlerByPath(cellPath);
-       let finalVal = initialValues[c.key];
-       if (finalVal === undefined) {
-         if (c.key === 'name' && initialValues.category !== undefined) {
-            const registry = getSkillsByCategory(initialValues.category);
-            if (registry.length > 0) finalVal = registry[0].id;
-         }
-         if (finalVal === undefined) finalVal = cellHandler?.getDefaultValue ? cellHandler.getDefaultValue() : '';
-       }
+       let finalVal = baseInitialValues[c.key];
+       if (finalVal === undefined) finalVal = cellHandler?.getDefaultValue ? cellHandler.getDefaultValue() : '';
        if (cellHandler?.update) finalVal = cellHandler.update(finalVal);
        newData[c.key] = [...newData[c.key], finalVal];
     });
     onChange(newData);
+    setSortKey(null);
   };
 
   const removeRow = useCallback((index: number) => {
@@ -163,27 +226,37 @@ export default function SkillsTable(props: DynamicTableProps & { minWidth?: stri
   }, [data, readOnly, onChange]);
 
   const isDescriptionCol = (key: string, handler: any) => (handler?.ui === 'text' || handler?.ui === 'markdown' || ['desc', 'notes', 'special', 'content'].some(word => key.toLowerCase().includes(word)));
-
   const isTableDirty = useMemo(() => (originalData ? JSON.stringify(data) !== JSON.stringify(originalData) : false), [data, originalData]);
-
-  const renderSingleRow = (idx: number, isGhost = false, registryEntry?: any) => (
-    <SkillsTableRow key={isGhost ? `ghost-${registryEntry?.id}` : `row-${idx}`} index={isGhost ? -1 : idx} columns={columns} data={data} originalData={originalData} path={path} readOnly={readOnly} readonlyColumns={readonlyColumns} rowDraggable={!showAll && rowDraggable} rowActionMode={rowActionMode} onRowDragStart={onRowDragStart} onRowDragOver={onRowDragOver} onRowDrop={onRowDrop} updateData={updateData} removeRow={removeRow} isGhost={isGhost} registryEntry={registryEntry} onActivate={(key?: string, val?: any) => { const init: any = { category: registryEntry.category, name: registryEntry.id, ability: registryEntry.defaultAbility }; if (key) init[key] = val; addRow(init); }} isDescriptionCol={isDescriptionCol} />
-  );
 
   return (
     <div className={`w-full rounded border transition-all ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
       <table className="w-full border-collapse text-sm table-auto" style={{ minWidth }}>
         <thead>
           <tr className="bg-stone-200 text-stone-700">
-            {visibleColumns.map((c: any) => (<th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>{t(c.label)}</th>))}
+            {visibleColumns.map((c: any) => {
+              const isSortable = !showAll && sortableColumns.includes(c.key);
+              return (
+                <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`} onClick={() => isSortable && handleSort(c.key)}>
+                  <div className="flex items-center justify-center gap-1">{t(c.label)}{sortKey === c.key && <Triangle size={8} className={`fill-current transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />}</div>
+                </th>
+              );
+            })}
             <th className="w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors pointer-events-auto">{!showAll && rowDraggable && onRowActionModeToggle && (<button type="button" onClick={onRowActionModeToggle} className="p-1.5 w-full flex justify-center text-stone-400 hover:text-stone-900 transition-colors">{rowActionMode === 'drag' ? <GripVertical size={16} /> : <Trash2 size={16} className="text-red-400 hover:text-red-500" />}</button>)}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-300">
-          {!showAll ? Array.from({ length: rowCount }).map((_, i) => renderSingleRow(i)) : CATEGORY_IDS.map(catId => {
+          {!showAll ? currentIndices.map(idx => (
+            <SkillsTableRow key={idx} index={idx} columns={columns} data={data} originalData={originalData} path={path} readOnly={readOnly} readonlyColumns={readonlyColumns} rowDraggable={rowDraggable} rowActionMode={rowActionMode} onRowDragStart={onDragStart} onRowDragOver={onRowDragOver} onRowDrop={onRowDrop} updateData={updateData} removeRow={removeRow} registryEntry={null} isDescriptionCol={isDescriptionCol} />
+          )) : CATEGORY_IDS.map(catId => {
             const isCollapsed = collapsedCategories.has(catId);
             const canCollapse = catId > 1;
             const presentIndices: number[] = []; ((data as any).category || []).forEach((c: number, i: number) => { if (c === catId) presentIndices.push(i); });
+            presentIndices.sort((a, b) => {
+              const valA = (data as any).name[a]; const valB = (data as any).name[b];
+              if (typeof valA === 'number' && typeof valB === 'number') return valA - valB;
+              if (typeof valA === 'number') return -1; if (typeof valB === 'number') return 1;
+              return String(valA).localeCompare(String(valB));
+            });
             const registrySkills = getSkillsByCategory(catId);
             return (
               <React.Fragment key={catId}>
@@ -195,7 +268,18 @@ export default function SkillsTable(props: DynamicTableProps & { minWidth?: stri
                     </div>
                   </td>
                 </tr>
-                {!isCollapsed && (catId >= 3 ? (presentIndices.length > 0 ? presentIndices.map(idx => renderSingleRow(idx)) : <tr><td colSpan={visibleColumns.length + 1} className="py-2 text-center text-xs text-stone-400 italic">{t('common.none')}</td></tr>) : registrySkills.map(reg => { const dataIdx = presentIndices.find(idx => (data as any).name[idx] === reg.id); return renderSingleRow(dataIdx ?? -1, dataIdx === undefined, reg); }))}
+                {!isCollapsed && (catId >= 3 ? (presentIndices.length > 0 ? presentIndices.map(idx => (
+                  <SkillsTableRow key={idx} index={idx} columns={columns} data={data} originalData={originalData} path={path} readOnly={readOnly} readonlyColumns={readonlyColumns} rowDraggable={false} rowActionMode={rowActionMode} updateData={updateData} removeRow={removeRow} registryEntry={null} isDescriptionCol={isDescriptionCol} />
+                )) : <tr><td colSpan={visibleColumns.length + 1} className="py-2 text-center text-xs text-stone-400 italic">{t('common.none')}</td></tr>) : registrySkills.map((reg, regIdx) => { 
+                  const dataIdx = presentIndices.find(idx => (data as any).name[idx] === reg.id); 
+                  return (
+                    <SkillsTableRow key={`reg-${reg.id}-${regIdx}`} index={dataIdx ?? -1} columns={columns} data={data} originalData={originalData} path={path} readOnly={readOnly} readonlyColumns={readonlyColumns} rowDraggable={false} rowActionMode={rowActionMode} updateData={updateData} removeRow={removeRow} isGhost={dataIdx === undefined} registryEntry={reg} onActivate={(key?: string, val?: any) => { 
+                       const nameHandler = handlers.SkillNameHandler;
+                       const init: any = { category: reg.category, name: reg.id, ability: nameHandler?.getDefaultAbility?.(reg.category) ?? reg.defaultAbility }; 
+                       if (key) init[key] = val; addRow(init); 
+                    }} isDescriptionCol={isDescriptionCol} />
+                  );
+                }))}
               </React.Fragment>
             );
           })}

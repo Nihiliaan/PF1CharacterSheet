@@ -1,28 +1,12 @@
-import React, { memo } from 'react';
+import React, { memo, useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Triangle } from 'lucide-react';
 import { DynamicTableProps } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
 import DynamicInput from './DynamicInput';
 
-// 提取 Memo 化的行组件以减少重渲染
 const DynamicTableRow = memo(({ 
-  index: i, 
-  columns, 
-  data, 
-  originalData, 
-  path, 
-  readOnly, 
-  readonlyColumns, 
-  rowDraggable, 
-  rowActionMode, 
-  onRowDragStart, 
-  onRowDragOver, 
-  onRowDrop, 
-  updateData, 
-  removeRow,
-  fixedRows,
-  isDescriptionCol 
+  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, updateData, removeRow, fixedRows, isDescriptionCol 
 }: any) => {
   const getCellPath = (basePath: string, index: number, key: string) => {
     if (!basePath) return undefined;
@@ -39,15 +23,11 @@ const DynamicTableRow = memo(({
   };
 
   const row: Record<string, any> = {};
-  columns.forEach((c: any) => {
-    row[c.key] = data[c.key]?.[i];
-  });
-
-  const dirty = isRowDirty();
+  columns.forEach((c: any) => { row[c.key] = data[c.key]?.[i]; });
 
   return (
     <tr
-      className={`transition-colors group ${dirty ? 'bg-amber-100/30' : 'hover:bg-stone-50'}`}
+      className={`transition-colors group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'}`}
       draggable={rowDraggable && rowActionMode === 'drag'}
       onDragStart={(e) => onRowDragStart?.(i, e)}
       onDragOver={(e) => onRowDragOver?.(i, e)}
@@ -56,11 +36,11 @@ const DynamicTableRow = memo(({
       {columns.map((c: any) => {
         const cellPath = getCellPath(path || '', i, c.key);
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
-
+        const isDesc = isDescriptionCol(c.key, cellHandler);
         return (
           <td key={c.key} className={`p-0 relative border-stone-300 align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
             <DynamicInput
-              value={String(row[c.key] ?? '')}
+              value={row[c.key] ?? ''}
               originalValue={originalData?.[c.key]?.[i]}
               onChange={(val) => updateData(i, c.key, val)}
               path={cellPath}
@@ -69,7 +49,8 @@ const DynamicTableRow = memo(({
               type={cellHandler?.ui || c.type}
               optionIndices={cellHandler?.optionIndices || c.optionIndices}
               displayFormatter={c.displayFormatter}
-              align={c.align || (isDescriptionCol(c.key, cellHandler) ? 'left' : 'center')}
+              align={c.align || (isDesc ? 'left' : 'center')}
+              singleLine={!isDesc}
               row={row}
               className={`${(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}
             />
@@ -77,19 +58,12 @@ const DynamicTableRow = memo(({
         );
       })}
       {!fixedRows && (
-        <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors">
+        <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors pointer-events-auto">
           <div className="flex items-center justify-center w-full h-[32px] opacity-0 group-hover:opacity-100 transition-opacity">
             {rowDraggable && rowActionMode === 'drag' ? (
               <GripVertical size={16} className="text-stone-300 cursor-grab hover:text-stone-500" />
             ) : (
-              <button
-                type="button"
-                onClick={() => removeRow(i)}
-                className="text-stone-300 hover:text-red-500 rounded p-1"
-                title="删除行"
-              >
-                <Trash2 size={16} />
-              </button>
+              <button type="button" onClick={() => removeRow(i)} className="text-stone-300 hover:text-red-500 rounded p-1" title="删除行"><Trash2 size={16} /></button>
             )}
           </div>
         </td>
@@ -99,36 +73,19 @@ const DynamicTableRow = memo(({
 });
 
 export default function DynamicTable(props: DynamicTableProps & { minWidth?: string }) {
-  const {
-    path,
-    columns: propsColumns,
-    data,
-    originalData,
-    onChange,
-    newItemGenerator,
-    fixedRows: propsFixedRows,
-    readonlyColumns,
-    rowDraggable,
-    rowActionMode = 'drag',
-    onRowActionModeToggle,
-    onRowDragStart,
-    onRowDragOver,
-    onRowDrop,
-    readOnly = false,
-    minWidth = '600px'
-  } = props;
-
+  const { path, columns: propsColumns, data, originalData, onChange, newItemGenerator, fixedRows: propsFixedRows, readonlyColumns, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart: propsDragStart, onRowDragOver, onRowDrop: propsDrop, readOnly = false, minWidth = '600px' } = props;
   const { t } = useTranslation();
 
-  // 从 Schema 获取 Handler
-  const tableHandler = path ? getHandlerByPath(path) : null;
+  // sortKey 和 sortOrder 现在仅作为 UI 状态（控制三角图标）
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // 优先级：传入的 columns > Schema 定义的列
+  const tableHandler = path ? getHandlerByPath(path) : null;
   const columns = propsColumns || tableHandler?.columns || [];
   const fixedRows = propsFixedRows !== undefined ? propsFixedRows : tableHandler?.fixedRows;
+  const sortableColumns = tableHandler?.sortableColumns || [];
 
-  // SoA 模式下的行数计算
-  const rowCount = React.useMemo(() => {
+  const rowCount = useMemo(() => {
     if (!data || typeof data !== 'object' || Array.isArray(data)) return 0;
     const firstKey = columns[0]?.key;
     if (!firstKey) return 0;
@@ -136,28 +93,63 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     return Array.isArray(colData) ? colData.length : 0;
   }, [data, columns]);
 
-  const updateData = React.useCallback((index: number, key: string, value: any) => {
+  // 渲染时总是使用原始物理索引
+  const currentIndices = useMemo(() => Array.from({ length: rowCount }, (_, i) => i), [rowCount]);
+
+  const handleSort = (key: string) => {
+    if (!sortableColumns.includes(key)) return;
+
+    let newOrder: 'asc' | 'desc' = 'asc';
+    if (sortKey === key) {
+      newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    }
+    
+    // 1. 计算排序后的物理索引
+    const indices = Array.from({ length: rowCount }, (_, i) => i);
+    indices.sort((a, b) => {
+      let valA = (data as any)[key][a];
+      let valB = (data as any)[key][b];
+      if (typeof valA === 'number' && typeof valB === 'number') return newOrder === 'asc' ? valA - valB : valB - valA;
+      const strA = String(valA ?? ''); const strB = String(valB ?? '');
+      return newOrder === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
+    });
+
+    // 2. 物理重排数据
+    const newData = { ...data };
+    Object.keys(newData).forEach(k => {
+      if (Array.isArray(newData[k])) {
+        newData[k] = indices.map(i => newData[k][i]);
+      }
+    });
+
+    // 3. 提交物理变更并更新 UI 状态
+    onChange(newData);
+    setSortKey(key);
+    setSortOrder(newOrder);
+  };
+
+  const onDragStart = (idx: number, e: React.DragEvent) => {
+    // 只要触发拖拽，就清除排序 UI 状态
+    if (sortKey) setSortKey(null);
+    propsDragStart?.(idx, e);
+  };
+
+  const updateData = useCallback((index: number, key: string, value: any) => {
     if (readOnly) return;
     const newData = { ...data };
-
     const cellPath = `${path || ''}.${key}[${index}]`;
     const cellHandler = getHandlerByPath(cellPath);
     const finalValue = cellHandler?.update ? cellHandler.update(value) : value;
-
-    if (!newData[key]) {
-      newData[key] = new Array(rowCount).fill('');
-    }
+    if (!newData[key]) newData[key] = new Array(rowCount).fill('');
     const newColArray = [...newData[key]];
     newColArray[index] = finalValue;
     newData[key] = newColArray;
-
     onChange(newData);
   }, [data, path, rowCount, readOnly, onChange]);
 
   const addRow = () => {
     if (readOnly || fixedRows) return;
     const newData = { ...data };
-
     if (newItemGenerator) {
       const newItem = newItemGenerator();
       Object.keys(newItem).forEach(key => {
@@ -169,96 +161,50 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
         const cellPath = `${path || ''}.${c.key}[0]`;
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
         const defaultValue = cellHandler?.getDefaultValue ? cellHandler.getDefaultValue() : '';
-        
         if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill(defaultValue);
         newData[c.key] = [...newData[c.key], defaultValue];
       });
     }
     onChange(newData);
+    setSortKey(null); // 添加行后清除排序标记
   };
 
-  const removeRow = React.useCallback((index: number) => {
+  const removeRow = useCallback((index: number) => {
     if (readOnly || fixedRows) return;
     const newData = { ...data };
-    Object.keys(newData).forEach(key => {
-      if (Array.isArray(newData[key])) {
-        newData[key] = newData[key].filter((_: any, i: number) => i !== index);
-      }
-    });
+    Object.keys(newData).forEach(key => { if (Array.isArray(newData[key])) newData[key] = newData[key].filter((_: any, i: number) => i !== index); });
     onChange(newData);
   }, [data, readOnly, fixedRows, onChange]);
 
-  const isDescriptionCol = (key: string, handler: any) => {
-    if (handler?.ui === 'text' || handler?.ui === 'markdown') return true;
-    const k = key.toLowerCase();
-    return ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => k.includes(word));
-  };
-
-  // 判定整表是否被修改：使用稳定的序列化比较
-  const isTableDirty = React.useMemo(() => {
-    if (!originalData) return false;
-    return JSON.stringify(data) !== JSON.stringify(originalData);
-  }, [data, originalData]);
+  const isDescriptionCol = (key: string, handler: any) => (handler?.ui === 'text' || handler?.ui === 'markdown' || ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => key.toLowerCase().includes(word)));
+  const isTableDirty = useMemo(() => (originalData ? JSON.stringify(data) !== JSON.stringify(originalData) : false), [data, originalData]);
 
   return (
     <div className={`w-full rounded border transition-all ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
       <table className="w-full border-collapse text-sm table-auto" style={{ minWidth }}>
         <thead>
           <tr className="bg-stone-200 text-stone-700">
-            {columns.map((c: any) => (
-              <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold relative whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
-                {t(c.label)}
-              </th>
-            ))}
+            {columns.map((c: any) => {
+              const isSortable = sortableColumns.includes(c.key);
+              return (
+                <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold relative whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`} onClick={() => isSortable && handleSort(c.key)}>
+                  <div className="flex items-center justify-center gap-1">{t(c.label)}{sortKey === c.key && <Triangle size={8} className={`fill-current transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />}</div>
+                </th>
+              );
+            })}
             {!fixedRows && (
               <th className="w-8 p-0 align-middle border-stone-300">
-                {rowDraggable && onRowActionModeToggle ? (
-                  <button
-                    type="button"
-                    onClick={onRowActionModeToggle}
-                    className="p-1.5 w-full h-full min-h-[36px] flex items-center justify-center text-stone-400 hover:text-stone-900 transition-colors cursor-pointer"
-                  >
-                    {rowActionMode === 'drag' ? <GripVertical size={16} /> : <Trash2 size={16} className="text-red-400 hover:text-red-500" />}
-                  </button>
-                ) : null}
+                {rowDraggable && onRowActionModeToggle && (<button type="button" onClick={onRowActionModeToggle} className="p-1.5 w-full flex justify-center text-stone-400 hover:text-stone-900 transition-colors pointer-events-auto">{rowActionMode === 'drag' ? <GripVertical size={16} /> : <Trash2 size={16} className="text-red-400 hover:text-red-500" />}</button>)}
               </th>
             )}
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-300">
-          {Array.from({ length: rowCount }).map((_, i) => (
-            <DynamicTableRow
-              key={i}
-              index={i}
-              columns={columns}
-              data={data}
-              originalData={originalData}
-              path={path}
-              readOnly={readOnly}
-              readonlyColumns={readonlyColumns}
-              rowDraggable={rowDraggable}
-              rowActionMode={rowActionMode}
-              onRowDragStart={onRowDragStart}
-              onRowDragOver={onRowDragOver}
-              onRowDrop={onRowDrop}
-              updateData={updateData}
-              removeRow={removeRow}
-              fixedRows={fixedRows}
-              isDescriptionCol={isDescriptionCol}
-            />
+          {currentIndices.map((idx) => (
+            <DynamicTableRow key={idx} index={idx} columns={columns} data={data} originalData={originalData} path={path} readOnly={readOnly} readonlyColumns={readonlyColumns} rowDraggable={rowDraggable} rowActionMode={rowActionMode} onRowDragStart={onDragStart} onRowDragOver={onRowDragOver} onRowDrop={propsDrop} updateData={updateData} removeRow={removeRow} fixedRows={fixedRows} isDescriptionCol={isDescriptionCol} />
           ))}
           {!fixedRows && (
-            <tr>
-              <td colSpan={columns.length + 1} className="p-0 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer">
-                <button
-                  type="button"
-                  onClick={addRow}
-                  className="flex items-center gap-1 text-xs text-stone-600 hover:text-stone-900 px-3 py-2 w-full justify-center font-medium uppercase tracking-wider"
-                >
-                  <Plus size={14} /> {t('common.add_row')}
-                </button>
-              </td>
-            </tr>
+            <tr><td colSpan={columns.length + 1} className="p-0 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer"><button type="button" onClick={addRow} className="flex items-center gap-1 text-xs text-stone-600 hover:text-stone-900 px-3 py-2 w-full justify-center font-medium uppercase tracking-wider"><Plus size={14} /> {t('common.add_row')}</button></td></tr>
           )}
         </tbody>
       </table>

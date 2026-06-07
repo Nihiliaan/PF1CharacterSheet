@@ -226,8 +226,8 @@ export function transformAIData(extracted: any) {
     mergedData.basic.age = parseInt(b.age) || 0;
     mergedData.basic.height = parseInt(b.height) || 0;
     mergedData.basic.weight = parseInt(b.weight) || 0;
-    mergedData.basic.senses = b.senses || '';
-    mergedData.basic.languages = b.languages || '';
+    mergedData.basic.senses = b.senses || [];
+    mergedData.basic.languages = b.languages || [];
     mergedData.basic.deity = b.deity || '';
     
     if (b.avatars && Array.isArray(b.avatars)) {

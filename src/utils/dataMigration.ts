@@ -131,6 +131,32 @@ export const dataMigration = {
       }
     }
 
+    // 7. 多选字段修复 (Multi-select string to array fix)
+    const ensureArray = (v: any) => {
+      if (Array.isArray(v)) return v;
+      if (typeof v === 'string') {
+        const trimmed = v.trim();
+        if (trimmed === '') return [];
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          try { 
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) return parsed;
+          } catch(e) { /* fallback */ }
+        }
+        return trimmed.split(',').map(s => s.trim()).filter(s => s !== '');
+      }
+      if (v === null || v === undefined) return [];
+      return [v];
+    };
+
+    if (migrated.basic) {
+      if (migrated.basic.senses !== undefined) migrated.basic.senses = ensureArray(migrated.basic.senses);
+      if (migrated.basic.languages !== undefined) migrated.basic.languages = ensureArray(migrated.basic.languages);
+    }
+    if (migrated.favoredClass && migrated.favoredClass.fc !== undefined) {
+      migrated.favoredClass.fc = ensureArray(migrated.favoredClass.fc);
+    }
+
     return migrated;
   },
 

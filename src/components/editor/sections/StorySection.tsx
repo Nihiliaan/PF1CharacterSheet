@@ -17,7 +17,8 @@ const StorySection: React.FC = () => {
         originalValue={lastSavedData.story || ''}
         onChange={v => update('story', v)}
         placeholder={t('editor.basic.story_placeholder')}
-        height="100px"
+        height="auto"
+        isAutoHeight={true}
       />
     </Section>
   );

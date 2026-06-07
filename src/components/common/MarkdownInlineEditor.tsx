@@ -1,26 +1,34 @@
-import React, { useEffect, useRef } from 'react';
-import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, placeholder as cmPlaceholder } from '@codemirror/view';
+import React, { useEffect, useRef, useState } from 'react';
+import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, placeholder as cmPlaceholder, drawSelection, dropCursor } from '@codemirror/view';
 import { EditorState, RangeSetBuilder, Annotation } from '@codemirror/state';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
+import { cn } from '../../lib/utils';
 
-// Custom annotation to distinguish programmatic updates from user input
 const programmaticUpdate = Annotation.define<boolean>();
 
-interface MarkdownInlineEditorProps {
-  value: string;
-  onChange: (v: string) => void;
-  onBlur?: () => void;
-  autoFocus?: boolean;
-  initialClickCoords?: { x: number, y: number } | null;
-  readOnly?: boolean;
-  className?: string;
-  placeholder?: string;
-  height?: string;
-  minHeight?: string;
-  singleLine?: boolean;
-  transactionFilter?: (tr: any) => boolean;
-}
+// 极简预览渲染器：仅处理链接，节省初次渲染开销
+const MarkdownPreviewer = ({ text, placeholder }: { text: string, placeholder?: string }) => {
+  if (!text) return <span className="text-stone-300 italic pointer-events-none select-none">{placeholder}</span>;
+  
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
 
+  while ((match = linkRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.substring(lastIndex, match.index));
+    parts.push(
+      <span key={match.index} className="text-primary underline cursor-pointer">
+        {match[1]}
+      </span>
+    );
+    lastIndex = linkRegex.lastIndex;
+  }
+  if (lastIndex < text.length) parts.push(text.substring(lastIndex));
+  return <>{parts}</>;
+};
+
+// 链接隐藏插件
 const markdownConcealPlugin = ViewPlugin.fromClass(class {
   decorations: DecorationSet;
   constructor(view: EditorView) { this.decorations = this.getDecorations(view); }
@@ -43,194 +51,152 @@ const markdownConcealPlugin = ViewPlugin.fromClass(class {
       if (!isCursorInside) {
         builder.add(start, start + 1, Decoration.replace({}));
         builder.add(start + 1, start + 1 + label.length, Decoration.mark({
-          attributes: { style: "color: #2563eb; text-decoration: underline; cursor: pointer;" },
+          attributes: { style: "color: var(--color-primary); text-decoration: underline; cursor: pointer;" },
           class: "cm-md-link-active"
         }));
         builder.add(start + 1 + label.length, end, Decoration.replace({}));
-      } else {
-        builder.add(start + 1, start + 1 + label.length, Decoration.mark({ class: "text-primary font-bold" }));
       }
     }
     return builder.finish();
   }
 }, { decorations: v => v.decorations });
 
-const externalLinkHandler = EditorView.domEventHandlers({
-  mousedown: (event, view) => {
-    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-    if (pos === null) return false;
-    const doc = view.state.doc.toString();
-    const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
-    let match;
-    while ((match = regex.exec(doc)) !== null) {
-      const start = match.index;
-      const end = match.index + match[0].length;
-      const url = match[2];
-      if (pos >= start && pos <= end) {
-        const selection = view.state.selection.main;
-        const isCursorInside = (selection.from >= start && selection.from <= end);
-        if (!isCursorInside || event.ctrlKey || event.metaKey) {
-          window.open(url, '_blank');
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-});
+interface MarkdownInlineEditorProps {
+  value: string;
+  onChange: (v: string) => void;
+  onBlur?: () => void;
+  isFocused?: boolean; // 由父组件控制
+  onFocus?: () => void; // 通知父组件已聚焦
+  placeholder?: string;
+  height?: string;
+  minHeight?: string;
+  singleLine?: boolean;
+  align?: 'left' | 'center' | 'right';
+  className?: string;
+  initialClickCoords?: { x: number, y: number } | null;
+}
 
 const MarkdownInlineEditor = ({
   value,
   onChange,
   onBlur,
-  autoFocus = false,
-  initialClickCoords = null,
-  readOnly = false,
-  className = '',
+  isFocused = false,
+  onFocus,
   placeholder = '',
   height = 'auto',
   minHeight = '24px',
   singleLine = false,
-  transactionFilter
+  align = 'left',
+  className = '',
+  initialClickCoords
 }: MarkdownInlineEditorProps) => {
-  const editorRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-
-  const onBlurRef = useRef(onBlur);
-  useEffect(() => { onBlurRef.current = onBlur; }, [onBlur]);
-
   const onChangeRef = useRef(onChange);
-  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  onChangeRef.current = onChange;
 
-  const transactionFilterRef = useRef(transactionFilter);
-  useEffect(() => { transactionFilterRef.current = transactionFilter; }, [transactionFilter]);
-
-  // Initial mount
+  // 核心：处理编辑器的挂载与销毁
   useEffect(() => {
-    if (!editorRef.current) return;
-
-    const state = EditorState.create({
-      doc: String(value ?? ''),
-      extensions: [
-        markdown({ base: markdownLanguage }),
-        markdownConcealPlugin,
-        externalLinkHandler,
-        EditorView.domEventHandlers({
-          blur: () => {
-            if (onBlurRef.current) onBlurRef.current();
-          }
-        }),
-        EditorState.transactionFilter.of(tr => {
-            if (tr.docChanged) {
-                if (tr.annotation(programmaticUpdate)) return tr;
-                const newDocString = tr.newDoc.toString();
-                if (singleLine && newDocString.includes('\n')) return [];
-                if (transactionFilterRef.current && !transactionFilterRef.current(tr)) return [];
-            }
-            return tr;
-        }),
-        singleLine ? [] : EditorView.lineWrapping,
-        EditorState.readOnly.of(readOnly),
-        EditorView.theme({
-          "&": { height, minHeight, fontSize: "inherit", backgroundColor: "transparent" },
-          "&.cm-focused": { outline: "none" },
-          ".cm-content": {
-              padding: "0px",
+    if (isFocused && containerRef.current && !viewRef.current) {
+      // 进入编辑模式：原地启动 CodeMirror
+      const state = EditorState.create({
+        doc: String(value ?? ''),
+        extensions: [
+          markdown({ base: markdownLanguage }),
+          markdownConcealPlugin,
+          drawSelection(),
+          dropCursor(),
+          EditorView.lineWrapping,
+          EditorView.theme({
+            "&": { height: "100%", backgroundColor: "transparent" },
+            "&.cm-focused": { outline: "none" },
+            ".cm-content": {
+              padding: "0",
               fontFamily: "inherit",
-              lineHeight: "inherit",
-              whiteSpace: singleLine ? "nowrap" : "pre-wrap"
-          },
-          ".cm-line": { padding: "0" },
-          ".cm-scroller": {
-              fontFamily: "inherit",
-              lineHeight: "inherit",
-              overflowX: singleLine ? "auto" : "hidden",
-              overflowY: height === 'auto' ? 'hidden' : 'auto',
-              scrollbarWidth: "none",
-              "&::-webkit-scrollbar": { display: "none" }
-          },
-          ".cm-gutters": { display: "none" },
-          ".cm-placeholder": { color: "#aaa" },
-          "&.cm-focused .cm-placeholder": { display: "none" }
-        }),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged && !update.transactions.some(tr => tr.annotation(programmaticUpdate))) {
-            onChangeRef.current(update.state.doc.toString());
-          }
-        }),
-        placeholder ? cmPlaceholder(placeholder) : [],
-      ],
-    });
-
-    const view = new EditorView({ state, parent: editorRef.current });
-    viewRef.current = view;
-
-    if (autoFocus && !view.hasFocus) {
-        // Use requestAnimationFrame to ensure the focus happens after the DOM is fully updated
-        requestAnimationFrame(() => {
-            if (viewRef.current) {
-                viewRef.current.focus();
-                if (initialClickCoords) {
-                    const pos = viewRef.current.posAtCoords(initialClickCoords);
-                    if (pos !== null) {
-                        viewRef.current.dispatch({
-                            selection: { anchor: pos, head: pos },
-                            scrollIntoView: true
-                        });
-                    }
-                }
+              lineHeight: "1.625",
+              caretColor: "#854d0e !important",
+              minHeight: "1.625em"
+            },
+            ".cm-line": { display: "block", padding: "0", minHeight: "1.625em" },
+            ".cm-cursor": { borderLeft: "2px solid #854d0e !important" },
+            ".cm-cursorLayer": { zIndex: "1000 !important", opacity: "1 !important" },
+            ".cm-placeholder": { color: "#a8a29e", fontStyle: "italic" },
+            "&.cm-focused .cm-placeholder": { display: "none" }
+          }),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged && !update.transactions.some(tr => tr.annotation(programmaticUpdate))) {
+              onChangeRef.current(update.state.doc.toString());
             }
-        });
-    }
-
-    return () => {
-        view.destroy();
-        viewRef.current = null;
-    };
-  }, [readOnly, placeholder, singleLine]);
-
-  // Sync value from props
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-
-    const safeValue = typeof value === 'string' ? value : String(value ?? '');
-    const currentValue = view.state.doc.toString();
-
-    if (safeValue !== currentValue) {
-      // Defer the dispatch to avoid conflicts with ongoing transactions
-      const transaction = view.state.update({
-        changes: { from: 0, to: view.state.doc.length, insert: safeValue },
-        annotations: [programmaticUpdate.of(true)]
+          }),
+          placeholder ? cmPlaceholder(placeholder) : []
+        ]
       });
 
-      // Use requestAnimationFrame to ensure we are outside of the update listener cycle
+      const view = new EditorView({ state, parent: containerRef.current });
+      viewRef.current = view;
+
+      // 精准聚焦与定位
       requestAnimationFrame(() => {
-          if (viewRef.current && !viewRef.current.contentDOM.isConnected) return;
-          try {
-            view.dispatch(transaction);
-          } catch (e) {
-            // If the dispatch still fails with decompose, it's a core CodeMirror issue
-            // potentially related to document state corruption.
-            // In that case, we fall back to a full view recreation if necessary,
-            // but let's try this deferral first.
+        if (!viewRef.current) return;
+        viewRef.current.focus();
+        if (initialClickCoords) {
+          const pos = viewRef.current.posAtCoords(initialClickCoords);
+          if (pos !== null) {
+            viewRef.current.dispatch({
+              selection: { anchor: pos, head: pos },
+              scrollIntoView: true
+            });
           }
+        }
       });
+    } else if (!isFocused && viewRef.current) {
+      // 退出编辑模式：销毁实例节省算力
+      viewRef.current.destroy();
+      viewRef.current = null;
+    }
+  }, [isFocused]);
+
+  // 同步外部 Value 变化
+  useEffect(() => {
+    if (viewRef.current) {
+      const safeValue = String(value ?? '');
+      if (safeValue !== viewRef.current.state.doc.toString()) {
+        viewRef.current.dispatch({
+          changes: { from: 0, to: viewRef.current.state.doc.length, insert: safeValue },
+          annotations: [programmaticUpdate.of(true)]
+        });
+      }
     }
   }, [value]);
 
-  const handleContainerClick = () => {
-    if (viewRef.current && !viewRef.current.hasFocus) {
-        viewRef.current.focus();
-    }
-  };
+  const textAlignClass = {
+    left: 'text-left justify-start',
+    center: 'text-center justify-center',
+    right: 'text-right justify-end'
+  }[align];
 
   return (
-    <div
-        ref={editorRef}
-        className={`w-full h-full cursor-text ${className}`}
-        onClick={handleContainerClick}
-    />
+    <div 
+      className={cn(
+        "w-full h-full min-h-[1.625em] flex items-start cursor-text",
+        textAlignClass,
+        className
+      )}
+      onMouseDown={(e) => {
+        if (!isFocused && onFocus) {
+          // 捕获点击瞬时坐标并开启编辑
+          onFocus();
+        }
+      }}
+      style={{ height: isFocused ? height : 'auto', minHeight }}
+    >
+      <div ref={containerRef} className={cn("w-full", !isFocused && "hidden")} />
+      {!isFocused && (
+        <div className="w-full break-words whitespace-pre-wrap">
+          <MarkdownPreviewer text={value} placeholder={placeholder} />
+        </div>
+      )}
+    </div>
   );
 };
 

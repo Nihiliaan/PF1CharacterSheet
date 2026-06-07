@@ -8,6 +8,8 @@ export const REGEX_PATTERNS = {
 };
 
 import { KNOWLEDGE_IDS, CRAFT_IDS, PERFORM_IDS, PROFESSION_IDS, SKILL_REGISTRY } from '../constants/skills';
+import { DEITIES_BY_PANTHEON } from '../database/deities';
+import { ALL_LANGUAGES, LANGUAGES_GROUPED } from '../database/languages';
 
 /**
  * 核心数据枚举
@@ -23,8 +25,16 @@ const ABILITY_TYPES = ['—', 'Sp', 'Su', 'Ex'];
  * 职责：定义接口规范与通用的显示/格式化逻辑
  */
 export class BaseHandler {
-  ui: string = 'text';
+  _ui: string = 'text';
   defaultValue: any = '';
+
+  get ui(): string {
+    return this._ui;
+  }
+
+  set ui(val: string) {
+    this._ui = val;
+  }
 
   constructor(config: Partial<BaseHandler> = {}) {
     Object.assign(this, config);
@@ -34,7 +44,7 @@ export class BaseHandler {
     return true;
   }
 
-  update(v: any): any {
+  update(v: any, context?: any): any {
     return v;
   }
 
@@ -46,8 +56,9 @@ export class BaseHandler {
     return (v ?? '') === '' ? '' : String(v);
   }
 
-  formatInteractive(v: any, context?: any): string {
-    return this.formatDisplay(v, context);
+  // 返回用于交互编辑的值
+  formatInteractive(v: any, context?: any): any {
+    return v;
   }
 }
 
@@ -55,7 +66,7 @@ export class BaseHandler {
  * 文本处理器
  */
 export class BaseText extends BaseHandler {
-  ui = 'text';
+  _ui = 'text';
   defaultValue = '';
 }
 
@@ -63,7 +74,7 @@ export class BaseText extends BaseHandler {
  * 数值处理器基类
  */
 export class BaseInt extends BaseHandler {
-  ui = 'number';
+  _ui = 'number';
   step = 1;
   min = -Infinity;
   max = Infinity;
@@ -123,13 +134,22 @@ export class BaseFloat extends BaseInt {
 
 /**
  * 选择处理器基类
+ * 支持：单选/多选 (isMulti), 固定/可选可填 (isHybrid)
  */
 export class BaseSelect extends BaseHandler {
-  ui = 'select';
   optionValues: any[] = [];
   optionIndices: number[] = [];
   defaultIndex: number = 0;
   i18nPrefix: string = '';
+  separator: string = ', '; 
+  
+  isMulti: boolean = false;
+  isHybrid: boolean = false;
+
+  get ui(): string {
+    if (!this.isMulti && !this.isHybrid) return 'select';
+    return 'datalist';
+  }
 
   constructor(config: Partial<BaseSelect> = {}) {
     super();
@@ -139,60 +159,157 @@ export class BaseSelect extends BaseHandler {
   }
 
   getDefaultValue(): any {
-    return this.defaultIndex;
+    return this.isMulti ? [] : this.defaultIndex;
   }
 
-  update(v: any): any {
-    if (typeof v === 'number') return v;
-    const idx = this.optionValues.indexOf(v);
-    if (idx !== -1) return idx;
-    const num = parseInt(v, 10);
-    return isNaN(num) ? this.defaultIndex : num;
+  update(v: any, context?: any): any {
+    const processItem = (item: any): any => {
+      if (item === undefined || item === null || (typeof item === 'string' && item.trim() === '')) return this.defaultIndex;
+      
+      let index = -1;
+      if (typeof item === 'number') {
+        index = item;
+      } else if (typeof item === 'string' && /^\d+$/.test(item.trim())) {
+        index = parseInt(item.trim(), 10);
+      }
+
+      if (index !== -1 && (this.optionValues[index] !== undefined || index < this.optionValues.length)) {
+        return index;
+      }
+
+      const t = context?.t;
+      if (t && typeof item === 'string') {
+        const foundIndex = this.optionValues.findIndex(key => 
+          t(`${this.i18nPrefix}${key}`) === item.trim()
+        );
+        if (foundIndex !== -1) return foundIndex;
+      }
+
+      return this.isHybrid ? (typeof item === 'string' ? item.trim() : item) : this.defaultIndex;
+    };
+
+    if (this.isMulti) {
+      if (!Array.isArray(v)) {
+        // 溯源警告：找出是谁在往多选字段传非数组值
+        if (v !== undefined && v !== null && v !== '') {
+            console.warn(`[BaseSelect.update] Multi-select "${this.i18nPrefix}" received non-array:`, v);
+        }
+        if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) return [];
+        return [processItem(v)];
+      }
+      return Array.from(new Set(v.map(processItem))).filter(item => item !== undefined && item !== null);
+    }
+
+    return processItem(v);
   }
 
   formatDisplay(v: any, context?: any): string {
-    const key = this.optionValues[v];
-    if (key === undefined || key === null || key === '') return '—';
-    return context?.t ? context.t(`${this.i18nPrefix}${key}`) : String(key);
+    if (Array.isArray(v)) {
+      if (v.length === 0) return '—';
+      return v.map(item => this.formatDisplay(item, context)).join(this.separator);
+    }
+
+    if (v === undefined || v === null || v === '') return '—';
+    const t = context?.t;
+
+    let index = -1;
+    if (typeof v === 'number') {
+      index = v;
+    } else if (typeof v === 'string' && /^\d+$/.test(v.trim())) {
+      index = parseInt(v.trim(), 10);
+    }
+
+    if (index !== -1 && this.optionValues[index] !== undefined) {
+      const key = this.optionValues[index];
+      return t ? t(`${this.i18nPrefix}${key}`) : String(key);
+    }
+
+    return String(v);
+  }
+
+  formatInteractive(v: any, context?: any): any {
+    if (this.isMulti) {
+        return Array.isArray(v) ? v : [];
+    }
+    // 无论是混合还是普通单选，交互时都显示文本名而非序号，防止输入框显示数字
+    return (v === '' || v === undefined || v === null) 
+      ? '' 
+      : this.formatDisplay(v, { ...context, isOption: true });
+  }
+}
+
+/**
+ * 混合选择处理器 (兼容层)
+ */
+export class HybridSelect extends BaseSelect {
+  constructor(config: Partial<BaseSelect> = {}) {
+    super({ ...config, isHybrid: true });
   }
 }
 
 /**
  * 技能名称处理器
- * 职责：处理 ID (number) 和 自定义文本 (string) 的混合场景，并管理分类规则。
  */
-export class SkillNameHandlerClass extends BaseSelect {
-  ui = 'select';
+export class SkillNameHandlerClass extends HybridSelect {
   i18nPrefix = 'editor.skills.names.';
 
-  update(v: any): any {
-    if (typeof v === 'number') return v;
-    const num = parseInt(v, 10);
-    if (!isNaN(num) && String(num) === String(v)) {
-      if (SKILL_REGISTRY.some(s => s.id === num)) return num;
+  update(v: any, context?: any): any {
+    const processSingle = (item: any): any => {
+        if (typeof item === 'number') return item;
+        const t = context?.t;
+        if (t && typeof item === 'string') {
+            for (const s of SKILL_REGISTRY) {
+                const cat = Math.floor(s.id / 1000);
+                const idx = s.id % 1000;
+                if (t(`${this.i18nPrefix}${cat}.${idx}`) === item.trim()) return s.id;
+            }
+        }
+        return super.update(item, context);
+    };
+
+    if (this.isMulti) {
+      if (!Array.isArray(v)) return [processSingle(v)];
+      return v.map(processSingle);
     }
-    return v;
+    return processSingle(v);
   }
 
   formatDisplay(v: any, context?: any): string {
+    if (Array.isArray(v)) {
+      if (v.length === 0) return '—';
+      return v.map(item => this.formatDisplay(item, context)).join(', ');
+    }
     const t = context?.t;
     if (!t || (v ?? '') === '') return '—';
 
+    let name = '';
+    let cat = -1;
+
     if (typeof v === 'number') {
-      const cat = Math.floor(v / 1000);
+      cat = Math.floor(v / 1000);
       const idx = v % 1000;
-      const name = t(`${this.i18nPrefix}${cat}.${idx}`);
-      // 如果不是在渲染下拉选项（isOption 为假），且属于分类 2-5，则添加大类前缀
-      if (cat >= 2 && cat <= 5 && !context?.isOption) {
-        const catName = t(`editor.skills.categories.${cat}`);
-        return `${catName}（${name}）`;
-      }
-      return name;
+      name = t(`${this.i18nPrefix}${cat}.${idx}`);
+    } else {
+      name = super.formatDisplay(v, { ...context, isOption: true });
+      if (typeof v === 'string') cat = context?.row?.category;
     }
-    return String(v);
+
+    if (cat >= 2 && cat <= 5 && !context?.isOption) {
+      const catName = t(`editor.skills.categories.${cat}`);
+      return `${catName}（${name}）`;
+    }
+    
+    return name;
   }
 
-  // 根据大类获取对应选项序号列表
+  getOptions(context?: any): number[] {
+    const cat = context?.row?.category;
+    if (cat !== undefined) {
+      return this.getOptionIndices(cat);
+    }
+    return this.optionIndices;
+  }
+
   getOptionIndices(cat: number): number[] {
     switch (cat) {
       case 2: return KNOWLEDGE_IDS;
@@ -203,45 +320,39 @@ export class SkillNameHandlerClass extends BaseSelect {
     }
   }
 
-  // 判定是否为固定技能名
   isFixed(cat: number) {
     return cat <= 2;
   }
 
-  // 获取下拉列表列数（专业类设为 3 列）
+  getDefaultAbility(cat: number): number {
+    switch (cat) {
+      case 3: return 3; 
+      case 4: return 5; 
+      case 5: return 4; 
+      default: return 0;
+    }
+  }
+
   getColumnCount(cat: number) {
     return cat === 5 ? 3 : 1;
   }
 }
 
 /**
- * 业务 Handler 实例与子类
+ * 业务 Handler 实例
  */
-
 const TextHandler = new BaseText();
-
 const SkillNameHandler = new SkillNameHandlerClass();
-
 const IntegerHandler = new BaseInt();
-
-const PosIntHandler = new BaseInt({
-  ui: 'posInt',
-  min: 1
-});
-
-const NonNegativeIntHandler = new BaseInt({
-  ui: 'int',
-  min: 0
-});
-
+const PosIntHandler = new BaseInt({ ui: 'posInt', min: 1 });
+const NonNegativeIntHandler = new BaseInt({ ui: 'int', min: 0 });
 const QuantityHandler = new BaseInt({
   ui: 'quantity',
   min: 1,
   formatDisplay: (v: any) => {
     const n = parseInt(v, 10);
     return (isNaN(n) || n <= 1) ? '' : `×${n}`;
-  },
-  formatInteractive: function (v: any) { return this.formatDisplay!(v); }
+  }
 });
 
 const LevelHandler = new BaseInt({
@@ -252,10 +363,6 @@ const LevelHandler = new BaseInt({
     const n = parseInt(v, 10);
     if (!n || n <= 0) return '';
     return context?.t ? context.t('editor.lists.level_format', { n }) : n.toString();
-  },
-  formatInteractive: function (v: any) {
-    const n = parseInt(v, 10);
-    return (!n || n <= 0) ? '' : n.toString();
   }
 });
 
@@ -269,8 +376,7 @@ const DistanceHandler = new BaseInt({
     const n = parseInt(v, 10);
     if (isNaN(n) || n === 0) return '';
     return context?.t ? context.t('editor.lists.distance_format', { v: n }) : `${n} ft`;
-  },
-  formatInteractive: function (v: any) { return this.formatDisplay!(v); }
+  }
 });
 
 const BonusHandler = new BaseInt({
@@ -282,14 +388,10 @@ const BonusHandler = new BaseInt({
     const num = parseInt(s, 10);
     if (isNaN(num)) return '—';
     return num >= 0 ? `+${num}` : `${num}`;
-  },
-  formatInteractive: function (v: any) { return this.formatDisplay!(v); }
+  }
 });
 
-const FloatHandler = new BaseFloat({
-  ui: 'float'
-});
-
+const FloatHandler = new BaseFloat({ ui: 'float' });
 const CostHandler = new BaseFloat({
   ui: 'cost',
   min: 0,
@@ -298,8 +400,7 @@ const CostHandler = new BaseFloat({
     if (isNaN(n) || n === 0) return '—';
     const unit = context?.t ? context.t('editor.items.units.gp') : 'gp';
     return `${n} ${unit}`;
-  },
-  formatInteractive: function (v: any) { return this.formatDisplay!(v); }
+  }
 });
 
 const WeightHandler = new BaseFloat({
@@ -310,15 +411,13 @@ const WeightHandler = new BaseFloat({
     if (isNaN(n) || n === 0) return '—';
     const unit = context?.t ? context.t('editor.items.units.lbs') : 'lbs';
     return `${n} ${unit}`;
-  },
-  formatInteractive: function (v: any) { return this.formatDisplay!(v); }
+  }
 });
 
 const BoolHandler = new BaseHandler({
   ui: 'bool',
   update: (v: any) => v === true || v === 'true',
-  formatDisplay: (v: any) => (v ? '是' : '否'),
-  formatInteractive: (v: any) => (v ? 'true' : 'false')
+  formatDisplay: (v: any) => (v ? '是' : '否')
 });
 
 const ClassSkillHandler = new BaseHandler({
@@ -327,16 +426,8 @@ const ClassSkillHandler = new BaseHandler({
   formatDisplay: (v: any, context?: any) => {
     const rank = parseInt(context?.row?.rank, 10);
     return ((v === true || v === 'true') && rank > 0) ? '+3' : '';
-  },
-  formatExport: function (v: any, context?: any) {
-    const display = this.formatDisplay(v, context);
-    if (display === '+3') {
-      const t = context?.t;
-      return t ? `+3${t('editor.sections.cs_short')}` : '+3本职';
-    }
-    return display;
   }
-} as any);
+});
 
 const AbilityTypeHandler = new BaseSelect({ optionValues: ABILITY_TYPES });
 
@@ -360,10 +451,183 @@ const SkillAttributeHandler = new BaseSelect({
   }
 });
 
-const ManeuverabilityHandler = new BaseSelect({ optionValues: MANEUVERABILITY, i18nPrefix: 'editor.basic.maneuverability_options.' });
-const AlignmentHandler = new BaseSelect({ optionValues: ALIGNMENTS, i18nPrefix: 'editor.basic.alignment_options.' });
-const SizeHandler = new BaseSelect({ optionValues: SIZES, optionIndices: [3, 4], i18nPrefix: 'editor.basic.size_options.' });
-const GenderHandler = new BaseSelect({ optionValues: GENDERS, i18nPrefix: 'editor.basic.gender_options.' });
+const ManeuverabilityHandler = new BaseSelect({ optionValues: ['Clumsy', 'Poor', 'Average', 'Good', 'Perfect'], i18nPrefix: 'editor.basic.maneuverability_options.' });
+const AlignmentHandler = new BaseSelect({ optionValues: ['LG', 'NG', 'CG', 'LN', 'N', 'CN', 'LE', 'NE', 'CE'], i18nPrefix: 'editor.basic.alignment_options.' });
+const SizeHandler = new BaseSelect({ optionValues: ['Fine', 'Diminutive', 'Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan', 'Colossal'], optionIndices: [3, 4], i18nPrefix: 'editor.basic.size_options.' });
+const GenderHandler = new BaseSelect({ optionValues: ['Male', 'Female', 'Other'], i18nPrefix: 'editor.basic.gender_options.' });
+
+// 神系名称到 i18n Key 的映射
+const PANTHEON_MAP: Record<string, string> = {
+  'Core Deities': 'core',
+  'Other Deities': 'other',
+  'Archdevils': 'archdevils',
+  'Demon Lords': 'demon_lords',
+  'Eldest': 'eldest',
+  'Empyreal Lords': 'empyreal_lords',
+  'Outer Gods': 'outer_gods',
+  'Dwarven Deities': 'dwarven',
+  'Elven Deities': 'elven',
+  'Gnome Deities': 'gnome',
+  'Halfling Deities': 'halfling',
+  'Orc Deities': 'orc',
+  'Deities of Ancient Osirion': 'osirion',
+  'Deities of Tian Xia': 'tian_xia',
+  'Great Old Ones': 'great_old_ones',
+  'Horsemen': 'horsemen',
+  'Queens of the Night': 'queens_of_night'
+};
+
+const DeityHandler = new BaseSelect({
+  isHybrid: true,
+  optionValues: ['None', ...Object.values(DEITIES_BY_PANTHEON).flat()],
+  i18nPrefix: 'editor.basic.deity_options.',
+  defaultIndex: 0,
+  getOptions: function(context?: any) {
+    const t = context?.t;
+    const noneOption = {
+      label: t ? (t(`${this.i18nPrefix}None`) === `${this.i18nPrefix}None` ? 'None' : t(`${this.i18nPrefix}None`)) : 'None',
+      value: 0
+    };
+
+    const groupedOptions = Object.entries(DEITIES_BY_PANTHEON).map(([pantheon, deities]) => {
+      const labelKey = PANTHEON_MAP[pantheon] || pantheon;
+      return {
+        label: t ? (t(`${this.i18nPrefix}${labelKey}`) === `${this.i18nPrefix}${labelKey}` ? pantheon : t(`${this.i18nPrefix}${labelKey}`)) : pantheon,
+        value: pantheon,
+        children: deities.map(name => ({
+          label: t ? (t(`${this.i18nPrefix}${name}`) === `${this.i18nPrefix}${name}` ? name : t(`${this.i18nPrefix}${name}`)) : name,
+          value: this.optionValues.indexOf(name)
+        }))
+      };
+    });
+
+    return [noneOption, ...groupedOptions];
+  }
+});
+
+const RACES_GROUPED = [
+  {
+    label: 'core',
+    options: ['Human', 'Elf', 'Dwarf', 'Gnome', 'Halfling', 'Half-Orc', 'Half-Elf']
+  },
+  {
+    label: 'uncommon',
+    options: ['Aasimar', 'Drow', 'Geniekin', 'Goblin', 'Kobold', 'Orc', 'Tiefling']
+  },
+  {
+    label: 'rare',
+    children: [
+      {
+        label: 'aliens',
+        options: ['Kasatha', 'Lashunta', 'Triaxian', 'Trox']
+      },
+      {
+        label: 'dragon_empires',
+        options: ['Kitsune', 'Nagaji', 'Samsaran', 'Tengu', 'Wayang']
+      },
+      {
+        label: 'other',
+        options: [
+          'Aquatic Elf', 'Gathlain', 'Grippli', 'Merfolk', 'Skinwalker', 
+          'Vanara', 'Vishkanya', 'Wyrwood', 'Wyvaran',
+          'Ifrit', 'Oread', 'Sylph', 'Undine', 'Suli', 'Svirfneblin', 'Duergar',
+          'Android', 'Catfolk', 'Changeling', 'Dhampir', 'Fetchling', 'Ghoran', 'Gillman', 'Hobgoblin', 'Ratfolk', 'Strix'
+        ]
+      }
+    ]
+  }
+];
+
+const RaceHandler = new BaseSelect({
+  isHybrid: true,
+  optionValues: [
+    'Human', 'Elf', 'Dwarf', 'Gnome', 'Halfling', 'Half-Orc', 'Half-Elf',
+    'Aasimar', 'Drow', 'Geniekin', 'Goblin', 'Kobold', 'Orc', 'Tiefling',
+    'Android', 'Catfolk', 'Changeling', 'Dhampir', 'Fetchling', 'Ghoran', 'Gillman', 'Hobgoblin', 'Ratfolk', 'Strix',
+    'Kasatha', 'Lashunta', 'Triaxian', 'Trox',
+    'Kitsune', 'Nagaji', 'Samsaran', 'Tengu', 'Wayang',
+    'Aquatic Elf', 'Gathlain', 'Grippli', 'Merfolk', 'Skinwalker', 'Vanara', 'Vishkanya', 'Wyrwood', 'Wyvaran',
+    'Ifrit', 'Oread', 'Sylph', 'Undine', 'Suli', 'Svirfneblin', 'Duergar'
+  ],
+  i18nPrefix: 'editor.basic.race_options.',
+  getOptions: function(context?: any) {
+    const t = context?.t;
+    const buildGroup = (group: any): any => {
+      if (group.children) {
+        return {
+          label: t ? t(`${this.i18nPrefix}${group.label}`) : group.label,
+          value: group.label,
+          children: group.children.map(buildGroup)
+        };
+      }
+      return {
+        label: t ? t(`${this.i18nPrefix}${group.label}`) : group.label,
+        value: group.label,
+        children: group.options.map((opt: string) => ({
+          label: t ? t(`${this.i18nPrefix}${opt}`) : opt,
+          value: this.optionValues.indexOf(opt)
+        }))
+      };
+    };
+    return RACES_GROUPED.map(buildGroup);
+  }
+});
+
+const TraitTypeHandler = new BaseSelect({ isHybrid: true, optionValues: ['Combat', 'Faith', 'Magic', 'Social', 'Race', 'Regional', 'Religion', 'Equipment'] });
+
+const SensesHandler = new BaseSelect({ 
+  isHybrid: true, 
+  isMulti: true, 
+  optionValues: ['Darkvision', 'Low-Light Vision', 'Scent', 'Blindsight', 'Blindsense', 'Tremorsense'],
+  i18nPrefix: 'editor.basic.senses_options.'
+});
+
+const LanguagesHandler = new BaseSelect({ 
+  isHybrid: true, 
+  isMulti: true, 
+  optionValues: ALL_LANGUAGES,
+  i18nPrefix: 'editor.basic.languages_options.',
+  getOptions: function(context?: any) {
+    const t = context?.t;
+    const buildGroup = (group: any): any => {
+      // 递归处理嵌套分组（如 Sign languages）
+      const children = group.children.map((item: any) => {
+        if (typeof item === 'object' && item.label) {
+          return {
+            label: item.label, // 暂时不翻译
+            value: item.label,
+            children: item.children.map((subItem: string) => ({
+              label: t ? (t(`${this.i18nPrefix}${subItem}`) === `${this.i18nPrefix}${subItem}` ? subItem : t(`${this.i18nPrefix}${subItem}`)) : subItem,
+              value: this.optionValues.indexOf(subItem)
+            }))
+          };
+        }
+        // 普通项：使用 ALL_LANGUAGES 中的索引作为 value
+        return {
+          label: t ? (t(`${this.i18nPrefix}${item}`) === `${this.i18nPrefix}${item}` ? item : t(`${this.i18nPrefix}${item}`)) : item,
+          value: this.optionValues.indexOf(item)
+        };
+      });
+
+      return {
+        label: group.label, // 暂时不翻译
+        value: group.label,
+        children: children
+      };
+    };
+
+    return LANGUAGES_GROUPED.map(buildGroup);
+  }
+});
+const DamageTypeHandler = new BaseSelect({ 
+  isHybrid: true, 
+  isMulti: true, 
+  optionValues: ['P', 'S', 'B'],
+  separator: '/',
+  i18nPrefix: 'editor.attacks.damage_types.'
+});
+const FavoredClassHandler = new BaseSelect({ isHybrid: true, isMulti: true });
+const FeatTypeHandler = new BaseSelect({ isHybrid: true, isMulti: true, optionValues: ['Combat', 'General', 'Item Creation', 'Metamagic', 'Skill Focus', 'Teamwork', 'Critical'] });
 
 const AgeHandler = new BaseInt({
   min: 0,
@@ -402,17 +666,17 @@ const DailyUsesHandler = new BaseInt({
   formatDisplay: (v: any, context?: any) => {
     if (!v) return context?.t ? context.t('editor.spells.at_will') : '随意使用';
     return context?.t ? context.t('editor.spells.uses_per_day', { n: v }) : `${v}次/日`;
-  },
-  formatInteractive: (v: any) => v ? v.toString() : '0'
+  }
 });
 
 /**
- * 表格与业务复合处理器
+ * 复合处理器
  */
 export class BaseTable extends BaseHandler {
-  ui = 'table';
+  _ui = 'table';
   columns: any[] = [];
   fixedRows: boolean = false;
+  sortableColumns: string[] = []; 
   view?: string;
 
   constructor(config: Partial<BaseTable> = {}) {
@@ -424,7 +688,7 @@ export class BaseTable extends BaseHandler {
 }
 
 export class CompositeHandler extends BaseHandler {
-  ui = 'composite';
+  _ui = 'composite';
   view: string = 'CompositeView';
   columns?: any[];
 
@@ -502,7 +766,8 @@ const SkillsTableHandler = new BaseTable({
     { key: 'ability', label: 'editor.skills.headers.ability', width: '10%', type: 'attributeIndex' },
     { key: 'others', label: 'editor.skills.headers.others', width: '20%' },
     { key: 'special', label: 'editor.skills.headers.special', width: '35%' }
-  ]
+  ],
+  sortableColumns: ['name', 'total', 'rank', 'cs', 'ability']
 });
 
 const SimpleListHandler = new BaseTable({
@@ -548,7 +813,8 @@ const EquipmentItemsHandler = new BaseTable({
     { key: 'cost', label: 'editor.items.headers.cost', width: '10%', type: 'cost' },
     { key: 'weight', label: 'editor.items.headers.weight', width: '10%', type: 'weight' },
     { key: 'notes', label: 'editor.items.headers.notes', width: '40%' }
-  ]
+  ],
+  sortableColumns: ['item', 'cost', 'weight']
 });
 
 const BasicInfoHandler = new CompositeHandler();
@@ -561,39 +827,43 @@ const CombatInfoHandler = new CompositeHandler({
 });
 const CurrencyHandler = new CompositeHandler();
 
-export function getHandlerByType(type: string): BaseHandler {
-  switch (type) {
-    case 'number': case 'int': return IntegerHandler;
-    case 'posInt': case 'quantity': return PosIntHandler;
-    case 'level': return LevelHandler;
-    case 'distance': return DistanceHandler;
-    case 'bonus': return BonusHandler;
-    case 'float': return FloatHandler;
-    case 'cost': return CostHandler;
-    case 'weight': return WeightHandler;
-    case 'bool': case 'checkbox': return BoolHandler;
-    case 'classSkill': return ClassSkillHandler;
-    case 'critRange': return CritRangeHandler;
-    case 'critMultiplier': return CritMultiplierHandler;
-    case 'abilityType': return AbilityTypeHandler;
-    case 'skillName': return SkillNameHandler;
-    default: return TextHandler;
-  }
-}
-
 const handlers: any = {
   TextHandler, SkillNameHandler,
   IntegerHandler, PosIntHandler, NonNegativeIntHandler, QuantityHandler, LevelHandler,
   DistanceHandler, SkillAttributeHandler, CostHandler, WeightHandler,
   ManeuverabilityHandler, AlignmentHandler, SizeHandler, GenderHandler,
-  HeightHandler, AgeHandler, CritRangeHandler, CritMultiplierHandler, BonusHandler,
-  FloatHandler, BoolHandler, ClassSkillHandler, AbilityTypeHandler, SpellTypeHandler,
-  DailyUsesHandler, getHandlerByType,
-  BaseHandler, BaseText, BaseInt, BaseSelect, BaseTable, CompositeHandler, SkillNameHandlerClass,
+  DeityHandler, RaceHandler, TraitTypeHandler, SensesHandler, LanguagesHandler, DamageTypeHandler,
+  FavoredClassHandler, FeatTypeHandler,
   AttributesTableHandler, MeleeAttackTableHandler, RangedAttackTableHandler, DefensesTableHandler,
   SavesTableHandler, SkillsTableHandler, SimpleListHandler, BackgroundTraitsTableHandler,
   ClassFeaturesTableHandler, FeatsTableHandler, SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler,
-  BasicInfoHandler, CombatInfoHandler, CurrencyHandler
+  BasicInfoHandler, CombatInfoHandler, CurrencyHandler,
+  BaseHandler, BaseText, BaseInt, BaseSelect, BaseTable, CompositeHandler, SkillNameHandlerClass,
+  DailyUsesHandler, BoolHandler, FloatHandler, AbilityTypeHandler, SpellTypeHandler, ClassSkillHandler,
+  AgeHandler, HeightHandler, CritRangeHandler, CritMultiplierHandler, BonusHandler,
+  getHandlerByType: (type: string): BaseHandler => {
+    switch (type) {
+      case 'number': case 'int': return IntegerHandler;
+      case 'posInt': case 'quantity': return PosIntHandler;
+      case 'level': return LevelHandler;
+      case 'distance': return DistanceHandler;
+      case 'bonus': return BonusHandler;
+      case 'float': return FloatHandler;
+      case 'cost': return CostHandler;
+      case 'weight': return WeightHandler;
+      case 'bool': case 'checkbox': return BoolHandler;
+      case 'skillName': return SkillNameHandler;
+      case 'deity': return DeityHandler;
+      case 'race': return RaceHandler;
+      case 'traitType': return TraitTypeHandler;
+      case 'senses': return SensesHandler;
+      case 'languages': return LanguagesHandler;
+      case 'damageType': return DamageTypeHandler;
+      case 'favoredClass': return FavoredClassHandler;
+      case 'featType': return FeatTypeHandler;
+      default: return TextHandler;
+    }
+  }
 };
 
 export default handlers;

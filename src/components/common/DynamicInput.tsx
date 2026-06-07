@@ -11,10 +11,14 @@ const { getHandlerByType } = handlers;
 
 import { useCharacter } from '../../contexts/CharacterContext';
 
+import { cn } from '../../lib/utils';
+import { Combobox } from '../ui/combobox';
+import { X } from 'lucide-react';
+
 export interface DynamicInputProps {
-  value: string | number;
-  originalValue?: string | number;
-  onChange: (v: string | number) => void;
+  value: any;
+  originalValue?: any;
+  onChange: (v: any) => void;
   path?: string;
   className?: string; // Applied to inner element
   wrapperClassName?: string; // Applied to outermost div
@@ -94,8 +98,9 @@ export const DynamicInput = React.memo(({
   const { t } = useTranslation();
   const characterContext = useCharacter();
   const [isFocused, setIsFocused] = React.useState(false);
-  const [isEditing, setIsEditing] = React.useState(false);
+  const [isComboboxOpen, setIsComboboxOpen] = React.useState(false);
   const lastClickCoords = React.useRef<{ x: number, y: number } | null>(null);
+  const datalistId = React.useId(); // 稳定 datalist ID
 
   const modifiers = characterContext?.computed?.modifiers;
 
@@ -112,7 +117,16 @@ export const DynamicInput = React.memo(({
   }, [path, type]);
 
   const alignClass = align ? `text-${align}` : '';
-  const innerClass = `w-full h-full font-medium transition-colors leading-relaxed ${alignClass} ${className}`;
+  const justifyClass = React.useMemo(() => {
+    switch (align) {
+      case 'left': return 'justify-start';
+      case 'right': return 'justify-end';
+      case 'center': return 'justify-center';
+      default: return 'justify-start';
+    }
+  }, [align]);
+
+  const innerClass = `font-medium transition-colors leading-relaxed ${alignClass} ${className}`;
 
   // Ensure default font size if not provided by className
   const finalInnerClass = React.useMemo(() => {
@@ -141,10 +155,19 @@ export const DynamicInput = React.memo(({
     return v1 !== v2;
   }, [readOnly, originalValue, value, handler]);
 
-  const [tempValue, setTempValue] = React.useState(value);
+  const [tempValue, setTempValue] = React.useState(() => 
+    handler?.formatInteractive ? handler.formatInteractive(value, context) : value
+  );
+  
+  // 同步逻辑：非焦点状态下，通过 handler.formatInteractive 获取最新的编辑值
   React.useEffect(() => {
-    if (!isFocused) setTempValue(value);
-  }, [value, isFocused]);
+    if (!isFocused) {
+      const interactiveValue = handler?.formatInteractive ? handler.formatInteractive(value, context) : value;
+      setTempValue(interactiveValue);
+    }
+  }, [value, isFocused, handler, context]);
+
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const handleStepperChange = (v: string) => {
     const finalValue = handler?.update?.(v) ?? v;
@@ -205,18 +228,102 @@ export const DynamicInput = React.memo(({
   const paddingClass = className.includes('p-') ? '' : 'px-2 py-1';
 
   // 核心样式复用：确保预览和编辑状态的文字位置、间距、字体完全一致
-  const sharedStyles = `w-full h-full break-words whitespace-pre-wrap ${paddingClass} ${finalInnerClass}`;
+  const sharedStyles = cn(
+    "h-full transition-colors leading-relaxed flex min-h-[32px] px-2",
+    singleLine ? "items-center" : "items-start pt-1.5",
+    justifyClass,
+    singleLine ? "whitespace-nowrap w-max min-w-full" : "break-words whitespace-pre-wrap w-full",
+    finalInnerClass
+  );
+
+  // Datalist 缓存：避免几百个技能名在每一行、每一帧都重新翻译
+  // 我们使用一个模块级或 Ref 级的缓存来存储翻译后的选项
+  const optionsCache = React.useRef<Record<string, { value: string, id: number }[]>>({});
 
   const renderContent = () => {
     // 只读模式直接返回预览
     if (readOnly) {
       const val = displayValue();
       return (
-        <div className={`${sharedStyles} flex items-start`}>
-          <div className="w-full">
+        <div className={sharedStyles}>
+          <div className={cn(!singleLine && "w-full")}>
             <MarkdownLinkRenderer text={val} />
           </div>
         </div>
+      );
+    }
+
+    // Datalist 类型：改用 Shadcn/UI Combobox 实现
+    if (handler?.ui === 'datalist') {
+      const getDatalistOptions = () => {
+        const rawOptions = optionIndices || (handler.getOptions ? handler.getOptions(context) : handler.optionIndices) || [];
+        
+        // 如果已经是格式化好的对象结构（带 children 或 label/value），直接返回
+        if (rawOptions.length > 0 && typeof rawOptions[0] === 'object' && rawOptions[0] !== null) {
+          return rawOptions;
+        }
+
+        // 否则按传统扁平索引转换
+        return rawOptions.map((opt: number) => ({
+          label: handler?.formatDisplay ? handler.formatDisplay(opt, { ...context, isOption: true }) : String(opt),
+          value: opt
+        }));
+      };
+
+      const options = getDatalistOptions();
+      
+      // 多选标签化渲染：仅在获得焦点（交互状态）或下拉框打开时显示 Tag，平时显示纯文本
+      let displayContent: React.ReactNode;
+      const displayLabel = handler?.formatDisplay ? handler.formatDisplay(value, context) : String(value);
+
+      const showTags = (isFocused || isComboboxOpen) && handler.isMulti && Array.isArray(value) && value.length > 0;
+
+      if (showTags) {
+        displayContent = (
+          <div className={cn("flex gap-1 items-center py-0.5", (singleLine && !isComboboxOpen) ? "flex-nowrap" : "flex-wrap")}>
+            {value.map((v, i) => {
+              const label = handler?.formatDisplay ? handler.formatDisplay(v, { ...context, isOption: true }) : String(v);
+              return (
+                <div 
+                  key={`${v}-${i}`}
+                  className="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-md text-[13px] font-medium leading-tight group/tag hover:bg-primary/20 transition-colors whitespace-nowrap"
+                >
+                  {label}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation(); // 关键：阻止删除操作触发下拉框的开关
+                      const next = [...value];
+                      next.splice(i, 1);
+                      onChange(next);
+                    }}
+                    className="p-0.5 hover:bg-primary/30 rounded-full transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        );
+      } else {
+        // 单选或非焦点状态下的纯文本显示
+        displayContent = displayLabel || <span className="text-stone-300">—</span>;
+      }
+
+      return (
+        <Combobox
+          options={options}
+          value={value}
+          multiSelect={handler.isMulti}
+          onSelect={(val) => {
+            onChange(val);
+          }}
+          onOpenChange={setIsComboboxOpen}
+          className={cn(sharedStyles, "!p-0 font-inherit bg-transparent hover:bg-stone-50 transition-colors", showTags && !singleLine && "h-auto")}
+          placeholder={displayContent}
+          singleLine={singleLine}
+        />
       );
     }
 
@@ -230,14 +337,13 @@ export const DynamicInput = React.memo(({
             onFocus={() => setIsFocused(true)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           >
-            <option value="">{t('common.select_option')}...</option>
             {(optionIndices || handler.optionIndices || []).map((opt: number) => (
               <option key={opt} value={opt}>
-                {handler?.formatDisplay ? handler.formatDisplay(opt, context) : opt}
+                {handler?.formatDisplay ? handler.formatDisplay(opt, { ...context, isOption: true }) : opt}
               </option>
             ))}
           </select>
-          <div className={`${sharedStyles} flex items-center justify-center ${isChanged ? 'text-amber-700' : 'text-ink'} ${isFocused ? 'bg-stone-50' : ''}`}>
+          <div className={`${sharedStyles} ${isChanged ? 'text-amber-700' : 'text-ink'} ${isFocused ? 'bg-stone-50' : ''}`}>
             {displayValue() || <span className="text-stone-300">—</span>}
           </div>
         </div>
@@ -254,39 +360,28 @@ export const DynamicInput = React.memo(({
             e.stopPropagation();
             toggleBool();
           }}
-          className={`${sharedStyles} flex items-center justify-center cursor-pointer hover:bg-stone-200/50 transition-colors ${isChanged ? 'text-amber-900 bg-amber-50/30' : 'text-ink'}`}
+          className={`${sharedStyles} cursor-pointer hover:bg-stone-200/50 transition-colors ${isChanged ? 'text-amber-900 bg-amber-50/30' : 'text-ink'}`}
         >
           {displayValue()}
         </button>
       );
     }
 
-    // 预览模式：非焦点状态下显示预览
-    if (!isFocused) {
-      const val = displayValue();
-      return (
-        <div className={`${sharedStyles} cursor-text min-h-[32px] flex items-start`}>
-          <div className="w-full">
-            <MarkdownLinkRenderer text={val} />
-          </div>
-        </div>
-      );
-    }
-
-    // 编辑模式：所有非 select/bool 类型统一使用增强的 MarkdownInlineEditor 以支持精准光标定位
+    // 所有其他 Markdown 输入类型：统一交给混合模式编辑器处理
     return (
-      <div className={`${paddingClass} ${finalInnerClass} flex items-center w-full h-full`}>
+      <div className={cn(sharedStyles, isFocused && "bg-white/50 shadow-sm ring-1 ring-primary/20")}>
         <MarkdownInlineEditor
           value={String(value ?? '')}
           onChange={handleChange}
+          isFocused={isFocused}
+          onFocus={() => setIsFocused(true)}
           placeholder={placeholder}
           singleLine={singleLine}
-          transactionFilter={transactionFilter}
           height={height}
           minHeight={minHeight}
           className="!bg-transparent !p-0 w-full"
-          autoFocus={true}
           initialClickCoords={lastClickCoords.current}
+          align={align}
         />
       </div>
     );
@@ -295,26 +390,39 @@ export const DynamicInput = React.memo(({
   return (
     <div
       ref={containerRef}
-      tabIndex={readOnly ? undefined : 0}
+      tabIndex={readOnly || isFocused ? undefined : 0}
       onMouseDown={(e) => {
         if (!readOnly) {
           lastClickCoords.current = { x: e.clientX, y: e.clientY };
+          // 仅在非焦点时阻止默认行为，允许点击穿透给编辑器
+          if (!isFocused) e.preventDefault();
           setIsFocused(true);
         }
       }}
-      onFocus={() => !readOnly && setIsFocused(true)}
-      onBlur={(e) => {
-        // 如果窗口失去焦点（如切换到其他应用），保留编辑状态，方便切回
-        if (!document.hasFocus()) return;
-
-        // 利用 focusout 冒泡判断是否真的离开了组件
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-          setIsFocused(false);
-          const finalValue = handler?.update ? handler.update(tempValue) : tempValue;
-          onChange(finalValue);
-        }
+      onFocus={(e) => {
+          if (!readOnly && !isFocused) setIsFocused(true);
       }}
-      className={`grid h-full w-full relative group transition-colors ${defaultHeightClass} ${isChanged && !hideIndicator ? 'bg-amber-100/40' : ''} ${wrapperClassName}`}
+      onBlur={(e) => {
+        if (!document.hasFocus()) return;
+        const currentTarget = e.currentTarget;
+        // 延迟检查焦点是否真的离开了组件
+        setTimeout(() => {
+          if (!currentTarget.contains(document.activeElement)) {
+            setIsFocused(false);
+            if (handler?.ui !== 'datalist') {
+                const finalValue = handler?.update ? handler.update(tempValue, context) : tempValue;
+                onChange(finalValue);
+            }
+          }
+        }, 100);
+      }}
+      className={cn(
+        "grid h-full relative group transition-colors",
+        !singleLine && "w-full",
+        defaultHeightClass,
+        isChanged && !hideIndicator ? 'bg-amber-100/40' : '',
+        wrapperClassName
+      )}
     >
       {renderContent()}
       {isChanged && !hideIndicator && (
