@@ -24,19 +24,19 @@ export const getDisplayValue = (
   // 2. 获取 Handler
   const handler = path ? getHandlerByPath(path) : getHandlerByType(type);
 
+  let result = value;
   if (handler) {
     if (isFocused && handler.formatInteractive) {
-      return handler.formatInteractive(value, options.context || { t });
-    }
-    if (handler.formatDisplay) {
-      return handler.formatDisplay(value, options.context || { t });
+      result = handler.formatInteractive(value, options.context || { t });
+    } else if (handler.formatDisplay) {
+      result = handler.formatDisplay(value, options.context || { t });
     }
   }
 
-  // 3. 最后的兜底逻辑
-  if (value === '' || value === undefined || value === null) return '';
-  const result = String(value);
-  return result.trim() === '' ? '' : result;
+  // 3. 最后的兜底逻辑与强制字符串化
+  if (result === '' || result === undefined || result === null) return '';
+  const str = String(result);
+  return str.trim() === '' ? '' : str;
 };
 
 /**
@@ -50,7 +50,7 @@ export const getExportValue = (
     path?: string;
     context?: any;
   } = {}
-): string => {
+): any => {
   if (value === '' || value === undefined || value === null) return '';
 
   const { path } = options;
@@ -67,6 +67,7 @@ export const getExportValue = (
   }
 
   if (result === '' || result === undefined || result === null) return '';
+  if (typeof result === 'boolean') return result;
   const str = String(result);
   return str.trim() === '' ? '' : str;
 };

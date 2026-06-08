@@ -12,15 +12,6 @@ import { DEITIES_BY_PANTHEON } from '../database/deities';
 import { ALL_LANGUAGES, LANGUAGES_BY_CATEGORY } from '../database/languages';
 
 /**
- * 核心数据枚举
- */
-const ALIGNMENTS = ['LG', 'NG', 'CG', 'LN', 'N', 'CN', 'LE', 'NE', 'CE'];
-const SIZES = ['Fine', 'Diminutive', 'Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan', 'Colossal'];
-const GENDERS = ['Male', 'Female', 'Other'];
-const MANEUVERABILITY = ['Clumsy', 'Poor', 'Average', 'Good', 'Perfect'];
-const ABILITY_TYPES = ['—', 'Sp', 'Su', 'Ex'];
-
-/**
  * 基础处理器类 (Base Class)
  * 职责：定义接口规范与通用的显示/格式化逻辑
  */
@@ -52,7 +43,7 @@ export class BaseHandler {
     return this.defaultValue;
   }
 
-  formatDisplay(v: any, context?: any): string {
+  formatDisplay(v: any, context?: any): any {
     return (v ?? '') === '' ? '' : String(v);
   }
 
@@ -403,6 +394,16 @@ const CostHandler = new BaseFloat({
   }
 });
 
+const ACPHandler = new BaseInt({
+  ui: 'int',
+  min: 0,
+  formatDisplay: (v: any) => {
+    const n = parseInt(v, 10);
+    if (!n || n === 0) return '0';
+    return `-${n}`;
+  }
+});
+
 const WeightHandler = new BaseFloat({
   ui: 'weight',
   min: 0,
@@ -416,20 +417,26 @@ const WeightHandler = new BaseFloat({
 
 const BoolHandler = new BaseHandler({
   ui: 'bool',
-  update: (v: any) => v === true || v === 'true',
-  formatDisplay: (v: any) => (v ? '是' : '否')
+  update: (v: boolean) => v === true,
+  formatDisplay: (v: boolean) => v === true
 });
 
 const ClassSkillHandler = new BaseHandler({
-  ui: 'bool',
-  update: (v: any) => v === true || v === 'true',
-  formatDisplay: (v: any, context?: any) => {
+  formatDisplay: (v: boolean, context?: any) => {
     const rank = parseInt(context?.row?.rank, 10);
-    return ((v === true || v === 'true') && rank > 0) ? '+3' : '';
+    return (v && rank > 0) ? '+3' : '';
+  },
+  formatExport: (v: boolean, context?: any) => {
+    const rank = parseInt(context?.row?.rank, 10);
+    if (v && rank > 0) {
+      const label = context?.t ? context.t('editor.skills.headers.cs') : '本职';
+      return `+3${label}`;
+    }
+    return '';
   }
 });
 
-const AbilityTypeHandler = new BaseSelect({ optionValues: ABILITY_TYPES });
+const AbilityTypeHandler = new BaseSelect({ optionValues: ['', 'Sp', 'Su', 'Ex'] });
 
 const SpellTypeHandler = new BaseSelect({
   optionValues: [0, 1, 2, 3, 4, 5],
@@ -593,20 +600,115 @@ const DamageTypeHandler = new BaseSelect({
   i18nPrefix: 'editor.attacks.damage_types.'
 });
 const FavoredClassHandler = new BaseSelect({ isHybrid: true, isMulti: true });
-const FeatTypeHandler = new BaseSelect({ 
-  isHybrid: true, 
-  isMulti: true, 
+
+class EncodedSelect extends BaseSelect {
+  bitsPerSelection: number;
+  maxSelections: number;
+
+  constructor(config: Partial<BaseSelect> & { maxSelections?: number, bitsPerSelection?: number } = {}) {
+    super({ ...config, isMulti: true });
+
+    this.maxSelections = config.maxSelections || 2;
+    
+    // 强制设置 optionIndices 排除 0 (General)，使其在 UI 不可选
+    if (!config.optionIndices) {
+      this.optionIndices = [...this.optionValues.keys()].slice(1);
+    }
+
+    // 自动计算位数：log2(选项总数)
+    // 这里不使用 +1 偏移，0 直接代表索引 0 (General)
+    const bitCount = Math.ceil(Math.log2(this.optionValues.length || 1));
+    this.bitsPerSelection = config.bitsPerSelection || bitCount;
+  }
+
+  /**
+   * 解码：将单一数字映射回索引数组
+   */
+  private decode(v: number): number[] {
+    if (v === undefined || v === null || typeof v !== 'number') return [];
+    const ids: number[] = [];
+    const mask = (1 << this.bitsPerSelection) - 1;
+
+    // 从低位到高位提取
+    // 存储结构：[MSB...LSB] 对应 [最早选择...最后选择]
+    for (let i = 0; i < this.maxSelections; i++) {
+      const val = (v >> (i * this.bitsPerSelection)) & mask;
+      // 0 是有效的索引 (General)，但在多选中我们通常将其视为填充
+      // 除非整个数组都是 0，否则我们过滤掉它
+      ids.unshift(val);
+    }
+    
+    // 过滤掉 General (0)，因为它是填充项
+    const filtered = ids.filter(id => id > 0);
+    // 如果过滤后为空，说明全是 General 或没选，返回 [0] 代表 General
+    return filtered.length > 0 ? filtered : [0];
+  }
+
+  /**
+   * 编码：将索引数组打包为单一数字 (FIFO)
+   */
+  private encode(ids: any[]): number {
+    // 1. 过滤掉非法项，并确保是数字索引
+    // 2. 移除 0 (General)，因为我们要重新打包，0 会作为填充自动存在
+    const validIndices = ids
+      .map(id => {
+        if (typeof id === 'number') return id;
+        const n = parseInt(String(id), 10);
+        return isNaN(n) ? -1 : n;
+      })
+      .filter(id => id > 0)
+      .slice(-this.maxSelections);
+
+    let result = 0;
+    // 按照 [最早 -> 高位, 最晚 -> 低位] 的顺序打包
+    // 剩余的高位会自动保持为 0 (General)
+    for (let i = 0; i < validIndices.length; i++) {
+      const val = validIndices[i];
+      const shift = (validIndices.length - 1 - i) * this.bitsPerSelection;
+      result |= (val << shift);
+    }
+    return result;
+  }
+
+  update(v: any, context?: any): any {
+    let inputIds: any[] = [];
+    if (typeof v === 'number') {
+      inputIds = this.decode(v);
+    } else {
+      // 调用基类的 update 获取处理后的索引数组
+      inputIds = super.update(v, context);
+      if (!Array.isArray(inputIds)) {
+        inputIds = (inputIds === undefined || inputIds === null || inputIds === '') ? [] : [inputIds];
+      }
+    }
+
+    return this.encode(inputIds);
+  }
+
+  formatDisplay(v: any, context?: any): string {
+    if (context?.isOption) return super.formatDisplay(v, context);
+    
+    const ids = this.decode(typeof v === 'number' ? v : 0);
+    // decode 保证了至少返回一个 [0]
+    return ids
+      .map(id => super.formatDisplay(id, { ...context, isOption: true }))
+      .join(this.separator);
+  }
+
+  formatInteractive(v: any, context?: any): any {
+    const ids = (typeof v === 'number') ? this.decode(v) : (Array.isArray(v) ? v : []);
+    // UI (Combobox) 不应该看到 General (0)，否则它会显示在已选列表中
+    return ids.filter(id => id > 0);
+  }
+}
+
+const FeatTypeHandler = new EncodedSelect({ 
   i18nPrefix: 'editor.lists.feat_options.',
   optionValues: [
-    // CRB & Core High Frequency
-    'Combat', 'Item Creation', 'Metamagic', 
-    // Common Supplements (APG, UC, UM, etc.)
+    '', 'Combat', 'Item Creation', 'Metamagic', 
     'Teamwork', 'Critical', 'Style', 'Performance', 'Grit', 'Panache', 'Meditation', 'Conduit', 'Item Mastery',
-    // Specialized / Combat Variants
     'Achievement', 'Story', 'Monster', 'Armor Mastery', 'Shield Mastery', 'Weapon Mastery', 'Armor Style', 'Shield Style', 'Combat Stamina',
-    // Advanced / Occult / Specific
     'Alignment', 'Damnation', 'Stare', 'Words of Power', 'Blood Hex', 'Called Shot', 'Combination', 'Targeting', 'Trick',
-    // Social / Niche
     'Faction', 'Familiar', 'Coven', 'Esoteric', 'Hero Point', 'Origin', 'Gathlain Court Title'
   ] 
 });
@@ -812,7 +914,7 @@ const CurrencyHandler = new CompositeHandler();
 const handlers: any = {
   TextHandler, SkillNameHandler,
   IntegerHandler, PosIntHandler, NonNegativeIntHandler, QuantityHandler, LevelHandler,
-  DistanceHandler, SkillAttributeHandler, CostHandler, WeightHandler,
+  DistanceHandler, SkillAttributeHandler, CostHandler, WeightHandler, ACPHandler,
   ManeuverabilityHandler, AlignmentHandler, SizeHandler, GenderHandler,
   DeityHandler, RaceHandler, TraitTypeHandler, SensesHandler, LanguagesHandler, DamageTypeHandler,
   FavoredClassHandler, FeatTypeHandler,
@@ -833,6 +935,7 @@ const handlers: any = {
       case 'float': return FloatHandler;
       case 'cost': return CostHandler;
       case 'weight': return WeightHandler;
+      case 'acp': return ACPHandler;
       case 'bool': case 'checkbox': return BoolHandler;
       case 'skillName': return SkillNameHandler;
       case 'deity': return DeityHandler;

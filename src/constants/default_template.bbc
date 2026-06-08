@@ -49,7 +49,7 @@ hp {{hp}} ({{hd}})
 [/table][hr][b]职业特性[/b]
 [hr][table]
 {{#each classFeatures}}
-[tr][td]{{level}}[/td][td]{{name}}（{{type}}）[/td][td]{{desc}}[/td][/tr]
+[tr][td]{{level}}[/td][td]{{name}}{{#if type}}（{{type}}）{{/if}}[/td][td]{{desc}}[/td][/tr]
 {{/each}}
 [/table]{{#if magicBlocks}}[hr][b]法术与类法术能力[/b]
 [hr]{{#each magicBlocks}}[b]{{title}}[/b]（CL {{casterLevel}}{{#unless (eq (raw "type") 4)}}, 专注 {{concentration}}{{/unless}}）
@@ -57,21 +57,21 @@ hp {{hp}} ({{hd}})
 [tr]{{#unless (eq (raw "../type") 5)}}[td]{{level}}[/td]{{/unless}}{{#if uses}}[td]{{uses}}[/td]{{/if}}[td]{{spells}}[/td][/tr]
 {{/each}}[/table]{{#if notes}}
 备注：{{notes}}{{/if}}{{/each}}{{/if}}[hr][b]技能[/b]
-[hr][table]
-{{#each skills}}
+[hr]{{#with skills}}总技能点：{{totalPoints}}，防具检定减值：{{acp}}
+[table]{{#each this}}
 [tr][td]{{name}}[/td][td]{{total}} ({{rank}}{{cs}}{{ability}} {{others}})[/td][td]{{special}}[/td][/tr]
-{{/each}}
-[/table][hr][b]专长[/b]
+{{/each}}{{/with}}
+[/table]备注：{{notes}}[hr][b]专长[/b]
 [hr][table]
 {{#each feats}}
-[tr][td]{{level}}[/td][td]{{name}} ({{type}})[/td][td]{{desc}}[/td][/tr]
+[tr][td]{{level}}[/td][td]{{name}}{{#if type}} ({{type}}){{/if}}[/td][td]{{desc}}[/td][/tr]
 {{/each}}
-[/table][hr][b]物品[/b]
-[hr]{{#each equipment.container}}[quote author={{name}}]
+[/table][hr][b]物品[/b]{{#with equipment}}
+[hr]{{#each container}}[quote author={{name}}{{#if ignoreWeight}}（不计重量）{{/if}}]
 [table]
 {{#each this}}
-[tr][td]{{item}}[/td][td]{{quantity}}[/td][td]{{cost}}[/td][td]{{weight}}[/td][td]{{notes}}[/td][/tr]
+[tr][td]{{item}}{{#if quantity}}({{quantity}}){{/if}}[/td][td]{{cost}}[/td][td]{{weight}}[/td][td]{{notes}}[/td][/tr]
 {{/each}}
 [/table]
-[/quote]{{/each}}[b]总资产 {{totalCost}}gp，总重 {{totalWeight}}lbs[/b]
+[/quote]{{/each}}[b]总资产 {{totalCost}}gp，总重 {{totalWeight}}lbs[/b]{{/with}}
 {{/md2bb}}

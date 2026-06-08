@@ -38,7 +38,6 @@ const SkillsSection: React.FC = () => {
             value={String(skills.acp)}
             originalValue={String(lastSavedData.skills?.acp)}
             onChange={v => update('skills.acp', v)}
-            displayFormatter={(v, isFocused) => (!v || v === '0' || isFocused) ? v : `-${v}`}
             placeholder="0"
           />
         </div>

@@ -112,7 +112,7 @@ export const DynamicInput = React.memo(({
     return () => container.removeEventListener('wheel', handleWheel);
   }, [isFocused, tempValue, handler]);
 
-  const handleChange = useCallback((val: string) => {
+  const handleChange = useCallback((val: any) => {
     setTempValue(val);
     if (handler?.validate && !handler.validate(val)) return;
     onChange(handler?.update ? handler.update(val, context) : val);
@@ -160,13 +160,17 @@ export const DynamicInput = React.memo(({
       const options = (optionIndices || (handler.getOptions ? handler.getOptions(context) : handler.optionIndices) || []).map((opt: any) => 
         (typeof opt === 'object' && opt !== null) ? opt : { label: handler?.formatDisplay ? handler.formatDisplay(opt, { ...context, isOption: true }) : String(opt), value: opt }
       );
-      const showTags = (isFocused || isComboboxOpen) && handler.isMulti && Array.isArray(value) && value.length > 0;
+      
+      const interactiveValue = isFocused ? tempValue : (handler?.formatInteractive ? handler.formatInteractive(value, context) : value);
+      const isMulti = handler.isMulti;
+      const showTags = (isFocused || isComboboxOpen) && isMulti && Array.isArray(interactiveValue) && interactiveValue.length > 0;
+      
       const displayContent = showTags ? (
         <div className={cn("flex gap-1 items-center py-0.5", (singleLine && !isComboboxOpen) ? "flex-nowrap" : "flex-wrap")}>
-          {value.map((v: any, i: number) => (
+          {interactiveValue.map((v: any, i: number) => (
             <div key={`${v}-${i}`} className="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-md text-[13px] font-medium whitespace-nowrap">
               {handler?.formatDisplay ? handler.formatDisplay(v, { ...context, isOption: true }) : String(v)}
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); const next = [...value]; next.splice(i, 1); onChange(next); }} className="p-0.5 hover:bg-primary/30 rounded-full"><X className="h-3 w-3" /></button>
+              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); const next = [...interactiveValue]; next.splice(i, 1); handleChange(next); }} className="p-0.5 hover:bg-primary/30 rounded-full"><X className="h-3 w-3" /></button>
             </div>
           ))}
         </div>
@@ -174,7 +178,7 @@ export const DynamicInput = React.memo(({
 
       return (
         <Combobox
-          options={options} value={value} multiSelect={handler.isMulti} onSelect={onChange} onOpenChange={setIsComboboxOpen}
+          options={options} value={interactiveValue} multiSelect={isMulti} onSelect={handleChange} onOpenChange={setIsComboboxOpen}
           className={cn(sharedStyles, "font-inherit bg-transparent hover:bg-stone-50 transition-colors", showTags && !singleLine && "h-auto")}
           placeholder={displayContent} singleLine={singleLine} disablePadding={true}
         />

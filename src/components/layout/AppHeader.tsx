@@ -40,6 +40,7 @@ export default function AppHeader() {
   const {
     view,
     setView,
+    setToast,
     recentCharacters,
     removeFromRecent,
     isHeaderVisible,
@@ -162,7 +163,8 @@ export default function AppHeader() {
 
   const handleImportDefault = () => {
     if (window.confirm(t('editor.bbcode.confirm_reset'))) {
-      (window as any).__resetBBCodeTemplate?.();
+      setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
+      setToast({ message: t('editor.bbcode.reset_success'), type: 'success' });
     }
   };
 

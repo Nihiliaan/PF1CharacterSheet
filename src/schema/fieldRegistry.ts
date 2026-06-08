@@ -174,7 +174,7 @@ export const CharacterPrototype: any = {
     others: TextHandler,
     special: TextHandler,
     totalPoints: NonNegativeIntHandler,
-    acp: NonNegativeIntHandler,
+    acp: handlers.ACPHandler,
     notes: TextHandler
   },
 
