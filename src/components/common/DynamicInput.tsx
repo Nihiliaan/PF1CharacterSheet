@@ -9,6 +9,7 @@ import { useCharacter } from '../../contexts/CharacterContext';
 import { cn } from '../../lib/utils';
 import { Combobox } from '../ui/combobox';
 import { X } from 'lucide-react';
+import { isEqual } from 'lodash-es';
 
 const { getHandlerByType } = handlers;
 
@@ -126,10 +127,12 @@ export const DynamicInput = React.memo(({
   }, [readOnly, value, onChange]);
 
   const isChanged = useMemo(() => {
-    if (readOnly || originalValue === undefined || value === originalValue) return false;
+    if (readOnly || originalValue === undefined) return false;
+    
     const v1 = handler?.update ? handler.update(value, context) : value;
     const v2 = handler?.update ? handler.update(originalValue, context) : originalValue;
-    return (typeof v1 === 'object') ? JSON.stringify(v1) !== JSON.stringify(v2) : v1 !== v2;
+    
+    return !isEqual(v1, v2);
   }, [readOnly, originalValue, value, handler, context]);
 
   const handleManualFocus = useCallback((e: React.MouseEvent) => {
@@ -221,7 +224,9 @@ export const DynamicInput = React.memo(({
           isFocused ? (
             <SimpleInlineEditor value={tempValue} onChange={handleChange} autoFocus={true} placeholder={placeholder} className={align ? `text-${align}` : ''} onFocus={() => setIsFocused(true)} />
           ) : (
-            <div className="w-full truncate">{getDisplayValue(value, type || 'text', t, { isFocused, path, context }) || <span className="text-stone-300 italic">{placeholder}</span>}</div>
+            <div className={cn(singleLine && "whitespace-nowrap")}>
+              {getDisplayValue(value, type || 'text', t, { isFocused, path, context }) || <span className="text-stone-300 italic">{placeholder}</span>}
+            </div>
           )
         )}
       </div>

@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import DynamicInput from './DynamicInput';
 import { InputType } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
+import { isEqual } from 'lodash-es';
+import { useTranslation } from 'react-i18next';
 
 interface InlineInputProps {
   label: string;
@@ -32,13 +34,22 @@ const InlineInput = ({
   displayFormatter,
   align = 'center'
 }: InlineInputProps) => {
+  const { t } = useTranslation();
   // 从 Schema 获取逻辑 (主要用于 UI 样式的 isChanged 判断)
   const handler = path ? getHandlerByPath(path) : null;
 
-  const isChanged = originalValue !== undefined && value !== originalValue;
+  const isChanged = useMemo(() => {
+    if (originalValue === undefined || readOnly) return false;
+    
+    // 如果有 handler，先进行 normalize (update)，确保比较的是最终存储格式
+    const v1 = handler?.update ? handler.update(value, { t }) : value;
+    const v2 = handler?.update ? handler.update(originalValue, { t }) : originalValue;
+    
+    return !isEqual(v1, v2);
+  }, [value, originalValue, handler, readOnly, t]);
 
   // Extract text size and font weight classes from className to pass to DynamicInput
-  const textClasses = React.useMemo(() => {
+  const textClasses = useMemo(() => {
     return className.split(' ').filter(c =>
       c.startsWith('text-') || c.startsWith('font-')
     ).join(' ');

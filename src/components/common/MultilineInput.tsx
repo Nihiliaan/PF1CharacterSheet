@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import DynamicInput from './DynamicInput';
 import { InputType } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
+import { isEqual } from 'lodash-es';
+import { useTranslation } from 'react-i18next';
 
 interface MultilineInputProps {
   label: string;
@@ -30,13 +32,22 @@ const MultilineInput = ({
   isAutoHeight = false,
   type = 'text'
 }: MultilineInputProps) => {
+  const { t } = useTranslation();
   // 从 Schema 获取逻辑
   const handler = path ? getHandlerByPath(path) : null;
 
-  const isChanged = originalValue !== undefined && value !== originalValue;
+  const isChanged = useMemo(() => {
+    if (originalValue === undefined || readOnly) return false;
+    
+    // 如果有 handler，先进行 normalize (update)，确保比较的是最终存储格式
+    const v1 = handler?.update ? handler.update(value, { t }) : value;
+    const v2 = handler?.update ? handler.update(originalValue, { t }) : originalValue;
+    
+    return !isEqual(v1, v2);
+  }, [value, originalValue, handler, readOnly, t]);
 
   const handleChange = (v: string) => {
-    const finalValue = handler?.update ? handler.update(v) : v;
+    const finalValue = handler?.update ? handler.update(v, { t }) : v;
     onChange(finalValue);
   };
 

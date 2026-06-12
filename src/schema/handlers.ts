@@ -7,7 +7,7 @@ export const REGEX_PATTERNS = {
   float: /^-?\d*\.?\d*$/,
 };
 
-import { KNOWLEDGE_IDS, CRAFT_IDS, PERFORM_IDS, PROFESSION_IDS, SKILL_REGISTRY } from '../constants/skills';
+import { SKILL_REGISTRY, getCategoryDefaultAbility, getCategorySkillIds, getCategoryInitialValues } from '../constants/skills';
 import { DEITIES_BY_PANTHEON } from '../database/deities';
 import { ALL_LANGUAGES, LANGUAGES_BY_CATEGORY } from '../database/languages';
 
@@ -180,15 +180,21 @@ export class BaseSelect extends BaseHandler {
     };
 
     if (this.isMulti) {
-      if (!Array.isArray(v)) {
-        // 溯源警告：找出是谁在往多选字段传非数组值
-        if (v !== undefined && v !== null && v !== '') {
-            console.warn(`[BaseSelect.update] Multi-select "${this.i18nPrefix}" received non-array:`, v);
-        }
-        if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) return [];
-        return [processItem(v)];
+      let items = v;
+      if (typeof v === 'string') {
+        if (v.trim() === '') return [];
+        // 如果是字符串，尝试按分隔符拆分 (兼容旧数据或直接输入的字符串)
+        items = v.split(this.separator).map(s => s.trim());
       }
-      return Array.from(new Set(v.map(processItem))).filter(item => item !== undefined && item !== null);
+
+      if (!Array.isArray(items)) {
+        if (v !== undefined && v !== null && v !== '') {
+          // 仅在完全无法处理时警告
+          console.warn(`[BaseSelect.update] Multi-select "${this.i18nPrefix}" received unprocessable value:`, v);
+        }
+        return (v === undefined || v === null || v === '') ? [] : [processItem(v)];
+      }
+      return Array.from(new Set(items.map(processItem))).filter(item => item !== undefined && item !== null);
     }
 
     return processItem(v);
@@ -226,6 +232,38 @@ export class BaseSelect extends BaseHandler {
     return (v === '' || v === undefined || v === null) 
       ? '' 
       : this.formatDisplay(v, { ...context, isOption: true });
+  }
+
+  /**
+   * 递归构建分组选项树 (通用转换器)
+   * 将 Record<string, string[] | Record> 转换为 Combobox 需要的树形结构
+   */
+  protected buildTree(data: any, context?: any): any[] {
+    const t = context?.t;
+    const buildNode = (item: any, key: string): any => {
+      const label = t ? t(`${this.i18nPrefix}${key}`) : key;
+      
+      // 如果是数组，说明是最终的选项列表
+      if (Array.isArray(item)) {
+        return {
+          label,
+          value: key,
+          children: item.map(opt => ({
+            label: t ? t(`${this.i18nPrefix}${opt}`) : opt,
+            value: this.optionValues.indexOf(opt)
+          }))
+        };
+      }
+      
+      // 如果是对象，递归处理子层级
+      return {
+        label,
+        value: key,
+        children: Object.entries(item).map(([k, v]) => buildNode(v, k))
+      };
+    };
+
+    return Object.entries(data).map(([k, v]) => buildNode(v, k));
   }
 }
 
@@ -302,26 +340,15 @@ export class SkillNameHandlerClass extends HybridSelect {
   }
 
   getOptionIndices(cat: number): number[] {
-    switch (cat) {
-      case 2: return KNOWLEDGE_IDS;
-      case 3: return CRAFT_IDS;
-      case 4: return PERFORM_IDS;
-      case 5: return PROFESSION_IDS;
-      default: return [];
-    }
+    return getCategorySkillIds(cat);
   }
 
   isFixed(cat: number) {
     return cat <= 2;
   }
 
-  getDefaultAbility(cat: number): number {
-    switch (cat) {
-      case 3: return 3; 
-      case 4: return 5; 
-      case 5: return 4; 
-      default: return 0;
-    }
+  getDefaultAbility(cat: number): number | null {
+    return getCategoryDefaultAbility(cat);
   }
 
   getColumnCount(cat: number) {
@@ -422,6 +449,7 @@ const BoolHandler = new BaseHandler({
 });
 
 const ClassSkillHandler = new BaseHandler({
+  ui: 'bool',
   formatDisplay: (v: boolean, context?: any) => {
     const rank = parseInt(context?.row?.rank, 10);
     return (v && rank > 0) ? '+3' : '';
@@ -474,54 +502,24 @@ const DeityHandler = new BaseSelect({
       label: t ? t(`${this.i18nPrefix}None`) : 'None',
       value: 0
     };
-
-    const groupedOptions = Object.entries(DEITIES_BY_PANTHEON).map(([pantheon, deities]) => {
-      return {
-        label: t ? t(`${this.i18nPrefix}${pantheon}`) : pantheon,
-        value: pantheon,
-        children: deities.map(name => ({
-          label: t ? t(`${this.i18nPrefix}${name}`) : name,
-          value: this.optionValues.indexOf(name)
-        }))
-      };
-    });
-
-    return [noneOption, ...groupedOptions];
+    return [noneOption, ...this.buildTree(DEITIES_BY_PANTHEON, context)];
   }
 });
 
-const RACES_GROUPED = [
-  {
-    label: 'core',
-    options: ['Human', 'Elf', 'Dwarf', 'Gnome', 'Halfling', 'Half-Orc', 'Half-Elf']
-  },
-  {
-    label: 'uncommon',
-    options: ['Aasimar', 'Drow', 'Geniekin', 'Goblin', 'Kobold', 'Orc', 'Tiefling']
-  },
-  {
-    label: 'rare',
-    children: [
-      {
-        label: 'aliens',
-        options: ['Kasatha', 'Lashunta', 'Triaxian', 'Trox']
-      },
-      {
-        label: 'dragon_empires',
-        options: ['Kitsune', 'Nagaji', 'Samsaran', 'Tengu', 'Wayang']
-      },
-      {
-        label: 'other',
-        options: [
-          'Aquatic Elf', 'Gathlain', 'Grippli', 'Merfolk', 'Skinwalker', 
-          'Vanara', 'Vishkanya', 'Wyrwood', 'Wyvaran',
-          'Ifrit', 'Oread', 'Sylph', 'Undine', 'Suli', 'Svirfneblin', 'Duergar',
-          'Android', 'Catfolk', 'Changeling', 'Dhampir', 'Fetchling', 'Ghoran', 'Gillman', 'Hobgoblin', 'Ratfolk', 'Strix'
-        ]
-      }
+const RACES_DATA = {
+  core: ['Human', 'Elf', 'Dwarf', 'Gnome', 'Halfling', 'Half-Orc', 'Half-Elf'],
+  uncommon: ['Aasimar', 'Drow', 'Geniekin', 'Goblin', 'Kobold', 'Orc', 'Tiefling'],
+  rare: {
+    aliens: ['Kasatha', 'Lashunta', 'Triaxian', 'Trox'],
+    dragon_empires: ['Kitsune', 'Nagaji', 'Samsaran', 'Tengu', 'Wayang'],
+    other: [
+      'Aquatic Elf', 'Gathlain', 'Grippli', 'Merfolk', 'Skinwalker', 
+      'Vanara', 'Vishkanya', 'Wyrwood', 'Wyvaran',
+      'Ifrit', 'Oread', 'Sylph', 'Undine', 'Suli', 'Svirfneblin', 'Duergar',
+      'Android', 'Catfolk', 'Changeling', 'Dhampir', 'Fetchling', 'Ghoran', 'Gillman', 'Hobgoblin', 'Ratfolk', 'Strix'
     ]
   }
-];
+};
 
 const RaceHandler = new BaseSelect({
   isHybrid: true,
@@ -536,25 +534,7 @@ const RaceHandler = new BaseSelect({
   ],
   i18nPrefix: 'editor.basic.race_options.',
   getOptions: function(context?: any) {
-    const t = context?.t;
-    const buildGroup = (group: any): any => {
-      if (group.children) {
-        return {
-          label: t ? t(`${this.i18nPrefix}${group.label}`) : group.label,
-          value: group.label,
-          children: group.children.map(buildGroup)
-        };
-      }
-      return {
-        label: t ? t(`${this.i18nPrefix}${group.label}`) : group.label,
-        value: group.label,
-        children: group.options.map((opt: string) => ({
-          label: t ? t(`${this.i18nPrefix}${opt}`) : opt,
-          value: this.optionValues.indexOf(opt)
-        }))
-      };
-    };
-    return RACES_GROUPED.map(buildGroup);
+    return this.buildTree(RACES_DATA, context);
   }
 });
 
@@ -581,25 +561,9 @@ const LanguagesHandler = new BaseSelect({
   optionValues: ALL_LANGUAGES,
   i18nPrefix: 'editor.basic.languages_options.',
   getOptions: function(context?: any) {
-    const t = context?.t;
-    return Object.entries(LANGUAGES_BY_CATEGORY).map(([category, languages]) => ({
-      label: t ? t(`${this.i18nPrefix}${category}`) : category,
-      value: category,
-      children: languages.map(lang => ({
-        label: t ? t(`${this.i18nPrefix}${lang}`) : lang,
-        value: this.optionValues.indexOf(lang)
-      }))
-    }));
+    return this.buildTree(LANGUAGES_BY_CATEGORY, context);
   }
 });
-const DamageTypeHandler = new BaseSelect({ 
-  isHybrid: true, 
-  isMulti: true, 
-  optionValues: ['P', 'S', 'B'],
-  separator: '/',
-  i18nPrefix: 'editor.attacks.damage_types.'
-});
-const FavoredClassHandler = new BaseSelect({ isHybrid: true, isMulti: true });
 
 class EncodedSelect extends BaseSelect {
   bitsPerSelection: number;
@@ -697,10 +661,18 @@ class EncodedSelect extends BaseSelect {
 
   formatInteractive(v: any, context?: any): any {
     const ids = (typeof v === 'number') ? this.decode(v) : (Array.isArray(v) ? v : []);
-    // UI (Combobox) 不应该看到 General (0)，否则它会显示在已选列表中
+    // UI (Combobox) 不应该看到 General (0)，否则它会显示 in 已选列表中
     return ids.filter(id => id > 0);
   }
 }
+
+const DamageTypeHandler = new EncodedSelect({ 
+  optionValues: ['', 'P', 'S', 'B'],
+  separator: '/',
+  i18nPrefix: 'editor.attacks.damage_types.',
+  maxSelections: 3
+});
+const FavoredClassHandler = new BaseSelect({ isHybrid: true, isMulti: true });
 
 const FeatTypeHandler = new EncodedSelect({ 
   i18nPrefix: 'editor.lists.feat_options.',
@@ -803,8 +775,8 @@ const MeleeAttackTableHandler = new BaseTable({
     { key: 'critRange', label: 'editor.attacks.crit_range', width: '8%', type: 'critRange' },
     { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '8%', type: 'critMultiplier' },
     { key: 'touch', label: 'editor.attacks.reach', width: '8%', type: 'distance' },
-    { key: 'damageType', label: 'editor.attacks.damage_type', width: '10%' },
-    { key: 'special', label: 'editor.attacks.special', width: '26%' }
+    { key: 'damageType', label: 'editor.attacks.damage_type', width: '12%' },
+    { key: 'special', label: 'editor.attacks.special', width: '24%' }
   ]
 });
 
@@ -816,8 +788,8 @@ const RangedAttackTableHandler = new BaseTable({
     { key: 'critRange', label: 'editor.attacks.crit_range', width: '8%', type: 'critRange' },
     { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '8%', type: 'critMultiplier' },
     { key: 'range', label: 'editor.attacks.range', width: '8%', type: 'distance' },
-    { key: 'damageType', label: 'editor.attacks.damage_type', width: '10%' },
-    { key: 'special', label: 'editor.attacks.special', width: '26%' }
+    { key: 'damageType', label: 'editor.attacks.damage_type', width: '12%' },
+    { key: 'special', label: 'editor.attacks.special', width: '24%' }
   ]
 });
 

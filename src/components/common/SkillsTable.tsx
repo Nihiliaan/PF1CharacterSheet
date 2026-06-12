@@ -5,7 +5,7 @@ import { DynamicTableProps } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
 import DynamicInput from './DynamicInput';
 import handlers from '../../schema/handlers';
-import { SkillCategory, SKILL_REGISTRY, CATEGORY_IDS, getSkillsByCategory } from '../../constants/skills';
+import { SkillCategory, CATEGORY_IDS, getSkillsByCategory, getCategoryInitialValues } from '../../constants/skills';
 
 // --- 子组件：技能行 ---
 const SkillsTableRow = memo(({ 
@@ -199,19 +199,13 @@ export default function SkillsTable(props: DynamicTableProps & { minWidth?: stri
   const addRow = (initialValues: Record<string, any> = {}) => {
     if (readOnly) return;
     const newData = { ...data };
-    let baseInitialValues = { ...initialValues };
-    if (baseInitialValues.category !== undefined && baseInitialValues.name === undefined) {
-       const registry = getSkillsByCategory(baseInitialValues.category);
-       if (registry.length > 0) {
-         baseInitialValues.name = registry[0].id;
-         const nameHandler = handlers.SkillNameHandler;
-         baseInitialValues.ability = nameHandler?.getDefaultAbility?.(baseInitialValues.category) ?? registry[0].defaultAbility;
-       }
-    }
+    const baseInitialValues = initialValues.category !== undefined && initialValues.name === undefined
+      ? { ...getCategoryInitialValues(initialValues.category), ...initialValues }
+      : { ...initialValues };
+
     columns.forEach((c: any) => {
        if (!Array.isArray(newData[c.key])) newData[c.key] = new Array(rowCount).fill('');
-       const cellPath = `${path || ''}.${c.key}[0]`;
-       const cellHandler = getHandlerByPath(cellPath);
+       const cellHandler = getHandlerByPath(`${path || ''}.${c.key}[0]`);
        let finalVal = baseInitialValues[c.key];
        if (finalVal === undefined) finalVal = cellHandler?.getDefaultValue ? cellHandler.getDefaultValue() : '';
        if (cellHandler?.update) finalVal = cellHandler.update(finalVal);
@@ -277,9 +271,8 @@ export default function SkillsTable(props: DynamicTableProps & { minWidth?: stri
                   const dataIdx = presentIndices.find(idx => (data as any).name[idx] === reg.id); 
                   return (
                     <SkillsTableRow key={`reg-${reg.id}-${regIdx}`} index={dataIdx ?? -1} columns={columns} data={data} originalData={originalData} path={path} readOnly={readOnly} readonlyColumns={readonlyColumns} rowDraggable={false} rowActionMode={rowActionMode} updateData={updateData} removeRow={removeRow} isGhost={dataIdx === undefined} registryEntry={reg} onActivate={(key?: string, val?: any) => { 
-                       const nameHandler = handlers.SkillNameHandler;
-                       const init: any = { category: reg.category, name: reg.id, ability: nameHandler?.getDefaultAbility?.(reg.category) ?? reg.defaultAbility }; 
-                       if (key) init[key] = val; addRow(init); 
+                       const init = { ...getCategoryInitialValues(reg.category), name: reg.id, ability: reg.defaultAbility }; 
+                       if (key) (init as any)[key] = val; addRow(init); 
                     }} isDescriptionCol={isDescriptionCol} />
                   );
                 }))}
