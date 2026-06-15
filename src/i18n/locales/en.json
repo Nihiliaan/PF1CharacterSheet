@@ -627,9 +627,19 @@
     }
   },
   "about": {
-    "title": "About Character Manager",
-    "description": "Character Manager is a tool designed for PF1 tabletop players, providing convenient character data management and BBCode export functionality.",
-    "placeholder": "More content coming soon..."
+    "title": "About the System",
+    "description": "Originating from the 'Pure EP' TRPG community, this system is a character sheet management tool specifically crafted for Pathfinder 1e players. Whether you are a newcomer or a veteran of the Inner Sea, we provide the purest character creation experience.",
+    "philosophy_title": "Our Philosophy: Manual Mastery, No Black Boxes",
+    "philosophy_content": "In an era of fully automated tools, we stick to the logic of 'Fill & Validate.' We believe that manually calculating values and hand-writing abilities is the best way for players to understand rules and connect with their character's soul. The system only automates tedious details like encumbrance and assets, allowing you to focus your energy on core capabilities.",
+    "features_title": "Key Features",
+    "features_list": [
+      "One-click BBCode Export: Deeply adapted for forum posting with customizable templates, ending the pain of manual coding.",
+      "AI Intelligent Extraction: Automatically recognize and fill character data from PDFs, text, or screenshots using AI technology.",
+      "Universal Export Templates: Not limited to fixed formats; customize any text output style using Handlebars syntax.",
+      "Data Sovereignty: Integrated Google Drive sync ensures your data always stays in your own cloud storage.",
+      "Extensive Rule Database: Built-in PF1 rule databases for validation and reference, ensuring every piece of data has a source."
+    ],
+    "footer": "Built by players, for players. May your 20s always be natural."
   },
   "bbcode_help": {
     "syntax": {

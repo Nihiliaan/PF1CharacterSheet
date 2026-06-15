@@ -102,14 +102,36 @@ function AppContent() {
 
           {view === 'about' && (
             <motion.div key="about" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full overflow-y-auto p-8 custom-scrollbar">
-              <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-stone-200 p-8 mt-8">
-                <h1 className="text-3xl font-serif font-bold mb-4">{t('about.title')}</h1>
-                <p className="text-stone-600 leading-relaxed mb-4">
-                  {t('about.description')}
-                </p>
-                <p className="text-stone-500 text-sm italic">
-                  {t('about.placeholder')}
-                </p>
+              <div className="max-w-2xl mx-auto space-y-8 mt-8 pb-12">
+                <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-8">
+                  <h1 className="text-3xl font-serif font-bold mb-6 text-stone-900">{t('about.title')}</h1>
+                  <div className="prose prose-stone max-w-none">
+                    <p className="text-lg text-stone-700 leading-relaxed mb-6 font-medium">
+                      {t('about.description')}
+                    </p>
+                    
+                    <h2 className="text-xl font-bold text-stone-800 mb-3 border-b border-stone-100 pb-2">{t('about.philosophy_title')}</h2>
+                    <p className="text-stone-600 mb-6 leading-relaxed">
+                      {t('about.philosophy_content')}
+                    </p>
+
+                    <h2 className="text-xl font-bold text-stone-800 mb-3 border-b border-stone-100 pb-2">{t('about.features_title')}</h2>
+                    <ul className="space-y-3 mb-8">
+                      {(t('about.features_list', { returnObjects: true }) as string[]).map((feature, i) => (
+                        <li key={i} className="flex items-start gap-3 text-stone-600">
+                          <span className="text-stone-400 mt-1">✦</span>
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="pt-6 border-t border-stone-100 text-center">
+                      <p className="text-stone-400 text-sm italic italic font-serif">
+                        {t('about.footer')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
