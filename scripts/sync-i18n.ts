@@ -17,6 +17,37 @@ const OUTPUT_PATH = path.join(__dirname, '../src/i18n/locales/zh/database.json')
 const converter = OpenCC.Converter({ from: 'tw', to: 'cn' });
 
 /**
+ * 辅助：展平目录结构获取所有选项值
+ */
+function flattenDirectory(data: any[]): string[] {
+  let result: string[] = [];
+  data.forEach(item => {
+    if (typeof item === 'object' && item !== null && 'content' in item) {
+      result = result.concat(flattenDirectory(item.content));
+    } else {
+      result.push(item);
+    }
+  });
+  return result;
+}
+
+/**
+ * 辅助：递归获取所有目录名称
+ */
+function getDirectoryNames(data: any[]): string[] {
+  let result: string[] = [];
+  data.forEach(item => {
+    if (typeof item === 'object' && item !== null && 'name' in item) {
+      result.push(item.name);
+      if (item.content) {
+        result = result.concat(getDirectoryNames(item.content));
+      }
+    }
+  });
+  return result;
+}
+
+/**
  * 自动化同步配置
  * key: database.json 中的分类名
  * sources: 包含所有英文 Key 的数组或对象
@@ -24,19 +55,19 @@ const converter = OpenCC.Converter({ from: 'tw', to: 'cn' });
 const SYNC_TARGETS = [
   {
     ns: 'deities',
-    keys: Object.values(DEITIES_BY_PANTHEON).flat()
+    keys: flattenDirectory(DEITIES_BY_PANTHEON)
   },
   {
     ns: 'pantheons',
-    keys: Object.keys(DEITIES_BY_PANTHEON)
+    keys: getDirectoryNames(DEITIES_BY_PANTHEON)
   },
   {
     ns: 'languages',
-    keys: Object.values(LANGUAGES_BY_CATEGORY).flat()
+    keys: flattenDirectory(LANGUAGES_BY_CATEGORY)
   },
   {
     ns: 'language_categories',
-    keys: Object.keys(LANGUAGES_BY_CATEGORY)
+    keys: getDirectoryNames(LANGUAGES_BY_CATEGORY)
   }
 ];
 

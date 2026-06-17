@@ -10,6 +10,7 @@ export const REGEX_PATTERNS = {
 import { SKILL_REGISTRY, getCategoryDefaultAbility, getCategorySkillIds, getCategoryInitialValues } from '../constants/skills';
 import { DEITIES_BY_PANTHEON } from '../database/deities';
 import { ALL_LANGUAGES, LANGUAGES_BY_CATEGORY } from '../database/languages';
+import { RACES_DATA, flattenDirectory as flattenRaces } from '../database/races';
 
 /**
  * 基础处理器类 (Base Class)
@@ -137,6 +138,11 @@ export class BaseSelect extends BaseHandler {
   isMulti: boolean = false;
   isHybrid: boolean = false;
 
+  // 用于存储叶子节点到父节点的映射
+  protected parentMap: Record<string, string> = {};
+  // 用于存储父节点的元数据 (如 showParent)
+  protected parentMetadataMap: Record<string, any> = {};
+
   get ui(): string {
     if (!this.isMulti && !this.isHybrid) return 'select';
     return 'datalist';
@@ -235,36 +241,64 @@ export class BaseSelect extends BaseHandler {
   }
 
   /**
-   * 递归构建分组选项树 (通用转换器)
-   * 将 Record<string, string[] | Record> 转换为 Combobox 需要的树形结构
+   * 递归构建分组选项 tree
    */
-  protected buildTree(data: any, context?: any): any[] {
+  protected buildTree(data: any[], context?: any): any[] {
     const t = context?.t;
-    const buildNode = (item: any, key: string): any => {
-      const label = t ? t(`${this.i18nPrefix}${key}`) : key;
-      
-      // 如果是数组，说明是最终的选项列表
-      if (Array.isArray(item)) {
+    // 重置映射表
+    this.parentMap = {};
+    this.parentMetadataMap = {};
+
+    const build = (items: any[], parentName?: string): any[] => {
+      return items.map(item => {
+        if (typeof item === 'object' && item !== null && 'name' in item) {
+          const label = t ? t(`${this.i18nPrefix}${item.name}`) : item.name;
+          const valueIndex = this.optionValues.indexOf(item.name);
+          
+          if (parentName) this.parentMap[item.name] = parentName;
+          
+          // 存储父节点元数据
+          this.parentMetadataMap[item.name] = {
+            showParent: !!item.showParent
+          };
+
+          return {
+            label,
+            value: item.selectable ? valueIndex : item.name,
+            selectable: !!item.selectable,
+            children: build(item.content || [], item.name)
+          };
+        }
+        
+        if (parentName) this.parentMap[item] = parentName;
+
         return {
-          label,
-          value: key,
-          children: item.map(opt => ({
-            label: t ? t(`${this.i18nPrefix}${opt}`) : opt,
-            value: this.optionValues.indexOf(opt)
-          }))
+          label: t ? t(`${this.i18nPrefix}${item}`) : item,
+          value: this.optionValues.indexOf(item)
         };
-      }
-      
-      // 如果是对象，递归处理子层级
-      return {
-        label,
-        value: key,
-        children: Object.entries(item).map(([k, v]) => buildNode(v, k))
-      };
+      });
     };
 
-    return Object.entries(data).map(([k, v]) => buildNode(v, k));
+    return build(data);
   }
+}
+
+/**
+ * 辅助：展平目录结构获取所有选项值
+ */
+function flattenDirectory(data: any[]): any[] {
+  let result: any[] = [];
+  data.forEach(item => {
+    if (typeof item === 'object' && item !== null && 'content' in item) {
+      if (item.selectable) {
+        result.push(item.name);
+      }
+      result = result.concat(flattenDirectory(item.content));
+    } else {
+      result.push(item);
+    }
+  });
+  return result;
 }
 
 /**
@@ -493,7 +527,7 @@ const GenderHandler = new BaseSelect({ optionValues: ['Male', 'Female', 'Other']
 
 const DeityHandler = new BaseSelect({
   isHybrid: true,
-  optionValues: ['None', ...Object.values(DEITIES_BY_PANTHEON).flat()],
+  optionValues: ['None', ...flattenDirectory(DEITIES_BY_PANTHEON)],
   i18nPrefix: 'editor.basic.deity_options.',
   defaultIndex: 0,
   getOptions: function(context?: any) {
@@ -506,37 +540,39 @@ const DeityHandler = new BaseSelect({
   }
 });
 
-const RACES_DATA = {
-  core: ['Human', 'Elf', 'Dwarf', 'Gnome', 'Halfling', 'Half-Orc', 'Half-Elf'],
-  uncommon: ['Aasimar', 'Drow', 'Geniekin', 'Goblin', 'Kobold', 'Orc', 'Tiefling'],
-  rare: {
-    aliens: ['Kasatha', 'Lashunta', 'Triaxian', 'Trox'],
-    dragon_empires: ['Kitsune', 'Nagaji', 'Samsaran', 'Tengu', 'Wayang'],
-    other: [
-      'Aquatic Elf', 'Gathlain', 'Grippli', 'Merfolk', 'Skinwalker', 
-      'Vanara', 'Vishkanya', 'Wyrwood', 'Wyvaran',
-      'Ifrit', 'Oread', 'Sylph', 'Undine', 'Suli', 'Svirfneblin', 'Duergar',
-      'Android', 'Catfolk', 'Changeling', 'Dhampir', 'Fetchling', 'Ghoran', 'Gillman', 'Hobgoblin', 'Ratfolk', 'Strix'
-    ]
-  }
-};
-
 const RaceHandler = new BaseSelect({
   isHybrid: true,
-  optionValues: [
-    'Human', 'Elf', 'Dwarf', 'Gnome', 'Halfling', 'Half-Orc', 'Half-Elf',
-    'Aasimar', 'Drow', 'Geniekin', 'Goblin', 'Kobold', 'Orc', 'Tiefling',
-    'Android', 'Catfolk', 'Changeling', 'Dhampir', 'Fetchling', 'Ghoran', 'Gillman', 'Hobgoblin', 'Ratfolk', 'Strix',
-    'Kasatha', 'Lashunta', 'Triaxian', 'Trox',
-    'Kitsune', 'Nagaji', 'Samsaran', 'Tengu', 'Wayang',
-    'Aquatic Elf', 'Gathlain', 'Grippli', 'Merfolk', 'Skinwalker', 'Vanara', 'Vishkanya', 'Wyrwood', 'Wyvaran',
-    'Ifrit', 'Oread', 'Sylph', 'Undine', 'Suli', 'Svirfneblin', 'Duergar'
-  ],
+  optionValues: flattenRaces(RACES_DATA),
   i18nPrefix: 'editor.basic.race_options.',
   getOptions: function(context?: any) {
     return this.buildTree(RACES_DATA, context);
+  },
+  formatDisplay: function(v: any, context?: any) {
+    const t = context?.t;
+    const baseDisplay = BaseSelect.prototype.formatDisplay.call(this, v, context);
+    if (context?.isOption || !t || (v ?? '') === '') return baseDisplay;
+
+    // 获取内部存储的 key
+    let key = '';
+    if (typeof v === 'number') {
+      key = this.optionValues[v];
+    } else if (typeof v === 'string') {
+      key = v.trim();
+    }
+
+    const parentKey = this.parentMap[key];
+    const parentMeta = parentKey ? this.parentMetadataMap[parentKey] : null;
+
+    // 仅在父级节点显式标记了 showParent: true 时显示父类前缀
+    if (parentKey && parentMeta?.showParent) {
+      const parentDisplay = t(`${this.i18nPrefix}${parentKey}`);
+      return `${parentDisplay} (${baseDisplay})`;
+    }
+
+    return baseDisplay;
   }
 });
+
 
 const TraitTypeHandler = new BaseSelect({ 
   isHybrid: true, 

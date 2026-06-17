@@ -20,6 +20,7 @@ export interface ComboboxOption {
   label: string;
   value: string | number;
   children?: ComboboxOption[];
+  selectable?: boolean;
 }
 
 interface ComboboxProps {
@@ -70,7 +71,7 @@ export function Combobox({
     return String(value) === strVal
   }
 
-  const handleSelect = (val: string | number) => {
+  const handleSelect = (val: string | number, stayOpen?: boolean) => {
     const valStr = String(val)
     if (multiSelect) {
       const currentValues = Array.isArray(value) ? [...value] : (value !== undefined && value !== null && value !== '' ? [value] : [])
@@ -93,8 +94,10 @@ export function Combobox({
       }
     } else {
       onSelect(val)
-      setOpen(false)
-      setSearchValue("")
+      if (!stayOpen) {
+        setOpen(false)
+        setSearchValue("")
+      }
     }
   }
 
@@ -162,11 +165,29 @@ export function Combobox({
             key={option.value} 
             heading={
               <div 
-                className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors py-1 -ml-1 w-full"
+                className={cn(
+                  "flex items-center gap-1 cursor-pointer hover:text-primary transition-colors py-1 -ml-1 w-full",
+                  option.selectable && isSelected(option.value) && "text-primary font-bold"
+                )}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  toggleGroup(option.value);
+                  
+                  const isExpanded = !!searchValue || expandedGroups.has(option.value);
+                  
+                  if (option.selectable) {
+                    if (!isExpanded) {
+                      // 未展开时：展开并选中
+                      if (!expandedGroups.has(option.value)) toggleGroup(option.value);
+                      handleSelect(option.value, true);
+                    } else {
+                      // 已展开时：仅切换折叠（保持选中）
+                      toggleGroup(option.value);
+                    }
+                  } else {
+                    // 不可选项：仅切换折叠
+                    toggleGroup(option.value);
+                  }
                 }}
               >
                 {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
