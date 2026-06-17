@@ -230,7 +230,7 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
 
   // 注入属性名称 (因为数据层没有存储固定名称)
   if (view.attributes) {
-    view.attributes.name = ATTRIBUTE_NAMES.map(attr => t('editor.attributes.' + attr));
+    view.attributes.name = ATTRIBUTE_NAMES.map((_, i) => t('editor.attributes.' + i));
   }
 
   // 注入计算属性

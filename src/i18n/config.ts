@@ -22,7 +22,8 @@ const lookupInDatabase = (key: string) => {
   const db = zhDb as Record<string, Record<string, string>>;
   const searchCategories = [
     'deities', 'pantheons', 
-    'languages', 'language_categories'
+    'languages', 'language_categories',
+    'races', 'race_categories'
   ];
 
   for (const cat of searchCategories) {
@@ -79,8 +80,14 @@ i18n
         }
       }
       
-      // 如果查表也没找到，剥离前缀显示原名
-      return key.includes('.') ? key.split('.').pop()! : key;
+      // 如果查表也没找到，且最后一部分是数字索引，则返回原 key
+      // 这样可以方便 BaseSelect 等组件判断该索引是否真的缺失翻译
+      const parts = key.split('.');
+      const lastPart = parts[parts.length - 1];
+      if (/^\d+$/.test(lastPart)) return key;
+
+      // 否则剥离前缀显示原名
+      return lastPart;
     },
     postProcess: ['openCC'],
     debug: false,

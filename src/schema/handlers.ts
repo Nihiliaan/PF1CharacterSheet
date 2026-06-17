@@ -176,9 +176,11 @@ export class BaseSelect extends BaseHandler {
 
       const t = context?.t;
       if (t && typeof item === 'string') {
-        const foundIndex = this.optionValues.findIndex(key => 
-          t(`${this.i18nPrefix}${key}`) === item.trim()
-        );
+        // 尝试通过 i18n 文本查找索引
+        const foundIndex = this.optionValues.findIndex((key, idx) => {
+          // 优先尝试索引查找 (Array), 然后尝试 Key 查找 (Object)
+          return t(`${this.i18nPrefix}${idx}`) === item.trim() || t(`${this.i18nPrefix}${key}`) === item.trim();
+        });
         if (foundIndex !== -1) return foundIndex;
       }
 
@@ -223,8 +225,22 @@ export class BaseSelect extends BaseHandler {
     }
 
     if (index !== -1 && this.optionValues[index] !== undefined) {
+      if (!t) return String(this.optionValues[index]);
+      
       const key = this.optionValues[index];
-      return t ? t(`${this.i18nPrefix}${key}`) : String(key);
+      const pathWithIndex = `${this.i18nPrefix}${index}`;
+      const pathWithKey = `${this.i18nPrefix}${key}`;
+      
+      // 优先尝试按 Key 查找 (适配数据库和旧格式)
+      // 如果 Key 查找成功 (返回值不等于 Key 本身)，则使用该翻译
+      const resKey = t(pathWithKey);
+      if (resKey !== key && resKey !== pathWithKey) return resKey;
+      
+      // 如果 Key 查找失败，尝试按 Index 查找 (适配序列化数组)
+      const resIndex = t(pathWithIndex);
+      if (resIndex !== String(index) && resIndex !== pathWithIndex) return resIndex;
+      
+      return String(key);
     }
 
     return String(v);
@@ -321,10 +337,12 @@ export class SkillNameHandlerClass extends HybridSelect {
         if (typeof item === 'number') return item;
         const t = context?.t;
         if (t && typeof item === 'string') {
+            const prefix = this.i18nPrefix.endsWith('.') ? this.i18nPrefix.slice(0, -1) : this.i18nPrefix;
+            const names = t(prefix, { returnObjects: true });
             for (const s of SKILL_REGISTRY) {
                 const cat = Math.floor(s.id / 1000);
                 const idx = s.id % 1000;
-                if (t(`${this.i18nPrefix}${cat}.${idx}`) === item.trim()) return s.id;
+                if (names?.[cat]?.[idx] === item.trim()) return s.id;
             }
         }
         return super.update(item, context);
@@ -351,14 +369,17 @@ export class SkillNameHandlerClass extends HybridSelect {
     if (typeof v === 'number') {
       cat = Math.floor(v / 1000);
       const idx = v % 1000;
-      name = t(`${this.i18nPrefix}${cat}.${idx}`);
+      const prefix = this.i18nPrefix.endsWith('.') ? this.i18nPrefix.slice(0, -1) : this.i18nPrefix;
+      const names = t(prefix, { returnObjects: true });
+      name = names?.[cat]?.[idx] || t(`${this.i18nPrefix}${cat}.${idx}`);
     } else {
       name = super.formatDisplay(v, { ...context, isOption: true });
       if (typeof v === 'string') cat = context?.row?.category;
     }
 
     if (cat >= 2 && cat <= 5 && !context?.isOption) {
-      const catName = t(`editor.skills.categories.${cat}`);
+      const cats = t('editor.skills.categories', { returnObjects: true });
+      const catName = Array.isArray(cats) ? cats[cat] : (cats?.[cat] || cat);
       return `${catName}（${name}）`;
     }
     
@@ -516,7 +537,9 @@ const SkillAttributeHandler = new BaseSelect({
   optionIndices: [0, 1, 3, 4, 5],
   formatDisplay: function (v: any, context?: any) {
     const mod = context.modifiers[this.optionValues[v]];
-    return `${mod >= 0 ? '+' : ''}${mod}${context.t('editor.attributes.' + this.optionValues[v])}`;
+    const attrs = context.t('editor.attributes', { returnObjects: true });
+    const attrName = Array.isArray(attrs) ? attrs[v] : (attrs?.[v] || v);
+    return `${mod >= 0 ? '+' : ''}${mod}${attrName}`;
   }
 });
 
@@ -717,7 +740,7 @@ const FeatTypeHandler = new EncodedSelect({
     'Teamwork', 'Critical', 'Style', 'Performance', 'Grit', 'Panache', 'Meditation', 'Conduit', 'Item Mastery',
     'Achievement', 'Story', 'Monster', 'Armor Mastery', 'Shield Mastery', 'Weapon Mastery', 'Armor Style', 'Shield Style', 'Combat Stamina',
     'Alignment', 'Damnation', 'Stare', 'Words of Power', 'Blood Hex', 'Called Shot', 'Combination', 'Targeting', 'Trick',
-    'Faction', 'Familiar', 'Coven', 'Esoteric', 'Hero Point', 'Origin', 'Gathlain Court Title'
+    'Faction', 'Familiar', 'Coven', 'Esoteric', 'Hero Point', 'Origin', 'Gathlain Court Title', 'Betrayal'
   ] 
 });
 
@@ -794,11 +817,11 @@ export class CompositeHandler extends BaseHandler {
 
 const AttributesTableHandler = new BaseTable({
   columns: [
-    { key: 'name', label: 'editor.attributes.headers.attr', width: '10%' },
-    { key: 'final', label: 'editor.attributes.headers.final', width: '10%', type: 'int' },
-    { key: 'modifier', label: 'editor.attributes.headers.mod', width: '10%', type: 'bonus' },
-    { key: 'source', label: 'editor.attributes.headers.source', width: '50%' },
-    { key: 'status', label: 'editor.attributes.headers.status', width: '20%' }
+    { key: 'name', label: 'editor.attributes_headers.attr', width: '10%' },
+    { key: 'final', label: 'editor.attributes_headers.final', width: '10%', type: 'int' },
+    { key: 'modifier', label: 'editor.attributes_headers.mod', width: '10%', type: 'bonus' },
+    { key: 'source', label: 'editor.attributes_headers.source', width: '50%' },
+    { key: 'status', label: 'editor.attributes_headers.status', width: '20%' }
   ],
   fixedRows: true
 });
@@ -832,7 +855,7 @@ const RangedAttackTableHandler = new BaseTable({
 const DefensesTableHandler = new BaseTable({
   columns: [
     { key: 'ac', label: 'editor.defenses.ac', width: '15%', type: 'int' },
-    { key: 'source', label: 'editor.attributes.headers.source', width: '55%' },
+    { key: 'source', label: 'editor.attributes_headers.source', width: '55%' },
     { key: 'touch', label: 'editor.defenses.touch', width: '15%', type: 'int' },
     { key: 'flatFooted', label: 'editor.defenses.flat_footed', width: '15%', type: 'int' }
   ],
@@ -912,9 +935,9 @@ const EquipmentItemsHandler = new BaseTable({
 const BasicInfoHandler = new CompositeHandler();
 const CombatInfoHandler = new CompositeHandler({
   columns: [
-    { key: 'bab', label: 'editor.attributes.bab', width: '33.33%', type: 'bonus' },
-    { key: 'cmb', label: 'editor.attributes.cmb', width: '33.33%', type: 'bonus' },
-    { key: 'cmd', label: 'editor.attributes.cmd', width: '33.34%', type: 'int' }
+    { key: 'bab', label: 'editor.combat.bab', width: '33.33%', type: 'bonus' },
+    { key: 'cmb', label: 'editor.combat.cmb', width: '33.33%', type: 'bonus' },
+    { key: 'cmd', label: 'editor.combat.cmd', width: '33.34%', type: 'int' }
   ]
 });
 const CurrencyHandler = new CompositeHandler();

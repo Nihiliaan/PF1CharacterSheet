@@ -13,12 +13,12 @@ const AttributesSection: React.FC = () => {
 
   const tableData = React.useMemo(() => ({
     ...data.attributes,
-    name: ATTRIBUTE_NAMES.map(attr => t('editor.attributes.' + attr))
+    name: ATTRIBUTE_NAMES.map((_, i) => t('editor.attributes.' + i))
   }), [data.attributes, t]);
 
   const originalTableData = React.useMemo(() => ({
     ...lastSavedData.attributes,
-    name: ATTRIBUTE_NAMES.map(attr => t('editor.attributes.' + attr))
+    name: ATTRIBUTE_NAMES.map((_, i) => t('editor.attributes.' + i))
   }), [lastSavedData.attributes, t]);
 
   return (
@@ -38,7 +38,7 @@ const AttributesSection: React.FC = () => {
       <div className="flex flex-col md:flex-row gap-6 mt-4 items-stretch">
         <div className="w-full md:w-1/2 flex flex-col">
           <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-            {t('editor.attributes.combat_stats')}
+            {t('editor.combat.stats')}
             <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
           </label>
           <div className="flex-1">
@@ -53,12 +53,12 @@ const AttributesSection: React.FC = () => {
         </div>
         <MultilineInput
           className="w-full md:w-1/2"
-          label={t('editor.attributes.maneuver_notes')}
+          label={t('editor.combat.maneuver_notes')}
           path="combatManeuver.notes"
           value={data.combatManeuver.notes || ''}
           originalValue={lastSavedData.combatManeuver?.notes}
           onChange={v => update('combatManeuver.notes', v)}
-          placeholder={t('editor.attributes.maneuver_placeholder')}
+          placeholder={t('editor.combat.maneuver_placeholder')}
           height="100%"
         />
       </div>
