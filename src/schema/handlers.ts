@@ -644,6 +644,10 @@ class EncodedSelect extends BaseSelect {
     this.bitsPerSelection = config.bitsPerSelection || bitCount;
   }
 
+  getDefaultValue(): any {
+    return 0;
+  }
+
   /**
    * 解码：将单一数字映射回索引数组
    */
@@ -726,7 +730,11 @@ class EncodedSelect extends BaseSelect {
 }
 
 const DamageTypeHandler = new EncodedSelect({ 
-  optionValues: ['', 'P', 'S', 'B'],
+  optionValues: [
+    '', 'P', 'S', 'B',
+    'Acid', 'Cold', 'Electricity', 'Fire', 'Sonic', 'Force',
+    'Positive', 'Negative', 'Holy', 'Unholy'
+  ],
   separator: '/',
   i18nPrefix: 'editor.attacks.damage_types.',
   maxSelections: 3

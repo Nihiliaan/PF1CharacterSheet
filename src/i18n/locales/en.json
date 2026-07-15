@@ -198,7 +198,17 @@
         "",
         "P",
         "S",
-        "B"
+        "B",
+        "Acid",
+        "Cold",
+        "Electricity",
+        "Fire",
+        "Sonic",
+        "Force",
+        "Positive",
+        "Negative",
+        "Holy",
+        "Unholy"
       ],
       "special": "Special",
       "special_attacks": "Special Attacks"

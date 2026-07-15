@@ -131,10 +131,41 @@ export async function saveCharacter(characterData: any, id?: string | null, fold
     const currentUid = auth.currentUser.uid;
     const finalOwnerId = id ? (characterData.ownerId || currentUid) : currentUid;
 
+    // Defense against nested arrays from EncodedSelect fields:
+    // Any empty arrays `[]` in encoded columns will be coerced to `0`
+    const sanitizedData = { ...characterData };
+    if (sanitizedData.feats && Array.isArray(sanitizedData.feats.type)) {
+      sanitizedData.feats = {
+        ...sanitizedData.feats,
+        type: sanitizedData.feats.type.map((t: any) => Array.isArray(t) ? 0 : t)
+      };
+    }
+    if (sanitizedData.attacks) {
+      const sanitizedAttacks = { ...sanitizedData.attacks };
+      let attacksChanged = false;
+      if (sanitizedAttacks.melee && Array.isArray(sanitizedAttacks.melee.damageType)) {
+        sanitizedAttacks.melee = {
+          ...sanitizedAttacks.melee,
+          damageType: sanitizedAttacks.melee.damageType.map((t: any) => Array.isArray(t) ? 0 : t)
+        };
+        attacksChanged = true;
+      }
+      if (sanitizedAttacks.ranged && Array.isArray(sanitizedAttacks.ranged.damageType)) {
+        sanitizedAttacks.ranged = {
+          ...sanitizedAttacks.ranged,
+          damageType: sanitizedAttacks.ranged.damageType.map((t: any) => Array.isArray(t) ? 0 : t)
+        };
+        attacksChanged = true;
+      }
+      if (attacksChanged) {
+        sanitizedData.attacks = sanitizedAttacks;
+      }
+    }
+
     const payload: any = {
       name: filename,
       data: {
-        ...characterData,
+        ...sanitizedData,
         id: id || '', // Will be updated after creation if new
         folderId: folderId !== undefined ? folderId : (characterData.folderId || null),
         ownerId: finalOwnerId,
