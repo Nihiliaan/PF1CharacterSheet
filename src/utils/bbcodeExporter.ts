@@ -258,10 +258,11 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
         const spellType = typeof rawBlock.type === 'number' ? rawBlock.type : 0;
         const lowestLevel = handlers.SpellTypeHandler.lowestLevel[spellType] || 0;
 
-        // 注入 level 数组 (法术通常从 lowestLevel 开始递增)
+        // 注入 level 数组 (法术从高环到低环，与 UI 保持一致)
         block.level = [];
         for (let i = 0; i < rowCount; i++) {
-          block.level.push(t('editor.spells.computed_level', { n: i + lowestLevel }));
+          const computedLevelNumber = rowCount - 1 - i + lowestLevel;
+          block.level.push(t('editor.spells.computed_level', { n: computedLevelNumber }));
         }
       } else {
         // 类法术能力通常不分环位，或者 level 字段有其它用途
