@@ -166,9 +166,12 @@ hbs.registerHelper('md2bb', function (this: any, context: any, options?: any) {
  * 将数据转换为仅包含显示值的视图对象
  */
 export function buildViewObject(data: any, t: any, characterContext?: any): any {
+  const computed = characterContext?.computed || characterContext;
   const context = {
     t,
-    modifiers: characterContext?.computed?.modifiers,
+    data,
+    computed,
+    modifiers: computed?.modifiers,
     character: characterContext
   };
 

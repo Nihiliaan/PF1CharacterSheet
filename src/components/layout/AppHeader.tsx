@@ -41,13 +41,44 @@ export default function AppHeader() {
     view,
     setView,
     setToast,
-    recentCharacters,
+    recentCharacterIds,
     removeFromRecent,
     isHeaderVisible,
     setIsHeaderVisible,
     isHeaderPinned,
     setIsHeaderPinned
   } = useUI();
+  
+  const {
+    myCharacters,
+    currentFolderId,
+    setCurrentFolderId,
+    folders,
+    search,
+    setSearch,
+    viewMode,
+    setViewMode,
+    createFolder,
+    refreshCharacterList,
+    importFromClipboard,
+    onPaste
+  } = useVault();
+
+  const recentCharacters = useMemo(() => {
+    return recentCharacterIds.map(id => {
+      const found = myCharacters?.find((c: any) => c.id === id);
+      if (found) {
+        const data = found.data || {};
+        return {
+          id,
+          name: data.basic?.name || found.name || '未命名',
+          avatar: found.isTemplate ? 'https://ui-avatars.com/api/?name=T&background=6366f1&color=fff' : (data.basic?.avatars?.url?.[0] || ''),
+          classes: data.basic?.classes || found.classes || '',
+        };
+      }
+      return { id, name: id, avatar: '', classes: '' };
+    });
+  }, [recentCharacterIds, myCharacters]);
 
   const {
     isReadOnly,
@@ -79,20 +110,6 @@ export default function AppHeader() {
     handleCloudRestore,
     isSyncingDrive
   } = useCharacter();
-
-  const {
-    currentFolderId,
-    setCurrentFolderId,
-    folders,
-    search,
-    setSearch,
-    viewMode,
-    setViewMode,
-    createFolder,
-    refreshCharacterList,
-    importFromClipboard,
-    onPaste // Although not needed for import, good to keep context synced
-  } = useVault();
 
   const toggleLanguage = () => {
     const current = i18n.language;

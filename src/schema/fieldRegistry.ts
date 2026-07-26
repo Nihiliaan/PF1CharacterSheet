@@ -173,7 +173,7 @@ export const CharacterPrototype: any = {
     ability: SkillAttributeHandler,
     others: TextHandler,
     special: TextHandler,
-    totalPoints: NonNegativeIntHandler,
+    totalPoints: handlers.SkillTotalPointsHandler,
     acp: handlers.ACPHandler,
     notes: TextHandler
   },

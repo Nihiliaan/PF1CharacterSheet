@@ -486,6 +486,22 @@ const ACPHandler = new BaseInt({
   }
 });
 
+const SkillTotalPointsHandler = new BaseInt({
+  ui: 'int',
+  min: 0,
+  formatDisplay: (v: any, context?: any) => {
+    const ranks = context?.data?.skills?.rank;
+    const usedPoints = Array.isArray(ranks)
+      ? ranks.reduce((sum: number, r: any) => sum + (Number(r) || 0), 0)
+      : 0;
+    const total = (v ?? '') === '' ? 0 : v;
+    return `${usedPoints}/${total}`;
+  },
+  formatExport: (v: any) => {
+    return (v ?? '') === '' ? '0' : String(v);
+  }
+});
+
 const WeightHandler = new BaseFloat({
   ui: 'weight',
   min: 0,
@@ -536,8 +552,9 @@ const SkillAttributeHandler = new BaseSelect({
   optionValues: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'],
   optionIndices: [0, 1, 3, 4, 5],
   formatDisplay: function (v: any, context?: any) {
-    const mod = context.modifiers[this.optionValues[v]];
-    const attrs = context.t('editor.attributes', { returnObjects: true });
+    const modifiers = context?.computed?.modifiers || context?.modifiers;
+    const mod = modifiers?.[this.optionValues[v]] ?? 0;
+    const attrs = context?.t ? context.t('editor.attributes', { returnObjects: true }) : null;
     const attrName = Array.isArray(attrs) ? attrs[v] : (attrs?.[v] || v);
     return `${mod >= 0 ? '+' : ''}${mod}${attrName}`;
   }
@@ -963,7 +980,7 @@ const handlers: any = {
   BasicInfoHandler, CombatInfoHandler, CurrencyHandler,
   BaseHandler, BaseText, BaseInt, BaseSelect, BaseTable, CompositeHandler, SkillNameHandlerClass,
   DailyUsesHandler, BoolHandler, FloatHandler, AbilityTypeHandler, SpellTypeHandler, ClassSkillHandler,
-  AgeHandler, HeightHandler, CritRangeHandler, CritMultiplierHandler, BonusHandler,
+  AgeHandler, HeightHandler, CritRangeHandler, CritMultiplierHandler, BonusHandler, SkillTotalPointsHandler,
   getHandlerByType: (type: string): BaseHandler => {
     switch (type) {
       case 'number': case 'int': return IntegerHandler;

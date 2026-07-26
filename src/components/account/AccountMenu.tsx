@@ -97,7 +97,7 @@ const AccountMenu = ({ user, view, setView, recentCharacters, onSelect, onRemove
                         <div key={char.id} className="relative group/item">
                           <button
                             onClick={() => {
-                              onSelect(char, true);
+                              onSelect(char.id, true);
                               setIsOpen(false);
                             }}
                             className="w-full flex items-center gap-3 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left pr-10"

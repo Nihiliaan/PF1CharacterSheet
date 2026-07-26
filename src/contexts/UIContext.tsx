@@ -22,7 +22,7 @@ interface UIContextType {
   setIsHeaderVisible: (visible: boolean) => void;
 
   // Recent Characters
-  recentCharacters: any[];
+  recentCharacterIds: string[];
   addToRecent: (char: any) => void;
   removeFromRecent: (id: string) => void;
 }
@@ -43,7 +43,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [isHeaderPinned, setIsHeaderPinnedState] = useState(() => localStorage.getItem('header_pinned') !== 'false');
   const [isHeaderVisible, setIsHeaderVisible] = useState(false);
 
-  const [recentCharacters, setRecentCharacters] = useState<any[]>([]);
+  const [recentCharacterIds, setRecentCharacterIds] = useState<string[]>([]);
 
   // Persistence
   useEffect(() => {
@@ -51,10 +51,15 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   }, [isHeaderPinned]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('recent_characters');
+    const saved = localStorage.getItem('recent_character_ids') || localStorage.getItem('recent_characters');
     if (saved) {
-      try { setRecentCharacters(JSON.parse(saved)); }
-      catch (e) { console.error("[UIContext] Failed to parse recent characters:", e); }
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const ids = parsed.map((item: any) => typeof item === 'string' ? item : item.id).filter(Boolean);
+          setRecentCharacterIds(ids);
+        }
+      } catch (e) { console.error("[UIContext] Failed to parse recent character ids:", e); }
     }
   }, []);
 
@@ -63,28 +68,20 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const setIsHeaderPinned = (v: boolean) => setIsHeaderPinnedState(v);
 
   const addToRecent = (char: any) => {
-    if (!char || !char.id) return;
-    setRecentCharacters(prev => {
-      const filtered = prev.filter(p => p.id !== char.id);
-      const data = char.data || {};
-      const name = data.basic?.name || char.name || '未命名';
-      const newItem = {
-        id: char.id,
-        name: name,
-        avatar: char.isTemplate ? 'https://ui-avatars.com/api/?name=T&background=6366f1&color=fff' : (data.basic?.avatars?.url?.[0] || ''),
-        classes: data.basic?.classes || char.classes || '',
-        data: data
-      };
-      const next = [newItem, ...filtered].slice(0, 10);
-      localStorage.setItem('recent_characters', JSON.stringify(next));
+    const id = typeof char === 'string' ? char : char?.id;
+    if (!id) return;
+    setRecentCharacterIds(prev => {
+      const filtered = prev.filter(i => i !== id);
+      const next = [id, ...filtered].slice(0, 10);
+      localStorage.setItem('recent_character_ids', JSON.stringify(next));
       return next;
     });
   };
 
   const removeFromRecent = (id: string) => {
-    setRecentCharacters(prev => {
-      const next = prev.filter(p => p.id !== id);
-      localStorage.setItem('recent_characters', JSON.stringify(next));
+    setRecentCharacterIds(prev => {
+      const next = prev.filter(i => i !== id);
+      localStorage.setItem('recent_character_ids', JSON.stringify(next));
       return next;
     });
   };
@@ -95,7 +92,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     confirmModal, setConfirmModal,
     isHeaderPinned, setIsHeaderPinned,
     isHeaderVisible, setIsHeaderVisible,
-    recentCharacters, addToRecent, removeFromRecent
+    recentCharacterIds, addToRecent, removeFromRecent
   };
 
   return (

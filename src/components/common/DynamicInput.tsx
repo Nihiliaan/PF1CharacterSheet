@@ -79,8 +79,9 @@ export const DynamicInput = React.memo(({
   const lastClickCoords = useRef<{ x: number, y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const modifiers = characterContext?.computed?.modifiers;
-  const context = useMemo(() => ({ modifiers, t, row }), [modifiers, t, row]);
+  const computed = characterContext?.computed;
+  const data = characterContext?.data;
+  const context = useMemo(() => ({ data, computed, t, row }), [data, computed, t, row]);
   const handler = useMemo(() => (path ? getHandlerByPath(path) : null) || getHandlerByType(type || 'text'), [path, type]);
 
   const fontStack = "Inter, 'Noto Sans SC', system-ui, -apple-system, sans-serif";

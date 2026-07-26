@@ -199,7 +199,7 @@ export const useCharacterPersistence = (
           }
 
           // Check if we need to auto-create a link for someone else's character
-          if (user && char.ownerId !== user.uid && !char.targetId) {
+          if (user && char.ownerId && char.ownerId !== user.uid && !char.targetId) {
             const sharedFolderId = await ensureLocalFolderService('来自分享', null, user.uid);
             const linkId = await saveLink(char, sharedFolderId);
             if (linkId) {
@@ -262,7 +262,7 @@ export const useCharacterPersistence = (
           }
         }
 
-        if (user && char.ownerId !== user.uid) {
+        if (user && char.ownerId && char.ownerId !== user.uid) {
           const sharedFolderId = await ensureLocalFolderService('来自分享', null, user.uid);
           const linkId = await saveLink(char, sharedFolderId);
           if (linkId) {
