@@ -135,7 +135,7 @@ export class BaseSelect extends BaseHandler {
   optionIndices: number[] = [];
   defaultIndex: number = 0;
   i18nPrefix: string = '';
-  separator: string = ', '; 
+  separator?: string; 
   
   isMulti: boolean = false;
   isHybrid: boolean = false;
@@ -252,10 +252,16 @@ export class BaseSelect extends BaseHandler {
     return null;
   }
 
+  getSeparator(context?: any): string {
+    if (this.separator) return this.separator;
+    const currentLang = context?.t?.language || i18n.language || 'zh';
+    return currentLang.startsWith('zh') ? '，' : ', ';
+  }
+
   formatDisplay(v: any, context?: any): string {
     if (Array.isArray(v)) {
       if (v.length === 0) return '—';
-      return v.map(item => this.formatDisplay(item, context)).join(this.separator);
+      return v.map(item => this.formatDisplay(item, context)).join(this.getSeparator(context));
     }
 
     if (v === undefined || v === null || v === '') return '—';
