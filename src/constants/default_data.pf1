@@ -142,6 +142,7 @@
         "id": "bag-default",
         "name": "身上",
         "ignoreWeight": false,
+        "ignoreCost": false,
         "item": [],
         "quantity": [],
         "cost": [],

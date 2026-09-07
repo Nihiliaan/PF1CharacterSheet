@@ -8,8 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit",
-    "i18n:sync": "tsx scripts/sync-i18n.ts"
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@bbob/preset-react": "^4.3.1",

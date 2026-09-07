@@ -149,6 +149,7 @@ export interface ContainerData {
   id: string;
   name: string;
   ignoreWeight: boolean;
+  ignoreCost?: boolean;
   item: string[];
   quantity: number[];
   cost: number[];

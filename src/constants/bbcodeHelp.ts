@@ -231,6 +231,7 @@ export const BBCODE_DATA_TREE: BBCodeTreeItem[] = [
         key: 'container', descKey: 'bbcode_help.data.equipment_container', children: [
           { key: 'name', descKey: 'bbcode_help.data.equipment_container_name' },
           { key: 'ignoreWeight', descKey: 'bbcode_help.data.equipment_container_ignoreWeight' },
+          { key: 'ignoreCost', descKey: 'bbcode_help.data.equipment_container_ignoreCost' },
           { key: 'item', descKey: 'bbcode_help.data.equipment_container_item' },
           { key: 'quantity', descKey: 'bbcode_help.data.equipment_container_quantity' },
           { key: 'cost', descKey: 'bbcode_help.data.equipment_container_cost' },

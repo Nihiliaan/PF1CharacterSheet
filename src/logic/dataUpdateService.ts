@@ -59,6 +59,7 @@ export const dataUpdateService = {
         id: 'bag-' + Math.random().toString(36).substr(2, 9),
         name: '新容器',
         ignoreWeight: false,
+        ignoreCost: false,
         item: [],
         quantity: [],
         cost: [],

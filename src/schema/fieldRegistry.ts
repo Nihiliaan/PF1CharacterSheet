@@ -184,6 +184,7 @@ export const CharacterPrototype: any = {
       handler: new handlers.BaseTable({ ...EquipmentItemsHandler, view: 'EquipmentBags' }),
       name: TextHandler,
       ignoreWeight: BoolHandler,
+      ignoreCost: BoolHandler,
       // 物品平铺
       item: TextHandler,
       quantity: QuantityHandler,

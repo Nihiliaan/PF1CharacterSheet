@@ -67,7 +67,7 @@ hp {{hp}} ({{hd}})
 [tr][td]{{level}}[/td][td]{{name}}{{#if type}} ({{type}}){{/if}}[/td][td]{{desc}}[/td][/tr]
 {{/each}}
 [/table][hr][b]物品[/b]{{#with equipment}}
-[hr]{{#each container}}[quote author={{name}}{{#if ignoreWeight}}（不计重量）{{/if}}]
+[hr]{{#each container}}[quote author={{name}}{{#if ignoreWeight}}（不计重量）{{/if}}{{#if ignoreCost}}（不计资产）{{/if}}]
 [table]
 {{#each this}}
 [tr][td]{{item}}{{#if quantity}}({{quantity}}){{/if}}[/td][td]{{cost}}[/td][td]{{weight}}[/td][td]{{notes}}[/td][/tr]

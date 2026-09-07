@@ -11,6 +11,8 @@ import { SKILL_REGISTRY, getCategoryDefaultAbility, getCategorySkillIds, getCate
 import { DEITIES_BY_PANTHEON } from '../database/deities';
 import { ALL_LANGUAGES, LANGUAGES_BY_CATEGORY } from '../database/languages';
 import { RACES_DATA, flattenDirectory as flattenRaces } from '../database/races';
+import i18n from 'i18next';
+import { toTraditional } from '../i18n/config';
 
 /**
  * 基础处理器类 (Base Class)
@@ -208,6 +210,26 @@ export class BaseSelect extends BaseHandler {
     return processItem(v);
   }
 
+  localizedMap: Record<string, string> = {};
+
+  getLocalizedDisplay(key: string, context?: any): string | null {
+    if (!this.localizedMap || Object.keys(this.localizedMap).length === 0) {
+      if (typeof (this as any).getOptions === 'function') {
+        (this as any).getOptions(context);
+      }
+    }
+    if (this.localizedMap && this.localizedMap[key]) {
+      const currentLang = i18n.language || 'zh';
+      if (currentLang.startsWith('en')) return key;
+      const zh = this.localizedMap[key];
+      if (currentLang === 'zh-TW' || currentLang === 'zh-HK') {
+        return toTraditional(zh);
+      }
+      return zh;
+    }
+    return null;
+  }
+
   formatDisplay(v: any, context?: any): string {
     if (Array.isArray(v)) {
       if (v.length === 0) return '—';
@@ -224,10 +246,21 @@ export class BaseSelect extends BaseHandler {
       index = parseInt(v.trim(), 10);
     }
 
+    let key = '';
+    if (index !== -1 && this.optionValues[index] !== undefined) {
+      key = this.optionValues[index];
+    } else if (typeof v === 'string') {
+      key = v.trim();
+    }
+
+    if (key) {
+      const localized = this.getLocalizedDisplay(key, context);
+      if (localized) return localized;
+    }
+
     if (index !== -1 && this.optionValues[index] !== undefined) {
       if (!t) return String(this.optionValues[index]);
       
-      const key = this.optionValues[index];
       const pathWithIndex = `${this.i18nPrefix}${index}`;
       const pathWithKey = `${this.i18nPrefix}${key}`;
       
@@ -261,36 +294,71 @@ export class BaseSelect extends BaseHandler {
    */
   protected buildTree(data: any[], context?: any): any[] {
     const t = context?.t;
+    const currentLang = i18n.language || 'zh';
     // 重置映射表
     this.parentMap = {};
     this.parentMetadataMap = {};
+    this.localizedMap = {};
 
-    const build = (items: any[], parentName?: string): any[] => {
+    const parsePair = (val: any): [string, string] => {
+      if (Array.isArray(val)) {
+        return [val[0], val[1] ?? val[0]];
+      }
+      return [String(val), String(val)];
+    };
+
+    const getLocalizedLabel = (pair: [string, string], i18nKey?: string): string => {
+      const [en, zh] = pair;
+      this.localizedMap[en] = zh;
+
+      if (currentLang.startsWith('en')) {
+        return en;
+      }
+
+      let label = zh;
+      if (label === en && i18nKey && t) {
+        const trans = t(i18nKey);
+        if (trans && trans !== i18nKey && trans !== en) {
+          label = trans;
+          this.localizedMap[en] = trans;
+        }
+      }
+
+      if (currentLang === 'zh-TW' || currentLang === 'zh-HK') {
+        return toTraditional(label);
+      }
+      return label;
+    };
+
+    const build = (items: any[], parentEnName?: string): any[] => {
       return items.map(item => {
-        if (typeof item === 'object' && item !== null && 'name' in item) {
-          const label = t ? t(`${this.i18nPrefix}${item.name}`) : item.name;
-          const valueIndex = this.optionValues.indexOf(item.name);
+        if (typeof item === 'object' && item !== null && !Array.isArray(item) && 'name' in item) {
+          const [enName, zhName] = parsePair(item.name);
+          const label = getLocalizedLabel([enName, zhName], `${this.i18nPrefix}${enName}`);
+          const valueIndex = this.optionValues.indexOf(enName);
           
-          if (parentName) this.parentMap[item.name] = parentName;
+          if (parentEnName) this.parentMap[enName] = parentEnName;
           
           // 存储父节点元数据
-          this.parentMetadataMap[item.name] = {
+          this.parentMetadataMap[enName] = {
             showParent: !!item.showParent
           };
 
           return {
             label,
-            value: item.selectable ? valueIndex : item.name,
+            value: item.selectable ? valueIndex : enName,
             selectable: !!item.selectable,
-            children: build(item.content || [], item.name)
+            children: build(item.content || [], enName)
           };
         }
         
-        if (parentName) this.parentMap[item] = parentName;
+        const [enItem, zhItem] = parsePair(item);
+        const label = getLocalizedLabel([enItem, zhItem], `${this.i18nPrefix}${enItem}`);
+        if (parentEnName) this.parentMap[enItem] = parentEnName;
 
         return {
-          label: t ? t(`${this.i18nPrefix}${item}`) : item,
-          value: this.optionValues.indexOf(item)
+          label,
+          value: this.optionValues.indexOf(enItem)
         };
       });
     };
@@ -305,11 +373,14 @@ export class BaseSelect extends BaseHandler {
 function flattenDirectory(data: any[]): any[] {
   let result: any[] = [];
   data.forEach(item => {
-    if (typeof item === 'object' && item !== null && 'content' in item) {
+    if (typeof item === 'object' && item !== null && !Array.isArray(item) && 'content' in item) {
       if (item.selectable) {
-        result.push(item.name);
+        const en = Array.isArray(item.name) ? item.name[0] : item.name;
+        result.push(en);
       }
       result = result.concat(flattenDirectory(item.content));
+    } else if (Array.isArray(item)) {
+      result.push(item[0]);
     } else {
       result.push(item);
     }
@@ -571,12 +642,26 @@ const DeityHandler = new BaseSelect({
   i18nPrefix: 'editor.basic.deity_options.',
   defaultIndex: 0,
   getOptions: function(context?: any) {
-    const t = context?.t;
+    const currentLang = i18n.language || 'zh';
+    let noneLabel = 'None';
+    if (currentLang.startsWith('zh')) {
+      noneLabel = (currentLang === 'zh-TW' || currentLang === 'zh-HK') ? '無信仰' : '无信仰';
+    } else if (context?.t) {
+      noneLabel = context.t(`${this.i18nPrefix}None`);
+    }
     const noneOption = {
-      label: t ? t(`${this.i18nPrefix}None`) : 'None',
+      label: noneLabel,
       value: 0
     };
     return [noneOption, ...this.buildTree(DEITIES_BY_PANTHEON, context)];
+  },
+  formatDisplay: function(v: any, context?: any) {
+    if (v === 0 || v === '0' || v === 'None') {
+      const currentLang = i18n.language || 'zh';
+      if (currentLang.startsWith('en')) return 'None';
+      return (currentLang === 'zh-TW' || currentLang === 'zh-HK') ? '無信仰' : '无信仰';
+    }
+    return BaseSelect.prototype.formatDisplay.call(this, v, context);
   }
 });
 
@@ -590,7 +675,7 @@ const RaceHandler = new BaseSelect({
   formatDisplay: function(v: any, context?: any) {
     const t = context?.t;
     const baseDisplay = BaseSelect.prototype.formatDisplay.call(this, v, context);
-    if (context?.isOption || !t || (v ?? '') === '') return baseDisplay;
+    if (context?.isOption || (v ?? '') === '') return baseDisplay;
 
     // 获取内部存储的 key
     let key = '';
@@ -605,7 +690,7 @@ const RaceHandler = new BaseSelect({
 
     // 仅在父级节点显式标记了 showParent: true 时显示父类前缀
     if (parentKey && parentMeta?.showParent) {
-      const parentDisplay = t(`${this.i18nPrefix}${parentKey}`);
+      const parentDisplay = this.getLocalizedDisplay(parentKey, context) || (t ? t(`${this.i18nPrefix}${parentKey}`) : parentKey);
       return `${parentDisplay} (${baseDisplay})`;
     }
 

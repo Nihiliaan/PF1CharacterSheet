@@ -68,11 +68,20 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
           <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-stone-400 hover:text-stone-600 transition-colors shrink-0 ml-2">
             <input
               type="checkbox"
-              checked={bag.ignoreWeight}
+              checked={!!bag.ignoreWeight}
               onChange={e => update(`equipment.container[${bagIndex}].ignoreWeight`, e.target.checked)}
               className="rounded border-stone-300 text-primary focus:ring-primary h-3 w-3"
             />
             {t('editor.items.ignore_weight')}
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-stone-400 hover:text-stone-600 transition-colors shrink-0 ml-1">
+            <input
+              type="checkbox"
+              checked={!!bag.ignoreCost}
+              onChange={e => update(`equipment.container[${bagIndex}].ignoreCost`, e.target.checked)}
+              className="rounded border-stone-300 text-primary focus:ring-primary h-3 w-3"
+            />
+            {t('editor.items.ignore_cost')}
           </label>
         </div>
         <button

@@ -5,34 +5,10 @@ import * as OpenCC from 'opencc-js';
 
 import zh from './locales/zh.json';
 import en from './locales/en.json';
-import zhDb from './locales/zh/database.json';
 
 // 初始化 OpenCC 转换器 (简体 -> 繁体)
-const converter = OpenCC.Converter({ from: 'cn', to: 'tw' });
-
-/**
- * 核心查表逻辑
- * 尝试从 database.json 中查找对应的翻译
- */
-const lookupInDatabase = (key: string) => {
-  // 提取原始名称 (如 editor.basic.deity_options.Abadar -> Abadar)
-  const rawName = key.includes('.') ? key.split('.').pop()! : key;
-  
-  // 按照优先级在所有数据库分类中查找
-  const db = zhDb as Record<string, Record<string, string>>;
-  const searchCategories = [
-    'deities', 'pantheons', 
-    'languages', 'language_categories',
-    'races', 'race_categories'
-  ];
-
-  for (const cat of searchCategories) {
-    if (db[cat]?.[rawName]) return db[cat][rawName];
-    if (db[cat]?.[key]) return db[cat][key];
-  }
-
-  return null;
-};
+export const converter = OpenCC.Converter({ from: 'cn', to: 'tw' });
+export const toTraditional = (text: string) => converter(text);
 
 /**
  * 统一的后处理器
@@ -66,27 +42,11 @@ i18n
       'zh-HK': ['zh'],
       'default': ['zh']
     },
-    // 自定义缺失键处理器：这是实现“全量透明查表”的核心
+    // 缺失键处理器：最后一部分是数字索引则返回原 key，否则剥离前缀显示原名
     parseMissingKeyHandler: (key) => {
-      const lng = i18n.language || 'zh';
-      
-      if (lng.startsWith('zh')) {
-        const found = lookupInDatabase(key);
-        if (found) {
-          if (lng === 'zh-TW' || lng === 'zh-HK') {
-            return converter(found);
-          }
-          return found;
-        }
-      }
-      
-      // 如果查表也没找到，且最后一部分是数字索引，则返回原 key
-      // 这样可以方便 BaseSelect 等组件判断该索引是否真的缺失翻译
       const parts = key.split('.');
       const lastPart = parts[parts.length - 1];
       if (/^\d+$/.test(lastPart)) return key;
-
-      // 否则剥离前缀显示原名
       return lastPart;
     },
     postProcess: ['openCC'],

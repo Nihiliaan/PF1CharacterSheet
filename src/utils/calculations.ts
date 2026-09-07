@@ -28,12 +28,14 @@ export const calculateTotalCost = (data: CharacterData): string => {
   const equipment = data.equipment;
   if (equipment && equipment.container) {
     equipment.container.forEach(bag => {
-      if (!bag.item) return;
-      bag.item.forEach((_, i) => {
-        const cost = parseFloat(bag.cost[i] as any) || 0;
-        const qty = parseInt(bag.quantity[i] as any) || 1;
-        total += cost * qty;
-      });
+      if (!bag.ignoreCost) {
+        if (!bag.item) return;
+        bag.item.forEach((_, i) => {
+          const cost = parseFloat(bag.cost[i] as any) || 0;
+          const qty = parseInt(bag.quantity[i] as any) || 1;
+          total += cost * qty;
+        });
+      }
     });
   }
 

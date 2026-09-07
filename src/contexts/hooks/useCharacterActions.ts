@@ -32,6 +32,7 @@ export const useCharacterActions = (
             id: 'bag-' + Math.random(),
             name: '新容器',
             ignoreWeight: false,
+            ignoreCost: false,
             item: [],
             quantity: [],
             cost: [],
