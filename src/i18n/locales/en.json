@@ -1,7 +1,6 @@
 {
   "common": {
-    "app_name": "Character Manager",
-    "app_subtitle": "PF1 Sheet System",
+    "app_title": "PF1 Character Sheet Editor",
     "save": "Save",
     "saving": "Saving...",
     "share": "Share",
@@ -418,6 +417,7 @@
       "notes_placeholder": "Notes about equipment, assets, or other items..."
     },
     "lists": {
+      "drag_to_sort": "Drag to reorder",
       "name": "Name",
       "type": "Type",
       "headers": {

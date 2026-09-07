@@ -76,6 +76,8 @@ export const DynamicInput = React.memo(({
   const characterContext = useCharacter();
   const [isFocused, setIsFocused] = useState(false);
   const [isComboboxOpen, setIsComboboxOpen] = useState(false);
+  const [draggedTagIndex, setDraggedTagIndex] = useState<number | null>(null);
+  const [dragOverTagIndex, setDragOverTagIndex] = useState<number | null>(null);
   const lastClickCoords = useRef<{ x: number, y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -171,12 +173,77 @@ export const DynamicInput = React.memo(({
       
       const displayContent = showTags ? (
         <div className={cn("flex gap-1 items-center py-0.5", (singleLine && !isComboboxOpen) ? "flex-nowrap" : "flex-wrap")}>
-          {interactiveValue.map((v: any, i: number) => (
-            <div key={`${v}-${i}`} className="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-md text-[13px] font-medium whitespace-nowrap">
-              {handler?.formatDisplay ? handler.formatDisplay(v, { ...context, isOption: true }) : String(v)}
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); const next = [...interactiveValue]; next.splice(i, 1); handleChange(next); }} className="p-0.5 hover:bg-primary/30 rounded-full"><X className="h-3 w-3" /></button>
-            </div>
-          ))}
+          {interactiveValue.map((v: any, i: number) => {
+            const isDragging = draggedTagIndex === i;
+            const isOver = dragOverTagIndex === i;
+            return (
+              <div
+                key={`${v}-${i}`}
+                draggable={!readOnly}
+                onDragStart={(e) => {
+                  e.stopPropagation();
+                  setDraggedTagIndex(i);
+                  e.dataTransfer.setData('text/plain', String(i));
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverTagIndex !== i) {
+                    setDragOverTagIndex(i);
+                  }
+                }}
+                onDragLeave={(e) => {
+                  e.stopPropagation();
+                  if (dragOverTagIndex === i) {
+                    setDragOverTagIndex(null);
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOverTagIndex(null);
+                  setDraggedTagIndex(null);
+                  const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                  if (isNaN(fromIndex) || fromIndex === i) return;
+                  const next = [...interactiveValue];
+                  const [moved] = next.splice(fromIndex, 1);
+                  next.splice(i, 0, moved);
+                  handleChange(next);
+                }}
+                onDragEnd={(e) => {
+                  e.stopPropagation();
+                  setDraggedTagIndex(null);
+                  setDragOverTagIndex(null);
+                }}
+                className={cn(
+                  "flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-md text-[13px] font-medium whitespace-nowrap select-none transition-all",
+                  !readOnly && "cursor-grab active:cursor-grabbing",
+                  isDragging && "opacity-40 scale-95 border-dashed border-primary",
+                  isOver && "border-primary ring-2 ring-primary/30 bg-primary/20"
+                )}
+                title={!readOnly ? t('editor.lists.drag_to_sort', '按住拖动排序') : undefined}
+              >
+                {handler?.formatDisplay ? handler.formatDisplay(v, { ...context, isOption: true }) : String(v)}
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const next = [...interactiveValue];
+                      next.splice(i, 1);
+                      handleChange(next);
+                    }}
+                    className="p-0.5 hover:bg-primary/30 rounded-full cursor-pointer"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (handler?.formatDisplay ? handler.formatDisplay(value, context) : String(value)) || <span className="text-stone-300">—</span>;
 

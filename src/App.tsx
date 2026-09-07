@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -35,7 +35,11 @@ export default function App() {
 }
 
 function AppContent() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  useEffect(() => {
+    document.title = t('common.app_title');
+  }, [t, i18n.language]);
   const {
     view,
     isHeaderPinned,

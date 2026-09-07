@@ -1,7 +1,6 @@
 {
   "common": {
-    "app_name": "人物卡管理系统",
-    "app_subtitle": "Character Manager",
+    "app_title": "PF1人物卡编辑器",
     "save": "保存",
     "saving": "正在保存...",
     "share": "分享",
@@ -418,6 +417,7 @@
       "notes_placeholder": "关于装备、资产或其他物品的备注..."
     },
     "lists": {
+      "drag_to_sort": "按住拖动排序",
       "name": "名称",
       "type": "类型",
       "headers": {
