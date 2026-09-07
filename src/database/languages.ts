@@ -31,7 +31,7 @@ export const LANGUAGES_BY_CATEGORY: LanguageCategory[] = [
       ['Shadowtongue', '暗影语'],
       ['Shoanti', '休盎提语'],
       ['Skald', '乌尔芬语'],
-      ['Taldane', '塔尔多语'],
+      ['Taldane', '塔尔多语（通用语）'],
       ['Taltien', 'Taltien'],
       ['Thassilonian', '瑟西隆语'],
       ['Tien', '天洲语'],

@@ -134,6 +134,7 @@ const BasicInfoSection: React.FC = () => {
             originalValue={lastSavedData.basic.languages}
             onChange={v => update('basic.languages', v)}
             align="left"
+            singleLine={false}
           />
         </div>
         <div className="w-full md:w-64">

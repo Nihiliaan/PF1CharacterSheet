@@ -18,6 +18,7 @@ interface InlineInputProps {
   transactionFilter?: (tr: any) => boolean;
   displayFormatter?: (v: string, isFocused: boolean) => string;
   align?: 'left' | 'center' | 'right';
+  singleLine?: boolean;
 }
 
 const InlineInput = ({
@@ -32,7 +33,8 @@ const InlineInput = ({
   type = 'text',
   transactionFilter,
   displayFormatter,
-  align = 'center'
+  align = 'center',
+  singleLine = true
 }: InlineInputProps) => {
   const { t } = useTranslation();
   // 从 Schema 获取逻辑 (主要用于 UI 样式的 isChanged 判断)
@@ -71,7 +73,7 @@ const InlineInput = ({
           type={handler?.ui || type}
           readOnly={readOnly}
           placeholder={placeholder}
-          singleLine={true}
+          singleLine={singleLine}
           transactionFilter={transactionFilter}
           displayFormatter={displayFormatter}
           align={align}

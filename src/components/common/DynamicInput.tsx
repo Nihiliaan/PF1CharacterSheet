@@ -245,12 +245,16 @@ export const DynamicInput = React.memo(({
             );
           })}
         </div>
-      ) : (handler?.formatDisplay ? handler.formatDisplay(value, context) : String(value)) || <span className="text-stone-300">—</span>;
+      ) : (
+        <span className={cn("w-full text-stone-800", !singleLine && "break-words whitespace-normal leading-relaxed")}>
+          {(handler?.formatDisplay ? handler.formatDisplay(value, context) : String(value)) || <span className="text-stone-300">—</span>}
+        </span>
+      );
 
       return (
         <Combobox
           options={options} value={interactiveValue} multiSelect={isMulti} onSelect={handleChange} onOpenChange={setIsComboboxOpen}
-          className={cn(sharedStyles, "font-inherit bg-transparent hover:bg-stone-50 transition-colors", showTags && !singleLine && "h-auto")}
+          className={cn(sharedStyles, "font-inherit bg-transparent hover:bg-stone-50 transition-colors", !singleLine && "h-auto")}
           placeholder={displayContent} singleLine={singleLine} disablePadding={true}
         />
       );

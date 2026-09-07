@@ -176,14 +176,36 @@ export class BaseSelect extends BaseHandler {
         return index;
       }
 
-      const t = context?.t;
-      if (t && typeof item === 'string') {
-        // 尝试通过 i18n 文本查找索引
-        const foundIndex = this.optionValues.findIndex((key, idx) => {
-          // 优先尝试索引查找 (Array), 然后尝试 Key 查找 (Object)
-          return t(`${this.i18nPrefix}${idx}`) === item.trim() || t(`${this.i18nPrefix}${key}`) === item.trim();
-        });
-        if (foundIndex !== -1) return foundIndex;
+      if (typeof item === 'string') {
+        const itemClean = item.trim();
+        const itemLower = itemClean.toLowerCase();
+        
+        // 1. 尝试在 optionValues (英文原名) 中直接比对
+        const directIdx = this.optionValues.findIndex(key => String(key).toLowerCase() === itemLower);
+        if (directIdx !== -1) return directIdx;
+
+        // 2. 尝试在 localizedMap 中比对简体与繁体
+        if (this.localizedMap) {
+          for (const [enKey, zhVal] of Object.entries(this.localizedMap)) {
+            if (
+              zhVal.toLowerCase() === itemLower ||
+              toTraditional(zhVal).toLowerCase() === itemLower ||
+              enKey.toLowerCase() === itemLower
+            ) {
+              const idx = this.optionValues.indexOf(enKey);
+              if (idx !== -1) return idx;
+            }
+          }
+        }
+
+        // 3. 尝试通过 i18n 文本查找索引
+        const t = context?.t;
+        if (t) {
+          const foundIndex = this.optionValues.findIndex((key, idx) => {
+            return t(`${this.i18nPrefix}${idx}`) === itemClean || t(`${this.i18nPrefix}${key}`) === itemClean;
+          });
+          if (foundIndex !== -1) return foundIndex;
+        }
       }
 
       return this.isHybrid ? (typeof item === 'string' ? item.trim() : item) : this.defaultIndex;
@@ -193,8 +215,8 @@ export class BaseSelect extends BaseHandler {
       let items = v;
       if (typeof v === 'string') {
         if (v.trim() === '') return [];
-        // 如果是字符串，尝试按分隔符拆分 (兼容旧数据或直接输入的字符串)
-        items = v.split(this.separator).map(s => s.trim());
+        // 支持全角逗号、顿号、半角逗号、分号等切分
+        items = v.split(/[,，、;；\n]+/).map(s => s.trim()).filter(Boolean);
       }
 
       if (!Array.isArray(items)) {
@@ -344,10 +366,13 @@ export class BaseSelect extends BaseHandler {
             showParent: !!item.showParent
           };
 
+          const keywords = [enName, zhName, toTraditional(zhName)];
+
           return {
             label,
             value: item.selectable ? valueIndex : enName,
             selectable: !!item.selectable,
+            keywords,
             children: build(item.content || [], enName)
           };
         }
@@ -355,10 +380,12 @@ export class BaseSelect extends BaseHandler {
         const [enItem, zhItem] = parsePair(item);
         const label = getLocalizedLabel([enItem, zhItem], `${this.i18nPrefix}${enItem}`);
         if (parentEnName) this.parentMap[enItem] = parentEnName;
+        const keywords = [enItem, zhItem, toTraditional(zhItem)];
 
         return {
           label,
-          value: this.optionValues.indexOf(enItem)
+          value: this.optionValues.indexOf(enItem),
+          keywords
         };
       });
     };

@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Check, Plus, ChevronRight, ChevronDown, X } from "lucide-react"
+import { toTraditional } from "../../i18n/config"
 
 import { cn } from "../../lib/utils"
 import {
@@ -21,6 +22,7 @@ export interface ComboboxOption {
   value: string | number;
   children?: ComboboxOption[];
   selectable?: boolean;
+  keywords?: string[];
 }
 
 interface ComboboxProps {
@@ -138,10 +140,122 @@ export function Combobox({
     })
   }, [value, flattenedPresetValues, allowCustom])
 
-  // 检查某个选项（或其子项）是否匹配搜索词
+  // 收集所有具体可选项（用于跨语言匹配搜索词与批量解析）
+  const selectableOptions = React.useMemo(() => {
+    const list: ComboboxOption[] = [];
+    const traverse = (opts: ComboboxOption[]) => {
+      for (const opt of opts) {
+        if (opt.selectable !== false && opt.value !== undefined && opt.value !== null) {
+          list.push(opt);
+        }
+        if (opt.children) {
+          traverse(opt.children);
+        }
+      }
+    };
+    traverse(options);
+    return list;
+  }, [options]);
+
+  // 精确匹配选项（支持中/繁/英）
+  const findExactMatchingOption = React.useCallback((token: string): ComboboxOption | undefined => {
+    const raw = token.trim().toLowerCase();
+    if (!raw) return undefined;
+    const rawTrad = toTraditional(raw).toLowerCase();
+
+    return selectableOptions.find(opt => {
+      const l = opt.label.toLowerCase();
+      const lTrad = toTraditional(opt.label).toLowerCase();
+      if (l === raw || lTrad === raw || l === rawTrad || lTrad === rawTrad) return true;
+      return opt.keywords?.some(kw => {
+        const k = kw.toLowerCase();
+        const kTrad = toTraditional(kw).toLowerCase();
+        return k === raw || kTrad === raw || k === rawTrad || kTrad === rawTrad;
+      });
+    });
+  }, [selectableOptions]);
+
+  // 模糊/前缀/包含匹配选项
+  const findMatchingOption = React.useCallback((token: string): ComboboxOption | undefined => {
+    const raw = token.trim().toLowerCase();
+    if (!raw) return undefined;
+    const rawTrad = toTraditional(raw).toLowerCase();
+
+    // 1. 优先精确匹配
+    const exact = findExactMatchingOption(token);
+    if (exact) return exact;
+
+    // 2. 前缀或包含匹配
+    return selectableOptions.find(opt => {
+      const l = opt.label.toLowerCase();
+      const lTrad = toTraditional(opt.label).toLowerCase();
+      if (l.startsWith(raw) || lTrad.startsWith(raw) || l.startsWith(rawTrad) || l.includes(raw) || lTrad.includes(raw) || l.includes(rawTrad)) return true;
+      return opt.keywords?.some(kw => {
+        const k = kw.toLowerCase();
+        const kTrad = toTraditional(kw).toLowerCase();
+        return k.startsWith(raw) || kTrad.startsWith(raw) || k.startsWith(rawTrad) || k.includes(raw) || kTrad.includes(raw) || k.includes(rawTrad);
+      });
+    });
+  }, [selectableOptions, findExactMatchingOption]);
+
+  // 批量添加输入项（支持以中文逗号、顿号、英文逗号、分号切分）
+  const handleBatchAdd = React.useCallback((text: string) => {
+    const rawTokens = text.split(/[,，、;；\n]+/).map(t => t.trim()).filter(Boolean);
+    if (rawTokens.length === 0) return;
+
+    if (multiSelect) {
+      const currentValues = Array.isArray(value) ? [...value] : (value !== undefined && value !== null && value !== '' ? [value] : []);
+      const currentValStrs = new Set(currentValues.map(String));
+
+      for (const token of rawTokens) {
+        const matched = findMatchingOption(token);
+        const resolvedVal = matched ? matched.value : (allowCustom ? token : undefined);
+        if (resolvedVal !== undefined && !currentValStrs.has(String(resolvedVal))) {
+          currentValues.push(resolvedVal);
+          currentValStrs.add(String(resolvedVal));
+        }
+      }
+
+      onSelect(currentValues);
+      setSearchValue("");
+      if (inputRef.current) {
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 0);
+      }
+    } else {
+      const token = rawTokens[0];
+      const matched = findMatchingOption(token);
+      const resolvedVal = matched ? matched.value : (allowCustom ? token : undefined);
+      if (resolvedVal !== undefined) {
+        onSelect(resolvedVal);
+        setOpen(false);
+        setSearchValue("");
+      }
+    }
+  }, [multiSelect, value, findMatchingOption, allowCustom, onSelect]);
+
+  // 检查某个选项（或其子项）是否匹配搜索词（支持中英繁穿透，多词切分匹配）
   const hasMatchingChild = React.useCallback((option: ComboboxOption, search: string): boolean => {
     if (!search) return true;
-    if (option.label.toLowerCase().includes(search.toLowerCase())) return true;
+    const parts = search.split(/[,，、;；\n]+/).map(p => p.trim().toLowerCase()).filter(Boolean);
+    if (parts.length === 0) return true;
+
+    const matchPart = (text: string, part: string) => {
+      const t = text.toLowerCase();
+      const tTrad = toTraditional(text).toLowerCase();
+      const pTrad = toTraditional(part).toLowerCase();
+      return t.includes(part) || tTrad.includes(part) || t.includes(pTrad) || tTrad.includes(pTrad);
+    };
+
+    const isMatch = parts.some(part => {
+      if (matchPart(option.label, part)) return true;
+      if (option.keywords && option.keywords.some(kw => matchPart(kw, part))) return true;
+      return false;
+    });
+
+    if (isMatch) return true;
+
     if (option.children) {
       return option.children.some(child => hasMatchingChild(child, search));
     }
@@ -228,20 +342,17 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "flex h-full min-h-[32px] items-center cursor-pointer transition-colors",
+            "flex min-h-[32px] items-center cursor-pointer transition-colors",
+            !singleLine ? "w-full h-auto" : "h-full w-max min-w-full whitespace-nowrap",
             !disablePadding && "px-2 py-1",
-            !singleLine && "w-full",
-            singleLine && "w-max min-w-full whitespace-nowrap",
             !isCentered && "justify-between",
             isCentered && "justify-center",
-            !singleLine && "overflow-hidden",
             className
           )}
         >
           <div className={cn(
             "flex items-center",
-            !singleLine && "flex-wrap overflow-hidden",
-            singleLine && "flex-nowrap",
+            !singleLine ? "flex-wrap w-full" : "flex-nowrap",
             "gap-1",
             isCentered ? "justify-center" : "flex-1"
           )}>
@@ -260,19 +371,34 @@ export function Combobox({
             placeholder="Search..." 
             value={searchValue}
             onValueChange={setSearchValue}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const raw = searchValue.trim();
+                if (!raw) return;
+                const hasSeparator = /[,，、;；\n]/.test(raw);
+                const exactMatch = findExactMatchingOption(raw);
+                if (hasSeparator || exactMatch || (!findMatchingOption(raw) && allowCustom)) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleBatchAdd(raw);
+                }
+              }
+            }}
           />
           <CommandList className="max-h-[350px] overflow-y-auto custom-scrollbar">
             
-            {/* 1. 搜索提示：使用自定义内容 */}
+            {/* 1. 搜索提示：使用自定义内容或批量添加 */}
             {allowCustom && searchValue && !flattenedPresetValues.some(v => v === searchValue) && (
               <CommandGroup>
                 <CommandItem
                   value={searchValue}
-                  onSelect={() => handleSelect(searchValue)}
+                  onSelect={() => handleBatchAdd(searchValue)}
                   className="justify-start italic text-primary"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  使用自定义: "{searchValue}"
+                  {/[,，、;；\n]/.test(searchValue)
+                    ? `批量添加: "${searchValue}"`
+                    : `使用自定义: "${searchValue}"`}
                 </CommandItem>
               </CommandGroup>
             )}
