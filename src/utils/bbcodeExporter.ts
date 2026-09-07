@@ -178,6 +178,14 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
   function processNode(val: any, path: string): any {
     if (val === null || val === undefined) return val;
 
+    // 1. 优先判断当前路径注册的类型：如果注册了非容器的字段级 Handler，直接交由 getExportValue 计算
+    const handler = path ? getHandlerByPath(path) : null;
+    const isContainer = handler instanceof handlers.BaseTable || handler instanceof handlers.CompositeHandler;
+    if (handler && !isContainer && (handler.isMulti || (!Array.isArray(val) && val?.constructor !== Object))) {
+      return getExportValue(val, 'text', t, { path, context });
+    }
+
+    // 2. 通用类型兜底：处理未被字段级 Handler 拦截的列表结构
     if (Array.isArray(val)) {
       const result = (val.length > 0 && val[0]?.constructor === Object)
         ? val.map((item, i) => processNode(item, `${path}.${i}`))
@@ -277,6 +285,8 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
   if (view.basic) {
     view.name = view.basic.name;
     view.race = view.basic.race;
+    view.languages = view.basic.languages;
+    view.senses = view.basic.senses;
   }
 
   return view;
