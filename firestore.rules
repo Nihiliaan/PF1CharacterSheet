@@ -28,7 +28,7 @@ service cloud.firestore {
     }
 
     match /characters/{characterId} {
-      allow get: if isValidId(characterId) && (resource.data.get('isPublic', false) == true || isOwner(resource.data.ownerId));
+      allow get: if isValidId(characterId);
       allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
       
       allow create: if isValidId(characterId) 

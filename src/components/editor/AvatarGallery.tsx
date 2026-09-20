@@ -44,18 +44,21 @@ const AvatarGallery = ({ avatars, onUpdate }: { avatars: AvatarsSoA, onUpdate: (
          ref={containerRef}
          className="w-full aspect-square border-2 border-stone-300 rounded bg-stone-50 flex items-center justify-center overflow-hidden relative group cursor-ns-resize shadow-inner"
        >
-         <AnimatePresence mode="wait">
-           <motion.img
-             key={index}
-             src={current.url || DEFAULT_AVATAR}
-             initial={{ opacity: 0, scale: 1.05 }}
-             animate={{ opacity: 1, scale: 1 }}
-             exit={{ opacity: 0, scale: 0.95 }}
-             transition={{ duration: 0.25 }}
-             className="w-full h-full object-cover absolute inset-0"
-             draggable={false}
-           />
-         </AnimatePresence>
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={index}
+              src={current.url || DEFAULT_AVATAR}
+              initial={{ opacity: 0.85, scale: 1.02 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0.85, scale: 0.98 }}
+              transition={{ duration: 0.15 }}
+              className="w-full h-full object-cover absolute inset-0"
+              draggable={false}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+            />
+          </AnimatePresence>
          
          {/* Index indicator */}
          {total > 1 && (

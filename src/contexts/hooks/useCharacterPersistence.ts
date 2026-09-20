@@ -153,6 +153,14 @@ export const useCharacterPersistence = (
     }
   };
 
+  const checkIsReadOnly = (charDoc: any, currentUser: any) => {
+    if (!charDoc) return true;
+    if (charDoc.name?.endsWith('.lnk')) return true;
+    if (!currentUser) return true;
+    if (charDoc.ownerId && currentUser.uid !== charDoc.ownerId) return true;
+    return false;
+  };
+
   const selectCharacter = async (idOrChar: string | any, skipDirtyCheck: boolean = false, shouldSwitchView: boolean = true) => {
     const renderCharacterDocument = (char: CharacterDocument, shouldSwitchView: boolean = true) => {
       if (char.isTemplate) {
@@ -181,7 +189,6 @@ export const useCharacterPersistence = (
       try {
         if (idOrChar?.id) {
           let char = idOrChar as any;
-          setIsReadOnly(char.name?.endsWith('.lnk') || false);
 
           if (char.targetId) {
             const targetChar = await getCharacterById(char.targetId) as CharacterDocument | null;
@@ -201,6 +208,7 @@ export const useCharacterPersistence = (
           }
 
           renderCharacterDocument(char, shouldSwitchView);
+          setIsReadOnly(checkIsReadOnly(char, user));
           setIsSyncing(false);
           return;
         }
@@ -264,11 +272,11 @@ export const useCharacterPersistence = (
 
             setSyncStatus('synced');
             setTimeout(() => setSyncStatus('idle'), 2000);
-            setIsReadOnly(serverDoc.name?.endsWith('.lnk') || false);
+            setIsReadOnly(checkIsReadOnly(serverDoc, user));
           } else if (hasCached) {
             setSyncStatus('offline');
             setTimeout(() => setSyncStatus('idle'), 3000);
-            setIsReadOnly(cachedDoc?.name?.endsWith('.lnk') || false);
+            setIsReadOnly(checkIsReadOnly(cachedDoc, user));
           } else {
             throw new Error("Document not found");
           }
@@ -276,7 +284,7 @@ export const useCharacterPersistence = (
           if (hasCached) {
             setSyncStatus('offline');
             setTimeout(() => setSyncStatus('idle'), 3000);
-            setIsReadOnly(cachedDoc?.name?.endsWith('.lnk') || false);
+            setIsReadOnly(checkIsReadOnly(cachedDoc, user));
           } else {
             setSyncStatus('idle');
             setToast({ message: "加载失败: " + (e.message || "无法连接云端"), type: 'error' });
@@ -309,7 +317,7 @@ export const useCharacterPersistence = (
     await selectCharacter(id, true, true);
   };
 
-  // Initial Load
+  // Initial Load: 组件挂载时立即拉取展示，不等待跨国 Auth 鉴权阻塞
   useEffect(() => {
     const loadInitial = async () => {
       try {
@@ -383,7 +391,30 @@ export const useCharacterPersistence = (
       }
     };
     loadInitial();
-  }, [user]);
+  }, []);
+
+  // 当 Firebase Auth 异步鉴权完成后，核验当前已打开卡片的所有权并动态解锁只读
+  useEffect(() => {
+    if (!user) return;
+
+    if (currentCharacterId) {
+      getCharacterFromCache(currentCharacterId).then(async (doc) => {
+        if (!doc) {
+          doc = await getCharacterById(currentCharacterId);
+        }
+        if (doc) {
+          setIsReadOnly(checkIsReadOnly(doc, user));
+          if (doc.ownerId && doc.ownerId !== user.uid && !doc.targetId) {
+            const sharedFolderId = await ensureLocalFolderService('来自分享', null, user.uid);
+            const linkId = await saveLink(doc, sharedFolderId);
+            if (linkId) {
+              setCurrentFolderId(sharedFolderId);
+            }
+          }
+        }
+      }).catch(console.error);
+    }
+  }, [user, currentCharacterId]);
 
   return {
     isSaving,
