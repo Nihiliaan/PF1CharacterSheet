@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutGrid, Save, Share2, Download, Copy, FilePlus, Sparkles, Plus, Pin, User, Languages, 
   ChevronDown, Info, RotateCcw, X, Search, HardDrive, Folder, Check, CloudUpload, Grid, List as ListIcon,
-  FolderPlus, ChevronRight
+  FolderPlus, ChevronRight, Loader2, CheckCircle2, CloudOff
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AccountMenu from '../account/AccountMenu';
@@ -83,6 +83,7 @@ export default function AppHeader() {
   const {
     isReadOnly,
     isSaving,
+    syncStatus,
     isDirty,
     isTemplateDirty,
     handleSave,
@@ -548,6 +549,46 @@ export default function AppHeader() {
             </div>
           </div>
         )}
+
+        {/* Sync Status Capsule */}
+        <AnimatePresence>
+          {syncStatus && syncStatus !== 'idle' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, x: 5 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.9, x: 5 }}
+              className="flex items-center"
+            >
+              {syncStatus === 'syncing' && (
+                <div 
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-full text-xs font-medium backdrop-blur-sm"
+                  title={t('common.syncing_cloud')}
+                >
+                  <Loader2 size={13} className="animate-spin text-amber-400" />
+                  <span className="hidden sm:inline">{t('common.syncing')}</span>
+                </div>
+              )}
+              {syncStatus === 'synced' && (
+                <div 
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-full text-xs font-medium backdrop-blur-sm"
+                  title={t('common.synced_cloud')}
+                >
+                  <CheckCircle2 size={13} className="text-emerald-400" />
+                  <span className="hidden sm:inline">{t('common.synced')}</span>
+                </div>
+              )}
+              {syncStatus === 'offline' && (
+                <div 
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-stone-700/60 border border-stone-600 text-stone-300 rounded-full text-xs font-medium"
+                  title={t('common.offline_cache_tip')}
+                >
+                  <CloudOff size={13} className="text-stone-400" />
+                  <span className="hidden sm:inline">{t('common.cached')}</span>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="h-6 w-px bg-stone-600 mx-1"></div>
 

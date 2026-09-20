@@ -30,6 +30,7 @@ interface CharacterContextType {
   isSaving: boolean;
   isSyncing: boolean;
   setIsSyncing: (val: boolean) => void;
+  syncStatus: 'idle' | 'syncing' | 'synced' | 'offline';
   isDirty: boolean;
   isTemplateDirty: boolean;
   tableActionMode: 'drag' | 'delete';
@@ -201,6 +202,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const {
     isSaving,
+    syncStatus,
     handleSave,
     handleSaveAs,
     handleSaveInternal,
@@ -299,7 +301,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     currentCharacterId, setCurrentCharacterId,
     currentTemplateId, setCurrentTemplateId,
     isSaving,
-    isSyncing, setIsSyncing, isDirty, isTemplateDirty,
+    isSyncing, setIsSyncing, syncStatus, isDirty, isTemplateDirty,
     tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor,
     update, addBag, removeBag,
     addMagicBlock, removeMagicBlock,

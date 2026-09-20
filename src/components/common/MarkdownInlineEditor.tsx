@@ -25,7 +25,21 @@ const MarkdownPreviewer = ({ text, placeholder }: { text: string, placeholder?: 
   let match;
   while ((match = linkRegex.exec(text)) !== null) {
     if (match.index > lastIndex) parts.push(text.substring(lastIndex, match.index));
-    parts.push(<span key={match.index} className="text-primary underline cursor-pointer">{match[1]}</span>);
+    const label = match[1];
+    const url = match[2];
+    parts.push(
+      <a
+        key={match.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary underline hover:text-primary/80 cursor-pointer"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {label}
+      </a>
+    );
     lastIndex = linkRegex.lastIndex;
   }
   if (lastIndex < text.length) parts.push(text.substring(lastIndex));
@@ -52,11 +66,16 @@ const markdownConcealPlugin = ViewPlugin.fromClass(class {
       const start = match.index;
       const end = match.index + match[0].length;
       const label = match[1];
+      const url = match[2];
       const isCursorInside = isActive && ((selection.from >= start && selection.from <= end) || (selection.to >= start && selection.to <= end));
       if (!isCursorInside) {
         builder.add(start, start + 1, Decoration.replace({}));
         builder.add(start + 1, start + 1 + label.length, Decoration.mark({
-          attributes: { style: "color: var(--color-primary); text-decoration: underline; cursor: pointer;" },
+          attributes: { 
+            style: "color: var(--color-primary); text-decoration: underline; cursor: pointer;",
+            "data-url": url,
+            title: "Ctrl + 点击打开链接"
+          },
           class: "cm-md-link-active"
         }));
         builder.add(start + 1 + label.length, end, Decoration.replace({}));
@@ -132,6 +151,21 @@ const MarkdownInlineEditor = ({
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !update.transactions.some(tr => tr.annotation(programmaticUpdate))) {
               onChangeRef.current(update.state.doc.toString());
+            }
+          }),
+          EditorView.domEventHandlers({
+            click(event) {
+              const target = event.target as HTMLElement | null;
+              const linkEl = target?.closest('.cm-md-link-active') as HTMLElement | null;
+              if (linkEl && (event.ctrlKey || event.metaKey)) {
+                const url = linkEl.getAttribute('data-url');
+                if (url) {
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                  event.preventDefault();
+                  return true;
+                }
+              }
+              return false;
             }
           }),
           placeholder ? cmPlaceholder(placeholder) : []

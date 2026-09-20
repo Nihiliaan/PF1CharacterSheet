@@ -42,13 +42,6 @@ export default function AppOverlays() {
 
   return (
     <>
-      {/* Syncing Overlay */}
-      {isSyncing && (
-        <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-[100] flex items-center justify-center text-white flex-col gap-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="font-serif italic font-medium">{t('overlays.syncing')}</p>
-        </div>
-      )}
 
       {/* Dialogs and Toasts */}
       <AnimatePresence>

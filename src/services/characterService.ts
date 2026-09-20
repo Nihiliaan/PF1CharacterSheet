@@ -1,7 +1,9 @@
 import { 
   collection, 
   doc, 
-  getDoc, 
+  getDoc,
+  getDocFromCache,
+  getDocFromServer, 
   getDocs, 
   addDoc, 
   updateDoc, 
@@ -453,30 +455,52 @@ export async function getMyCharacters(uid?: string) {
   return getCharacterList(userId);
 }
 
+function formatCharacterDoc(docSnap: any): Character | null {
+  if (!docSnap.exists()) return null;
+  const d = docSnap.data() as any;
+  return {
+    ...d,
+    id: docSnap.id,
+    isLink: !!d.targetId,
+    isTemplate: !!d.isTemplate,
+    data: {
+      ...d.data,
+      id: docSnap.id,
+      ownerId: d.ownerId,
+      folderId: d.folderId,
+      targetId: d.targetId || '',
+      isLink: !!d.targetId,
+      isTemplate: !!d.isTemplate
+    }
+  } as Character;
+}
+
+export async function getCharacterFromCache(id: string): Promise<Character | null> {
+  try {
+    const docRef = doc(db, 'characters', id);
+    const docSnap = await getDocFromCache(docRef);
+    return formatCharacterDoc(docSnap);
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function getCharacterFromServer(id: string): Promise<Character | null> {
+  try {
+    const docRef = doc(db, 'characters', id);
+    const docSnap = await getDocFromServer(docRef);
+    return formatCharacterDoc(docSnap);
+  } catch (e) {
+    return null;
+  }
+}
+
 export async function getCharacterById(id: string) {
   const path = `characters/${id}`;
   try {
     const docRef = doc(db, 'characters', id);
     const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const d = docSnap.data() as any;
-      return {
-        ...d,
-        id: docSnap.id,
-        isLink: !!d.targetId,
-        isTemplate: !!d.isTemplate,
-        data: {
-          ...d.data,
-          id: docSnap.id,
-          ownerId: d.ownerId,
-          folderId: d.folderId,
-          targetId: d.targetId || '',
-          isLink: !!d.targetId,
-          isTemplate: !!d.isTemplate
-        }
-      } as Character;
-    }
-    return null;
+    return formatCharacterDoc(docSnap);
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
     return null;

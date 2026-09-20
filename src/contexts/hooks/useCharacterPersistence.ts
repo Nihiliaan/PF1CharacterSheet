@@ -6,6 +6,8 @@ import { dataMigration } from '../../utils/dataMigration';
 import {
   saveCharacter as saveCharacterService,
   getCharacterById,
+  getCharacterFromCache,
+  getCharacterFromServer,
   ensureLocalFolder as ensureLocalFolderService,
   saveLink
 } from '../../services/characterService';
@@ -39,6 +41,7 @@ export const useCharacterPersistence = (
   ) => {
   const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'offline'>('idle');
 
   const handleSaveInternal = async (saveData: CharacterData | { content: string, name?: string }, id?: string | null, folderId?: string | null, isTemplate: boolean = false) => {
     if (!user) {
@@ -151,53 +154,42 @@ export const useCharacterPersistence = (
   };
 
   const selectCharacter = async (idOrChar: string | any, skipDirtyCheck: boolean = false, shouldSwitchView: boolean = true) => {
+    const renderCharacterDocument = (char: CharacterDocument, shouldSwitchView: boolean = true) => {
+      if (char.isTemplate) {
+        const content = char.data?.content || '';
+        setBbcodeTemplate(content);
+        setLastSavedTemplate(content);
+        if (shouldSwitchView) setView('bbcode-template');
+        setCurrentTemplateId(char.id);
+        localStorage.setItem(KEY_LAST_TEMP, char.id);
+      } else {
+        const merged = dataMigration.mergeWithDefault(char.data);
+        setData(merged);
+        setLastSavedData(JSON.parse(JSON.stringify(merged)));
+        setCurrentCharacterId(char.id);
+        localStorage.setItem(KEY_LAST_CHAR, char.id);
+        if (shouldSwitchView) setView('editor');
+      }
+      if (char.folderId) setCurrentFolderId(char.folderId);
+      addToRecent(char);
+      const url = new URL(window.location.href);
+      url.searchParams.set('id', char.id);
+      window.history.replaceState({}, '', url.toString());
+    };
+
     const performSelect = async () => {
       try {
         if (idOrChar?.id) {
-          const char = idOrChar as any;
-          
-          // Set ReadOnly strictly based on extension
+          let char = idOrChar as any;
           setIsReadOnly(char.name?.endsWith('.lnk') || false);
 
-          // If it's a link, load the target
           if (char.targetId) {
             const targetChar = await getCharacterById(char.targetId) as CharacterDocument | null;
             if (targetChar) {
-              if (targetChar.isTemplate) {
-                const content = targetChar.data?.content || '';
-                setBbcodeTemplate(content);
-                setLastSavedTemplate(content);
-                if (shouldSwitchView) setView('bbcode-template');
-                setCurrentTemplateId(char.id); 
-                localStorage.setItem(KEY_LAST_TEMP, char.id);
-              } else {
-                const merged = dataMigration.mergeWithDefault(targetChar.data);
-                setData(merged);
-                setLastSavedData(JSON.parse(JSON.stringify(merged)));
-                setCurrentCharacterId(char.id); 
-                localStorage.setItem(KEY_LAST_CHAR, char.id);
-                if (shouldSwitchView) setView('editor');
-              }
-              if (char.folderId) setCurrentFolderId(char.folderId);
-              addToRecent(char);
-              const url = new URL(window.location.href);
-              url.searchParams.set('id', char.id);
-              window.history.replaceState({}, '', url.toString());
-              return;
+              char = { ...targetChar, id: char.id, folderId: char.folderId };
             }
           }
 
-          if (char.isTemplate) {
-            const content = char.data?.content || '';
-            setBbcodeTemplate(content);
-            setLastSavedTemplate(content);
-            if (shouldSwitchView) setView('bbcode-template');
-            setCurrentTemplateId(char.id);
-            localStorage.setItem(KEY_LAST_TEMP, char.id);
-            return;
-          }
-
-          // Check if we need to auto-create a link for someone else's character
           if (user && char.ownerId && char.ownerId !== user.uid && !char.targetId) {
             const sharedFolderId = await ensureLocalFolderService('来自分享', null, user.uid);
             const linkId = await saveLink(char, sharedFolderId);
@@ -208,90 +200,94 @@ export const useCharacterPersistence = (
             }
           }
 
-          const merged = dataMigration.mergeWithDefault(char.data);
-          setData(merged);
-          setLastSavedData(JSON.parse(JSON.stringify(merged)));
-          setCurrentCharacterId(char.id);
-          if (shouldSwitchView) setView('editor');
-          if (char.folderId) setCurrentFolderId(char.folderId);
-          addToRecent(char);
-          const url = new URL(window.location.href);
-          url.searchParams.set('id', char.id);
-          window.history.replaceState({}, '', url.toString());
+          renderCharacterDocument(char, shouldSwitchView);
+          setIsSyncing(false);
           return;
         }
 
         const id = idOrChar as string;
         if (!id) return;
-        
-        setToast({ message: "正在加载..." });
-        const char = await getCharacterById(id) as CharacterDocument | null;
-        if (!char || !char.data) throw new Error("Document not found");
-        
-        // Set ReadOnly strictly based on extension
-        setIsReadOnly(char.name?.endsWith('.lnk') || false);
 
-        // Handle links or unowned characters
-        if (char.targetId) {
-          const targetChar = await getCharacterById(char.targetId) as CharacterDocument | null;
-          if (targetChar) {
-            if (targetChar.isTemplate) {
-              const content = targetChar.data?.content || '';
-              setBbcodeTemplate(content);
-              setLastSavedTemplate(content);
-              if (shouldSwitchView) setView('bbcode-template');
-              setCurrentTemplateId(char.id); 
-              localStorage.setItem(KEY_LAST_TEMP, char.id);
-            } else {
-              const merged = dataMigration.mergeWithDefault(targetChar.data);
-              setData(merged);
-              setLastSavedData(JSON.parse(JSON.stringify(merged)));
-              setCurrentCharacterId(id);
-              localStorage.setItem(KEY_LAST_CHAR, id);
-              if (shouldSwitchView) setView('editor');
+        setIsSyncing(true);
+        setSyncStatus('syncing');
+
+        // 1. 优先尝试从本地 IndexedDB 缓存秒开
+        let cachedDoc = await getCharacterFromCache(id) as CharacterDocument | null;
+        let hasCached = false;
+
+        if (cachedDoc && cachedDoc.data) {
+          hasCached = true;
+          if (cachedDoc.targetId) {
+            const cachedTarget = await getCharacterFromCache(cachedDoc.targetId) as CharacterDocument | null;
+            if (cachedTarget && cachedTarget.data) {
+              cachedDoc = { ...cachedTarget, id: cachedDoc.id, folderId: cachedDoc.folderId };
             }
-            if (char.folderId) setCurrentFolderId(char.folderId);
-            addToRecent(char);
-            const url = new URL(window.location.href);
-            url.searchParams.set('id', id);
-            window.history.replaceState({}, '', url.toString());
-            return;
           }
+          // 立即呈现本地缓存内容，并置为只读浏览保护
+          renderCharacterDocument(cachedDoc, shouldSwitchView);
+          setIsReadOnly(true);
         }
 
-        if (user && char.ownerId && char.ownerId !== user.uid) {
-          const sharedFolderId = await ensureLocalFolderService('来自分享', null, user.uid);
-          const linkId = await saveLink(char, sharedFolderId);
-          if (linkId) {
-             setCurrentFolderId(sharedFolderId);
-             await selectCharacter(linkId, true, shouldSwitchView);
-             return;
-          }
-        }
+        // 2. 后台与云端对齐最新版本
+        try {
+          let serverDoc = await getCharacterFromServer(id) as CharacterDocument | null;
+          if (serverDoc && serverDoc.data) {
+            if (serverDoc.targetId) {
+              const targetDoc = await getCharacterFromServer(serverDoc.targetId) as CharacterDocument | null;
+              if (targetDoc && targetDoc.data) {
+                serverDoc = { ...targetDoc, id: serverDoc.id, folderId: serverDoc.folderId };
+              }
+            }
 
-        if (char.isTemplate) {
-          const content = char.data.content || '';
-          setBbcodeTemplate(content);
-          setLastSavedTemplate(content);
-          if (shouldSwitchView) setView('bbcode-template');
-          setCurrentTemplateId(char.id);
-          localStorage.setItem(KEY_LAST_TEMP, char.id);
-        } else {
-          const merged = dataMigration.mergeWithDefault(char.data);
-          setData(merged);
-          setLastSavedData(JSON.parse(JSON.stringify(merged)));
-          setCurrentCharacterId(char.id);
-          localStorage.setItem(KEY_LAST_CHAR, char.id);
-          if (shouldSwitchView) setView('editor');
+            if (user && serverDoc.ownerId && serverDoc.ownerId !== user.uid && !serverDoc.targetId) {
+              const sharedFolderId = await ensureLocalFolderService('来自分享', null, user.uid);
+              const linkId = await saveLink(serverDoc, sharedFolderId);
+              if (linkId) {
+                setCurrentFolderId(sharedFolderId);
+                await selectCharacter(linkId, true, shouldSwitchView);
+                return;
+              }
+            }
+
+            let shouldApply = !hasCached;
+            if (hasCached && cachedDoc) {
+              const cachedTime = cachedDoc.updatedAt?.toMillis?.() || cachedDoc.createdAt?.toMillis?.() || 0;
+              const serverTime = serverDoc.updatedAt?.toMillis?.() || serverDoc.createdAt?.toMillis?.() || 0;
+              if (serverTime > cachedTime) {
+                shouldApply = true;
+              }
+            }
+
+            if (shouldApply) {
+              renderCharacterDocument(serverDoc, shouldSwitchView);
+            }
+
+            setSyncStatus('synced');
+            setTimeout(() => setSyncStatus('idle'), 2000);
+            setIsReadOnly(serverDoc.name?.endsWith('.lnk') || false);
+          } else if (hasCached) {
+            setSyncStatus('offline');
+            setTimeout(() => setSyncStatus('idle'), 3000);
+            setIsReadOnly(cachedDoc?.name?.endsWith('.lnk') || false);
+          } else {
+            throw new Error("Document not found");
+          }
+        } catch (e: any) {
+          if (hasCached) {
+            setSyncStatus('offline');
+            setTimeout(() => setSyncStatus('idle'), 3000);
+            setIsReadOnly(cachedDoc?.name?.endsWith('.lnk') || false);
+          } else {
+            setSyncStatus('idle');
+            setToast({ message: "加载失败: " + (e.message || "无法连接云端"), type: 'error' });
+          }
+        } finally {
+          setIsSyncing(false);
         }
-        
-        if (char.folderId) setCurrentFolderId(char.folderId);
-        addToRecent(char);
-        const url = new URL(window.location.href);
-        url.searchParams.set('id', id);
-        window.history.replaceState({}, '', url.toString());
       } catch (e: any) {
         setToast({ message: "加载失败", type: 'error' });
+        setIsSyncing(false);
+        setSyncStatus('idle');
       }
     };
 
@@ -391,6 +387,7 @@ export const useCharacterPersistence = (
 
   return {
     isSaving,
+    syncStatus,
     handleSave,
     handleSaveAs,
     handleSaveInternal,
