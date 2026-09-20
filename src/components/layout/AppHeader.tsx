@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutGrid, Save, Share2, Download, Copy, FilePlus, Sparkles, Plus, Pin, User, Languages, 
   ChevronDown, Info, RotateCcw, X, Search, HardDrive, Folder, Check, CloudUpload, Grid, List as ListIcon,
-  FolderPlus, ChevronRight, Loader2, CheckCircle2, CloudOff
+  FolderPlus, ChevronRight, Loader2, CheckCircle2, CloudOff, FileText, ArrowLeft
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AccountMenu from '../account/AccountMenu';
@@ -147,6 +147,7 @@ export default function AppHeader() {
 
   const navItems = [
     { id: 'editor', label: t('common.character_editor'), icon: <LayoutGrid size={16} /> },
+    { id: 'gm-view', label: t('common.gm_view'), icon: <FileText size={16} /> },
     { id: 'bbcode-template', label: t('common.bbcode_editor'), icon: <Copy size={16} /> },
     { id: 'vault', label: t('common.vault'), icon: <LayoutGrid size={16} />, hidden: !user },
     { id: 'about', label: t('common.about'), icon: <Info size={16} /> },
@@ -374,7 +375,38 @@ export default function AppHeader() {
               <FilePlus size={16} />
               <span className="hidden sm:inline">{t('common.new')}</span>
             </button>
+
+            <button 
+              onClick={() => setView('gm-view')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-800 hover:bg-amber-700 text-white rounded text-sm font-medium transition-colors shadow-sm"
+              title={t('common.switch_to_gm', 'GM紧凑卡')}
+            >
+              <FileText size={16} />
+              <span className="hidden sm:inline">{t('common.switch_to_gm', 'GM紧凑卡')}</span>
+            </button>
           </>
+        )}
+
+        {view === 'gm-view' && (
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setView('editor')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+              title={t('common.switch_to_editor', '返回编辑')}
+            >
+              <ArrowLeft size={16} />
+              <span className="hidden sm:inline">{t('common.switch_to_editor', '返回编辑')}</span>
+            </button>
+
+            <button 
+              onClick={handleExport}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+              title={t('common.export')}
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline">{t('common.export')}</span>
+            </button>
+          </div>
         )}
 
         {view === 'bbcode-template' && (

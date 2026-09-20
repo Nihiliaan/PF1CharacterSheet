@@ -1,0 +1,508 @@
+import React, { useState, useMemo } from 'react';
+import { motion } from 'motion/react';
+import { 
+  ArrowLeft, Copy, Printer, Check, Eye, EyeOff, SlidersHorizontal, Info, Shield, Swords, Sparkles, Wand2
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useCharacter } from '../../contexts/CharacterContext';
+import { useUI } from '../../contexts/UIContext';
+import { 
+  formatStatBlockData, 
+  exportStatBlockToMarkdown, 
+  getEstimatedCR 
+} from '../../utils/statBlockFormatter';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+
+export default function GMStatBlockView() {
+  const { t } = useTranslation();
+  const { data } = useCharacter();
+  const { setView, setToast } = useUI();
+
+  const defaultCR = useMemo(() => getEstimatedCR(data), [data]);
+  const [customCR, setCustomCR] = useState<number | string>(defaultCR);
+  const [customMR, setCustomMR] = useState<string>('');
+  const [isCompactMode, setIsCompactMode] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  // 格式化后的数据
+  const sb = useMemo(() => {
+    const mrNum = customMR.trim() ? parseInt(customMR, 10) : undefined;
+    return formatStatBlockData(data, t, customCR, mrNum);
+  }, [data, t, customCR, customMR]);
+
+  // 复制为 Markdown
+  const handleCopyMarkdown = async () => {
+    const mrNum = customMR.trim() ? parseInt(customMR, 10) : undefined;
+    const md = exportStatBlockToMarkdown(data, t, customCR, mrNum);
+    try {
+      await navigator.clipboard.writeText(md);
+      setCopied(true);
+      setToast({ message: t('common.copied_markdown_toast', '已复制怪物数据卡Markdown'), type: 'success' });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy markdown:', err);
+    }
+  };
+
+  // 打印
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <motion.div
+      key="gm-view"
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      className="h-full overflow-y-auto bg-stone-100 p-2 sm:p-4 md:p-6 print:p-0 print:bg-white print:overflow-visible custom-scrollbar"
+    >
+      {/* 顶部操作工具栏（打印时隐藏） */}
+      <div className="max-w-5xl mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 bg-white border border-stone-200 rounded-lg px-4 py-2.5 shadow-sm print:hidden">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setView('editor')}
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded transition-colors"
+            title={t('common.switch_to_editor', '返回编辑')}
+          >
+            <ArrowLeft size={16} />
+            <span>{t('common.switch_to_editor', '返回编辑')}</span>
+          </button>
+
+          <div className="h-4 w-px bg-stone-200" />
+
+          {/* CR 微调 */}
+          <div className="flex items-center gap-1.5 text-xs text-stone-600">
+            <span className="font-semibold">{t('gm_view.cr', 'CR')}:</span>
+            <input
+              type="text"
+              value={customCR}
+              onChange={(e) => setCustomCR(e.target.value)}
+              className="w-12 text-center text-xs font-bold border border-stone-300 rounded px-1 py-0.5 bg-stone-50 focus:bg-white focus:outline-none focus:border-amber-600"
+              title={t('gm_view.cr', 'CR')}
+            />
+          </div>
+
+          {/* MR 微调 */}
+          <div className="flex items-center gap-1.5 text-xs text-stone-600">
+            <span className="font-semibold">{t('gm_view.mr', 'MR')}:</span>
+            <input
+              type="text"
+              value={customMR}
+              onChange={(e) => setCustomMR(e.target.value)}
+              placeholder="—"
+              className="w-10 text-center text-xs font-bold border border-stone-300 rounded px-1 py-0.5 bg-stone-50 focus:bg-white focus:outline-none focus:border-amber-600"
+              title={t('gm_view.mr', 'MR')}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* 紧凑模式开关 */}
+          <button
+            onClick={() => setIsCompactMode(!isCompactMode)}
+            className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded border transition-colors ${
+              isCompactMode 
+                ? 'bg-amber-50 border-amber-300 text-amber-900' 
+                : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
+            }`}
+            title={isCompactMode ? t('common.compact_view', '紧凑模式') : t('common.expanded_view', '完整说明')}
+          >
+            {isCompactMode ? <Eye size={14} /> : <EyeOff size={14} />}
+            <span>{isCompactMode ? t('common.compact_view', '紧凑模式') : t('common.expanded_view', '完整说明')}</span>
+          </button>
+
+          {/* 复制 Markdown */}
+          <button
+            onClick={handleCopyMarkdown}
+            className="flex items-center gap-1.5 text-xs font-medium bg-stone-800 text-white hover:bg-stone-700 px-3 py-1.5 rounded shadow-sm transition-colors"
+          >
+            {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+            <span>{copied ? t('common.copied', '已复制') : t('common.copy_markdown', '复制 Markdown')}</span>
+          </button>
+
+          {/* 打印 */}
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-1.5 text-xs font-medium bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded border border-stone-200 transition-colors"
+            title={t('common.print', '打印 / 导出PDF')}
+          >
+            <Printer size={14} />
+            <span className="hidden sm:inline">{t('common.print', '打印')}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 怪物数据卡核心主体（经典 Pathfinder 怪物图鉴双栏紧凑排版） */}
+      <article className="max-w-5xl mx-auto bg-[#fcfbfa] text-stone-900 border border-stone-300 rounded-lg shadow-sm p-4 sm:p-6 print:border-none print:shadow-none print:p-0 print:max-w-none text-[13px] leading-snug print:text-[11px] print:leading-tight font-sans">
+        
+        {/* 头部信息 */}
+        <header className="border-b-2 border-stone-800 pb-2 mb-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 tracking-wide uppercase">
+              {sb.name}
+              <span className="text-base sm:text-lg font-semibold ml-2 text-stone-700">
+                （CR {sb.cr}{sb.mr ? `，MR ${sb.mr}` : ''}）
+              </span>
+            </h1>
+            <div className="text-xs sm:text-sm font-bold text-stone-700">
+              {t('gm_view.xp', '经验值')} {sb.xp}
+            </div>
+          </div>
+
+          <div className="text-stone-800 text-xs sm:text-sm mt-0.5 font-medium">
+            {sb.race && <span>{sb.race} </span>}
+            <span>{sb.classes || '—'}</span>
+          </div>
+
+          <div className="text-stone-700 text-xs mt-0.5">
+            <span>{sb.alignment} </span>
+            <span>{sb.size} </span>
+            <span>{sb.typeSubtype}</span>
+          </div>
+
+          <div className="text-stone-800 text-xs mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+            <span><strong className="font-semibold">{t('editor.basic.initiative', '先攻')}</strong> {sb.initiative}</span>
+            <span>；</span>
+            <span><strong className="font-semibold">{t('editor.basic.senses', '感官')}</strong> {sb.senses}</span>
+            {sb.aura && (
+              <>
+                <span>；</span>
+                <span><strong className="font-semibold">{t('editor.basic.aura', '灵光')}</strong> {sb.aura}</span>
+              </>
+            )}
+          </div>
+        </header>
+
+        {/* 双栏主体 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 print:grid-cols-2">
+          
+          {/* 左栏：防御、进攻、法术 */}
+          <div className="space-y-3">
+            
+            {/* 防御 (Defense) */}
+            <section className="space-y-1">
+              <div className="border-b border-stone-400/80 pb-0.5 mb-1.5 flex items-center justify-between">
+                <h2 className="font-serif font-bold tracking-wider text-xs uppercase text-stone-900">
+                  {t('gm_view.defense', '防御')}
+                </h2>
+              </div>
+
+              <div>
+                <strong className="font-semibold">AC</strong> {sb.ac}，
+                <strong className="font-semibold">{t('gm_view.touch', '接触')}</strong> {sb.touch}，
+                <strong className="font-semibold">{t('gm_view.flat_footed', '措手不及')}</strong> {sb.flatFooted}
+                {sb.acSource && <span className="text-stone-600 text-xs">（{sb.acSource}）</span>}
+              </div>
+
+              <div>
+                <strong className="font-semibold">hp</strong> {sb.hp}
+                {sb.hd && <span className="text-stone-600">（{sb.hd}）</span>}
+              </div>
+
+              <div>
+                <strong className="font-semibold">{t('gm_view.saves', '豁免')}</strong> 
+                {' '}{t('gm_view.fort', '强韧')} {sb.fort}，
+                {t('gm_view.ref', '反射')} {sb.ref}，
+                {t('gm_view.will', '意志')} {sb.will}
+                {sb.conditionalSaves && <span className="text-stone-600 text-xs">（{sb.conditionalSaves}）</span>}
+              </div>
+
+              {sb.specialDefenses && (
+                <div>
+                  <strong className="font-semibold">{t('editor.defenses.special_defenses', '防御能力')}</strong> {sb.specialDefenses}
+                </div>
+              )}
+            </section>
+
+            {/* 进攻 (Offense) */}
+            <section className="space-y-1 pt-1 border-t border-stone-200/60 print:border-stone-300">
+              <div className="border-b border-stone-400/80 pb-0.5 mb-1.5">
+                <h2 className="font-serif font-bold tracking-wider text-xs uppercase text-stone-900">
+                  {t('gm_view.offense', '进攻')}
+                </h2>
+              </div>
+
+              <div>
+                <strong className="font-semibold">{t('gm_view.speed', '速度')}</strong> {sb.speed}
+              </div>
+
+              {sb.meleeAttacks.length > 0 && (
+                <div>
+                  <strong className="font-semibold">{t('gm_view.melee', '近战')}</strong>{' '}
+                  {sb.meleeAttacks.map((a, i) => (
+                    <span key={i}>
+                      <span className="font-medium italic">{a.weapon}</span> {a.hit} 
+                      <span className="text-stone-600"> ({[a.damage + '/' + a.crit, a.damageType, a.special].filter(Boolean).join(' ')})</span>
+                      {i < sb.meleeAttacks.length - 1 ? '，' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {sb.rangedAttacks.length > 0 && (
+                <div>
+                  <strong className="font-semibold">{t('gm_view.ranged', '远程')}</strong>{' '}
+                  {sb.rangedAttacks.map((a, i) => (
+                    <span key={i}>
+                      <span className="font-medium italic">{a.weapon}</span> {a.hit} 
+                      <span className="text-stone-600"> ({[a.damage + '/' + a.crit, a.rangeOrTouch, a.damageType, a.special].filter(Boolean).join(' ')})</span>
+                      {i < sb.rangedAttacks.length - 1 ? '，' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div>
+                <strong className="font-semibold">{t('gm_view.space', '占据')}</strong> {sb.space}尺；
+                <strong className="font-semibold">{t('gm_view.reach', '触及')}</strong> {sb.reach}尺
+              </div>
+
+              {sb.specialAttacks && (
+                <div>
+                  <strong className="font-semibold">{t('gm_view.special_attacks', '特殊攻击')}</strong> {sb.specialAttacks}
+                </div>
+              )}
+
+              {/* 法术与类法术列表 */}
+              {sb.magicBlocks.length > 0 && (
+                <div className="space-y-2 mt-2 pt-1">
+                  {sb.magicBlocks.map((mb, idx) => (
+                    <div key={idx} className="bg-stone-50/70 print:bg-transparent rounded p-1.5 border border-stone-200/80 print:border-none print:p-0">
+                      <div className="font-serif font-bold text-xs text-stone-900 flex items-center justify-between">
+                        <span>
+                          {mb.title}
+                          {(mb.cl || mb.concentration) && (
+                            <span className="font-sans font-normal text-stone-600 text-[11px] ml-1">
+                              （{[mb.cl ? `CL ${mb.cl}` : '', mb.concentration ? `专注 ${mb.concentration}` : ''].filter(Boolean).join('；')}）
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[10px] text-stone-500 font-sans">{mb.typeName}</span>
+                      </div>
+                      
+                      <div className="mt-1 space-y-0.5 text-xs">
+                        {mb.rows.map((r, rIdx) => (
+                          <div key={rIdx} className="flex items-start gap-1">
+                            <span className="font-semibold text-stone-700 shrink-0 min-w-[42px]">
+                              {r.levelText}{r.usesText ? ` (${r.usesText})` : ''}：
+                            </span>
+                            <span className="italic text-stone-800">{r.spellsText}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {mb.notes && (
+                        <div className="text-[11px] text-stone-500 italic mt-0.5">
+                          {mb.notes}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
+          {/* 右栏：战术、统计、专长、技能、装备、特殊能力 */}
+          <div className="space-y-3">
+            
+            {/* 战术 (Tactics - 如有填写则显示) */}
+            {sb.tactics && (sb.tactics.beforeCombat || sb.tactics.duringCombat || sb.tactics.morale) && (
+              <section className="space-y-1">
+                <div className="border-b border-stone-400/80 pb-0.5 mb-1.5">
+                  <h2 className="font-serif font-bold tracking-wider text-xs uppercase text-stone-900">
+                    {t('gm_view.tactics', '战术')}
+                  </h2>
+                </div>
+                {sb.tactics.beforeCombat && <div><strong>战斗前</strong> {sb.tactics.beforeCombat}</div>}
+                {sb.tactics.duringCombat && <div><strong>战斗中</strong> {sb.tactics.duringCombat}</div>}
+                {sb.tactics.morale && <div><strong>士气</strong> {sb.tactics.morale}</div>}
+              </section>
+            )}
+
+            {/* 统计 (Statistics) */}
+            <section className="space-y-1">
+              <div className="border-b border-stone-400/80 pb-0.5 mb-1.5">
+                <h2 className="font-serif font-bold tracking-wider text-xs uppercase text-stone-900">
+                  {t('gm_view.statistics', '统计')}
+                </h2>
+              </div>
+
+              {/* 核心六维属性 */}
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 py-0.5">
+                {sb.attributes.map((attr, i) => (
+                  <span key={i} className="whitespace-nowrap">
+                    <strong className="font-semibold">{attr.name}</strong> {attr.value} 
+                    <span className="text-stone-500 text-xs">({attr.mod})</span>
+                    {i < sb.attributes.length - 1 ? '，' : ''}
+                  </span>
+                ))}
+              </div>
+
+              <div>
+                <strong className="font-semibold">BAB</strong> {sb.bab}；
+                <strong className="font-semibold">CMB</strong> {sb.cmb}；
+                <strong className="font-semibold">CMD</strong> {sb.cmd}
+              </div>
+
+              {/* 专长（紧凑排列，支持悬浮/点击 Popover） */}
+              {sb.feats.length > 0 && (
+                <div>
+                  <strong className="font-semibold">{t('gm_view.feats', '专长')}</strong>{' '}
+                  {sb.feats.map((feat, i) => (
+                    <span key={i}>
+                      {feat.desc ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="font-medium underline decoration-dotted decoration-stone-400 hover:text-amber-800 transition-colors cursor-help text-left"
+                            >
+                              {feat.name}{feat.type ? ` [${feat.type}]` : ''}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 text-xs p-3 shadow-lg bg-stone-900 text-stone-100 border-stone-800 z-50">
+                            <div className="font-bold text-amber-400 mb-1">{feat.name}</div>
+                            <div className="text-stone-300 leading-relaxed whitespace-pre-wrap">{feat.desc}</div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <span>{feat.name}{feat.type ? ` [${feat.type}]` : ''}</span>
+                      )}
+                      {i < sb.feats.length - 1 ? '，' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* 技能（仅受训技能 + 察觉） */}
+              {sb.skills.length > 0 && (
+                <div>
+                  <strong className="font-semibold">{t('gm_view.skills', '技能')}</strong>{' '}
+                  {sb.skills.map((s, i) => (
+                    <span key={i} className="whitespace-nowrap">
+                      {s.name} {s.total}
+                      {i < sb.skills.length - 1 ? '，' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div>
+                <strong className="font-semibold">{t('gm_view.languages', '语言')}</strong> {sb.languages}
+              </div>
+
+              {/* SQ 特殊能力汇总 */}
+              {sb.specialQualities.length > 0 && (
+                <div>
+                  <strong className="font-semibold">{t('gm_view.sq', '特殊能力')}</strong>{' '}
+                  {sb.specialQualities.map((sq, i) => (
+                    <span key={i}>
+                      {sq.desc ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="font-medium underline decoration-dotted decoration-stone-400 hover:text-amber-800 transition-colors cursor-help text-left"
+                            >
+                              {sq.name}{sq.type ? ` (${sq.type})` : ''}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 text-xs p-3 shadow-lg bg-stone-900 text-stone-100 border-stone-800 z-50">
+                            <div className="font-bold text-amber-400 mb-1">{sq.name}{sq.type ? ` (${sq.type})` : ''}</div>
+                            <div className="text-stone-300 leading-relaxed whitespace-pre-wrap">{sq.desc}</div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <span>{sq.name}{sq.type ? ` (${sq.type})` : ''}</span>
+                      )}
+                      {i < sb.specialQualities.length - 1 ? '，' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* 装备 */}
+              {sb.combatGear.length > 0 && (
+                <div>
+                  <strong className="font-semibold">{t('gm_view.combat_gear', '战斗装备')}</strong> {sb.combatGear.join('，')}
+                </div>
+              )}
+
+              {sb.otherGear.length > 0 && (
+                <div>
+                  <strong className="font-semibold">{t('gm_view.other_gear', '其他装备')}</strong> {sb.otherGear.join('，')}
+                </div>
+              )}
+            </section>
+
+            {/* 特殊能力详细说明 (Special Abilities) */}
+            {sb.specialAbilities.length > 0 && (
+              <section className="space-y-1.5 pt-1 border-t border-stone-200/60 print:border-stone-300">
+                <div className="border-b border-stone-400/80 pb-0.5 mb-1.5 flex items-center justify-between">
+                  <h2 className="font-serif font-bold tracking-wider text-xs uppercase text-stone-900">
+                    {t('gm_view.special_abilities', '特殊能力')}
+                  </h2>
+                  <span className="text-[10px] text-stone-400 print:hidden font-sans">
+                    {isCompactMode ? '点击条目查阅详情' : ''}
+                  </span>
+                </div>
+
+                {isCompactMode ? (
+                  // 紧凑模式：名片摘要式排列，点击弹窗查看长文本规则
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 print:grid-cols-1">
+                    {sb.specialAbilities.map((sa, i) => (
+                      <Popover key={i}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="text-left w-full p-1.5 rounded border border-stone-200 bg-stone-50/70 hover:bg-stone-100 hover:border-stone-300 transition-colors group cursor-pointer"
+                          >
+                            <div className="font-semibold text-xs text-stone-900 group-hover:text-amber-900 flex items-center justify-between">
+                              <span className="truncate">{sa.name}</span>
+                              {sa.type && (
+                                <span className="text-[10px] font-mono font-bold text-stone-500 bg-stone-200/70 px-1 rounded ml-1">
+                                  {sa.type}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-stone-500 truncate mt-0.5">
+                              {sa.desc}
+                            </div>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 text-xs p-3 shadow-lg bg-stone-900 text-stone-100 border-stone-800 z-50">
+                          <div className="font-bold text-amber-400 mb-1">
+                            {sa.name}{sa.type ? ` (${sa.type})` : ''}
+                          </div>
+                          <div className="text-stone-300 leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto custom-scrollbar">
+                            {sa.desc}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    ))}
+                  </div>
+                ) : (
+                  // 展开模式：平铺全部说明
+                  <div className="space-y-2">
+                    {sb.specialAbilities.map((sa, i) => (
+                      <div key={i} className="text-xs">
+                        <strong className="font-semibold text-stone-900">
+                          {sa.name}{sa.type ? ` (${sa.type})` : ''}
+                        </strong>{' '}
+                        <span className="text-stone-700 leading-relaxed">{sa.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+          </div>
+        </div>
+
+      </article>
+    </motion.div>
+  );
+}

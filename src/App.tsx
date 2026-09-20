@@ -13,6 +13,7 @@ import AccountSettings from './components/account/AccountSettings';
 import AppHeader from './components/layout/AppHeader';
 import AppOverlays from './components/layout/AppOverlays';
 import CharacterEditor from './components/editor/CharacterEditor';
+import GMStatBlockView from './components/gm/GMStatBlockView';
 
 // Context
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -70,6 +71,7 @@ function AppContent() {
       <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
           {view === 'editor' && <CharacterEditor user={user} />}
+          {view === 'gm-view' && <GMStatBlockView />}
 
           {view === 'vault' && (
             <motion.div key="vault" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full overflow-hidden">

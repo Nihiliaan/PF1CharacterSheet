@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type ViewType = 'editor' | 'vault' | 'settings' | 'bbcode-template' | 'about';
+export type ViewType = 'editor' | 'vault' | 'settings' | 'bbcode-template' | 'about' | 'gm-view';
 
 interface UIContextType {
   // Navigation
