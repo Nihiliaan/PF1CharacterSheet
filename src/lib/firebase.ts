@@ -1,6 +1,11 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, GithubAuthProvider, OAuthProvider } from 'firebase/auth'; 
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { 
+  initializeFirestore, 
+  getFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 import firebaseAppletConfig from '../../firebase-applet-config.json';
 
@@ -21,36 +26,29 @@ const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || firebas
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
-export const db = getFirestore(app, firestoreDatabaseId);
 
-// Initialize Analytics if supported
-export const analytics = isSupported().then(yes => yes ? getAnalytics(app) : null).catch(() => null);
-
-// Validate connection to Firestore
-async function testConnection() {
-  if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") {
-    console.warn("Firebase: Project ID is not configured. Please set your environment variables or firebase-applet-config.json.");
-    return;
-  }
-
+// 启用带有多标签页支持的本地离线持久化缓存 (IndexedDB)
+export const db = (() => {
+  const dbId = firestoreDatabaseId === '(default)' ? undefined : firestoreDatabaseId;
   try {
-    // Attempt a lightweight read to verify connection
-    await getDocFromServer(doc(db, '_connection_test_', 'ping'));
-  } catch (error: any) {
-    // We ignore 'permission-denied' because it means we DID reach the server (which is good!)
-    // We only care about connection-level failures
-    if (error?.code === 'permission-denied' || error?.message?.includes('permission-denied')) {
-      return;
-    }
-
-    if (error?.message?.includes('the client is offline')) {
-      console.error("Firebase: SDK 报告离线。请检查：\n1. 是否已在 Firebase 控制台创建了 Firestore 数据库？\n2. 项目 ID (" + firebaseConfig.projectId + ") 是否正确？\n3. 您的网络是否允许连接到 firebase.googleapis.com");
-    } else {
-      console.warn("Firebase 连接信息:", error?.message || error);
-    }
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    }, dbId);
+  } catch (e) {
+    return getFirestore(app, firestoreDatabaseId);
   }
+})();
+
+// Initialize Analytics if supported and measurementId is valid
+export const analytics = (firebaseConfig.measurementId && typeof window !== 'undefined')
+  ? isSupported().then(yes => yes ? getAnalytics(app) : null).catch(() => null)
+  : Promise.resolve(null);
+
+if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") {
+  console.warn("Firebase: Project ID is not configured. Please set your environment variables or firebase-applet-config.json.");
 }
-testConnection();
 
 export const googleProvider = new GoogleAuthProvider();
 export const githubProvider = new GithubAuthProvider();

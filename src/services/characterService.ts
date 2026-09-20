@@ -447,9 +447,10 @@ export async function getCharacterList(uid: string, folderId?: string | null) {
   }
 }
 
-export async function getMyCharacters() {
-  if (!auth.currentUser) return [];
-  return getCharacterList(auth.currentUser.uid);
+export async function getMyCharacters(uid?: string) {
+  const userId = uid || auth.currentUser?.uid;
+  if (!userId) return [];
+  return getCharacterList(userId);
 }
 
 export async function getCharacterById(id: string) {

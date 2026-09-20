@@ -183,7 +183,6 @@ export const useCharacterPersistence = (
               const url = new URL(window.location.href);
               url.searchParams.set('id', char.id);
               window.history.replaceState({}, '', url.toString());
-              if (user) await refreshCharacterList();
               return;
             }
           }
@@ -219,7 +218,6 @@ export const useCharacterPersistence = (
           const url = new URL(window.location.href);
           url.searchParams.set('id', char.id);
           window.history.replaceState({}, '', url.toString());
-          if (user) await refreshCharacterList();
           return;
         }
 
@@ -257,7 +255,6 @@ export const useCharacterPersistence = (
             const url = new URL(window.location.href);
             url.searchParams.set('id', id);
             window.history.replaceState({}, '', url.toString());
-            if (user) await refreshCharacterList();
             return;
           }
         }
@@ -293,7 +290,6 @@ export const useCharacterPersistence = (
         const url = new URL(window.location.href);
         url.searchParams.set('id', id);
         window.history.replaceState({}, '', url.toString());
-        if (user) await refreshCharacterList();
       } catch (e: any) {
         setToast({ message: "加载失败", type: 'error' });
       }

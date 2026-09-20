@@ -4,6 +4,8 @@ import { Image as ImageIcon, ChevronDown, Settings, X, Plus, Trash2 } from 'luci
 
 import { AvatarsSoA } from '../../schema/types';
 
+const DEFAULT_AVATAR = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="%23a8a29e"><rect width="100" height="100" fill="%23f5f5f4"/><circle cx="50" cy="38" r="18"/><path d="M20 88 C20 66 34 60 50 60 C66 60 80 66 80 88 Z"/></svg>`;
+
 const AvatarGallery = ({ avatars, onUpdate }: { avatars: AvatarsSoA, onUpdate: (a: AvatarsSoA) => void }) => {
   const [index, setIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
@@ -45,7 +47,7 @@ const AvatarGallery = ({ avatars, onUpdate }: { avatars: AvatarsSoA, onUpdate: (
          <AnimatePresence mode="wait">
            <motion.img
              key={index}
-             src={current.url || 'https://via.placeholder.com/400?text=No+Avatar'}
+             src={current.url || DEFAULT_AVATAR}
              initial={{ opacity: 0, scale: 1.05 }}
              animate={{ opacity: 1, scale: 1 }}
              exit={{ opacity: 0, scale: 0.95 }}

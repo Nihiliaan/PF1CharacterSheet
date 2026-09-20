@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useUI } from './UIContext';
 import {
@@ -76,17 +76,32 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [cutItems, setCutItems] = useState<string[]>([]);
 
   const refreshCharacterList = useCallback(async () => {
+    if (!user) {
+      setMyCharacters([]);
+      setFolders([]);
+      return;
+    }
     try {
       const [list, folderList] = await Promise.all([
-        getMyCharacters(),
-        getFolders()
+        getMyCharacters(user.uid),
+        getFolders(user.uid)
       ]);
       setMyCharacters([...(list || [])]);
       setFolders([...(folderList || [])]);
     } catch (e) {
       setToast({ message: "刷新数据失败，请检查连接", type: 'error' });
     }
-  }, [setToast]);
+  }, [user, setToast]);
+
+  useEffect(() => {
+    if (user) {
+      refreshCharacterList();
+    } else {
+      setMyCharacters([]);
+      setFolders([]);
+      setCurrentFolderId(null);
+    }
+  }, [user, refreshCharacterList]);
 
   const toggleTableActionMode = () => setTableActionMode(p => p === 'drag' ? 'delete' : 'drag');
 
