@@ -71,6 +71,22 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.race', v)}
           />
           <InlineInput
+            className="col-span-12 sm:col-span-4"
+            label={t('editor.basic.type')}
+            value={data.basic.type}
+            path="basic.type"
+            originalValue={lastSavedData.basic.type}
+            onChange={v => update('basic.type', v)}
+          />
+          <InlineInput
+            className="col-span-12 sm:col-span-8"
+            label={t('editor.basic.subtype')}
+            value={data.basic.subtype || []}
+            path="basic.subtype"
+            originalValue={lastSavedData.basic.subtype || []}
+            onChange={v => update('basic.subtype', v)}
+          />
+          <InlineInput
             className="col-span-4"
             label={t('editor.basic.age')}
             value={data.basic.age}

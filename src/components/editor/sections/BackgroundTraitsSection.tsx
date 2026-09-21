@@ -26,6 +26,7 @@ const BackgroundTraitsSection: React.FC = () => {
           data={data.backgroundTraits}
           originalData={lastSavedData.backgroundTraits}
           onChange={v => update('backgroundTraits', v)}
+          enableSQShow={true}
           rowDraggable={true}
           rowActionMode={tableActionMode}
           onRowActionModeToggle={toggleTableActionMode}

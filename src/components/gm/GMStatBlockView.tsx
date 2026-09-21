@@ -13,6 +13,57 @@ import {
 } from '../../utils/statBlockFormatter';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 
+/**
+ * 轻量级 Markdown 超链接渲染组件，支持将 [文本](URL) 渲染为可跳转链接，并隔离点击事件
+ */
+export const SafeMarkdownText: React.FC<{
+  text?: string | null;
+  className?: string;
+  linkClassName?: string;
+}> = ({
+  text,
+  className,
+  linkClassName = "text-amber-800 hover:text-amber-600 underline font-medium cursor-pointer"
+}) => {
+  if (!text) return null;
+  const str = String(text);
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts: (string | React.ReactNode)[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = linkRegex.exec(str)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(str.substring(lastIndex, match.index));
+    }
+    const label = match[1];
+    const url = match[2];
+    parts.push(
+      <a
+        key={`${match.index}-${label}`}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={linkClassName}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {label}
+      </a>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < str.length) {
+    parts.push(str.substring(lastIndex));
+  }
+
+  if (parts.length === 0) return <span className={className}>{str}</span>;
+  return <span className={className}>{parts}</span>;
+};
+
 export default function GMStatBlockView() {
   const { t } = useTranslation();
   const { data } = useCharacter();
@@ -140,7 +191,7 @@ export default function GMStatBlockView() {
         <header className="border-b-2 border-stone-800 pb-2 mb-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h1 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 tracking-wide uppercase">
-              {sb.name}
+              <SafeMarkdownText text={sb.name} />
               <span className="text-base sm:text-lg font-semibold ml-2 text-stone-700">
                 （CR {sb.cr}{sb.mr ? `，MR ${sb.mr}` : ''}）
               </span>
@@ -151,24 +202,24 @@ export default function GMStatBlockView() {
           </div>
 
           <div className="text-stone-800 text-xs sm:text-sm mt-0.5 font-medium">
-            {sb.race && <span>{sb.race} </span>}
-            <span>{sb.classes || '—'}</span>
+            {sb.race && <span><SafeMarkdownText text={sb.race} /> </span>}
+            <span><SafeMarkdownText text={sb.classes || '—'} /></span>
           </div>
 
           <div className="text-stone-700 text-xs mt-0.5">
             <span>{sb.alignment} </span>
             <span>{sb.size} </span>
-            <span>{sb.typeSubtype}</span>
+            <span><SafeMarkdownText text={sb.typeSubtype} /></span>
           </div>
 
           <div className="text-stone-800 text-xs mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
             <span><strong className="font-semibold">{t('editor.basic.initiative', '先攻')}</strong> {sb.initiative}</span>
             <span>；</span>
-            <span><strong className="font-semibold">{t('editor.basic.senses', '感官')}</strong> {sb.senses}</span>
+            <span><strong className="font-semibold">{t('editor.basic.senses', '感官')}</strong> <SafeMarkdownText text={sb.senses} /></span>
             {sb.aura && (
               <>
                 <span>；</span>
-                <span><strong className="font-semibold">{t('editor.basic.aura', '灵光')}</strong> {sb.aura}</span>
+                <span><strong className="font-semibold">{t('editor.basic.aura', '灵光')}</strong> <SafeMarkdownText text={sb.aura} /></span>
               </>
             )}
           </div>
@@ -192,7 +243,7 @@ export default function GMStatBlockView() {
                 <strong className="font-semibold">AC</strong> {sb.ac}，
                 <strong className="font-semibold">{t('gm_view.touch', '接触')}</strong> {sb.touch}，
                 <strong className="font-semibold">{t('gm_view.flat_footed', '措手不及')}</strong> {sb.flatFooted}
-                {sb.acSource && <span className="text-stone-600 text-xs">（{sb.acSource}）</span>}
+                {sb.acSource && <span className="text-stone-600 text-xs">（<SafeMarkdownText text={sb.acSource} />）</span>}
               </div>
 
               <div>
@@ -205,12 +256,12 @@ export default function GMStatBlockView() {
                 {' '}{t('gm_view.fort', '强韧')} {sb.fort}，
                 {t('gm_view.ref', '反射')} {sb.ref}，
                 {t('gm_view.will', '意志')} {sb.will}
-                {sb.conditionalSaves && <span className="text-stone-600 text-xs">（{sb.conditionalSaves}）</span>}
+                {sb.conditionalSaves && <span className="text-stone-600 text-xs">（<SafeMarkdownText text={sb.conditionalSaves} />）</span>}
               </div>
 
               {sb.specialDefenses && (
                 <div>
-                  <strong className="font-semibold">{t('editor.defenses.special_defenses', '防御能力')}</strong> {sb.specialDefenses}
+                  <strong className="font-semibold">{t('editor.defenses.special_defenses', '防御能力')}</strong> <SafeMarkdownText text={sb.specialDefenses} />
                 </div>
               )}
             </section>
@@ -232,7 +283,7 @@ export default function GMStatBlockView() {
                   <strong className="font-semibold">{t('gm_view.melee', '近战')}</strong>{' '}
                   {sb.meleeAttacks.map((a, i) => (
                     <span key={i}>
-                      <span className="font-medium italic">{a.weapon}</span> {a.hit} 
+                      <span className="font-medium italic"><SafeMarkdownText text={a.weapon} /></span> {a.hit} 
                       <span className="text-stone-600"> ({[a.damage + '/' + a.crit, a.damageType, a.special].filter(Boolean).join(' ')})</span>
                       {i < sb.meleeAttacks.length - 1 ? '，' : ''}
                     </span>
@@ -245,7 +296,7 @@ export default function GMStatBlockView() {
                   <strong className="font-semibold">{t('gm_view.ranged', '远程')}</strong>{' '}
                   {sb.rangedAttacks.map((a, i) => (
                     <span key={i}>
-                      <span className="font-medium italic">{a.weapon}</span> {a.hit} 
+                      <span className="font-medium italic"><SafeMarkdownText text={a.weapon} /></span> {a.hit} 
                       <span className="text-stone-600"> ({[a.damage + '/' + a.crit, a.rangeOrTouch, a.damageType, a.special].filter(Boolean).join(' ')})</span>
                       {i < sb.rangedAttacks.length - 1 ? '，' : ''}
                     </span>
@@ -260,7 +311,7 @@ export default function GMStatBlockView() {
 
               {sb.specialAttacks && (
                 <div>
-                  <strong className="font-semibold">{t('gm_view.special_attacks', '特殊攻击')}</strong> {sb.specialAttacks}
+                  <strong className="font-semibold">{t('gm_view.special_attacks', '特殊攻击')}</strong> <SafeMarkdownText text={sb.specialAttacks} />
                 </div>
               )}
 
@@ -271,7 +322,7 @@ export default function GMStatBlockView() {
                     <div key={idx} className="bg-stone-50/70 print:bg-transparent rounded p-1.5 border border-stone-200/80 print:border-none print:p-0">
                       <div className="font-serif font-bold text-xs text-stone-900 flex items-center justify-between">
                         <span>
-                          {mb.title}
+                          <SafeMarkdownText text={mb.title} />
                           {(mb.cl || mb.concentration) && (
                             <span className="font-sans font-normal text-stone-600 text-[11px] ml-1">
                               （{[mb.cl ? `CL ${mb.cl}` : '', mb.concentration ? `专注 ${mb.concentration}` : ''].filter(Boolean).join('；')}）
@@ -287,14 +338,16 @@ export default function GMStatBlockView() {
                             <span className="font-semibold text-stone-700 shrink-0 min-w-[42px]">
                               {r.levelText}{r.usesText ? ` (${r.usesText})` : ''}：
                             </span>
-                            <span className="italic text-stone-800">{r.spellsText}</span>
+                            <span className="italic text-stone-800">
+                              <SafeMarkdownText text={r.spellsText} />
+                            </span>
                           </div>
                         ))}
                       </div>
 
                       {mb.notes && (
                         <div className="text-[11px] text-stone-500 italic mt-0.5">
-                          {mb.notes}
+                          <SafeMarkdownText text={mb.notes} />
                         </div>
                       )}
                     </div>
@@ -315,9 +368,9 @@ export default function GMStatBlockView() {
                     {t('gm_view.tactics', '战术')}
                   </h2>
                 </div>
-                {sb.tactics.beforeCombat && <div><strong>战斗前</strong> {sb.tactics.beforeCombat}</div>}
-                {sb.tactics.duringCombat && <div><strong>战斗中</strong> {sb.tactics.duringCombat}</div>}
-                {sb.tactics.morale && <div><strong>士气</strong> {sb.tactics.morale}</div>}
+                {sb.tactics.beforeCombat && <div><strong>战斗前</strong> <SafeMarkdownText text={sb.tactics.beforeCombat} /></div>}
+                {sb.tactics.duringCombat && <div><strong>战斗中</strong> <SafeMarkdownText text={sb.tactics.duringCombat} /></div>}
+                {sb.tactics.morale && <div><strong>士气</strong> <SafeMarkdownText text={sb.tactics.morale} /></div>}
               </section>
             )}
 
@@ -346,7 +399,7 @@ export default function GMStatBlockView() {
                 <strong className="font-semibold">CMD</strong> {sb.cmd}
               </div>
 
-              {/* 专长（紧凑排列，支持悬浮/点击 Popover） */}
+              {/* 专长（紧凑排列，支持超链接与 Popover 弹窗） */}
               {sb.feats.length > 0 && (
                 <div>
                   <strong className="font-semibold">{t('gm_view.feats', '专长')}</strong>{' '}
@@ -357,18 +410,25 @@ export default function GMStatBlockView() {
                           <PopoverTrigger asChild>
                             <button
                               type="button"
-                              className="font-medium underline decoration-dotted decoration-stone-400 hover:text-amber-800 transition-colors cursor-help text-left"
+                              className="font-medium underline decoration-dotted decoration-stone-400 hover:text-amber-800 transition-colors cursor-help text-left inline"
                             >
-                              {feat.name}{feat.type ? ` [${feat.type}]` : ''}
+                              <SafeMarkdownText text={feat.name} />{feat.type ? ` [${feat.type}]` : ''}
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-80 text-xs p-3 shadow-lg bg-stone-900 text-stone-100 border-stone-800 z-50">
-                            <div className="font-bold text-amber-400 mb-1">{feat.name}</div>
-                            <div className="text-stone-300 leading-relaxed whitespace-pre-wrap">{feat.desc}</div>
+                            <div className="font-bold text-amber-400 mb-1">
+                              <SafeMarkdownText text={feat.name} linkClassName="text-amber-300 hover:text-amber-100 underline" />
+                              {feat.type ? ` [${feat.type}]` : ''}
+                            </div>
+                            <div className="text-stone-300 leading-relaxed whitespace-pre-wrap">
+                              <SafeMarkdownText text={feat.desc} linkClassName="text-amber-300 hover:text-amber-100 underline" />
+                            </div>
                           </PopoverContent>
                         </Popover>
                       ) : (
-                        <span>{feat.name}{feat.type ? ` [${feat.type}]` : ''}</span>
+                        <span>
+                          <SafeMarkdownText text={feat.name} />{feat.type ? ` [${feat.type}]` : ''}
+                        </span>
                       )}
                       {i < sb.feats.length - 1 ? '，' : ''}
                     </span>
@@ -382,7 +442,7 @@ export default function GMStatBlockView() {
                   <strong className="font-semibold">{t('gm_view.skills', '技能')}</strong>{' '}
                   {sb.skills.map((s, i) => (
                     <span key={i} className="whitespace-nowrap">
-                      {s.name} {s.total}
+                      <SafeMarkdownText text={s.name} /> {s.total}
                       {i < sb.skills.length - 1 ? '，' : ''}
                     </span>
                   ))}
@@ -390,7 +450,7 @@ export default function GMStatBlockView() {
               )}
 
               <div>
-                <strong className="font-semibold">{t('gm_view.languages', '语言')}</strong> {sb.languages}
+                <strong className="font-semibold">{t('gm_view.languages', '语言')}</strong> <SafeMarkdownText text={sb.languages} />
               </div>
 
               {/* SQ 特殊能力汇总 */}
@@ -404,18 +464,25 @@ export default function GMStatBlockView() {
                           <PopoverTrigger asChild>
                             <button
                               type="button"
-                              className="font-medium underline decoration-dotted decoration-stone-400 hover:text-amber-800 transition-colors cursor-help text-left"
+                              className="font-medium underline decoration-dotted decoration-stone-400 hover:text-amber-800 transition-colors cursor-help text-left inline"
                             >
-                              {sq.name}{sq.type ? ` (${sq.type})` : ''}
+                              <SafeMarkdownText text={sq.name} />{sq.type ? ` (${sq.type})` : ''}
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-80 text-xs p-3 shadow-lg bg-stone-900 text-stone-100 border-stone-800 z-50">
-                            <div className="font-bold text-amber-400 mb-1">{sq.name}{sq.type ? ` (${sq.type})` : ''}</div>
-                            <div className="text-stone-300 leading-relaxed whitespace-pre-wrap">{sq.desc}</div>
+                            <div className="font-bold text-amber-400 mb-1">
+                              <SafeMarkdownText text={sq.name} linkClassName="text-amber-300 hover:text-amber-100 underline" />
+                              {sq.type ? ` (${sq.type})` : ''}
+                            </div>
+                            <div className="text-stone-300 leading-relaxed whitespace-pre-wrap">
+                              <SafeMarkdownText text={sq.desc} linkClassName="text-amber-300 hover:text-amber-100 underline" />
+                            </div>
                           </PopoverContent>
                         </Popover>
                       ) : (
-                        <span>{sq.name}{sq.type ? ` (${sq.type})` : ''}</span>
+                        <span>
+                          <SafeMarkdownText text={sq.name} />{sq.type ? ` (${sq.type})` : ''}
+                        </span>
                       )}
                       {i < sb.specialQualities.length - 1 ? '，' : ''}
                     </span>
@@ -426,13 +493,25 @@ export default function GMStatBlockView() {
               {/* 装备 */}
               {sb.combatGear.length > 0 && (
                 <div>
-                  <strong className="font-semibold">{t('gm_view.combat_gear', '战斗装备')}</strong> {sb.combatGear.join('，')}
+                  <strong className="font-semibold">{t('gm_view.combat_gear', '战斗装备')}</strong>{' '}
+                  {sb.combatGear.map((item, i) => (
+                    <span key={i}>
+                      <SafeMarkdownText text={item} />
+                      {i < sb.combatGear.length - 1 ? '，' : ''}
+                    </span>
+                  ))}
                 </div>
               )}
 
               {sb.otherGear.length > 0 && (
                 <div>
-                  <strong className="font-semibold">{t('gm_view.other_gear', '其他装备')}</strong> {sb.otherGear.join('，')}
+                  <strong className="font-semibold">{t('gm_view.other_gear', '其他装备')}</strong>{' '}
+                  {sb.otherGear.map((item, i) => (
+                    <span key={i}>
+                      <SafeMarkdownText text={item} />
+                      {i < sb.otherGear.length - 1 ? '，' : ''}
+                    </span>
+                  ))}
                 </div>
               )}
             </section>
@@ -460,24 +539,25 @@ export default function GMStatBlockView() {
                             className="text-left w-full p-1.5 rounded border border-stone-200 bg-stone-50/70 hover:bg-stone-100 hover:border-stone-300 transition-colors group cursor-pointer"
                           >
                             <div className="font-semibold text-xs text-stone-900 group-hover:text-amber-900 flex items-center justify-between">
-                              <span className="truncate">{sa.name}</span>
+                              <span className="truncate"><SafeMarkdownText text={sa.name} /></span>
                               {sa.type && (
-                                <span className="text-[10px] font-mono font-bold text-stone-500 bg-stone-200/70 px-1 rounded ml-1">
+                                <span className="text-[10px] font-mono font-bold text-stone-500 bg-stone-200/70 px-1 rounded ml-1 shrink-0">
                                   {sa.type}
                                 </span>
                               )}
                             </div>
                             <div className="text-[11px] text-stone-500 truncate mt-0.5">
-                              {sa.desc}
+                              <SafeMarkdownText text={sa.desc} />
                             </div>
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 text-xs p-3 shadow-lg bg-stone-900 text-stone-100 border-stone-800 z-50">
                           <div className="font-bold text-amber-400 mb-1">
-                            {sa.name}{sa.type ? ` (${sa.type})` : ''}
+                            <SafeMarkdownText text={sa.name} linkClassName="text-amber-300 hover:text-amber-100 underline" />
+                            {sa.type ? ` (${sa.type})` : ''}
                           </div>
                           <div className="text-stone-300 leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto custom-scrollbar">
-                            {sa.desc}
+                            <SafeMarkdownText text={sa.desc} linkClassName="text-amber-300 hover:text-amber-100 underline" />
                           </div>
                         </PopoverContent>
                       </Popover>
@@ -489,9 +569,11 @@ export default function GMStatBlockView() {
                     {sb.specialAbilities.map((sa, i) => (
                       <div key={i} className="text-xs">
                         <strong className="font-semibold text-stone-900">
-                          {sa.name}{sa.type ? ` (${sa.type})` : ''}
+                          <SafeMarkdownText text={sa.name} />{sa.type ? ` (${sa.type})` : ''}
                         </strong>{' '}
-                        <span className="text-stone-700 leading-relaxed">{sa.desc}</span>
+                        <span className="text-stone-700 leading-relaxed">
+                          <SafeMarkdownText text={sa.desc} />
+                        </span>
                       </div>
                     ))}
                   </div>

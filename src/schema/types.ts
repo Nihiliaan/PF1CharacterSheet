@@ -41,6 +41,7 @@ export interface DynamicTableProps {
   path?: string;
   showAll?: boolean;
   minWidth?: string;
+  enableSQShow?: boolean;
 }
 
 export interface SingleRowTableProps {
@@ -108,12 +109,14 @@ export interface SavesData {
 export interface TraitsSoA {
   name: string[];
   desc: string[];
+  SQshow?: boolean[];
 }
 
 export interface BackgroundTraitsSoA {
   name: string[];
   type: string[];
   desc: string[];
+  SQshow?: boolean[];
 }
 
 export interface ClassFeaturesSoA {
@@ -121,6 +124,7 @@ export interface ClassFeaturesSoA {
   name: string[];
   type: number[]; // 0:—, 1:Sp, 2:Su, 3:Ex
   desc: string[];
+  SQshow?: boolean[];
 }
 
 export interface FeatsSoA {
@@ -191,6 +195,8 @@ export interface CharacterData {
     size: number;
     gender: number;
     race: string;
+    type: number;
+    subtype: (number | string)[];
     age: number;
     height: number;
     weight: number;

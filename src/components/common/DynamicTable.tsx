@@ -6,7 +6,7 @@ import { getHandlerByPath } from '../../schema/fieldRegistry';
 import DynamicInput from './DynamicInput';
 
 const DynamicTableRow = memo(({ 
-  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, updateData, removeRow, fixedRows, isDescriptionCol 
+  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow 
 }: any) => {
   const getCellPath = (basePath: string, index: number, key: string) => {
     if (!basePath) return undefined;
@@ -57,6 +57,20 @@ const DynamicTableRow = memo(({
           </td>
         );
       })}
+      {enableSQShow && (
+        <td className="p-0 text-center align-middle w-8 border-stone-300 border-r relative group-hover:bg-stone-100 transition-colors pointer-events-auto">
+          <div className="flex items-center justify-center w-full h-[32px]">
+            <input
+              type="checkbox"
+              checked={data?.SQshow?.[i] !== false}
+              disabled={readOnly}
+              onChange={(e) => updateData(i, 'SQshow', e.target.checked)}
+              className="rounded border-stone-300 text-stone-700 focus:ring-stone-500 w-4 h-4 cursor-pointer"
+              title="在GM数据卡特殊能力(SQ)中显示"
+            />
+          </div>
+        </td>
+      )}
       {!fixedRows && (
         <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors pointer-events-auto">
           <div className="flex items-center justify-center w-full h-[32px] opacity-0 group-hover:opacity-100 transition-opacity">
@@ -73,7 +87,7 @@ const DynamicTableRow = memo(({
 });
 
 export default function DynamicTable(props: DynamicTableProps & { minWidth?: string }) {
-  const { path, columns: propsColumns, data, originalData, onChange, newItemGenerator, fixedRows: propsFixedRows, readonlyColumns, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart: propsDragStart, onRowDragOver, onRowDrop: propsDrop, readOnly = false, minWidth = '600px' } = props;
+  const { path, columns: propsColumns, data, originalData, onChange, newItemGenerator, fixedRows: propsFixedRows, readonlyColumns, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart: propsDragStart, onRowDragOver, onRowDrop: propsDrop, readOnly = false, minWidth = '600px', enableSQShow = false } = props;
   const { t } = useTranslation();
 
   // sortKey 和 sortOrder 现在仅作为 UI 状态（控制三角图标）
@@ -140,8 +154,12 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     const cellPath = `${path || ''}.${key}[${index}]`;
     const cellHandler = getHandlerByPath(cellPath);
     const finalValue = cellHandler?.update ? cellHandler.update(value) : value;
-    if (!newData[key]) newData[key] = new Array(rowCount).fill('');
+    const defaultFill = key === 'SQshow' ? true : '';
+    if (!newData[key]) newData[key] = new Array(rowCount).fill(defaultFill);
     const newColArray = [...newData[key]];
+    while (newColArray.length < rowCount) {
+      newColArray.push(defaultFill);
+    }
     newColArray[index] = finalValue;
     newData[key] = newColArray;
     onChange(newData);
@@ -164,6 +182,13 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
         if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill(defaultValue);
         newData[c.key] = [...newData[c.key], defaultValue];
       });
+    }
+    if (enableSQShow) {
+      const existingSQ = Array.isArray(newData.SQshow) ? [...newData.SQshow] : [];
+      while (existingSQ.length < rowCount) {
+        existingSQ.push(true);
+      }
+      newData.SQshow = [...existingSQ, true];
     }
     onChange(newData);
     setSortKey(null); // 添加行后清除排序标记
@@ -192,6 +217,13 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                 </th>
               );
             })}
+            {enableSQShow && (
+              <th className="w-8 p-0 text-center align-middle border-stone-300 border-r" title="在GM数据卡特殊能力(SQ)中显示">
+                <div className="flex items-center justify-center w-full h-[32px] text-stone-500 font-semibold text-xs select-none">
+                  SQ
+                </div>
+              </th>
+            )}
             {!fixedRows && (
               <th className="w-8 p-0 align-middle border-stone-300">
                 {rowDraggable && onRowActionModeToggle && (<button type="button" onClick={onRowActionModeToggle} className="p-1.5 w-full flex justify-center text-stone-400 hover:text-stone-900 transition-colors pointer-events-auto">{rowActionMode === 'drag' ? <GripVertical size={16} /> : <Trash2 size={16} className="text-red-400 hover:text-red-500" />}</button>)}
@@ -201,10 +233,10 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
         </thead>
         <tbody className="divide-y divide-stone-300">
           {currentIndices.map((idx) => (
-            <DynamicTableRow key={idx} index={idx} columns={columns} data={data} originalData={originalData} path={path} readOnly={readOnly} readonlyColumns={readonlyColumns} rowDraggable={rowDraggable} rowActionMode={rowActionMode} onRowDragStart={onDragStart} onRowDragOver={onRowDragOver} onRowDrop={propsDrop} updateData={updateData} removeRow={removeRow} fixedRows={fixedRows} isDescriptionCol={isDescriptionCol} />
+            <DynamicTableRow key={idx} index={idx} columns={columns} data={data} originalData={originalData} path={path} readOnly={readOnly} readonlyColumns={readonlyColumns} rowDraggable={rowDraggable} rowActionMode={rowActionMode} onRowDragStart={onDragStart} onRowDragOver={onRowDragOver} onRowDrop={propsDrop} updateData={updateData} removeRow={removeRow} fixedRows={fixedRows} isDescriptionCol={isDescriptionCol} enableSQShow={enableSQShow} />
           ))}
           {!fixedRows && (
-            <tr><td colSpan={columns.length + 1} className="p-0 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer"><button type="button" onClick={addRow} className="flex items-center gap-1 text-xs text-stone-600 hover:text-stone-900 px-3 py-2 w-full justify-center font-medium uppercase tracking-wider"><Plus size={14} /> {t('common.add_row')}</button></td></tr>
+            <tr><td colSpan={columns.length + 1 + (enableSQShow ? 1 : 0)} className="p-0 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer"><button type="button" onClick={addRow} className="flex items-center gap-1 text-xs text-stone-600 hover:text-stone-900 px-3 py-2 w-full justify-center font-medium uppercase tracking-wider"><Plus size={14} /> {t('common.add_row')}</button></td></tr>
           )}
         </tbody>
       </table>

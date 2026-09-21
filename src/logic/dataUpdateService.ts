@@ -1,6 +1,7 @@
 import { produce } from 'immer';
 import { CharacterData } from '../schema/types';
 import { getHandlerByPath } from '../schema/fieldRegistry';
+import { getCreatureTypeByRace } from '../database/races';
 
 /**
  * 辅助函数：解析路径片段，支持 prop[index] 格式
@@ -45,6 +46,15 @@ export const dataUpdateService = {
         if (current[name]) current[name][parseInt(index, 10)] = finalValue;
       } else {
         current[lastPart] = finalValue;
+      }
+
+      // 联动：当玩家修改种族时，自动更新生物类型与子类
+      if (path === 'basic.race' && draft.basic) {
+        const mapping = getCreatureTypeByRace(finalValue);
+        if (mapping) {
+          draft.basic.type = mapping.type;
+          draft.basic.subtype = [...mapping.subtype];
+        }
       }
     });
   },

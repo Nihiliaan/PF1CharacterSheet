@@ -37,6 +37,8 @@ export const CharacterPrototype: any = {
     size: handlers.SizeHandler,
     gender: handlers.GenderHandler,
     race: handlers.RaceHandler,
+    type: handlers.CreatureTypeHandler,
+    subtype: handlers.CreatureSubtypeHandler,
     age: AgeHandler,
     height: HeightHandler,
     weight: WeightHandler,
@@ -134,13 +136,15 @@ export const CharacterPrototype: any = {
   racialTraits: {
     handler: SimpleListHandler,
     name: TextHandler,
-    desc: TextHandler
+    desc: TextHandler,
+    SQshow: BoolHandler
   },
   backgroundTraits: {
     handler: BackgroundTraitsTableHandler,
     name: TextHandler,
     type: handlers.TraitTypeHandler,
-    desc: TextHandler
+    desc: TextHandler,
+    SQshow: BoolHandler
   },
   favoredClass: {
     fc: handlers.FavoredClassHandler,
@@ -151,7 +155,8 @@ export const CharacterPrototype: any = {
     level: LevelHandler,
     name: TextHandler,
     type: AbilityTypeHandler,
-    desc: TextHandler
+    desc: TextHandler,
+    SQshow: BoolHandler
   },
   feats: {
     handler: FeatsTableHandler,

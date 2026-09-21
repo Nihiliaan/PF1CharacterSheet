@@ -24,6 +24,7 @@ const RacialTraitsSection: React.FC = () => {
         data={data.racialTraits}
         originalData={lastSavedData.racialTraits}
         onChange={v => update('racialTraits', v)}
+        enableSQShow={true}
         rowDraggable={true}
         rowActionMode={tableActionMode}
         onRowActionModeToggle={toggleTableActionMode}

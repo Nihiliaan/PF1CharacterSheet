@@ -11,6 +11,7 @@ import { SKILL_REGISTRY, getCategoryDefaultAbility, getCategorySkillIds, getCate
 import { DEITIES_BY_PANTHEON } from '../database/deities';
 import { ALL_LANGUAGES, LANGUAGES_BY_CATEGORY } from '../database/languages';
 import { RACES_DATA, flattenDirectory as flattenRaces } from '../database/races';
+import { CREATURE_TYPES, CREATURE_SUBTYPES } from '../database/creatures';
 import i18n from 'i18next';
 import { toTraditional } from '../i18n/config';
 
@@ -373,13 +374,15 @@ export class BaseSelect extends BaseHandler {
           };
 
           const keywords = [enName, zhName, toTraditional(zhName)];
+          const hasContent = Array.isArray(item.content) && item.content.length > 0;
+          const isSelectable = item.selectable !== undefined ? !!item.selectable : !hasContent;
 
           return {
             label,
-            value: item.selectable ? valueIndex : enName,
-            selectable: !!item.selectable,
+            value: isSelectable ? valueIndex : enName,
+            selectable: isSelectable,
             keywords,
-            children: build(item.content || [], enName)
+            ...(hasContent ? { children: build(item.content, enName) } : {})
           };
         }
         
@@ -668,6 +671,52 @@ const ManeuverabilityHandler = new BaseSelect({ optionValues: ['Clumsy', 'Poor',
 const AlignmentHandler = new BaseSelect({ optionValues: ['LG', 'NG', 'CG', 'LN', 'N', 'CN', 'LE', 'NE', 'CE'], i18nPrefix: 'editor.basic.alignment_options.' });
 const SizeHandler = new BaseSelect({ optionValues: ['Fine', 'Diminutive', 'Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan', 'Colossal'], optionIndices: [3, 4], i18nPrefix: 'editor.basic.size_options.' });
 const GenderHandler = new BaseSelect({ optionValues: ['Male', 'Female', 'Other'], i18nPrefix: 'editor.basic.gender_options.' });
+
+const CreatureTypeHandler = new BaseSelect({
+  optionValues: CREATURE_TYPES.map(t => t[0]),
+  defaultValue: 5, // Humanoid
+  getOptions: function(context?: any) {
+    return this.buildTree(CREATURE_TYPES, context);
+  },
+  formatDisplay: function(v: any, context?: any) {
+    if (v === '' || v === undefined || v === null) return '';
+    const idx = typeof v === 'number' ? v : this.optionValues.indexOf(v);
+    if (idx >= 0 && idx < CREATURE_TYPES.length) {
+      const currentLang = i18n.language || 'zh';
+      if (currentLang.startsWith('en')) return CREATURE_TYPES[idx][0];
+      const zh = CREATURE_TYPES[idx][1];
+      return (currentLang === 'zh-TW' || currentLang === 'zh-HK') ? toTraditional(zh) : zh;
+    }
+    return String(v);
+  }
+});
+
+const CreatureSubtypeHandler = new BaseSelect({
+  isHybrid: true,
+  isMulti: true,
+  optionValues: CREATURE_SUBTYPES.map(t => t[0]),
+  getOptions: function(context?: any) {
+    return this.buildTree(CREATURE_SUBTYPES, context);
+  },
+  formatDisplay: function(v: any, context?: any) {
+    if (v === '' || v === undefined || v === null) return '';
+    const currentLang = i18n.language || 'zh';
+    const resolveSingle = (item: any) => {
+      const idx = typeof item === 'number' ? item : this.optionValues.indexOf(item);
+      if (idx >= 0 && idx < CREATURE_SUBTYPES.length) {
+        if (currentLang.startsWith('en')) return CREATURE_SUBTYPES[idx][0];
+        const zh = CREATURE_SUBTYPES[idx][1];
+        return (currentLang === 'zh-TW' || currentLang === 'zh-HK') ? toTraditional(zh) : zh;
+      }
+      return String(item);
+    };
+
+    if (Array.isArray(v)) {
+      return v.map(resolveSingle).join(', ');
+    }
+    return resolveSingle(v);
+  }
+});
 
 const DeityHandler = new BaseSelect({
   isHybrid: true,
@@ -1090,6 +1139,7 @@ const handlers: any = {
   IntegerHandler, PosIntHandler, NonNegativeIntHandler, QuantityHandler, LevelHandler,
   DistanceHandler, SkillAttributeHandler, CostHandler, WeightHandler, ACPHandler,
   ManeuverabilityHandler, AlignmentHandler, SizeHandler, GenderHandler,
+  CreatureTypeHandler, CreatureSubtypeHandler,
   DeityHandler, RaceHandler, TraitTypeHandler, SensesHandler, LanguagesHandler, DamageTypeHandler,
   FavoredClassHandler, FeatTypeHandler,
   AttributesTableHandler, MeleeAttackTableHandler, RangedAttackTableHandler, DefensesTableHandler,
@@ -1114,6 +1164,8 @@ const handlers: any = {
       case 'skillName': return SkillNameHandler;
       case 'deity': return DeityHandler;
       case 'race': return RaceHandler;
+      case 'creatureType': return CreatureTypeHandler;
+      case 'creatureSubtype': return CreatureSubtypeHandler;
       case 'traitType': return TraitTypeHandler;
       case 'senses': return SensesHandler;
       case 'languages': return LanguagesHandler;

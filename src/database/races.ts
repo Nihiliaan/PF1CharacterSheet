@@ -1,11 +1,23 @@
+import { CREATURE_SUBTYPES } from './creatures';
+
 export type LocalizedName = [string, string];
 
 export interface RaceNode {
   name: LocalizedName;
+  type?: number;
+  subtype?: number[];
   selectable?: boolean;
   showParent?: boolean;
-  content: (RaceNode | LocalizedName)[];
+  content?: (RaceNode | LocalizedName)[];
 }
+
+/**
+ * 辅助函数：根据英文子类名称动态解析当前最新的整数子类 ID 列表
+ */
+const st = (names: string[]): number[] =>
+  names
+    .map(name => CREATURE_SUBTYPES.findIndex(s => s[0].toLowerCase() === name.toLowerCase()))
+    .filter(idx => idx >= 0);
 
 export const RACES_DATA: RaceNode[] = [
   {
@@ -13,6 +25,7 @@ export const RACES_DATA: RaceNode[] = [
     content: [
       {
         name: ['Human', '人类'],
+        subtype: st(['Human']),
         showParent: true,
         content: [
           ['Azlanti', '阿兹兰特人'],
@@ -30,12 +43,12 @@ export const RACES_DATA: RaceNode[] = [
           ['Vudrani', '乌荼罗人']
         ]
       },
-      ['Elf', '精灵'],
-      ['Dwarf', '矮人'],
-      ['Gnome', '侏儒'],
-      ['Halfling', '半身人'],
-      ['Half-Orc', '半兽人'],
-      ['Half-Elf', '半精灵']
+      { name: ['Elf', '精灵'], subtype: st(['Elf']) },
+      { name: ['Dwarf', '矮人'], subtype: st(['Dwarf']) },
+      { name: ['Gnome', '侏儒'], subtype: st(['Gnome']) },
+      { name: ['Halfling', '半身人'], subtype: st(['Halfling']) },
+      { name: ['Half-Orc', '半兽人'], subtype: st(['Human', 'Orc']) },
+      { name: ['Half-Elf', '半精灵'], subtype: st(['Elf', 'Human']) }
     ]
   },
   {
@@ -43,6 +56,8 @@ export const RACES_DATA: RaceNode[] = [
     content: [
       {
         name: ['Aasimar', '神裔'],
+        type: 9,
+        subtype: st(['Native']),
         selectable: true,
         showParent: true,
         content: [
@@ -54,24 +69,28 @@ export const RACES_DATA: RaceNode[] = [
           ['Peri-Blooded', '佩里裔']
         ]
       },
-      ['Drow', '卓尔'],
+      { name: ['Drow', '卓尔'], subtype: st(['Elf']) },
       {
         name: ['Geniekin', '元素裔'],
+        type: 9,
+        subtype: st(['Native']),
         selectable: true,
         showParent: true,
         content: [
-          ['Ifrit', '火元素裔'],
-          ['Oread', '土元素裔'],
+          { name: ['Ifrit', '火元素裔'], subtype: st(['Native', 'Fire']) },
+          { name: ['Oread', '土元素裔'], subtype: st(['Native', 'Earth']) },
           ['Suli', '巨灵裔'],
-          ['Sylph', '风元素裔'],
-          ['Undine', '水元素裔']
+          { name: ['Sylph', '风元素裔'], subtype: st(['Native', 'Air']) },
+          { name: ['Undine', '水元素裔'], subtype: st(['Native', 'Water']) }
         ]
       },
-      ['Goblin', '地精'],
-      ['Kobold', '狗头人'],
-      ['Orc', '兽人'],
+      { name: ['Goblin', '地精'], subtype: st(['Goblinoid']) },
+      { name: ['Kobold', '狗头人'], subtype: st(['Reptilian']) },
+      { name: ['Orc', '兽人'], subtype: st(['Orc']) },
       {
         name: ['Tiefling', '魔裔'],
+        type: 9,
+        subtype: st(['Native']),
         selectable: true,
         showParent: true,
         content: [
@@ -95,17 +114,18 @@ export const RACES_DATA: RaceNode[] = [
       {
         name: ['aliens', '异星种族'],
         content: [
-          ['Kasatha', '卡萨塔'],
-          ['Lashunta', '勒珊塔'],
-          ['Triaxian', '特里亚克萨斯'],
-          ['Trox', '特洛克斯']
+          { name: ['Kasatha', '卡萨塔'], subtype: st(['Kasatha']) },
+          { name: ['Lashunta', '勒珊塔'], subtype: st(['Lashunta']) },
+          { name: ['Triaxian', '特里亚克萨斯'], subtype: st(['Triaxian']) },
+          { name: ['Trox', '特洛克斯'], type: 7 }
         ]
       },
-      ['Android', '仿生人'],
-      ['Catfolk', '猫族'],
-      ['Changeling', '替换儿'],
+      { name: ['Android', '仿生人'], subtype: st(['Android']) },
+      { name: ['Catfolk', '猫族'], subtype: st(['Catfolk']) },
+      { name: ['Changeling', '替换儿'], subtype: st(['Changeling']) },
       {
         name: ['Dhampir', '吸血裔'],
+        subtype: st(['Dhampir']),
         selectable: true,
         showParent: true,
         content: [
@@ -118,27 +138,28 @@ export const RACES_DATA: RaceNode[] = [
       {
         name: ['dragon_empires', '龙国'],
         content: [
-          ['Kitsune', '狐妖'],
-          ['Nagaji', '娜迦裔'],
-          ['Samsaran', '轮回者'],
-          ['Tengu', '天狗'],
-          ['Wayang', '剪影人']
+          { name: ['Kitsune', '狐妖'], subtype: st(['Kitsune', 'Shapechanger']) },
+          { name: ['Nagaji', '娜迦裔'], subtype: st(['Reptilian']) },
+          { name: ['Samsaran', '轮回者'], subtype: st(['Samsaran']) },
+          { name: ['Tengu', '天狗'], subtype: st(['Tengu']) },
+          { name: ['Wayang', '剪影人'], subtype: st(['Wayang']) }
         ]
       },
-      ['Fetchling', '窃影鬼'],
-      ['Ghoran', '蒿兰人'],
-      ['Gillman', '半鱼人'],
-      ['Hobgoblin', '大地精'],
+      { name: ['Fetchling', '窃影鬼'], type: 9, subtype: st(['Native']) },
+      { name: ['Ghoran', '蒿兰人'], type: 10 },
+      { name: ['Gillman', '半鱼人'], subtype: st(['Aquatic']) },
+      { name: ['Hobgoblin', '大地精'], subtype: st(['Goblinoid']) },
       {
         name: ['other', '其它种族'],
         content: [
-          ['Aquatic Elf', '水栖精灵'],
-          ['Duergar', '灰矮人'],
-          ['Gathlain', '伽瑟兰'],
-          ['Grippli', '树蛙人'],
-          ['Merfolk', '人鱼'],
+          { name: ['Aquatic Elf', '水栖精灵'], subtype: st(['Elf', 'Aquatic']) },
+          { name: ['Duergar', '灰矮人'], subtype: st(['Dwarf']) },
+          { name: ['Gathlain', '伽瑟兰'], type: 4 },
+          { name: ['Grippli', '树蛙人'], subtype: st(['Grippli']) },
+          { name: ['Merfolk', '人鱼'], subtype: st(['Aquatic']) },
           {
             name: ['Skinwalker', '兽态人'],
+            subtype: st(['Skinwalker', 'Shapechanger']),
             selectable: true,
             showParent: true,
             content: [
@@ -152,35 +173,79 @@ export const RACES_DATA: RaceNode[] = [
               ['Werewolf-Kin', '半狼人']
             ]
           },
-          ['Svirfneblin', '地底侏儒'],
-          ['Vanara', '灵猴族'],
-          ['Vishkanya', '蝮血裔'],
-          ['Wyrwood', '汲魂木'],
-          ['Wyvaran', '翼龙人']
+          { name: ['Svirfneblin', '地底侏儒'], subtype: st(['Gnome']) },
+          { name: ['Vanara', '灵猴族'], subtype: st(['Vanara']) },
+          { name: ['Vishkanya', '蝮血裔'], subtype: st(['Vishkanya']) },
+          { name: ['Wyrwood', '汲魂木'], type: 2 },
+          { name: ['Wyvaran', '翼龙人'], type: 3 }
         ]
       },
-      ['Ratfolk', '鼠人'],
-      ['Strix', '鸮形人']
+      { name: ['Ratfolk', '鼠人'], subtype: st(['Ratfolk']) },
+      { name: ['Strix', '鸮形人'], subtype: st(['Strix']) }
     ]
   }
 ];
 
-export function flattenDirectory(data: any[]): string[] {
-  let result: string[] = [];
-  data.forEach(item => {
-    if (typeof item === 'object' && item !== null && !Array.isArray(item) && 'content' in item) {
-      if (item.selectable) {
-        const en = Array.isArray(item.name) ? item.name[0] : item.name;
-        result.push(en);
-      }
-      result = result.concat(flattenDirectory(item.content));
-    } else if (Array.isArray(item)) {
-      result.push(item[0]);
-    } else if (typeof item === 'string') {
-      result.push(item);
-    }
-  });
-  return result;
+export interface RaceCreatureMapping {
+  type: number;
+  subtype: number[];
 }
 
-export const ALL_RACES = flattenDirectory(RACES_DATA);
+/**
+ * 展平种族树，同时生成名称列表、生物类型与子类映射列表以及双语反查字典
+ */
+function flattenRacesData(data: RaceNode[]) {
+  const races: string[] = [];
+  const creatureData: RaceCreatureMapping[] = [];
+  const nameMap: Record<string, number> = {};
+
+  function walk(nodes: (RaceNode | LocalizedName)[], parentType: number = 5, parentSubtype: number[] = []) {
+    nodes.forEach(item => {
+      if (typeof item === 'object' && item !== null && !Array.isArray(item) && 'name' in item) {
+        const [en, zh] = item.name;
+        const currentType = item.type !== undefined ? item.type : parentType;
+        const currentSubtype = item.subtype !== undefined ? item.subtype : parentSubtype;
+        const hasContent = Array.isArray(item.content) && item.content.length > 0;
+
+        if (item.selectable || !hasContent) {
+          const idx = races.length;
+          races.push(en);
+          creatureData.push({ type: currentType, subtype: currentSubtype });
+          if (en) nameMap[en.toLowerCase()] = idx;
+          if (zh) nameMap[zh.toLowerCase()] = idx;
+        }
+
+        if (hasContent) {
+          walk(item.content!, currentType, currentSubtype);
+        }
+      } else if (Array.isArray(item)) {
+        const [en, zh] = item;
+        const idx = races.length;
+        races.push(en);
+        creatureData.push({ type: parentType, subtype: parentSubtype });
+        if (en) nameMap[en.toLowerCase()] = idx;
+        if (zh) nameMap[zh.toLowerCase()] = idx;
+      }
+    });
+  }
+
+  walk(data);
+  nameMap['human'] = 0;
+  nameMap['人类'] = 0;
+  return { races, creatureData, nameMap };
+}
+
+const { races, creatureData, nameMap } = flattenRacesData(RACES_DATA);
+
+export const ALL_RACES = races;
+export const RACE_CREATURE_DATA = creatureData;
+export const flattenDirectory = (data: any[]): string[] => flattenRacesData(data).races;
+
+/**
+ * 根据种族序号或名称获取默认的生物类型与子类
+ */
+export function getCreatureTypeByRace(race: any): RaceCreatureMapping | null {
+  if (race === undefined || race === null || race === '') return null;
+  const idx = typeof race === 'number' ? race : nameMap[String(race).trim().toLowerCase()];
+  return (idx !== undefined && RACE_CREATURE_DATA[idx]) ? RACE_CREATURE_DATA[idx] : null;
+}

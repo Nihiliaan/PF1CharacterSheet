@@ -121,6 +121,8 @@
       "size": "体型",
       "gender": "性别",
       "race": "种族",
+      "type": "生物类型",
+      "subtype": "生物子类",
       "age": "年龄",
       "height": "身高",
       "weight": "体重",

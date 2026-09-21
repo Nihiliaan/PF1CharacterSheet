@@ -2,7 +2,7 @@ import { CharacterData, ATTRIBUTE_NAMES } from '../schema/types';
 import { getModifier, formatModifier } from './calculations';
 import handlers from '../schema/handlers';
 
-// 标准 Pathfinder 1e CR -> XP 对照表
+// 标准 Pathfinder 1e CR -> XP 对照表 (扩充至 CR 30 封顶)
 export const CR_XP_TABLE: Record<string, number> = {
   '1/8': 50,
   '1/6': 65,
@@ -34,24 +34,27 @@ export const CR_XP_TABLE: Record<string, number> = {
   '23': 819200,
   '24': 1228800,
   '25': 1638400,
+  '26': 2457600,
+  '27': 3276800,
+  '28': 4915200,
+  '29': 6553600,
+  '30': 9830400,
 };
 
 export const getXPByCR = (cr: number | string): string => {
-  const crStr = String(cr);
+  const crStr = String(cr).trim();
   if (CR_XP_TABLE[crStr]) {
     return CR_XP_TABLE[crStr].toLocaleString();
   }
   const numericCR = typeof cr === 'number' ? cr : parseFloat(cr);
   if (isNaN(numericCR) || numericCR <= 0) return '0';
   if (numericCR < 1) return '200';
-  const rounded = Math.round(numericCR);
+  // 严格限制最大范围 1-30，绝不产生指数溢出
+  const rounded = Math.min(30, Math.max(1, Math.round(numericCR)));
   if (CR_XP_TABLE[String(rounded)]) {
     return CR_XP_TABLE[String(rounded)].toLocaleString();
   }
-  // 高于 25 级的公式近似估算
-  const base25 = 1638400;
-  const xp = base25 * Math.pow(2, Math.floor((rounded - 25) / 2));
-  return Math.round(xp).toLocaleString();
+  return CR_XP_TABLE['30'].toLocaleString();
 };
 
 /**
@@ -86,21 +89,44 @@ export const getSpaceAndReach = (sizeValue: number | string): { space: string; r
  */
 export const getEstimatedCR = (data: CharacterData): number => {
   const classesStr = data.basic?.classes || '';
+
+  // 1. 彻底剥离 Markdown 链接中的 URL 与裸 URL，防止 URL 中的端口、IP、页面ID等数字被误算为等级
+  const cleanStr = classesStr
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [法师](http://.../1234) -> 法师
+    .replace(/https?:\/\/\S+/g, '');          // 移除所有裸露 URL
+
   let totalLevel = 0;
-  const levelMatches = classesStr.match(/\d+/g);
-  if (levelMatches && levelMatches.length > 0) {
-    totalLevel = levelMatches.reduce((acc, curr) => acc + (parseInt(curr, 10) || 0), 0);
+
+  // 2. 匹配可能表示等级的数字 (优先匹配 "10级"、"5 级" 等显式带"级"的格式)
+  const explicitLevelMatches = cleanStr.match(/(\d{1,2})\s*级/g);
+  if (explicitLevelMatches && explicitLevelMatches.length > 0) {
+    totalLevel = explicitLevelMatches.reduce((acc, curr) => {
+      const num = parseInt(curr.replace(/[^\d]/g, ''), 10) || 0;
+      return acc + (num <= 20 ? num : 0);
+    }, 0);
+  } else {
+    // 匹配常规职业等级数值（单职业限定 1-20）
+    const generalMatches = cleanStr.match(/\b([1-9]|1\d|20)\b/g);
+    if (generalMatches && generalMatches.length > 0) {
+      totalLevel = generalMatches.reduce((acc, curr) => {
+        const num = parseInt(curr, 10) || 0;
+        return acc + num;
+      }, 0);
+    }
   }
+
+  // 3. 若职业未能解析出等级，尝试从生命骰解析 (如 "10d8+20" -> 10)
   if (totalLevel <= 0) {
     const hdStr = data.defenses?.hd || '';
-    const hdMatch = hdStr.match(/^(\d+)d/i);
+    const hdMatch = hdStr.match(/^(\d{1,2})d/i);
     if (hdMatch) {
       totalLevel = parseInt(hdMatch[1], 10) || 1;
     }
   }
+
+  // 安全范围兜底：限制在 1 到 30 之间
   if (totalLevel <= 0) return 1;
-  // PC 角色如果是精英属性与PC装备，CR通常约等于等级或等级-1（NPC等同等级-1）
-  return Math.max(1, totalLevel);
+  return Math.min(30, Math.max(1, totalLevel));
 };
 
 export interface FormattedAttack {
@@ -210,12 +236,21 @@ export const formatStatBlockData = (
   // 1. 基础信息
   const name = data.basic?.name?.trim() || t('common.untitled_character', '未命名角色');
   const classes = data.basic?.classes?.trim() || '';
-  const race = handlers.RaceHandler.formatDisplay(data.basic?.race, { t }) || '';
+  const rawRace = handlers.RaceHandler.formatDisplay(data.basic?.race, { t }) || '';
+  const race = (rawRace === '—' || rawRace === 'None') ? '' : rawRace;
   const alignment = handlers.AlignmentHandler.formatDisplay(data.basic?.alignment, { t }) || '';
   const size = handlers.SizeHandler.formatDisplay(data.basic?.size, { t }) || '';
   
   // 生物类型/子类型推导
-  const typeSubtype = race ? `${t('gm_view.humanoid', '类人生物')}（${race}）` : t('gm_view.humanoid', '类人生物');
+  const typeName = handlers.CreatureTypeHandler.formatDisplay(data.basic?.type, { t }) || (race ? t('gm_view.humanoid', '类人生物') : '');
+  let subtypeName = handlers.CreatureSubtypeHandler.formatDisplay(data.basic?.subtype, { t }) || '';
+  if (subtypeName === '—' || subtypeName === '') {
+    subtypeName = '';
+  }
+  if (!subtypeName && race && (data.basic?.type === undefined || data.basic?.type === 5)) {
+    subtypeName = race;
+  }
+  const typeSubtype = subtypeName ? `${typeName}（${subtypeName}）` : typeName;
 
   const initiative = formatModifier(data.basic?.initiative || 0);
 
@@ -268,14 +303,14 @@ export const formatStatBlockData = (
   // 3. 进攻
   const speeds: string[] = [];
   const speedObj = data.basic?.speed || { land: 30, fly: 0, maneuverability: 2, swim: 0, climb: 0, burrow: 0 };
-  speeds.push(`${t('editor.basic.speed_land', '陆行')} ${speedObj.land || 30}尺`);
+  speeds.push(`${speedObj.land || 30}尺`);
   if (speedObj.fly && speedObj.fly > 0) {
     const manStr = handlers.ManeuverabilityHandler.formatDisplay(speedObj.maneuverability, { t });
-    speeds.push(`${t('editor.basic.speed_fly', '飞行')} ${speedObj.fly}尺（${manStr}）`);
+    speeds.push(`飞行 ${speedObj.fly}尺（${manStr}）`);
   }
-  if (speedObj.swim && speedObj.swim > 0) speeds.push(`${t('editor.basic.speed_swim', '游泳')} ${speedObj.swim}尺`);
-  if (speedObj.climb && speedObj.climb > 0) speeds.push(`${t('editor.basic.speed_climb', '攀爬')} ${speedObj.climb}尺`);
-  if (speedObj.burrow && speedObj.burrow > 0) speeds.push(`${t('editor.basic.speed_burrow', '掘地')} ${speedObj.burrow}尺`);
+  if (speedObj.swim && speedObj.swim > 0) speeds.push(`游泳 ${speedObj.swim}尺`);
+  if (speedObj.climb && speedObj.climb > 0) speeds.push(`攀爬 ${speedObj.climb}尺`);
+  if (speedObj.burrow && speedObj.burrow > 0) speeds.push(`掘地 ${speedObj.burrow}尺`);
   const speed = speeds.join('，');
 
   // 近战与远程攻击
@@ -462,20 +497,32 @@ export const formatStatBlockData = (
   }
   const languages = languagesList.join('，') || '通用语';
 
-  // 特殊能力汇总（种族特性、职业特性）
+  // 特殊能力汇总（种族特性、背景特性、职业特性）
   const specialQualities: { name: string; type?: string; desc?: string }[] = [];
   if (data.racialTraits?.name) {
     data.racialTraits.name.forEach((rname, i) => {
       if (!rname || rname.trim() === '') return;
+      if (data.racialTraits?.SQshow?.[i] === false) return;
       specialQualities.push({
         name: rname.trim(),
         desc: data.racialTraits.desc?.[i]
       });
     });
   }
+  if (data.backgroundTraits?.name) {
+    data.backgroundTraits.name.forEach((bname, i) => {
+      if (!bname || bname.trim() === '') return;
+      if (data.backgroundTraits?.SQshow?.[i] === false) return;
+      specialQualities.push({
+        name: bname.trim(),
+        desc: data.backgroundTraits.desc?.[i]
+      });
+    });
+  }
   if (data.classFeatures?.name) {
     data.classFeatures.name.forEach((cname, i) => {
       if (!cname || cname.trim() === '') return;
+      if (data.classFeatures?.SQshow?.[i] === false) return;
       const typeCode = data.classFeatures.type?.[i] ?? 0;
       const typeLabel = ['', 'Sp', 'Su', 'Ex'][typeCode] || '';
       specialQualities.push({

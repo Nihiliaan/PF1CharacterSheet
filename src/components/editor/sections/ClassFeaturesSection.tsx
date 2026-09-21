@@ -24,6 +24,7 @@ const ClassFeaturesSection: React.FC = () => {
         data={data.classFeatures}
         originalData={lastSavedData.classFeatures}
         onChange={v => update('classFeatures', v)}
+        enableSQShow={true}
         rowDraggable={true}
         rowActionMode={tableActionMode}
         onRowActionModeToggle={toggleTableActionMode}

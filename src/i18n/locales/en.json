@@ -121,6 +121,8 @@
       "size": "Size",
       "gender": "Gender",
       "race": "Race",
+      "type": "Creature Type",
+      "subtype": "Creature Subtypes",
       "age": "Age",
       "height": "Height",
       "weight": "Weight",

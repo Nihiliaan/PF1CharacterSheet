@@ -10,6 +10,8 @@
     "size": 4,
     "gender": 0,
     "race": "",
+    "type": 5,
+    "subtype": [],
     "age": 0,
     "height": 0,
     "weight": 0,
@@ -87,12 +89,14 @@
   },
   "racialTraits": {
     "name": [],
-    "desc": []
+    "desc": [],
+    "SQshow": []
   },
   "backgroundTraits": {
     "name": [],
     "type": [],
-    "desc": []
+    "desc": [],
+    "SQshow": []
   },
   "favoredClass": {
     "fc": [],
@@ -102,7 +106,8 @@
     "level": [],
     "name": [],
     "type": [],
-    "desc": []
+    "desc": [],
+    "SQshow": []
   },
   "feats": {
     "level": [],
