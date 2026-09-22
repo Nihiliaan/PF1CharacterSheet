@@ -407,7 +407,7 @@
       "notes": "备注",
       "notes_placeholder": "在此输入关于此法术或能力的特别说明...",
       "computed_level": "{{n}}环",
-      "at_will": "随意使用",
+      "at_will": "随意",
       "uses_per_day": "{{n}}次/日",
       "add_spell_block": "添加施法块",
       "default_block_title": "法术"
