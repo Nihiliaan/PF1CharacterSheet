@@ -375,10 +375,10 @@ export default function GMStatBlockView() {
 
             {/* 核心六维属性（紧凑单行显示） */}
             <div>
-              <strong className="font-semibold">{t('editor.sections.attributes', '属性')}</strong>{' '}
+              <strong className="font-semibold">{t('editor.sections.attributes', '属性')}</strong>
               {sb.attributes.map((attr, i) => (
                 <span key={i} className="whitespace-nowrap">
-                  {attr.name} {attr.value} <span className="text-stone-500 text-xs">({attr.mod})</span> 
+                  {' '}{attr.name} {attr.value} <span className="text-stone-500 text-xs">({attr.mod})</span>
                 </span>
               ))}
             </div>
