@@ -151,19 +151,6 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, [data]);
 
-  const {
-    handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
-    handleBagDragStart, handleBagDragOver, handleBagDrop,
-    handleItemDragStart, handleItemDragOver, handleItemDrop,
-    handleDragStart, handleDragOver, handleDrop
-  } = useCharacterDnD(data, setData);
-
-  const {
-    update, addBag, removeBag,
-    addMagicBlock, removeMagicBlock,
-    addAdditionalBlock, removeAdditionalBlock
-  } = useCharacterActions(isReadOnly, setData);
-
   // 优化：仅在数据真正变化时进行深比较，且增加简单的长度初步判断
   const isEqual = (a: any, b: any): boolean => {
     if (a === b) return true;
@@ -219,16 +206,33 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
 
   const {
+    driveModal, setDriveModal, isSyncingDrive,
+    handleBrowseDrive, handleBrowseDriveRoot, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore
+  } = useDriveSync();
+
+  // 综合只读保护：权限只读 或 正在后台同步数据时，必须激活只读保护锁
+  const isSyncingActive = isSyncing || syncStatus === 'syncing' || isSyncingDrive;
+  const effectiveReadOnly = isReadOnly || isSyncingActive;
+
+  const {
+    handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
+    handleBagDragStart, handleBagDragOver, handleBagDrop,
+    handleItemDragStart, handleItemDragOver, handleItemDrop,
+    handleDragStart, handleDragOver, handleDrop
+  } = useCharacterDnD(data, setData, effectiveReadOnly);
+
+  const {
+    update, addBag, removeBag,
+    addMagicBlock, removeMagicBlock,
+    addAdditionalBlock, removeAdditionalBlock
+  } = useCharacterActions(effectiveReadOnly, setData);
+
+  const {
     userApiKey, setUserApiKey, showApiKeyInput, setShowApiKeyInput,
     aiModel, setAiModel, availableModels, isFetchingModels, fetchAvailableModels,
     aiInputText, setAiInputText, showAIModal, setShowAIModal,
     isAILoading, aiStatusMsg, handleAIExtract
   } = useCharacterAI(setData, setCurrentCharacterId);
-
-  const {
-    driveModal, setDriveModal, isSyncingDrive,
-    handleBrowseDrive, handleBrowseDriveRoot, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore
-  } = useDriveSync();
 
   const handleShare = () => {
     const id = ui.view === 'bbcode-template' ? currentTemplateId : currentCharacterId;
@@ -297,7 +301,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const value: CharacterContextType = {
-    data, setData, computed, lastSavedData, isReadOnly, setIsReadOnly, 
+    data, setData, computed, lastSavedData, isReadOnly: effectiveReadOnly, setIsReadOnly, 
     currentCharacterId, setCurrentCharacterId,
     currentTemplateId, setCurrentTemplateId,
     isSaving,

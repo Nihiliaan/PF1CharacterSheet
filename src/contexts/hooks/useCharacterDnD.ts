@@ -6,7 +6,7 @@ import { CharacterData } from '../../schema/types';
 /**
  * 专门处理角色表拖拽排序和跨容器移动的交互逻辑
  */
-export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<React.SetStateAction<CharacterData>>) {
+export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<React.SetStateAction<CharacterData>>, isReadOnly: boolean = false) {
   // Refs for Drag & Drop
   const draggedTableItem = useRef<{ listKey: string, itemIndex: number } | null>(null);
   const draggedBagIndex = useRef<number | null>(null);
@@ -15,12 +15,14 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
 
   // --- 通用表格行拖拽 ---
   const handleTableItemDragStart = (listKey: string, itemIndex: number, e: React.DragEvent) => {
+    if (isReadOnly) return;
     e.dataTransfer.effectAllowed = 'move';
     draggedTableItem.current = { listKey, itemIndex };
     e.stopPropagation();
   };
 
   const handleTableItemDragOver = (listKey: string, targetItemIndex: number, e: React.DragEvent) => {
+    if (isReadOnly) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     const currentDrag = draggedTableItem.current;
@@ -34,6 +36,7 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
   };
 
   const handleTableItemDrop = (listKey: string, targetItemIndex: number, e: React.DragEvent) => {
+    if (isReadOnly) return;
     e.preventDefault();
     e.stopPropagation();
     draggedTableItem.current = null;
@@ -41,11 +44,13 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
 
   // --- 背包容器拖拽 ---
   const handleBagDragStart = (e: React.DragEvent, index: number) => {
+    if (isReadOnly) return;
     e.dataTransfer.effectAllowed = 'move';
     draggedBagIndex.current = index;
   };
 
   const handleBagDragOver = (e: React.DragEvent, targetIndex: number) => {
+    if (isReadOnly) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     const sourceIndex = draggedBagIndex.current;
@@ -56,6 +61,7 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
   };
 
   const handleBagDrop = (e: React.DragEvent, dropIndex: number) => {
+    if (isReadOnly) return;
     e.preventDefault();
     e.stopPropagation();
     if (draggedItem.current !== null) {
@@ -73,12 +79,14 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
 
   // --- 跨背包物品拖拽 ---
   const handleItemDragStart = (bagId: string, itemIndex: number, e: React.DragEvent) => {
+    if (isReadOnly) return;
     e.dataTransfer.effectAllowed = 'move';
     draggedItem.current = { bagId, itemIndex };
     e.stopPropagation();
   };
 
   const handleItemDragOver = (targetBagId: string, targetItemIndex: number, e: React.DragEvent) => {
+    if (isReadOnly) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     const currentDrag = draggedItem.current;
@@ -100,6 +108,7 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
   };
 
   const handleItemDrop = (targetBagId: string, targetItemIndex: number, e: React.DragEvent) => {
+    if (isReadOnly) return;
     e.preventDefault();
     e.stopPropagation();
     draggedBagIndex.current = null;
@@ -108,11 +117,13 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
 
   // --- 模块化数据块拖拽 (Magic Blocks / Additional Data) ---
   const handleDragStart = (e: React.DragEvent, id: string) => {
+    if (isReadOnly) return;
     draggedBlockId.current = id;
     e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragOver = (e: React.DragEvent, targetId: string, listName: 'additionalData' | 'magicBlocks') => {
+    if (isReadOnly) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     const sourceId = draggedBlockId.current;
@@ -125,6 +136,7 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
   };
 
   const handleDrop = (e: React.DragEvent, targetId: string, listName: 'additionalData' | 'magicBlocks') => {
+    if (isReadOnly) return;
     e.preventDefault();
     draggedBlockId.current = null;
   };

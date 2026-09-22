@@ -124,26 +124,26 @@ export default function GMStatBlockView() {
 
           {/* CR 微调 */}
           <div className="flex items-center gap-1.5 text-xs text-stone-600">
-            <span className="font-semibold">{t('gm_view.cr', 'CR')}:</span>
+            <span className="font-semibold">CR:</span>
             <input
               type="text"
               value={customCR}
               onChange={(e) => setCustomCR(e.target.value)}
               className="w-12 text-center text-xs font-bold border border-stone-300 rounded px-1 py-0.5 bg-stone-50 focus:bg-white focus:outline-none focus:border-amber-600"
-              title={t('gm_view.cr', 'CR')}
+              title="CR"
             />
           </div>
 
           {/* MR 微调 */}
           <div className="flex items-center gap-1.5 text-xs text-stone-600">
-            <span className="font-semibold">{t('gm_view.mr', 'MR')}:</span>
+            <span className="font-semibold">MR:</span>
             <input
               type="text"
               value={customMR}
               onChange={(e) => setCustomMR(e.target.value)}
               placeholder="—"
               className="w-10 text-center text-xs font-bold border border-stone-300 rounded px-1 py-0.5 bg-stone-50 focus:bg-white focus:outline-none focus:border-amber-600"
-              title={t('gm_view.mr', 'MR')}
+              title="MR"
             />
           </div>
         </div>
@@ -200,7 +200,7 @@ export default function GMStatBlockView() {
                 </span>
               </h1>
               <div className="text-xs sm:text-sm font-bold text-stone-700">
-                {t('gm_view.xp', '经验值')} {sb.xp}
+                {t('editor.basic.xp', '经验值')} {sb.xp}
               </div>
             </div>
 
@@ -232,14 +232,14 @@ export default function GMStatBlockView() {
           <section className="space-y-1 mb-3">
             <div className="border-y border-stone-400/80 py-0.5 my-1.5 break-after-avoid flex items-center justify-between">
               <h2 className="font-serif font-bold tracking-wider text-xs uppercase text-stone-900">
-                {t('gm_view.defense', '防御')}
+                {t('editor.sections.defenses', '防御')}
               </h2>
             </div>
 
             <div>
               <strong className="font-semibold">AC</strong> {sb.ac}，
-              <strong className="font-semibold">{t('gm_view.touch', '接触')}</strong> {sb.touch}，
-              <strong className="font-semibold">{t('gm_view.flat_footed', '措手不及')}</strong> {sb.flatFooted}
+              <strong className="font-semibold">{t('editor.defenses.touch', '接触')}</strong> {sb.touch}，
+              <strong className="font-semibold">{t('editor.defenses.flat_footed', '措手不及')}</strong> {sb.flatFooted}
               {sb.acSource && <span className="text-stone-600 text-xs">（<SafeMarkdownText text={sb.acSource} />）</span>}
             </div>
 
@@ -249,10 +249,10 @@ export default function GMStatBlockView() {
             </div>
 
             <div>
-              <strong className="font-semibold">{t('gm_view.saves', '豁免')}</strong> 
-              {' '}{t('gm_view.fort', '强韧')} {sb.fort}，
-              {t('gm_view.ref', '反射')} {sb.ref}，
-              {t('gm_view.will', '意志')} {sb.will}
+              <strong className="font-semibold">{t('editor.defenses.saves', '豁免')}</strong> 
+              {' '}{t('editor.defenses.fort', '强韧')} {sb.fort}，
+              {t('editor.defenses.ref', '反射')} {sb.ref}，
+              {t('editor.defenses.will', '意志')} {sb.will}
               {sb.conditionalSaves && <span className="text-stone-600 text-xs">（<SafeMarkdownText text={sb.conditionalSaves} />）</span>}
             </div>
 
@@ -267,17 +267,17 @@ export default function GMStatBlockView() {
           <section className="space-y-1 mb-3">
             <div className="border-y border-stone-400/80 py-0.5 my-1.5 break-after-avoid flex items-center justify-between">
               <h2 className="font-serif font-bold tracking-wider text-xs uppercase text-stone-900">
-                {t('gm_view.offense', '进攻')}
+                {t('editor.sections.attacks', '进攻')}
               </h2>
             </div>
 
             <div>
-              <strong className="font-semibold">{t('gm_view.speed', '速度')}</strong> {sb.speed}
+              <strong className="font-semibold">{t('editor.basic.speed', '速度')}</strong> {sb.speed}
             </div>
 
             {sb.meleeAttacks.length > 0 && (
               <div>
-                <strong className="font-semibold">{t('gm_view.melee', '近战')}</strong>{' '}
+                <strong className="font-semibold">{t('editor.attacks.melee', '近战')}</strong>{' '}
                 {sb.meleeAttacks.map((a, i) => (
                   <span key={i}>
                     <span className="font-medium italic"><SafeMarkdownText text={a.weapon} /></span> {a.hit} 
@@ -290,7 +290,7 @@ export default function GMStatBlockView() {
 
             {sb.rangedAttacks.length > 0 && (
               <div>
-                <strong className="font-semibold">{t('gm_view.ranged', '远程')}</strong>{' '}
+                <strong className="font-semibold">{t('editor.attacks.ranged', '远程')}</strong>{' '}
                 {sb.rangedAttacks.map((a, i) => (
                   <span key={i}>
                     <span className="font-medium italic"><SafeMarkdownText text={a.weapon} /></span> {a.hit} 
@@ -302,13 +302,13 @@ export default function GMStatBlockView() {
             )}
 
             <div>
-              <strong className="font-semibold">{t('gm_view.space', '占据')}</strong> {sb.space}尺；
-              <strong className="font-semibold">{t('gm_view.reach', '触及')}</strong> {sb.reach}尺
+              <strong className="font-semibold">{t('editor.basic.space', '占据')}</strong> {sb.space}尺；
+              <strong className="font-semibold">{t('editor.basic.reach', '触及')}</strong> {sb.reach}尺
             </div>
 
             {sb.specialAttacks && (
               <div>
-                <strong className="font-semibold">{t('gm_view.special_attacks', '特殊攻击')}</strong> <SafeMarkdownText text={sb.specialAttacks} />
+                <strong className="font-semibold">{t('editor.attacks.special_attacks', '特殊攻击')}</strong> <SafeMarkdownText text={sb.specialAttacks} />
               </div>
             )}
 
@@ -326,7 +326,6 @@ export default function GMStatBlockView() {
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-stone-500 font-sans">{mb.typeName}</span>
                     </div>
                     
                     <div className="space-y-0.5 text-xs">
@@ -357,7 +356,7 @@ export default function GMStatBlockView() {
             <section className="space-y-1 mb-3">
               <div className="border-y border-stone-400/80 py-0.5 my-1.5 break-after-avoid flex items-center justify-between">
                 <h2 className="font-serif font-bold tracking-wider text-xs uppercase text-stone-900">
-                  {t('gm_view.tactics', '战术')}
+                  {t('editor.tactics.title', '战术')}
                 </h2>
               </div>
               {sb.tactics.beforeCombat && <div><strong>战斗前</strong> <SafeMarkdownText text={sb.tactics.beforeCombat} /></div>}
@@ -370,13 +369,13 @@ export default function GMStatBlockView() {
           <section className="space-y-1 mb-3">
             <div className="border-y border-stone-400/80 py-0.5 my-1.5 break-after-avoid flex items-center justify-between">
               <h2 className="font-serif font-bold tracking-wider text-xs uppercase text-stone-900">
-                {t('gm_view.statistics', '统计')}
+                {t('editor.statistics.title', '统计')}
               </h2>
             </div>
 
             {/* 核心六维属性（紧凑单行显示） */}
             <div>
-              <strong className="font-semibold">{t('gm_view.attributes', '属性')}</strong>{' '}
+              <strong className="font-semibold">{t('editor.sections.attributes', '属性')}</strong>{' '}
               {sb.attributes.map((attr, i) => (
                 <span key={i} className="whitespace-nowrap">
                   {attr.name} {attr.value} <span className="text-stone-500 text-xs">({attr.mod})</span>
@@ -394,7 +393,7 @@ export default function GMStatBlockView() {
             {/* 专长（紧凑排列，支持超链接与 Popover 弹窗） */}
             {sb.feats.length > 0 && (
               <div>
-                <strong className="font-semibold">{t('gm_view.feats', '专长')}</strong>{' '}
+                <strong className="font-semibold">{t('editor.sections.feats', '专长')}</strong>{' '}
                 {sb.feats.map((feat, i) => (
                   <span key={i}>
                     {feat.desc ? (
@@ -431,7 +430,7 @@ export default function GMStatBlockView() {
             {/* 技能（仅受训技能 + 察觉） */}
             {sb.skills.length > 0 && (
               <div>
-                <strong className="font-semibold">{t('gm_view.skills', '技能')}</strong>{' '}
+                <strong className="font-semibold">{t('editor.sections.skills', '技能')}</strong>{' '}
                 {sb.skills.map((s, i) => (
                   <span key={i} className="whitespace-nowrap">
                     <SafeMarkdownText text={s.name} /> {s.total}
@@ -442,13 +441,13 @@ export default function GMStatBlockView() {
             )}
 
             <div>
-              <strong className="font-semibold">{t('gm_view.languages', '语言')}</strong> <SafeMarkdownText text={sb.languages} />
+              <strong className="font-semibold">{t('editor.basic.languages', '语言')}</strong> <SafeMarkdownText text={sb.languages} />
             </div>
 
             {/* SQ 特殊能力汇总（仅显示能力名称，Popover保留类型） */}
             {sb.specialQualities.length > 0 && (
               <div>
-                <strong className="font-semibold">{t('gm_view.sq', '特殊能力')}</strong>{' '}
+                <strong className="font-semibold">{t('editor.defenses.special_qualities', '特殊能力')}</strong>{' '}
                 {sb.specialQualities.map((sq, i) => (
                   <span key={i}>
                     {sq.desc ? (
@@ -485,7 +484,7 @@ export default function GMStatBlockView() {
             {/* 装备 */}
             {sb.combatGear.length > 0 && (
               <div>
-                <strong className="font-semibold">{t('gm_view.combat_gear', '战斗装备')}</strong>{' '}
+                <strong className="font-semibold">{t('editor.equipment.combat_gear', '战斗装备')}</strong>{' '}
                 {sb.combatGear.map((item, i) => (
                   <span key={i}>
                     <SafeMarkdownText text={item} />
@@ -497,7 +496,7 @@ export default function GMStatBlockView() {
 
             {sb.otherGear.length > 0 && (
               <div>
-                <strong className="font-semibold">{t('gm_view.other_gear', '其他装备')}</strong>{' '}
+                <strong className="font-semibold">{t('editor.equipment.other_gear', '其他装备')}</strong>{' '}
                 {sb.otherGear.map((item, i) => (
                   <span key={i}>
                     <SafeMarkdownText text={item} />
@@ -513,11 +512,8 @@ export default function GMStatBlockView() {
             <section className="space-y-1.5 mb-3">
               <div className="border-y border-stone-400/80 py-0.5 my-1.5 break-after-avoid flex items-center justify-between">
                 <h2 className="font-serif font-bold tracking-wider text-xs uppercase text-stone-900">
-                  {t('gm_view.special_abilities', '特殊能力')}
+                  {t('editor.defenses.special_qualities', '特殊能力')}
                 </h2>
-                <span className="text-[10px] text-stone-400 print:hidden font-sans">
-                  {isCompactMode ? '点击条目查阅详情' : ''}
-                </span>
               </div>
 
               {isCompactMode ? (

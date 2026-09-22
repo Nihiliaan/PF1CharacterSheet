@@ -224,6 +224,7 @@ export const useCharacterPersistence = (
 
         setIsSyncing(true);
         setSyncStatus('syncing');
+        setIsReadOnly(true); // 无论是否有缓存，在后台同步对齐期间均严格保持只读保护
 
         // 1. 优先尝试从本地 IndexedDB 缓存秒开
         let cachedDoc = await getCharacterFromCache(id) as CharacterDocument | null;

@@ -242,7 +242,7 @@ export const formatStatBlockData = (
   const size = handlers.SizeHandler.formatDisplay(data.basic?.size, { t }) || '';
   
   // 生物类型/子类型推导
-  const typeName = handlers.CreatureTypeHandler.formatDisplay(data.basic?.type, { t }) || (race ? t('gm_view.humanoid', '类人生物') : '');
+  const typeName = handlers.CreatureTypeHandler.formatDisplay(data.basic?.type, { t }) || (race ? handlers.CreatureTypeHandler.formatDisplay(5, { t }) : '');
   let subtypeName = handlers.CreatureSubtypeHandler.formatDisplay(data.basic?.subtype, { t }) || '';
   if (subtypeName === '—' || subtypeName === '') {
     subtypeName = '';
