@@ -11,6 +11,7 @@ import {
   ensureLocalFolder as ensureLocalFolderService,
   saveLink
 } from '../../services/characterService';
+import { auth } from '../../lib/firebase';
 
 const KEY_LAST_CHAR = 'last_active_character_id';
 const KEY_LAST_TEMP = 'last_active_template_id';
@@ -42,6 +43,7 @@ export const useCharacterPersistence = (
   const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'offline'>('idle');
+  const activeDocRef = React.useRef<CharacterDocument | any>(null);
 
   const handleSaveInternal = async (saveData: CharacterData | { content: string, name?: string }, id?: string | null, folderId?: string | null, isTemplate: boolean = false) => {
     if (!user) {
@@ -153,16 +155,19 @@ export const useCharacterPersistence = (
     }
   };
 
-  const checkIsReadOnly = (charDoc: any, currentUser: any) => {
+  const checkIsReadOnly = (charDoc: any, currentUser?: any) => {
     if (!charDoc) return true;
     if (charDoc.name?.endsWith('.lnk')) return true;
-    if (!currentUser) return true;
-    if (charDoc.ownerId && currentUser.uid !== charDoc.ownerId) return true;
+    const activeUser = auth.currentUser || currentUser;
+    if (!activeUser) return true;
+    const ownerId = charDoc.ownerId || charDoc.data?.ownerId;
+    if (ownerId && activeUser.uid !== ownerId) return true;
     return false;
   };
 
   const selectCharacter = async (idOrChar: string | any, skipDirtyCheck: boolean = false, shouldSwitchView: boolean = true) => {
     const renderCharacterDocument = (char: CharacterDocument, shouldSwitchView: boolean = true) => {
+      activeDocRef.current = char;
       if (char.isTemplate) {
         const content = char.data?.content || '';
         setBbcodeTemplate(content);
@@ -197,8 +202,9 @@ export const useCharacterPersistence = (
             }
           }
 
-          if (user && char.ownerId && char.ownerId !== user.uid && !char.targetId) {
-            const sharedFolderId = await ensureLocalFolderService('来自分享', null, user.uid);
+          const activeUser = auth.currentUser || user;
+          if (activeUser && char.ownerId && char.ownerId !== activeUser.uid && !char.targetId) {
+            const sharedFolderId = await ensureLocalFolderService('来自分享', null, activeUser.uid);
             const linkId = await saveLink(char, sharedFolderId);
             if (linkId) {
               setCurrentFolderId(sharedFolderId);
@@ -208,7 +214,7 @@ export const useCharacterPersistence = (
           }
 
           renderCharacterDocument(char, shouldSwitchView);
-          setIsReadOnly(checkIsReadOnly(char, user));
+          setIsReadOnly(checkIsReadOnly(char, activeUser));
           setIsSyncing(false);
           return;
         }
@@ -247,8 +253,9 @@ export const useCharacterPersistence = (
               }
             }
 
-            if (user && serverDoc.ownerId && serverDoc.ownerId !== user.uid && !serverDoc.targetId) {
-              const sharedFolderId = await ensureLocalFolderService('来自分享', null, user.uid);
+            const activeUser = auth.currentUser || user;
+            if (activeUser && serverDoc.ownerId && serverDoc.ownerId !== activeUser.uid && !serverDoc.targetId) {
+              const sharedFolderId = await ensureLocalFolderService('来自分享', null, activeUser.uid);
               const linkId = await saveLink(serverDoc, sharedFolderId);
               if (linkId) {
                 setCurrentFolderId(sharedFolderId);
@@ -272,11 +279,11 @@ export const useCharacterPersistence = (
 
             setSyncStatus('synced');
             setTimeout(() => setSyncStatus('idle'), 2000);
-            setIsReadOnly(checkIsReadOnly(serverDoc, user));
+            setIsReadOnly(checkIsReadOnly(serverDoc, activeUser));
           } else if (hasCached) {
             setSyncStatus('offline');
             setTimeout(() => setSyncStatus('idle'), 3000);
-            setIsReadOnly(checkIsReadOnly(cachedDoc, user));
+            setIsReadOnly(checkIsReadOnly(cachedDoc, auth.currentUser || user));
           } else {
             throw new Error("Document not found");
           }
@@ -284,7 +291,7 @@ export const useCharacterPersistence = (
           if (hasCached) {
             setSyncStatus('offline');
             setTimeout(() => setSyncStatus('idle'), 3000);
-            setIsReadOnly(checkIsReadOnly(cachedDoc, user));
+            setIsReadOnly(checkIsReadOnly(cachedDoc, auth.currentUser || user));
           } else {
             setSyncStatus('idle');
             setToast({ message: "加载失败: " + (e.message || "无法连接云端"), type: 'error' });
@@ -395,26 +402,34 @@ export const useCharacterPersistence = (
 
   // 当 Firebase Auth 异步鉴权完成后，核验当前已打开卡片的所有权并动态解锁只读
   useEffect(() => {
-    if (!user) return;
+    const activeUser = auth.currentUser || user;
+    if (!activeUser) return;
 
-    if (currentCharacterId) {
-      getCharacterFromCache(currentCharacterId).then(async (doc) => {
+    const currentDoc = activeDocRef.current;
+    if (currentDoc) {
+      setIsReadOnly(checkIsReadOnly(currentDoc, activeUser));
+      const ownerId = currentDoc.ownerId || currentDoc.data?.ownerId;
+      if (ownerId && ownerId !== activeUser.uid && !currentDoc.targetId && !currentDoc.name?.endsWith('.lnk')) {
+        ensureLocalFolderService('来自分享', null, activeUser.uid).then(async (sharedFolderId) => {
+          const linkId = await saveLink(currentDoc, sharedFolderId);
+          if (linkId) {
+            setCurrentFolderId(sharedFolderId);
+          }
+        }).catch(console.error);
+      }
+    } else if (currentCharacterId || currentTemplateId) {
+      const targetId = (currentCharacterId || currentTemplateId)!;
+      getCharacterFromCache(targetId).then(async (doc) => {
         if (!doc) {
-          doc = await getCharacterById(currentCharacterId);
+          doc = await getCharacterById(targetId);
         }
         if (doc) {
-          setIsReadOnly(checkIsReadOnly(doc, user));
-          if (doc.ownerId && doc.ownerId !== user.uid && !doc.targetId) {
-            const sharedFolderId = await ensureLocalFolderService('来自分享', null, user.uid);
-            const linkId = await saveLink(doc, sharedFolderId);
-            if (linkId) {
-              setCurrentFolderId(sharedFolderId);
-            }
-          }
+          activeDocRef.current = doc;
+          setIsReadOnly(checkIsReadOnly(doc, activeUser));
         }
       }).catch(console.error);
     }
-  }, [user, currentCharacterId]);
+  }, [user, currentCharacterId, currentTemplateId]);
 
   return {
     isSaving,

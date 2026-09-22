@@ -81,6 +81,7 @@ export default function AppHeader() {
   }, [recentCharacterIds, myCharacters]);
 
   const {
+    data,
     isReadOnly,
     isSaving,
     syncStatus,
@@ -155,9 +156,31 @@ export default function AppHeader() {
 
   const currentNavItem = navItems.find(item => item.id === view) || navItems[0];
 
-  const currentPath = view === 'bbcode-template' 
-    ? (getItemPath(currentTemplateId) || t('common.new_template'))
-    : (getItemPath(currentCharacterId) || t('common.new_character'));
+  const currentPath = useMemo(() => {
+    if (view === 'bbcode-template') {
+      if (!currentTemplateId) return t('common.new_template');
+      const path = getItemPath(currentTemplateId);
+      if (path) return path;
+      if (syncStatus === 'syncing') return t('common.loading');
+      return t('common.bbcode_editor');
+    }
+
+    if (!currentCharacterId) {
+      return t('common.new_character');
+    }
+
+    const path = getItemPath(currentCharacterId);
+    if (path) return path;
+
+    const charName = data.basic?.name?.trim();
+    if (charName) return charName;
+
+    if (syncStatus === 'syncing') {
+      return t('common.loading');
+    }
+
+    return t('common.unnamed_character');
+  }, [view, currentTemplateId, currentCharacterId, getItemPath, syncStatus, data.basic?.name, t]);
   
   const isCurrentDirty = view === 'bbcode-template' ? isTemplateDirty : isDirty;
   const displayPath = currentPath + (isCurrentDirty ? '*' : '') + (isReadOnly ? ` (${t('common.read_only')})` : '');

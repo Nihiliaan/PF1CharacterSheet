@@ -9,6 +9,8 @@
     "synced_cloud": "云端已对齐",
     "cached": "本地缓存",
     "offline_cache_tip": "当前为本地缓存数据",
+    "loading": "正在载入...",
+    "unnamed_character": "未命名角色",
     "share": "分享",
     "export": "导出",
     "new": "新建",

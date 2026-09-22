@@ -9,6 +9,8 @@
     "synced_cloud": "Cloud up to date",
     "cached": "Cached",
     "offline_cache_tip": "Showing local cached data",
+    "loading": "Loading...",
+    "unnamed_character": "Unnamed Character",
     "share": "Share",
     "export": "Export",
     "new": "New",

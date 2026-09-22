@@ -381,8 +381,9 @@ export const formatStatBlockData = (
       if (!b) return;
       const title = b.title || t('editor.spells.default_block_title', '法术');
       const cl = b.casterLevel ? String(b.casterLevel) : '';
-      const concentration = b.concentration ? formatModifier(b.concentration) : '';
       const type = b.type ?? 2;
+      const isExtractBlock = type === 4; // 化合炼成没有专注
+      const concentration = (!isExtractBlock && b.concentration) ? formatModifier(b.concentration) : '';
       const typeName = handlers.SpellTypeHandler.formatDisplay(type, { t }) || '';
 
       const spellsArr: string[] = Array.isArray(b.spells) ? b.spells : [];
@@ -397,23 +398,38 @@ export const formatStatBlockData = (
         const spellNames = (spellsArr[i] || '').trim();
         if (!spellNames) continue; // 跳过空法术行
 
+        const usesVal = usesArr[i];
         let levelText = '';
         if (isSpellBlock) {
           const compLevel = rowCount - 1 - i + lowestLevel;
-          levelText = t('editor.spells.computed_level', { n: compLevel });
+          const levelName = t('editor.spells.computed_level', { n: compLevel });
+          if (compLevel === 0) {
+            if (usesVal !== undefined && usesVal !== '' && usesVal !== 0 && usesVal !== '0') {
+              levelText = `${levelName}（${usesVal}/日）`;
+            } else {
+              levelText = `${levelName}（${t('editor.spells.at_will', '随意')}）`;
+            }
+          } else {
+            if (usesVal !== undefined && usesVal !== '' && usesVal !== 0 && usesVal !== '0') {
+              levelText = `${levelName}（${usesVal}/日）`;
+            } else {
+              levelText = levelName;
+            }
+          }
         } else {
-          levelText = t('editor.spells.spell_like', '能力');
-        }
-
-        const usesVal = usesArr[i];
-        let usesText = '';
-        if (usesVal !== undefined && usesVal !== '' && usesVal !== 0 && usesVal !== '0') {
-          usesText = `${usesVal}/日`;
+          // 类法术能力：完全由使用频率驱动（恒定、随意、3次/日、1次/日等）
+          if (usesVal === undefined || usesVal === '' || usesVal === 0 || usesVal === '0') {
+            levelText = t('editor.spells.at_will', '随意');
+          } else if (typeof usesVal === 'number' || /^\d+$/.test(String(usesVal).trim())) {
+            levelText = `${usesVal}次/日`;
+          } else {
+            levelText = String(usesVal).trim();
+          }
         }
 
         rows.push({
           levelText,
-          usesText,
+          usesText: '',
           spellsText: spellNames
         });
       }
@@ -691,8 +707,7 @@ export const exportStatBlockToMarkdown = (
       const meta = [clPart, concPart].filter(Boolean).join('；');
       lines.push(`**${b.title}**${meta ? `（${meta}）` : ''}`);
       b.rows.forEach(r => {
-        const uses = r.usesText ? `（${r.usesText}）` : '';
-        lines.push(`- **${r.levelText}${uses}** —— ${r.spellsText}`);
+        lines.push(`- **${r.levelText}** —— ${r.spellsText}`);
       });
       if (b.notes) {
         lines.push(`**备注** ${b.notes}`);
@@ -716,7 +731,7 @@ export const exportStatBlockToMarkdown = (
   }
   lines.push(`**语言** ${sb.languages}`);
   if (sb.specialQualities.length > 0) {
-    lines.push(`**特殊能力** ${sb.specialQualities.map(sq => sq.type ? `${sq.name} (${sq.type})` : sq.name).join('，')}`);
+    lines.push(`**特殊能力** ${sb.specialQualities.map(sq => sq.name).join('，')}`);
   }
   if (sb.combatGear.length > 0) {
     lines.push(`**战斗装备** ${sb.combatGear.join('，')}`);
