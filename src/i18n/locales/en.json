@@ -90,7 +90,9 @@
     "no_recent": "No recent records",
     "unknown_class": "Unknown Class",
     "delete_record": "Delete Record",
-    "failed_to_create_folder": "Failed to create folder"
+    "failed_to_create_folder": "Failed to create folder",
+    "copied": "Copied",
+    "untitled_character": "Untitled Character"
   },
   "editor": {
     "read_only_notice_copy": "Copy to My Vault",
@@ -175,7 +177,12 @@
         "Blindsight",
         "Blindsense",
         "Tremorsense"
-      ]
+      ],
+      "xp": "XP",
+      "aura": "Aura",
+      "space": "Space",
+      "reach": "Reach",
+      "speed_short": "Speed"
     },
     "attributes": [
       "STR",
@@ -228,7 +235,9 @@
         "Unholy"
       ],
       "special": "Special",
-      "special_attacks": "Special Attacks"
+      "special_attacks": "Special Attacks",
+      "melee_short": "Melee",
+      "ranged_short": "Ranged"
     },
     "defenses": {
       "ac_details": "AC Details",
@@ -246,7 +255,8 @@
       "will": "Will",
       "saves_notes": "Saves Notes",
       "special_defenses": "Special Defenses",
-      "special_defenses_placeholder": "Enter SR, DR, ER, or other special defenses..."
+      "special_defenses_placeholder": "Enter SR, DR, ER, or other special defenses...",
+      "special_qualities": "Special Qualities"
     },
     "skills": {
       "headers": {
@@ -376,7 +386,8 @@
           "Trapper",
           "Woodcutter"
         ]
-      ]
+      ],
+      "title": "Skills"
     },
     "spells": {
       "add_sla_template": "Add SLA Template",
@@ -398,7 +409,8 @@
       "computed_level": "Level {{n}}",
       "at_will": "At will",
       "uses_per_day": "{{n}}/day",
-      "add_spell_block": "Add Spell Block"
+      "add_spell_block": "Add Spell Block",
+      "default_block_title": "Spells"
     },
     "items": {
       "headers": {
@@ -560,6 +572,19 @@
       "vault": "Personal Character Vault",
       "signed_in": "Signed in as {{name}}",
       "guest": "Guest Mode"
+    },
+    "tactics": {
+      "title": "Tactics",
+      "before_combat": "Before Combat",
+      "during_combat": "During Combat",
+      "morale": "Morale"
+    },
+    "statistics": {
+      "title": "Statistics"
+    },
+    "equipment": {
+      "combat_gear": "Combat Gear",
+      "other_gear": "Other Gear"
     }
   },
   "about": {

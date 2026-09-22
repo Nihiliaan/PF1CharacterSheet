@@ -90,7 +90,9 @@
     "no_recent": "暂无最近记录",
     "unknown_class": "未定义职业",
     "delete_record": "删除记录",
-    "failed_to_create_folder": "创建文件夹失败"
+    "failed_to_create_folder": "创建文件夹失败",
+    "copied": "已复制",
+    "untitled_character": "未命名角色"
   },
   "editor": {
     "read_only_notice_copy": "复制到我的收藏",
@@ -175,7 +177,12 @@
         "盲视",
         "盲感",
         "震颤感知"
-      ]
+      ],
+      "xp": "经验值",
+      "aura": "灵光",
+      "space": "占据",
+      "reach": "触及",
+      "speed_short": "速度"
     },
     "attributes": [
       "力量",
@@ -228,7 +235,9 @@
         "污邪"
       ],
       "special": "特性",
-      "special_attacks": "特殊攻击"
+      "special_attacks": "特殊攻击",
+      "melee_short": "近战",
+      "ranged_short": "远程"
     },
     "defenses": {
       "ac_details": "防御等级",
@@ -246,7 +255,8 @@
       "will": "意志",
       "saves_notes": "豁免备注",
       "special_defenses": "特殊防御",
-      "special_defenses_placeholder": "在此输入特殊防御能力，如：伤害减免、能量抗力、法术抗力等..."
+      "special_defenses_placeholder": "在此输入特殊防御能力，如：伤害减免、能量抗力、法术抗力等...",
+      "special_qualities": "特殊能力"
     },
     "skills": {
       "headers": {
@@ -376,7 +386,8 @@
           "捕兽人",
           "樵夫"
         ]
-      ]
+      ],
+      "title": "技能"
     },
     "spells": {
       "add_sla_template": "添加类法术能力模板",
@@ -398,7 +409,8 @@
       "computed_level": "{{n}}环",
       "at_will": "随意使用",
       "uses_per_day": "{{n}}次/日",
-      "add_spell_block": "添加施法块"
+      "add_spell_block": "添加施法块",
+      "default_block_title": "法术"
     },
     "items": {
       "headers": {
@@ -560,6 +572,19 @@
       "vault": "个人角色库",
       "signed_in": "已登录为 {{name}}",
       "guest": "访客模式"
+    },
+    "tactics": {
+      "title": "战术",
+      "before_combat": "战斗前",
+      "during_combat": "战斗中",
+      "morale": "士气"
+    },
+    "statistics": {
+      "title": "统计"
+    },
+    "equipment": {
+      "combat_gear": "战斗装备",
+      "other_gear": "其他装备"
     }
   },
   "about": {

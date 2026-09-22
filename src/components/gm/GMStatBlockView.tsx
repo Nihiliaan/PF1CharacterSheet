@@ -272,12 +272,12 @@ export default function GMStatBlockView() {
             </div>
 
             <div>
-              <strong className="font-semibold">{t('editor.basic.speed', '速度')}</strong> {sb.speed}
+              <strong className="font-semibold">{t('editor.basic.speed_short', '速度')}</strong> {sb.speed}
             </div>
 
             {sb.meleeAttacks.length > 0 && (
               <div>
-                <strong className="font-semibold">{t('editor.attacks.melee', '近战')}</strong>{' '}
+                <strong className="font-semibold">{t('editor.attacks.melee_short', '近战')}</strong>{' '}
                 {sb.meleeAttacks.map((a, i) => (
                   <span key={i}>
                     <span className="font-medium italic"><SafeMarkdownText text={a.weapon} /></span> {a.hit} 
@@ -290,7 +290,7 @@ export default function GMStatBlockView() {
 
             {sb.rangedAttacks.length > 0 && (
               <div>
-                <strong className="font-semibold">{t('editor.attacks.ranged', '远程')}</strong>{' '}
+                <strong className="font-semibold">{t('editor.attacks.ranged_short', '远程')}</strong>{' '}
                 {sb.rangedAttacks.map((a, i) => (
                   <span key={i}>
                     <span className="font-medium italic"><SafeMarkdownText text={a.weapon} /></span> {a.hit} 
@@ -359,9 +359,9 @@ export default function GMStatBlockView() {
                   {t('editor.tactics.title', '战术')}
                 </h2>
               </div>
-              {sb.tactics.beforeCombat && <div><strong>战斗前</strong> <SafeMarkdownText text={sb.tactics.beforeCombat} /></div>}
-              {sb.tactics.duringCombat && <div><strong>战斗中</strong> <SafeMarkdownText text={sb.tactics.duringCombat} /></div>}
-              {sb.tactics.morale && <div><strong>士气</strong> <SafeMarkdownText text={sb.tactics.morale} /></div>}
+              {sb.tactics.beforeCombat && <div><strong>{t('editor.tactics.before_combat', '战斗前')}</strong> <SafeMarkdownText text={sb.tactics.beforeCombat} /></div>}
+              {sb.tactics.duringCombat && <div><strong>{t('editor.tactics.during_combat', '战斗中')}</strong> <SafeMarkdownText text={sb.tactics.duringCombat} /></div>}
+              {sb.tactics.morale && <div><strong>{t('editor.tactics.morale', '士气')}</strong> <SafeMarkdownText text={sb.tactics.morale} /></div>}
             </section>
           )}
 
@@ -403,13 +403,12 @@ export default function GMStatBlockView() {
                             type="button"
                             className="font-medium underline decoration-dotted decoration-stone-400 hover:text-amber-800 transition-colors cursor-help text-left inline"
                           >
-                            <SafeMarkdownText text={feat.name} />{feat.type ? ` [${feat.type}]` : ''}
+                            <SafeMarkdownText text={feat.name} />
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 text-xs p-3 shadow-lg bg-stone-900 text-stone-100 border-stone-800 z-50">
                           <div className="font-bold text-amber-400 mb-1">
                             <SafeMarkdownText text={feat.name} linkClassName="text-amber-300 hover:text-amber-100 underline" />
-                            {feat.type ? ` [${feat.type}]` : ''}
                           </div>
                           <div className="text-stone-300 leading-relaxed whitespace-pre-wrap">
                             <SafeMarkdownText text={feat.desc} linkClassName="text-amber-300 hover:text-amber-100 underline" />
@@ -418,7 +417,7 @@ export default function GMStatBlockView() {
                       </Popover>
                     ) : (
                       <span>
-                        <SafeMarkdownText text={feat.name} />{feat.type ? ` [${feat.type}]` : ''}
+                        <SafeMarkdownText text={feat.name} />
                       </span>
                     )}
                     {i < sb.feats.length - 1 ? '，' : ''}
@@ -430,7 +429,7 @@ export default function GMStatBlockView() {
             {/* 技能（仅受训技能 + 察觉） */}
             {sb.skills.length > 0 && (
               <div>
-                <strong className="font-semibold">{t('editor.sections.skills', '技能')}</strong>{' '}
+                <strong className="font-semibold">{t('editor.skills.title', '技能')}</strong>{' '}
                 {sb.skills.map((s, i) => (
                   <span key={i} className="whitespace-nowrap">
                     <SafeMarkdownText text={s.name} /> {s.total}
