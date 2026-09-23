@@ -74,8 +74,9 @@ export const useCharacterPersistence = (
 
         const name = isTemplate ? (('name' in saveData ? saveData.name : null) || '未命名模板') : ((saveData as CharacterData)?.basic?.name || '未命名人物');
         addToRecent({ id: newId, name, data: saveData, isTemplate });
-        await refreshCharacterList();
         setToast({ message: id ? (isTemplate ? "模板保存成功！" : "人物卡保存成功！") : ("已创建并保存新项目") });
+        // 后台静默刷新档案库列表，不阻塞保存状态与用户交互
+        refreshCharacterList().catch(console.error);
         return newId;
       }
     } catch (e: any) {
@@ -121,7 +122,7 @@ export const useCharacterPersistence = (
       try {
         const newId = await saveCharacterService(newData, undefined, currentFolderId);
         if (newId) {
-          await refreshCharacterList();
+          refreshCharacterList().catch(console.error);
           await selectCharacter(newId, true);
         }
       } catch (e: any) {

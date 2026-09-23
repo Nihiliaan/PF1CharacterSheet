@@ -281,8 +281,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (newId) {
         setLastSavedTemplate(content);
         setCurrentTemplateId(newId);
-        await refreshCharacterList();
         setToast({ message: "模板已保存", type: 'success' });
+        refreshCharacterList().catch(console.error);
       }
     } catch (e) {
       setToast({ message: "保存模板失败", type: 'error' });

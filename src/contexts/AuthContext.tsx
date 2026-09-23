@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 import { loginWithProvider, logout as authLogout, linkAccount, unlinkProvider } from '../services/authService';
 
 interface AuthContextType {
@@ -31,6 +32,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     return () => unsubscribe();
   }, []);
+
+  // 保持与 Firestore 的连接长青保活（Keep-Alive）
+  // 只要用户处于登录状态，由 Firebase SDK 原生维护 WebChannel 长连接与心跳帧，防止跨国 TCP/TLS 握手空闲超时
+  useEffect(() => {
+    if (!user) return;
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userRef, () => {}, (err) => {
+      console.debug('[Firestore KeepAlive] connection note:', err);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   const handleLogin = async (provider: any) => {
     try {
