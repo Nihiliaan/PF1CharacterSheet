@@ -281,7 +281,7 @@ export default function GMStatBlockView() {
                 {sb.meleeAttacks.map((a, i) => (
                   <span key={i}>
                     <span className="font-medium italic"><SafeMarkdownText text={a.weapon} /></span> {a.hit} 
-                    <span className="text-stone-600"> ({[a.damage + '/' + a.crit, a.damageType, a.special].filter(Boolean).join(' ')})</span>
+                    <span className="text-stone-600"> ({[a.damage + (a.crit ? '/' + a.crit : ''), a.rangeOrTouch, a.damageType, a.special].filter(Boolean).join(' ')})</span>
                     {i < sb.meleeAttacks.length - 1 ? '，' : ''}
                   </span>
                 ))}
@@ -294,7 +294,7 @@ export default function GMStatBlockView() {
                 {sb.rangedAttacks.map((a, i) => (
                   <span key={i}>
                     <span className="font-medium italic"><SafeMarkdownText text={a.weapon} /></span> {a.hit} 
-                    <span className="text-stone-600"> ({[a.damage + '/' + a.crit, a.rangeOrTouch, a.damageType, a.special].filter(Boolean).join(' ')})</span>
+                    <span className="text-stone-600"> ({[a.damage + (a.crit ? '/' + a.crit : ''), a.rangeOrTouch, a.damageType, a.special].filter(Boolean).join(' ')})</span>
                     {i < sb.rangedAttacks.length - 1 ? '，' : ''}
                   </span>
                 ))}

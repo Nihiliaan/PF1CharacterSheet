@@ -320,21 +320,38 @@ export const formatStatBlockData = (
       if (!wpn || wpn.trim() === '') return;
       const hit = formatModifier(data.attacks.melee.hit?.[i] || 0);
       const dmg = data.attacks.melee.damage?.[i] || '1d4';
-      const cRange = data.attacks.melee.critRange?.[i] || 20;
-      const cMult = data.attacks.melee.critMultiplier?.[i] || 2;
-      const critText = cRange < 20 ? `${cRange}-20/x${cMult}` : `x${cMult}`;
+      
+      const rawRange = data.attacks.melee.critRange?.[i];
+      const rawMult = data.attacks.melee.critMultiplier?.[i];
+      const cRangeStr = handlers.CritRangeHandler.formatDisplay(rawRange);
+      const cMultStr = handlers.CritMultiplierHandler.formatDisplay(rawMult);
+
+      let critText = '';
+      const isDefaultRange = !cRangeStr || cRangeStr === '20';
+      const isDefaultMult = !cMultStr || cMultStr === '×2' || cMultStr === 'x2';
+
+      if (!isDefaultRange && isDefaultMult) {
+        critText = cRangeStr;
+      } else if (isDefaultRange && !isDefaultMult) {
+        critText = cMultStr.replace('×', 'x');
+      } else if (!isDefaultRange && !isDefaultMult) {
+        critText = `${cRangeStr}/${cMultStr.replace('×', 'x')}`;
+      }
+
       const touchDist = data.attacks.melee.touch?.[i];
       const touchStr = touchDist && touchDist > 5 ? `触及 ${touchDist}尺` : '';
-      const dmgType = data.attacks.melee.damageType?.[i] || '';
-      const special = data.attacks.melee.special?.[i] || '';
+      const dmgType = handlers.DamageTypeHandler.formatDisplay(data.attacks.melee.damageType?.[i], { t }) || '';
+      const special = (data.attacks.melee.special?.[i] || '').trim();
 
-      const parenParts = [`${dmg}/${critText}`, touchStr, dmgType, special].filter(Boolean);
+      const dmgWithCrit = critText ? `${dmg}/${critText}` : dmg;
+      const parenParts = [dmgWithCrit, touchStr, dmgType, special].filter(Boolean);
       const fullText = `${wpn} ${hit} (${parenParts.join(' ')})`;
       meleeAttacks.push({
         weapon: wpn,
         hit,
         damage: dmg,
         crit: critText,
+        rangeOrTouch: touchStr,
         damageType: dmgType,
         special,
         fullText
@@ -348,15 +365,31 @@ export const formatStatBlockData = (
       if (!wpn || wpn.trim() === '') return;
       const hit = formatModifier(data.attacks.ranged.hit?.[i] || 0);
       const dmg = data.attacks.ranged.damage?.[i] || '1d4';
-      const cRange = data.attacks.ranged.critRange?.[i] || 20;
-      const cMult = data.attacks.ranged.critMultiplier?.[i] || 2;
-      const critText = cRange < 20 ? `${cRange}-20/x${cMult}` : `x${cMult}`;
+
+      const rawRange = data.attacks.ranged.critRange?.[i];
+      const rawMult = data.attacks.ranged.critMultiplier?.[i];
+      const cRangeStr = handlers.CritRangeHandler.formatDisplay(rawRange);
+      const cMultStr = handlers.CritMultiplierHandler.formatDisplay(rawMult);
+
+      let critText = '';
+      const isDefaultRange = !cRangeStr || cRangeStr === '20';
+      const isDefaultMult = !cMultStr || cMultStr === '×2' || cMultStr === 'x2';
+
+      if (!isDefaultRange && isDefaultMult) {
+        critText = cRangeStr;
+      } else if (isDefaultRange && !isDefaultMult) {
+        critText = cMultStr.replace('×', 'x');
+      } else if (!isDefaultRange && !isDefaultMult) {
+        critText = `${cRangeStr}/${cMultStr.replace('×', 'x')}`;
+      }
+
       const rangeDist = data.attacks.ranged.range?.[i];
       const rangeStr = rangeDist ? `${rangeDist}尺` : '';
-      const dmgType = data.attacks.ranged.damageType?.[i] || '';
-      const special = data.attacks.ranged.special?.[i] || '';
+      const dmgType = handlers.DamageTypeHandler.formatDisplay(data.attacks.ranged.damageType?.[i], { t }) || '';
+      const special = (data.attacks.ranged.special?.[i] || '').trim();
 
-      const parenParts = [`${dmg}/${critText}`, rangeStr, dmgType, special].filter(Boolean);
+      const dmgWithCrit = critText ? `${dmg}/${critText}` : dmg;
+      const parenParts = [dmgWithCrit, rangeStr, dmgType, special].filter(Boolean);
       const fullText = `${wpn} ${hit} (${parenParts.join(' ')})`;
       rangedAttacks.push({
         weapon: wpn,
@@ -471,7 +504,7 @@ export const formatStatBlockData = (
       if (!fname || fname.trim() === '') return;
       feats.push({
         name: fname.trim(),
-        type: data.feats.type?.[i],
+        type: handlers.FeatTypeHandler.formatDisplay(data.feats.type?.[i], { t }),
         desc: data.feats.desc?.[i]
       });
     });
