@@ -32,7 +32,8 @@ function getValueFromSoA(rootStorage: any, logicalPath: string, propName: string
     if (currentPath) {
       const parts = currentPath.split('.');
       const last = parts.pop();
-      if (last && /^\d+$/.test(last) && parts.length > 0) {
+      // 只有前面一层是具名属性（非纯数字）时才弹出属性名回到父对象
+      if (last && /^\d+$/.test(last) && parts.length > 0 && !/^\d+$/.test(parts[parts.length - 1])) {
         parts.pop();
       }
       currentPath = parts.join('.');

@@ -54,7 +54,7 @@ hp {{hp}} ({{hd}})
 [/table]{{#if magicBlocks}}[hr][b]法术与类法术能力[/b]
 [hr]{{#each magicBlocks}}[b]{{title}}[/b]（CL {{casterLevel}}{{#unless (eq (raw "type") 4)}}, 专注 {{concentration}}{{/unless}}）
 [table]{{#each this}}
-[tr]{{#unless (eq (raw "../type") 5)}}[td]{{level}}[/td]{{/unless}}{{#if uses}}[td]{{uses}}[/td]{{/if}}[td]{{spells}}[/td][/tr]
+[tr]{{#unless (eq (raw "../type") 5)}}[td]{{level}}[/td]{{/unless}}{{#if uses}}[td]{{uses}}[/td]{{/if}}[td]——[/td][td]{{spells}}[/td][/tr]
 {{/each}}[/table]{{#if notes}}
 备注：{{notes}}{{/if}}{{/each}}{{/if}}[hr][b]技能[/b]
 [hr]{{#with skills}}总技能点：{{totalPoints}}，防具检定减值：{{acp}}
