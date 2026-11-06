@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" width="400" height="250">
+  <style>
+    .btn { cursor: pointer; transition: fill 0.2s; }
+    .btn:hover { fill: #2980b9; }
+    .label { font-family: sans-serif; font-size: 16px; fill: white; text-anchor: middle; pointer-events: none; }
+    .status { font-family: sans-serif; font-size: 14px; fill: #333; text-anchor: middle; }
+  </style>
+
+  <!-- 绘制一个可点击的交互按钮 -->
+  <rect id="clickableRect" class="btn" x="100" y="80" width="200" height="60" rx="10" fill="#3498db" />
+  <text class="label" x="200" y="116">点击我运行脚本</text>
+  
+  <text id="statusText" class="status" x="200" y="180">等待点击...</text>
+
+  <!-- 嵌入的 JavaScript 脚本 -->
+  <script type="text/javascript">
+    <![CDATA[
+      // 在 SVG XML 规范中，脚本建议包裹在 CDATA 区块内，避免 < 或 & 符号破坏 XML 解析
+      let clickCount = 0;
+      const colors = ['#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22'];
+      
+      const rect = document.getElementById('clickableRect');
+      const text = document.getElementById('statusText');
+
+      rect.addEventListener('click', function() {
+        clickCount++;
+        // 随机切换颜色
+        const nextColor = colors[clickCount % colors.length];
+        rect.style.fill = nextColor;
+        
+        // 动态修改 SVG 内部的文本节点
+        text.textContent = `脚本正常运行！已点击 ${clickCount} 次`;
+        
+        // 测试控制台输出
+        console.log(`[SVG Script] 触发点击事件，当前颜色: ${nextColor}`);
+      });
+    ]]>
+  </script>
+</svg>
