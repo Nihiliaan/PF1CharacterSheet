@@ -6,8 +6,9 @@ import { googleProvider } from './lib/firebase';
 
 // Components
 import BBCodeTemplateEditor from './components/BBCodeTemplateEditor';
+import SvgTemplateEditor from './components/SvgTemplateEditor';
 import VaultContent from './components/vault/VaultContent';
-import AccountSettings from './components/account/AccountSettings';
+import SettingsCenter from './components/settings/SettingsCenter';
 
 // Layout & Editor Components
 import AppHeader from './components/layout/AppHeader';
@@ -20,18 +21,21 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { UIProvider, useUI } from './contexts/UIContext';
 import { VaultProvider, useVault } from './contexts/VaultContext';
 import { CharacterProvider, useCharacter } from './contexts/CharacterContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <UIProvider>
-        <VaultProvider>
-          <CharacterProvider>
-            <AppContent />
-          </CharacterProvider>
-        </VaultProvider>
-      </UIProvider>
-    </AuthProvider>
+    <SettingsProvider>
+      <AuthProvider>
+        <UIProvider>
+          <VaultProvider>
+            <CharacterProvider>
+              <AppContent />
+            </CharacterProvider>
+          </VaultProvider>
+        </UIProvider>
+      </AuthProvider>
+    </SettingsProvider>
   );
 }
 
@@ -88,21 +92,20 @@ function AppContent() {
           )}
 
           {view === 'settings' && (
-            <motion.div key="settings" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full overflow-hidden">
-              {user ? (
-                <AccountSettings />
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center p-8 bg-stone-50">
-                  <ShieldCheck size={64} className="text-stone-300 mb-4" />
-                  <p className="text-stone-500 mt-2">{t('common.please_login')}</p>
-                </div>
-              )}
+            <motion.div key="settings" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="h-full overflow-hidden">
+              <SettingsCenter />
             </motion.div>
           )}
 
           {view === 'bbcode-template' && (
             <motion.div key="bbcode-template" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full overflow-hidden">
               <BBCodeTemplateEditor />
+            </motion.div>
+          )}
+
+          {view === 'svg-template' && (
+            <motion.div key="svg-template" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full overflow-hidden">
+              <SvgTemplateEditor />
             </motion.div>
           )}
 

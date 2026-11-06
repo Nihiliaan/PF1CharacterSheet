@@ -17,7 +17,8 @@ export default function TableOfContents() {
     { id: 'spells', label: t('editor.sections.spells') },
     { id: 'skills', label: t('editor.sections.skills') },
     { id: 'equipment', label: t('editor.sections.equipment') },
-    { id: 'additional-data', label: t('editor.sections.additional') }
+    { id: 'additional-data', label: t('editor.sections.additional') },
+    { id: 'pfs', label: t('editor.sections.pfs') }
   ];
 
   const scrollTo = (id: string) => {

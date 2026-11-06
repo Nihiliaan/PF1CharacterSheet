@@ -21,6 +21,7 @@ import SpellsSection from './sections/SpellsSection';
 import SkillsSection from './sections/SkillsSection';
 import EquipmentSection from './sections/EquipmentSection';
 import AdditionalDataSection from './sections/AdditionalDataSection';
+import PFSSection from './sections/PFSSection';
 
 interface CharacterEditorProps {
   user: FirebaseUser | null;
@@ -59,6 +60,7 @@ export default function CharacterEditor({
         <SkillsSection />
         <EquipmentSection />
         <AdditionalDataSection />
+        <PFSSection />
       </main>
     </motion.div>
   );

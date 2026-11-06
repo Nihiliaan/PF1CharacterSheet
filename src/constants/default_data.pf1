@@ -35,10 +35,38 @@
   },
   "story": "",
   "attributes": {
-    "final": [10, 10, 10, 10, 10, 10],
-    "modifier": [0, 0, 0, 0, 0, 0],
-    "source": ["", "", "", "", "", ""],
-    "status": ["", "", "", "", "", ""]
+    "final": [
+      10,
+      10,
+      10,
+      10,
+      10,
+      10
+    ],
+    "modifier": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "source": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "status": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
   },
   "combatManeuver": {
     "bab": 0,
@@ -165,5 +193,32 @@
     },
     "notes": ""
   },
-  "additionalData": []
+  "additionalData": [],
+  "pfs": {
+    "playerNumber": "",
+    "characterNumber": "",
+    "faction": 1,
+    "xp": 0,
+    "fame": 0,
+    "prestige": 0,
+    "goals": [],
+    "boons": {
+      "uses": [],
+      "name": [],
+      "desc": [],
+      "sheetNo": []
+    },
+    "chronicles": {
+      "date": [],
+      "scenario": [],
+      "gm": [],
+      "event": [],
+      "faction": [],
+      "prestige": [],
+      "notes": [],
+      "link": []
+    }
+  },
+  "forumBindings": [],
+  "forumTitleTemplate": ""
 }

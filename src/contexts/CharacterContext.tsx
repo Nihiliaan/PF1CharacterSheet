@@ -10,9 +10,10 @@ import { useCharacterAI } from './hooks/useCharacterAI';
 import { useDriveSync } from './hooks/useDriveSync';
 import { CharacterData } from '../schema/types';
 import { DEFAULT_DATA, DEFAULT_BBCODE_TEMPLATE } from '../constants/index';
-import { generateBBCode } from '../utils/bbcodeExporter';
+import { getCharacterBBCode } from '../utils/bbcodeExporter';
 import { getAttributeModifiers, calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../utils/calculations';
 import { saveCharacter as saveCharacterService } from '../services/characterService';
+import { useSettings } from './SettingsContext';
 import { ensureLocalFolder as ensureLocalFolderService } from '../services/characterService';
 
 interface CharacterContextType {
@@ -55,6 +56,7 @@ interface CharacterContextType {
   handleShare: () => void;
   handleExport: () => void;
   handleExportBBCode: () => void;
+  handleRevertChanges: () => void;
   selectCharacter: (id: string, skipDirtyCheck?: boolean) => Promise<void>;
   loadSharedCharacter: (id: string) => Promise<void>;
 
@@ -124,6 +126,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const ui = useUI();
   const { setView, setToast, setConfirmModal, addToRecent } = ui;
   const { refreshCharacterList, currentFolderId, setCurrentFolderId, tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor, getItemPath } = useVault();
+  const { settings } = useSettings();
 
   const [data, setData] = useState<CharacterData>(DEFAULT_DATA);
   const [lastSavedData, setLastSavedData] = useState<CharacterData>(JSON.parse(JSON.stringify(DEFAULT_DATA)));
@@ -187,6 +190,48 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => clearTimeout(timer);
   }, [data, lastSavedData]);
 
+  // 开启本地缓存时：有修改自动防抖写入本地草稿
+  useEffect(() => {
+    if (!settings.storage.enableLocalAutoCache) return;
+    if (isDirty) {
+      const timer = setTimeout(() => {
+        try {
+          const draftKey = `pf1_char_draft_${currentCharacterId || 'new_character'}`;
+          localStorage.setItem(draftKey, JSON.stringify(data));
+        } catch (e) {
+          console.error('Failed to write draft to localStorage:', e);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [data, isDirty, currentCharacterId, settings.storage.enableLocalAutoCache]);
+
+  // 监听浏览器刷新与关闭：未开启本地缓存时提醒保存，开启后不打扰
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty && !settings.storage.enableLocalAutoCache) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty, settings.storage.enableLocalAutoCache]);
+
+  // 放弃修改重新载入
+  const handleRevertChanges = () => {
+    setConfirmModal({
+      title: "确定要放弃当前所有未保存修改并重新载入吗？本地缓存的修改将丢失。",
+      onConfirm: () => {
+        const draftKey = `pf1_char_draft_${currentCharacterId || 'new_character'}`;
+        localStorage.removeItem(draftKey);
+        setData(JSON.parse(JSON.stringify(lastSavedData)));
+        setIsDirty(false);
+        setToast({ message: "已放弃修改，重置为上次保存的状态", type: 'info' });
+      }
+    });
+  };
+
   const {
     isSaving,
     syncStatus,
@@ -202,7 +247,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     currentTemplateId, setCurrentTemplateId,
     isReadOnly, setIsReadOnly, setIsSyncing,
     setToast, setConfirmModal, setView, addToRecent, refreshCharacterList,
-    currentFolderId, setCurrentFolderId, isDirty, setBbcodeTemplate, setLastSavedTemplate
+    currentFolderId, setCurrentFolderId, isDirty, setBbcodeTemplate, setLastSavedTemplate, computed
   );
 
   const {
@@ -267,8 +312,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const handleExportBBCode = () => {
-    const tmpl = localStorage.getItem('bbcode_template') || DEFAULT_BBCODE_TEMPLATE;
-    const bbcode = generateBBCode(data, tmpl, t, { computed, data });
+    const bbcode = getCharacterBBCode(data, computed, t);
     navigator.clipboard.writeText(bbcode);
     setToast({ message: "BBCode 已复制到剪贴板！" });
   };
@@ -310,7 +354,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     update, addBag, removeBag,
     addMagicBlock, removeMagicBlock,
     addAdditionalBlock, removeAdditionalBlock,
-    handleSave, handleSaveAs, handleNew, handleShare, handleExport, handleExportBBCode, selectCharacter, loadSharedCharacter,
+    handleSave, handleSaveAs, handleNew, handleShare, handleExport, handleExportBBCode, handleRevertChanges, selectCharacter, loadSharedCharacter,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
     handleItemDragStart, handleItemDragOver, handleItemDrop,

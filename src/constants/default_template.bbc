@@ -5,7 +5,8 @@
 {{height}} {{weight}} {{age}}
 {{speed.land}} {{senses}}
 先攻 {{initiative}} 察觉 {{perception}}
-语言 {{languages}}
+语言 {{languages}}{{#if ../pfs}}
+XP {{../pfs.xp}} Fame {{../pfs.fame}} Prestige {{../pfs.prestige}}  Gold {{../pfs.gold}}gp{{/if}}
 [/td]
 [td][img width=200 height=200]{{avatars.url.[0]}}[/img][/td]
 [/tr]
@@ -73,5 +74,29 @@ hp {{hp}} ({{hd}})
 [tr][td]{{item}}{{#if quantity}}({{quantity}}){{/if}}[/td][td]{{cost}}[/td][td]{{weight}}[/td][td]{{notes}}[/td][/tr]
 {{/each}}
 [/table]
-[/quote]{{/each}}[b]总资产 {{totalCost}}gp，总重 {{totalWeight}}lbs[/b]{{/with}}
+[/quote]{{/each}}[b]总资产 {{totalCost}}gp，总重 {{totalWeight}}lbs[/b]{{/with}}{{#if pfs}}
+[hr][b]势力任务[/b]
+[b]所属势力：[/b]{{pfs.factionName}}（领袖：{{pfs.factionLeader}}，达成目标数：{{pfs.completedGoalsCount}}）
+{{#each pfs.goals}}
+{{boxes}} {{text}}
+{{/each}}
+{{#if pfs.factionBoons}}
+[b]势力特惠：[/b]
+{{#each pfs.factionBoons}}
+[b]{{name}}[/b]（{{statusText}}）：{{desc}}
+{{/each}}{{/if}}
+[hr][b]特殊福利[/b]
+[hr][table]
+[tr][td]已用/上限[/td][td]Boon[/td][td]效果[/td][td]记录单号[/td][/tr]
+{{#each pfs.boons}}
+[tr][td]{{boxes}}[/td][td]{{name}}[/td][td]{{desc}}[/td][td]{{sheetNo}}[/td][/tr]
+{{/each}}
+[/table]
+[hr][b]记录单[/b]
+[hr][table]
+[tr][td]单号[/td][td]日期[/td][td]模组名称[/td][td]GM[/td][td]活动[/td][td]势力[/td][td]PP[/td][td]备注[/td][td]链接[/td][/tr]
+{{#each pfs.chronicles}}
+[tr][td]{{index}}[/td][td]{{date}}[/td][td]{{scenario}}[/td][td]{{gm}}[/td][td]{{event}}[/td][td]{{faction}}[/td][td]{{prestige}}[/td][td]{{notes}}[/td][td]{{#if link}}[url={{link}}]{{title}}[/url]{{else}}—{{/if}}[/td][/tr]
+{{/each}}
+[/table]{{/if}}
 {{/md2bb}}

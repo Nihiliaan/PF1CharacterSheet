@@ -6,12 +6,12 @@ const {
   FloatHandler, BoolHandler, ClassSkillHandler, SkillAttributeHandler, QuantityHandler,
   CostHandler, WeightHandler, CritRangeHandler, CritMultiplierHandler,
   DistanceHandler, AbilityTypeHandler, SpellTypeHandler, CompositeHandler,
-  DailyUsesHandler, AgeHandler, HeightHandler,
+  DailyUsesHandler, AgeHandler, HeightHandler, DateHandler,
   // 业务表格 Handler
   AttributesTableHandler, MeleeAttackTableHandler, RangedAttackTableHandler, DefensesTableHandler,
   SavesTableHandler, SkillsTableHandler, SimpleListHandler,
   BackgroundTraitsTableHandler, ClassFeaturesTableHandler, FeatsTableHandler,
-  SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler,
+  SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler, PfsBoonsTableHandler, PfsChroniclesTableHandler, PfsFactionHandler, LinkHandler, CheckGroupHandler, HalfIntHandler,
   // 复合业务 Handler
   BasicInfoHandler, CombatInfoHandler, CurrencyHandler
 } = handlers;
@@ -27,6 +27,8 @@ export const CharacterPrototype: any = {
   folderId: TextHandler,
   ownerId: TextHandler,
   targetId: TextHandler,
+  forumBindings: SimpleListHandler,
+  forumTitleTemplate: TextHandler,
 
   // 1. 基础信息
   basic: {
@@ -223,6 +225,38 @@ export const CharacterPrototype: any = {
 
   additionalData: {
     handler: new handlers.BaseTable({ view: 'AdditionalData' }),
+    title: TextHandler,
+    content: TextHandler,
+    url: TextHandler,
+    caption: TextHandler,
+  },
+
+  pfs: {
+    playerNumber: PosIntHandler,
+    characterNumber: PosIntHandler,
+    faction: PfsFactionHandler,
+    xp: HalfIntHandler,
+    fame: HalfIntHandler,
+    prestige: HalfIntHandler,
+    goals: SimpleListHandler,
+    boons: {
+      handler: PfsBoonsTableHandler,
+      uses: CheckGroupHandler,
+      name: TextHandler,
+      desc: TextHandler,
+      sheetNo: PosIntHandler
+    },
+    chronicles: {
+      handler: PfsChroniclesTableHandler,
+      date: DateHandler,
+      scenario: TextHandler,
+      gm: TextHandler,
+      event: TextHandler,
+      faction: PfsFactionHandler,
+      prestige: HalfIntHandler,
+      notes: TextHandler,
+      link: LinkHandler
+    }
   }
 };
 

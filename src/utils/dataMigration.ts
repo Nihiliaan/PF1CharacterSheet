@@ -1,19 +1,20 @@
+import { getFactionIdByKey } from '../database/pfsFactions';
 import { DEFAULT_DATA } from '../constants';
 
 /**
- * 处理数据版本迁移和默认值合并
- * 核心逻辑：旧数据 -> 迁移规则 -> 与默认模板合并 -> 完整合规数据
+ * 数据版本迁移与默认值合并工具
+ * 核心逻辑：旧数据 -> 迁移规则 -> 与默认模板递归合并 -> 完整合规角色卡数据
  */
 export const dataMigration = {
   /**
-   * 迁移旧版本的数据结构到当前版本
+   * 迁移旧版本的数据结构到当前最新版本
    */
   migrate(data: any): any {
     if (typeof data !== 'object' || data === null) return data;
     
     const migrated = { ...data };
 
-    // 1. 战斗与防御 (Combat & Defenses)
+    // 1. 战斗战技与防御 (Combat Maneuvers & Defenses)
     if (migrated.combatTable && !migrated.combatManeuver) {
       migrated.combatManeuver = {
         bab: migrated.combatTable.bab || 0,
@@ -59,7 +60,7 @@ export const dataMigration = {
       delete migrated.favoredClassBonus;
     }
 
-    // 3. 技能 (Skills) - 迁移到 consolidated structure
+    // 3. 技能系统 (Skills - 迁移至统一结构)
     if (migrated.skills && migrated.skillsTotal !== undefined) {
       migrated.skills.totalPoints = migrated.skillsTotal;
       migrated.skills.acp = migrated.armorCheckPenalty || 0;
@@ -74,14 +75,14 @@ export const dataMigration = {
       delete migrated.skillsNotes;
     }
 
-    // 4. 装备与资产 (Equipment)
+    // 4. 装备与资产 (Equipment SoA 扁平化迁移)
     if (!migrated.equipment && (migrated.equipmentBags || migrated.currency)) {
       migrated.equipment = {
         container: (migrated.equipmentBags || []).map((bag: any) => {
           const { items, ...rest } = bag;
           return {
             ...rest,
-            // 拆解 items 对象到平铺结构
+            // 拆解 items 嵌套对象到平铺并行数组
             item: items?.item || [],
             quantity: items?.quantity || [],
             cost: items?.cost || [],
@@ -99,7 +100,7 @@ export const dataMigration = {
       delete migrated.currency;
     }
 
-    // 5. 施法块 (Magic Blocks) - 拆解 tableData 到平铺
+    // 5. 施法块 (Magic Blocks - 拆解 tableData 到平铺结构)
     if (Array.isArray(migrated.magicBlocks)) {
       migrated.magicBlocks = migrated.magicBlocks.map((block: any) => {
         if (block.tableData && block.type === 'spell') {
@@ -114,7 +115,7 @@ export const dataMigration = {
       });
     }
 
-    // 6. 攻击系统重命名 (Attacks rename)
+    // 6. 攻击系统字段结构 (Attacks rename)
     if (migrated.attacks) {
       if (migrated.attacks.meleeAttacks && !migrated.attacks.melee) {
         migrated.attacks.melee = {
@@ -131,7 +132,7 @@ export const dataMigration = {
       }
     }
 
-    // 7. 多选字段修复 (Multi-select string to array fix)
+    // 7. 多选字段修复 (字符串兼容转换为数组)
     const ensureArray = (v: any) => {
       if (Array.isArray(v)) return v;
       if (typeof v === 'string') {
@@ -157,23 +158,141 @@ export const dataMigration = {
       migrated.favoredClass.fc = ensureArray(migrated.favoredClass.fc);
     }
 
+    // 8. PFS (Pathfinder Society) 模块数据迁移与格式兼容
+    if (migrated.pfs) {
+      // 兼容早期 playerNumber 与 characterNumber 的拆分
+      if (typeof migrated.pfs.playerNumber === 'string' && migrated.pfs.playerNumber.includes('-')) {
+        const [pNo, cNo] = migrated.pfs.playerNumber.split('-');
+        migrated.pfs.playerNumber = (pNo || '').replace(/[^0-9]/g, '');
+        if (!migrated.pfs.characterNumber) {
+          migrated.pfs.characterNumber = (cNo || '').replace(/[^0-9]/g, '');
+        }
+      }
+      if (migrated.pfs.playerNumber) {
+        migrated.pfs.playerNumber = String(migrated.pfs.playerNumber).replace(/[^0-9]/g, '');
+      }
+      if (migrated.pfs.characterNumber) {
+        migrated.pfs.characterNumber = String(migrated.pfs.characterNumber).replace(/[^0-9]/g, '');
+      }
+
+      // 兼容 faction 整数枚举转换
+      if (typeof migrated.pfs.faction === 'string') {
+        const fid = getFactionIdByKey(migrated.pfs.faction);
+        migrated.pfs.faction = fid || 1;
+      } else if (typeof migrated.pfs.faction !== 'number') {
+        migrated.pfs.faction = 1;
+      }
+
+      // 兼容 goals 的 checkedCount
+      if (Array.isArray(migrated.pfs.goals)) {
+        migrated.pfs.goals = migrated.pfs.goals.map((g: any) => {
+          if (typeof g.checkedCount !== 'number') {
+            const checksCount = Array.isArray(g.checks) ? g.checks.filter(Boolean).length : 0;
+            return {
+              id: g.id,
+              checkedCount: checksCount,
+              maxChecks: g.maxChecks || 1
+            };
+          }
+          return g;
+        });
+      } else {
+        migrated.pfs.goals = [];
+      }
+
+      // 兼容 boons 结构：丢弃测试阶段的 maxUses 冗余字段，保持纯净 SoA
+      if (!migrated.pfs.boons) {
+        migrated.pfs.boons = { uses: [], name: [], desc: [], sheetNo: [] };
+      } else {
+        const oldB = migrated.pfs.boons;
+        const len = (oldB.name || oldB.desc || oldB.source || oldB.uses || oldB.sheetNo || []).length;
+        migrated.pfs.boons = {
+          uses: Array.isArray(oldB.uses) 
+            ? oldB.uses.map((u: any) => typeof u === 'number' ? u : (parseInt(u, 10) || 0))
+            : new Array(len).fill(0),
+          name: Array.isArray(oldB.name) ? oldB.name : new Array(len).fill(''),
+          desc: Array.isArray(oldB.desc) ? oldB.desc : new Array(len).fill(''),
+          sheetNo: Array.isArray(oldB.sheetNo)
+            ? oldB.sheetNo.map((s: any) => typeof s === 'number' ? s : (parseInt(s, 10) || 1))
+            : (Array.isArray(oldB.source) ? oldB.source.map((s: any) => parseInt(s, 10) || 1) : new Array(len).fill(1))
+        };
+      }
+
+      // 兼容 chronicles (记录单) 结构
+      if (migrated.pfs.chronicles) {
+        const oldC = migrated.pfs.chronicles;
+        const len = (oldC.date || oldC.scenario || oldC.sheetNo || []).length;
+        migrated.pfs.chronicles = {
+          date: Array.isArray(oldC.date) ? oldC.date : new Array(len).fill(''),
+          scenario: Array.isArray(oldC.scenario) ? oldC.scenario : new Array(len).fill(''),
+          gm: Array.isArray(oldC.gm) ? oldC.gm : new Array(len).fill(''),
+          event: Array.isArray(oldC.event) ? oldC.event : new Array(len).fill(''),
+          faction: Array.isArray(oldC.faction) 
+            ? oldC.faction.map((f: any) => typeof f === 'number' ? f : (typeof f === 'string' ? getFactionIdByKey(f) : 1)) 
+            : new Array(len).fill(migrated.pfs.faction || 1),
+          prestige: Array.isArray(oldC.prestige) ? oldC.prestige : new Array(len).fill(0),
+          notes: Array.isArray(oldC.notes) ? oldC.notes : new Array(len).fill(''),
+          link: Array.isArray(oldC.link) ? oldC.link : new Array(len).fill('')
+        };
+      } else {
+        migrated.pfs.chronicles = {
+          date: [],
+          scenario: [],
+          gm: [],
+          event: [],
+          faction: [],
+          prestige: [],
+          notes: [],
+          link: []
+        };
+      }
+    }
+
+    // 9. 论坛跨站同步楼层绑定 (forumBindings 归一化为 ForumBindingItem 结构)
+    if (!Array.isArray(migrated.forumBindings)) {
+      migrated.forumBindings = [];
+    } else {
+      migrated.forumBindings = migrated.forumBindings
+        .map((b: any) => {
+          if (typeof b === 'number') {
+            return { msgId: b, titleTemplate: '', subtitleTemplate: '' };
+          }
+          if (b && typeof b === 'object') {
+            const num = typeof b.msgId === 'number' ? b.msgId : parseInt(String(b.msgId || '').replace(/[^0-9]/g, ''), 10);
+            return {
+              msgId: num,
+              titleTemplate: typeof b.titleTemplate === 'string' ? b.titleTemplate : '',
+              subtitleTemplate: typeof b.subtitleTemplate === 'string' ? b.subtitleTemplate : ''
+            };
+          }
+          const parsed = parseInt(String(b || '').replace(/[^0-9]/g, ''), 10);
+          return { msgId: parsed, titleTemplate: '', subtitleTemplate: '' };
+        })
+        .filter((item: any) => typeof item.msgId === 'number' && !isNaN(item.msgId) && item.msgId > 0);
+    }
+
+    // 10. 论坛跨站同步标题模板
+    if (typeof migrated.forumTitleTemplate !== 'string') {
+      migrated.forumTitleTemplate = '';
+    }
+
     return migrated;
   },
 
   /**
-   * 递归地将数据与默认值合并，确保所有必要字段都存在
-   * 优化版：分离迁移逻辑与合并逻辑，避免指数级复杂度
+   * 递归地将数据与默认模板合并，确保所有必要字段均存在
+   * 优化设计：分离迁移逻辑与合并逻辑，避免递归中的重复计算
    */
   mergeWithDefault(data: any, defaults: any = DEFAULT_DATA): any {
     // 1. 仅在顶层执行一次迁移
     const migrated = this.migrate(data);
     
-    // 2. 使用内部高效递归进行合并
+    // 2. 使用内部递归进行深度合并
     return this._deepMerge(migrated, defaults);
   },
 
   /**
-   * 内部递归合并函数
+   * 内部深度合并函数
    */
   _deepMerge(target: any, source: any): any {
     if (!target || typeof target !== 'object') {

@@ -9,3 +9,5 @@ coverage/
 firebase-blueprint.json
 security_spec.md
 log/
+.temp/
+cache/

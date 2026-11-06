@@ -1,0 +1,9 @@
+{{#md2bb}}[b]{{basic.name}}[/b] | {{basic.alignment}} {{basic.race}} {{basic.classes}}
+先攻 {{signed defenses.initiative.total}} | 感知 {{basic.senses}} | 速度 {{speed.base}}尺
+[hr]
+[b]防御[/b]：AC {{defenses.ac.total}} (触 {{defenses.ac.touch}} / 措 {{defenses.ac.flatFooted}}) | HP {{defenses.hp.current}}/{{defenses.hp.total}}
+[b]豁免[/b]：强韧 {{signed defenses.fortitude.total}}，反射 {{signed defenses.reflex.total}}，意志 {{signed defenses.will.total}} | CMD {{defenses.cmd.total}}
+[b]属性[/b]：力量 {{attributes.total.[0]}}，敏捷 {{attributes.total.[1]}}，体质 {{attributes.total.[2]}}，智力 {{attributes.total.[3]}}，感知 {{attributes.total.[4]}}，魅力 {{attributes.total.[5]}}
+[b]战斗[/b]：BAB {{signed attacks.bab.total}} | CMB {{signed attacks.cmb.total}}
+[b]攻击[/b]：{{#each attacks.melee}}{{weapon}} {{hit}} ({{damage}}){{#unless @last}} / {{/unless}}{{/each}}
+[hr]{{/md2bb}}

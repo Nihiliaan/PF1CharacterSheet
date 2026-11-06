@@ -6,7 +6,7 @@ import { getHandlerByPath } from '../../schema/fieldRegistry';
 import DynamicInput from './DynamicInput';
 
 const DynamicTableRow = memo(({ 
-  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow 
+  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions
 }: any) => {
   const getCellPath = (basePath: string, index: number, key: string) => {
     if (!basePath) return undefined;
@@ -16,14 +16,17 @@ const DynamicTableRow = memo(({
   const isRowDirty = () => {
     if (!originalData) return false;
     return columns.some((c: any) => {
-      const val = data[c.key]?.[i];
-      const origVal = originalData[c.key]?.[i];
+      const val = data?.[c.key]?.[i];
+      const origVal = originalData?.[c.key]?.[i];
       return val !== origVal && String(val ?? '') !== String(origVal ?? '');
     });
   };
 
   const row: Record<string, any> = {};
-  columns.forEach((c: any) => { row[c.key] = data[c.key]?.[i]; });
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    Object.keys(data).forEach((k) => { row[k] = data[k]?.[i]; });
+  }
+  columns.forEach((c: any) => { if (row[c.key] === undefined) row[c.key] = data?.[c.key]?.[i]; });
 
   return (
     <tr
@@ -38,7 +41,7 @@ const DynamicTableRow = memo(({
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
         const isDesc = isDescriptionCol(c.key, cellHandler);
         return (
-          <td key={c.key} className={`p-0 relative border-stone-300 align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+          <td key={c.key} style={{ width: c.width }} className={`p-0 relative border-stone-300 align-top whitespace-nowrap overflow-visible ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
             <DynamicInput
               value={row[c.key] ?? ''}
               originalValue={originalData?.[c.key]?.[i]}
@@ -57,6 +60,9 @@ const DynamicTableRow = memo(({
           </td>
         );
       })}
+      {hasColumnActions && (
+        <td className="p-0 border-r border-stone-300 bg-stone-50/20" />
+      )}
       {enableSQShow && (
         <td className="p-0 text-center align-middle w-8 border-stone-300 border-r relative group-hover:bg-stone-100 transition-colors pointer-events-auto">
           <div className="flex items-center justify-center w-full h-[32px]">
@@ -87,7 +93,26 @@ const DynamicTableRow = memo(({
 });
 
 export default function DynamicTable(props: DynamicTableProps & { minWidth?: string }) {
-  const { path, columns: propsColumns, data, originalData, onChange, newItemGenerator, fixedRows: propsFixedRows, readonlyColumns, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart: propsDragStart, onRowDragOver, onRowDrop: propsDrop, readOnly = false, minWidth = '600px', enableSQShow = false } = props;
+  const {
+    path,
+    columns: propsColumns,
+    data,
+    originalData,
+    onChange,
+    onColumnsChange,
+    newItemGenerator,
+    fixedRows: propsFixedRows,
+    readonlyColumns,
+    rowDraggable,
+    rowActionMode = 'drag',
+    onRowActionModeToggle,
+    onRowDragStart: propsDragStart,
+    onRowDragOver,
+    onRowDrop: propsDrop,
+    readOnly = false,
+    minWidth = '600px',
+    enableSQShow = false
+  } = props;
   const { t } = useTranslation();
 
   // sortKey 和 sortOrder 现在仅作为 UI 状态（控制三角图标）
@@ -110,6 +135,37 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
   // 渲染时总是使用原始物理索引
   const currentIndices = useMemo(() => Array.from({ length: rowCount }, (_, i) => i), [rowCount]);
 
+  const hasColumnActions = Boolean(onColumnsChange && !readOnly);
+
+  const handleRenameColumn = useCallback((colIdx: number, newLabel: string) => {
+    if (!onColumnsChange) return;
+    const newCols = columns.map((c: any, i: number) => i === colIdx ? { ...c, label: newLabel } : c);
+    onColumnsChange(newCols);
+  }, [columns, onColumnsChange]);
+
+  const handleAddColumn = useCallback(() => {
+    if (!onColumnsChange) return;
+    const newKey = `col_${Date.now()}`;
+    const newLabel = `列${columns.length + 1}`;
+    const newCols = [...columns, { key: newKey, label: newLabel }];
+    const safeData = (data && typeof data === 'object' && !Array.isArray(data)) ? { ...data } : {};
+    safeData[newKey] = new Array(rowCount).fill('');
+    onColumnsChange(newCols);
+    onChange(safeData);
+  }, [columns, data, rowCount, onColumnsChange, onChange]);
+
+  const handleDeleteColumn = useCallback((colIdx: number) => {
+    if (!onColumnsChange || columns.length <= 1) return;
+    const targetCol = columns[colIdx];
+    const newCols = columns.filter((_: any, i: number) => i !== colIdx);
+    const safeData = (data && typeof data === 'object' && !Array.isArray(data)) ? { ...data } : {};
+    if (targetCol?.key) {
+      delete safeData[targetCol.key];
+    }
+    onColumnsChange(newCols);
+    onChange(safeData);
+  }, [columns, data, onColumnsChange, onChange]);
+
   const handleSort = (key: string) => {
     if (!sortableColumns.includes(key)) return;
 
@@ -121,15 +177,16 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     // 1. 计算排序后的物理索引
     const indices = Array.from({ length: rowCount }, (_, i) => i);
     indices.sort((a, b) => {
-      let valA = (data as any)[key][a];
-      let valB = (data as any)[key][b];
+      let valA = (data as any)[key]?.[a];
+      let valB = (data as any)[key]?.[b];
       if (typeof valA === 'number' && typeof valB === 'number') return newOrder === 'asc' ? valA - valB : valB - valA;
       const strA = String(valA ?? ''); const strB = String(valB ?? '');
       return newOrder === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
     });
 
     // 2. 物理重排数据
-    const newData = { ...data };
+    const safeData = (data && typeof data === 'object' && !Array.isArray(data)) ? { ...data } : {};
+    const newData = { ...safeData };
     Object.keys(newData).forEach(k => {
       if (Array.isArray(newData[k])) {
         newData[k] = indices.map(i => newData[k][i]);
@@ -150,12 +207,13 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
 
   const updateData = useCallback((index: number, key: string, value: any) => {
     if (readOnly) return;
-    const newData = { ...data };
+    const safeData = (data && typeof data === 'object' && !Array.isArray(data)) ? { ...data } : {};
+    const newData = { ...safeData };
     const cellPath = `${path || ''}.${key}[${index}]`;
     const cellHandler = getHandlerByPath(cellPath);
     const finalValue = cellHandler?.update ? cellHandler.update(value) : value;
     const defaultFill = key === 'SQshow' ? true : '';
-    if (!newData[key]) newData[key] = new Array(rowCount).fill(defaultFill);
+    if (!newData[key] || !Array.isArray(newData[key])) newData[key] = new Array(rowCount).fill(defaultFill);
     const newColArray = [...newData[key]];
     while (newColArray.length < rowCount) {
       newColArray.push(defaultFill);
@@ -167,11 +225,12 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
 
   const addRow = () => {
     if (readOnly || fixedRows) return;
-    const newData = { ...data };
+    const safeData = (data && typeof data === 'object' && !Array.isArray(data)) ? { ...data } : {};
+    const newData = { ...safeData };
     if (newItemGenerator) {
       const newItem = newItemGenerator();
       Object.keys(newItem).forEach(key => {
-        if (!newData[key]) newData[key] = new Array(rowCount).fill('');
+        if (!newData[key] || !Array.isArray(newData[key])) newData[key] = new Array(rowCount).fill('');
         newData[key] = [...newData[key], newItem[key]];
       });
     } else {
@@ -179,7 +238,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
         const cellPath = `${path || ''}.${c.key}[0]`;
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
         const defaultValue = cellHandler?.getDefaultValue ? cellHandler.getDefaultValue() : '';
-        if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill(defaultValue);
+        if (!newData[c.key] || !Array.isArray(newData[c.key])) newData[c.key] = new Array(rowCount).fill(defaultValue);
         newData[c.key] = [...newData[c.key], defaultValue];
       });
     }
@@ -196,27 +255,86 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
 
   const removeRow = useCallback((index: number) => {
     if (readOnly || fixedRows) return;
-    const newData = { ...data };
-    Object.keys(newData).forEach(key => { if (Array.isArray(newData[key])) newData[key] = newData[key].filter((_: any, i: number) => i !== index); });
+    const safeData = (data && typeof data === 'object' && !Array.isArray(data)) ? { ...data } : {};
+    const newData = { ...safeData };
+    Object.keys(newData).forEach(key => {
+      if (Array.isArray(newData[key])) {
+        newData[key] = newData[key].filter((_: any, i: number) => i !== index);
+      }
+    });
     onChange(newData);
   }, [data, readOnly, fixedRows, onChange]);
 
-  const isDescriptionCol = (key: string, handler: any) => (handler?.ui === 'text' || handler?.ui === 'markdown' || ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => key.toLowerCase().includes(word)));
-  const isTableDirty = useMemo(() => (originalData ? JSON.stringify(data) !== JSON.stringify(originalData) : false), [data, originalData]);
+  const isDescriptionCol = (key: string, handler: any) => {
+    if (key === 'link' || handler?.ui === 'link') return false;
+    return (handler?.ui === 'text' || handler?.ui === 'markdown' || ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => key.toLowerCase().includes(word)));
+  };
+
+  const isTableDirty = useMemo(() => {
+    if (!originalData) return false;
+    const normData = (data && typeof data === 'object' && !Array.isArray(data)) ? data : {};
+    const normOrig = (originalData && typeof originalData === 'object' && !Array.isArray(originalData)) ? originalData : {};
+    return JSON.stringify(normData) !== JSON.stringify(normOrig);
+  }, [data, originalData]);
 
   return (
     <div className={`w-full rounded border transition-all ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
       <table className="w-full border-collapse text-sm table-auto" style={{ minWidth }}>
         <thead>
           <tr className="bg-stone-200 text-stone-700">
-            {columns.map((c: any) => {
+            {columns.map((c: any, colIdx: number) => {
               const isSortable = sortableColumns.includes(c.key);
               return (
-                <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold relative whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`} onClick={() => isSortable && handleSort(c.key)}>
-                  <div className="flex items-center justify-center gap-1">{t(c.label)}{sortKey === c.key && <Triangle size={8} className={`fill-current transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />}</div>
+                <th
+                  key={c.key}
+                  style={{ width: c.width }}
+                  className={`border-stone-300 px-2 py-1.5 text-center font-semibold relative whitespace-nowrap min-w-[70px] group/col ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`}
+                  onClick={() => isSortable && handleSort(c.key)}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    {onColumnsChange && !readOnly ? (
+                      <input
+                        value={c.label}
+                        onChange={(e) => handleRenameColumn(colIdx, e.target.value)}
+                        className="bg-transparent border-b border-transparent hover:border-stone-400 focus:border-stone-700 focus:bg-white text-center font-semibold outline-none w-full px-1 text-stone-800 transition-colors"
+                        placeholder="列名"
+                        title="点击编辑列名"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span>{t(c.label)}</span>
+                    )}
+                    {isSortable && sortKey === c.key && (
+                      <Triangle size={8} className={`fill-current transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />
+                    )}
+                    {onColumnsChange && !readOnly && columns.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteColumn(colIdx);
+                        }}
+                        className="opacity-0 group-hover/col:opacity-100 p-0.5 text-stone-400 hover:text-red-500 rounded transition-opacity ml-0.5"
+                        title="删除此列"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
                 </th>
               );
             })}
+            {hasColumnActions && (
+              <th className="w-8 p-0 text-center align-middle border-stone-300 border-r bg-stone-200/80 hover:bg-stone-300/80 transition-colors" title="添加新列">
+                <button
+                  type="button"
+                  onClick={handleAddColumn}
+                  className="w-full h-[32px] flex items-center justify-center text-stone-500 hover:text-stone-800"
+                >
+                  <Plus size={14} />
+                </button>
+              </th>
+            )}
             {enableSQShow && (
               <th className="w-8 p-0 text-center align-middle border-stone-300 border-r" title="在GM数据卡特殊能力(SQ)中显示">
                 <div className="flex items-center justify-center w-full h-[32px] text-stone-500 font-semibold text-xs select-none">
@@ -226,17 +344,54 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
             )}
             {!fixedRows && (
               <th className="w-8 p-0 align-middle border-stone-300">
-                {rowDraggable && onRowActionModeToggle && (<button type="button" onClick={onRowActionModeToggle} className="p-1.5 w-full flex justify-center text-stone-400 hover:text-stone-900 transition-colors pointer-events-auto">{rowActionMode === 'drag' ? <GripVertical size={16} /> : <Trash2 size={16} className="text-red-400 hover:text-red-500" />}</button>)}
+                {rowDraggable && onRowActionModeToggle && (
+                  <button type="button" onClick={onRowActionModeToggle} className="p-1.5 w-full flex justify-center text-stone-400 hover:text-stone-900 transition-colors pointer-events-auto">
+                    {rowActionMode === 'drag' ? <GripVertical size={16} /> : <Trash2 size={16} className="text-red-400 hover:text-red-500" />}
+                  </button>
+                )}
               </th>
             )}
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-300">
           {currentIndices.map((idx) => (
-            <DynamicTableRow key={idx} index={idx} columns={columns} data={data} originalData={originalData} path={path} readOnly={readOnly} readonlyColumns={readonlyColumns} rowDraggable={rowDraggable} rowActionMode={rowActionMode} onRowDragStart={onDragStart} onRowDragOver={onRowDragOver} onRowDrop={propsDrop} updateData={updateData} removeRow={removeRow} fixedRows={fixedRows} isDescriptionCol={isDescriptionCol} enableSQShow={enableSQShow} />
+            <DynamicTableRow
+              key={idx}
+              index={idx}
+              columns={columns}
+              data={data}
+              originalData={originalData}
+              path={path}
+              readOnly={readOnly}
+              readonlyColumns={readonlyColumns}
+              rowDraggable={rowDraggable}
+              rowActionMode={rowActionMode}
+              onRowDragStart={onDragStart}
+              onRowDragOver={onRowDragOver}
+              onRowDrop={propsDrop}
+              updateData={updateData}
+              removeRow={removeRow}
+              fixedRows={fixedRows}
+              isDescriptionCol={isDescriptionCol}
+              enableSQShow={enableSQShow}
+              hasColumnActions={hasColumnActions}
+            />
           ))}
           {!fixedRows && (
-            <tr><td colSpan={columns.length + 1 + (enableSQShow ? 1 : 0)} className="p-0 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer"><button type="button" onClick={addRow} className="flex items-center gap-1 text-xs text-stone-600 hover:text-stone-900 px-3 py-2 w-full justify-center font-medium uppercase tracking-wider"><Plus size={14} /> {t('common.add_row')}</button></td></tr>
+            <tr>
+              <td
+                colSpan={columns.length + 1 + (enableSQShow ? 1 : 0) + (hasColumnActions ? 1 : 0)}
+                className="p-0 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer"
+              >
+                <button
+                  type="button"
+                  onClick={addRow}
+                  className="flex items-center gap-1 text-xs text-stone-600 hover:text-stone-900 px-3 py-2 w-full justify-center font-medium uppercase tracking-wider"
+                >
+                  <Plus size={14} /> {t('common.add_row')}
+                </button>
+              </td>
+            </tr>
           )}
         </tbody>
       </table>

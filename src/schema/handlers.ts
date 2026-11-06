@@ -1,3 +1,4 @@
+import { getFactionDisplayName, PFS_FACTION_ENUM } from '../database/pfsFactions';
 /**
  * 核心校验正则
  */
@@ -55,6 +56,9 @@ export class BaseHandler {
   formatInteractive(v: any, context?: any): any {
     return v;
   }
+
+  formatExport?(v: any, context?: any): any;
+  getOptions?(context?: any): any;
 }
 
 /**
@@ -63,6 +67,14 @@ export class BaseHandler {
 export class BaseText extends BaseHandler {
   _ui = 'text';
   defaultValue = '';
+
+  constructor(config: Partial<BaseText> = {}) {
+    super();
+    Object.assign(this, config);
+    if (config.ui) {
+      this._ui = config.ui;
+    }
+  }
 }
 
 /**
@@ -1101,6 +1113,140 @@ const ClassFeaturesTableHandler = new BaseTable({
   ]
 });
 
+export class CheckGroupHandlerClass extends BaseHandler {
+  _ui = 'checkGroup';
+  defaultValue = 0;
+
+  validate(v: any): boolean {
+    const num = parseInt(v, 10);
+    return !isNaN(num) && num >= 0;
+  }
+
+  update(v: any): number {
+    const num = parseInt(v, 10);
+    return isNaN(num) || num < 0 ? 0 : num;
+  }
+
+  formatDisplay(v: any): string {
+    const num = parseInt(v, 10) || 0;
+    const checks = num & 0xff;
+    const max = (num >> 8) & 0xff;
+    if (max <= 0) return '—';
+    return `${checks} / ${max}`;
+  }
+}
+
+export const CheckGroupHandler = new CheckGroupHandlerClass();
+
+const PfsBoonsTableHandler = new BaseTable({
+  columns: [
+    { key: 'uses', label: 'editor.pfs.boon_uses_tracking', width: '22%', type: 'checkGroup' },
+    { key: 'name', label: 'editor.pfs.boon_name', width: '24%', type: 'text' },
+    { key: 'desc', label: 'editor.pfs.boon_desc', width: '42%', type: 'text' },
+    { key: 'sheetNo', label: 'editor.pfs.boon_sheet_no', width: '12%', type: 'posInt' }
+  ]
+});
+
+
+export class HalfIntHandlerClass extends BaseInt {
+  _ui = 'halfInt';
+  step = 1;
+  min = 0;
+  max = Infinity;
+  defaultValue = 0;
+
+  validate(v: string) {
+    if (v === '') return true;
+    const cleanV = this.preProcess ? this.preProcess(v) : v;
+    return /^\d*(\.(5|0)?)?$/.test(cleanV);
+  }
+
+  update(v: any): number {
+    if (typeof v === 'number') {
+      const clamped = Math.max(0, v);
+      return Math.round(clamped * 2) / 2;
+    }
+    if ((v ?? '') === '') return this.defaultValue;
+    let strV = String(v).trim();
+    if (this.preProcess) strV = this.preProcess(strV);
+    const num = parseFloat(strV);
+    if (isNaN(num) || num < 0) return this.defaultValue;
+    return Math.round(num * 2) / 2;
+  }
+
+  formatDisplay(v: any) {
+    if (v === null || v === undefined || v === '') return '0';
+    return String(v);
+  }
+}
+
+export const HalfIntHandler = new HalfIntHandlerClass();
+
+export class DateHandlerClass extends BaseHandler {
+  _ui = 'date';
+  defaultValue = '';
+
+  validate(v: any): boolean {
+    if (!v) return true;
+    const s = String(v).trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) || !isNaN(Date.parse(s));
+  }
+
+  update(v: any): string {
+    if (!v) return '';
+    const s = String(v).trim();
+    if (!s) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    return s;
+  }
+
+  formatDisplay(v: any): string {
+    return (v ?? '') === '' ? '—' : String(v);
+  }
+}
+const DateHandler = new DateHandlerClass();
+
+const PfsFactionHandler = new BaseSelect({
+  optionValues: PFS_FACTION_ENUM.map(f => f.id),
+  // optionIndices 控制下拉列表中供用户选择的选项，仅包含现役势力 (1-8)
+  optionIndices: PFS_FACTION_ENUM.filter(f => !f.retired && f.id > 0).map(f => f.id),
+  getOptions: (context?: any) => {
+    const active = PFS_FACTION_ENUM.filter(f => !f.retired && f.id > 0).map(f => f.id);
+    const currentVal = parseInt(context?.value ?? context?.row?.faction ?? context?.data, 10);
+    // 若已有数据包含退役势力 (id >= 9)，则将该退役势力加入选项列表以确保能正确显示
+    if (currentVal && !active.includes(currentVal)) {
+      return [...active, currentVal];
+    }
+    return active;
+  },
+  formatDisplay: (v: any, context?: any) => {
+    const id = parseInt(v, 10);
+    if (!id || id <= 0) return '—';
+    const lang = context?.t ? (context.t('common.lang_code') || 'zh') : 'zh';
+    return getFactionDisplayName(id, lang);
+  }
+});
+
+const PfsChroniclesTableHandler = new BaseTable({
+  columns: [
+    { key: 'date', label: 'editor.pfs.chronicle_date', width: '12%', type: 'date' },
+    { key: 'scenario', label: 'editor.pfs.chronicle_scenario', width: '28%', type: 'text' },
+    { key: 'gm', label: 'editor.pfs.chronicle_gm', width: '12%', type: 'text' },
+    { key: 'event', label: 'editor.pfs.chronicle_event', width: '12%', type: 'text' },
+    { key: 'faction', label: 'editor.pfs.chronicle_faction', width: '14%', type: 'pfsFaction' },
+    { key: 'prestige', label: 'editor.pfs.chronicle_pp', width: '6%', type: 'halfInt' },
+    { key: 'notes', label: 'editor.pfs.chronicle_notes', width: '10%', type: 'text' },
+    { key: 'link', label: 'editor.pfs.chronicle_link', width: '6%', type: 'link' }
+  ]
+});
+
 const FeatsTableHandler = new BaseTable({
   columns: [
     { key: 'level', label: 'editor.lists.level', width: '5%', type: 'level' },
@@ -1132,6 +1278,12 @@ const CombatInfoHandler = new CompositeHandler({
     { key: 'cmd', label: 'editor.combat.cmd', width: '33.34%', type: 'int' }
   ]
 });
+const LinkHandler = new BaseText({
+  ui: 'link',
+  formatDisplay: (v: any) => (v ? String(v).trim() : ''),
+  formatExport: (v: any) => (v ? String(v).trim() : '')
+});
+
 const CurrencyHandler = new CompositeHandler();
 
 const handlers: any = {
@@ -1144,8 +1296,8 @@ const handlers: any = {
   FavoredClassHandler, FeatTypeHandler,
   AttributesTableHandler, MeleeAttackTableHandler, RangedAttackTableHandler, DefensesTableHandler,
   SavesTableHandler, SkillsTableHandler, SimpleListHandler, BackgroundTraitsTableHandler,
-  ClassFeaturesTableHandler, FeatsTableHandler, SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler,
-  BasicInfoHandler, CombatInfoHandler, CurrencyHandler,
+  ClassFeaturesTableHandler, FeatsTableHandler, PfsBoonsTableHandler, PfsFactionHandler, PfsChroniclesTableHandler, CheckGroupHandler, CheckGroupHandlerClass, HalfIntHandler, HalfIntHandlerClass, DateHandler, DateHandlerClass, SpellTableHandler, MagicBlocksHandler, EquipmentItemsHandler,
+  BasicInfoHandler, CombatInfoHandler, CurrencyHandler, LinkHandler,
   BaseHandler, BaseText, BaseInt, BaseSelect, BaseTable, CompositeHandler, SkillNameHandlerClass,
   DailyUsesHandler, BoolHandler, FloatHandler, AbilityTypeHandler, SpellTypeHandler, ClassSkillHandler,
   AgeHandler, HeightHandler, CritRangeHandler, CritMultiplierHandler, BonusHandler, SkillTotalPointsHandler,
@@ -1172,6 +1324,11 @@ const handlers: any = {
       case 'damageType': return DamageTypeHandler;
       case 'favoredClass': return FavoredClassHandler;
       case 'featType': return FeatTypeHandler;
+      case 'date': return DateHandler;
+      case 'pfsFaction': return PfsFactionHandler;
+      case 'checkGroup': return CheckGroupHandler;
+      case 'halfInt': return HalfIntHandler;
+      case 'link': return LinkHandler;
       default: return TextHandler;
     }
   }

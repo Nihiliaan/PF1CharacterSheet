@@ -1,7 +1,9 @@
+import ForumSyncModal from '../editor/ForumSyncModal';
+import CardExportModal from '../export/CardExportModal';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  LayoutGrid, Save, Share2, Download, Copy, FilePlus, Sparkles, Plus, Pin, User, Languages, 
+  LayoutGrid, Globe, Save, Share2, Download, Copy, FilePlus, Sparkles, Plus, Pin, User, Languages, Settings, 
   ChevronDown, Info, RotateCcw, X, Search, HardDrive, Folder, Check, CloudUpload, Grid, List as ListIcon,
   FolderPlus, ChevronRight, Loader2, CheckCircle2, CloudOff, FileText, ArrowLeft
 } from 'lucide-react';
@@ -12,6 +14,7 @@ import { logout } from '../../services/authService';
 
 import { useUI, ViewType } from '../../contexts/UIContext';
 import { useCharacter } from '../../contexts/CharacterContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { useVault } from '../../contexts/VaultContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCharacterAI } from '../../contexts/hooks/useCharacterAI';
@@ -20,9 +23,57 @@ import { DEFAULT_BBCODE_TEMPLATE } from '../../constants';
 export default function AppHeader() {
   const { t, i18n } = useTranslation();
   const { user, handleLogin, handleLogout } = useAuth();
+  const { settings } = useSettings();
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [showForumSyncModal, setShowForumSyncModal] = useState(false);
+  const [showCardExportModal, setShowCardExportModal] = useState(false);
+  const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
+  const fileMenuRef = useRef<HTMLDivElement>(null);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
+  const fileCloseTimeout = useRef<NodeJS.Timeout | null>(null);
+  const shareCloseTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const handleFileMouseEnter = () => {
+    if (fileCloseTimeout.current) clearTimeout(fileCloseTimeout.current);
+    if (shareCloseTimeout.current) clearTimeout(shareCloseTimeout.current);
+    setIsShareMenuOpen(false);
+    setIsFileMenuOpen(true);
+  };
+
+  const handleFileMouseLeave = () => {
+    fileCloseTimeout.current = setTimeout(() => {
+      setIsFileMenuOpen(false);
+    }, 200);
+  };
+
+  const handleShareMouseEnter = () => {
+    if (fileCloseTimeout.current) clearTimeout(fileCloseTimeout.current);
+    if (shareCloseTimeout.current) clearTimeout(shareCloseTimeout.current);
+    setIsFileMenuOpen(false);
+    setIsShareMenuOpen(true);
+  };
+
+  const handleShareMouseLeave = () => {
+    shareCloseTimeout.current = setTimeout(() => {
+      setIsShareMenuOpen(false);
+    }, 200);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fileMenuRef.current && !fileMenuRef.current.contains(event.target as Node)) {
+        setIsFileMenuOpen(false);
+      }
+      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target as Node)) {
+        setIsShareMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navCloseTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -92,6 +143,7 @@ export default function AppHeader() {
     handleShare,
     handleExport,
     handleExportBBCode,
+    handleRevertChanges,
     handleNew,
     currentCharacterId,
     currentTemplateId,
@@ -143,12 +195,15 @@ export default function AppHeader() {
   useEffect(() => {
     return () => {
       if (navCloseTimeout.current) clearTimeout(navCloseTimeout.current);
+      if (fileCloseTimeout.current) clearTimeout(fileCloseTimeout.current);
+      if (shareCloseTimeout.current) clearTimeout(shareCloseTimeout.current);
     };
   }, []);
 
   const navItems = [
     { id: 'editor', label: t('common.character_editor'), icon: <LayoutGrid size={16} /> },
     { id: 'gm-view', label: t('common.gm_view'), icon: <FileText size={16} /> },
+    { id: 'svg-template', label: 'SVG 模板工坊', icon: <Sparkles size={16} /> },
     { id: 'bbcode-template', label: t('common.bbcode_editor'), icon: <Copy size={16} /> },
     { id: 'vault', label: t('common.vault'), icon: <LayoutGrid size={16} />, hidden: !user },
     { id: 'about', label: t('common.about'), icon: <Info size={16} /> },
@@ -157,6 +212,10 @@ export default function AppHeader() {
   const currentNavItem = navItems.find(item => item.id === view) || navItems[0];
 
   const currentPath = useMemo(() => {
+    if (view === 'svg-template') {
+      return 'SVG 模板工坊 (.svgt)';
+    }
+
     if (view === 'bbcode-template') {
       if (!currentTemplateId) return t('common.new_template');
       const path = getItemPath(currentTemplateId);
@@ -334,80 +393,216 @@ export default function AppHeader() {
 
       <div className="flex items-center gap-2 sm:gap-4">
         {view === 'editor' && (
-          <>
-            {!isReadOnly && (
-              <>
-                <button 
-                  onClick={() => setShowAIModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-medium transition-colors shadow-lg shadow-indigo-200"
-                >
-                  <Sparkles size={16} />
-                  <span className="hidden sm:inline">{t('common.ai_identify')}</span>
-                </button>
-                <button 
-                  onClick={handleSave} 
-                  disabled={isSaving}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  <Save size={16} />
-                  <span className="hidden sm:inline">{isSaving ? t('common.saving') : t('common.save')}</span>
-                </button>
-              </>
-            )}
-
-            <button 
-              onClick={handleSaveAs}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* 文件下拉菜单 */}
+            <div 
+              className="relative" 
+              ref={fileMenuRef}
+              onMouseEnter={handleFileMouseEnter}
+              onMouseLeave={handleFileMouseLeave}
             >
-              <Copy size={16} />
-              <span className="hidden sm:inline">{t('common.save_as')}</span>
-            </button>
+              <button
+                onClick={() => {
+                  setIsFileMenuOpen(!isFileMenuOpen);
+                  setIsShareMenuOpen(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  isFileMenuOpen ? 'bg-stone-600 text-white shadow-inner' : 'bg-stone-700 hover:bg-stone-600 text-stone-100'
+                }`}
+                title="文件操作"
+              >
+                <FileText size={16} />
+                <span>文件</span>
+                <ChevronDown size={14} className={`text-stone-400 transition-transform ${isFileMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
 
-            {!isReadOnly && (
-              <button 
-                onClick={handleShare}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+              <AnimatePresence>
+                {isFileMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    className="absolute left-0 mt-2 w-48 bg-white border border-stone-200 rounded-xl shadow-xl z-[70] py-1 text-stone-800"
+                  >
+                    <button
+                      onClick={() => {
+                        handleNew();
+                        setIsFileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors cursor-pointer"
+                    >
+                      <FilePlus size={15} className="text-stone-500" />
+                      <span>{t('common.new')}</span>
+                    </button>
+
+                    {!isReadOnly && (
+                      <button
+                        onClick={() => {
+                          handleSave();
+                          setIsFileMenuOpen(false);
+                        }}
+                        disabled={isSaving}
+                        className="w-full flex items-center justify-between px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors disabled:opacity-50 cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Save size={15} className="text-emerald-600" />
+                          <span>{isSaving ? t('common.saving') : t('common.save')}</span>
+                        </div>
+                        {isDirty && <span className="w-2 h-2 rounded-full bg-amber-500"></span>}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        handleSaveAs();
+                        setIsFileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors cursor-pointer"
+                    >
+                      <Copy size={15} className="text-stone-500" />
+                      <span>{t('common.save_as')}</span>
+                    </button>
+
+                    {settings.storage.enableLocalAutoCache && isDirty && (
+                      <>
+                        <div className="h-px bg-stone-100 my-1" />
+                        <button
+                          onClick={() => {
+                            handleRevertChanges();
+                            setIsFileMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-rose-50 text-rose-600 text-left transition-colors cursor-pointer"
+                        >
+                          <RotateCcw size={15} className="text-rose-600" />
+                          <span>放弃修改并重新载入</span>
+                        </button>
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* 分享与导出下拉菜单 */}
+            <div 
+              className="relative" 
+              ref={shareMenuRef}
+              onMouseEnter={handleShareMouseEnter}
+              onMouseLeave={handleShareMouseLeave}
+            >
+              <button
+                onClick={() => {
+                  setIsShareMenuOpen(!isShareMenuOpen);
+                  setIsFileMenuOpen(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  isShareMenuOpen ? 'bg-stone-600 text-white shadow-inner' : 'bg-stone-700 hover:bg-stone-600 text-stone-100'
+                }`}
+                title="分享与导出"
               >
                 <Share2 size={16} />
-                <span className="hidden sm:inline">{t('common.share')}</span>
+                <span>分享</span>
+                <ChevronDown size={14} className={`text-stone-400 transition-transform ${isShareMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {isShareMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    className="absolute left-0 mt-2 w-52 bg-white border border-stone-200 rounded-xl shadow-xl z-[70] py-1 text-stone-800"
+                  >
+                    <button
+                      onClick={() => {
+                        setShowCardExportModal(true);
+                        setIsShareMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold hover:bg-amber-50 text-amber-900 text-left transition-colors cursor-pointer"
+                    >
+                      <Sparkles size={15} className="text-amber-600" />
+                      <span>论坛卡片与外链 (.svgt/.bbc)</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        handleExportBBCode();
+                        setIsShareMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors cursor-pointer"
+                    >
+                      <Copy size={15} className="text-stone-500" />
+                      <span>复制 BBCode</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowForumSyncModal(true);
+                        setIsShareMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-amber-800 text-left transition-colors cursor-pointer"
+                    >
+                      <Globe size={15} className="text-amber-700" />
+                      <span>{t('editor.forum_sync.btn_header', '果园同步')}</span>
+                    </button>
+
+                    {!isReadOnly && (
+                      <button
+                        onClick={() => {
+                          handleShare();
+                          setIsShareMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors cursor-pointer"
+                      >
+                        <Share2 size={15} className="text-stone-500" />
+                        <span>{t('common.share')} (在线链接)</span>
+                      </button>
+                    )}
+
+                    <div className="h-px bg-stone-100 my-1" />
+
+                    <button
+                      onClick={() => {
+                        handleExport();
+                        setIsShareMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors cursor-pointer"
+                    >
+                      <Download size={15} className="text-stone-500" />
+                      <span>{t('common.export')} (.pf1)</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* 快捷保存图标按钮 */}
+            {!isReadOnly && (
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className={`p-2 rounded-full transition-colors cursor-pointer ${
+                  isDirty 
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs' 
+                    : 'text-stone-400 hover:bg-stone-700 hover:text-white'
+                } disabled:opacity-50`}
+                title={`${isSaving ? t('common.saving') : t('common.save')} (Ctrl+S)`}
+              >
+                <Save size={16} />
               </button>
             )}
 
-            <button 
-              onClick={handleExport}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-              title={t('common.export')}
-            >
-              <Download size={16} />
-              <span className="hidden sm:inline">{t('common.export')}</span>
-            </button>
-
-            <button 
-              onClick={handleExportBBCode}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-              title="BBCode"
-            >
-              <Copy size={16} />
-              <span className="hidden sm:inline">BBCode</span>
-            </button>
-
-            <button 
-              onClick={handleNew}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-            >
-              <FilePlus size={16} />
-              <span className="hidden sm:inline">{t('common.new')}</span>
-            </button>
-
-            <button 
-              onClick={() => setView('gm-view')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-800 hover:bg-amber-700 text-white rounded text-sm font-medium transition-colors shadow-sm"
-              title={t('common.switch_to_gm', 'GM紧凑卡')}
-            >
-              <FileText size={16} />
-              <span className="hidden sm:inline">{t('common.switch_to_gm', 'GM紧凑卡')}</span>
-            </button>
-          </>
+            {/* AI 识别 - 纯图标替代，参照设置按钮风格 */}
+            {!isReadOnly && (
+              <button
+                onClick={() => setShowAIModal(true)}
+                className="p-2 rounded-full text-indigo-300 hover:text-white bg-indigo-950/80 hover:bg-indigo-800 border border-indigo-700/60 transition-colors shadow-xs cursor-pointer"
+                title={t('common.ai_identify', 'AI 识别导入')}
+              >
+                <Sparkles size={16} />
+              </button>
+            )}
+          </div>
         )}
 
         {view === 'gm-view' && (
@@ -671,6 +866,15 @@ export default function AppHeader() {
             </motion.div>
           </button>
 
+          {/* Settings Button */}
+          <button
+            onClick={() => setView('settings')}
+            className={`p-2 rounded-full transition-colors ${view === 'settings' ? 'bg-primary text-white shadow-xs' : 'text-stone-400 hover:bg-stone-700 hover:text-white'}`}
+            title="系统设置"
+          >
+            <Settings size={16} />
+          </button>
+
           {user ? (
             <AccountMenu 
               user={user} 
@@ -694,6 +898,8 @@ export default function AppHeader() {
           )}
         </div>
       </div>
+      <ForumSyncModal isOpen={showForumSyncModal} onClose={() => setShowForumSyncModal(false)} />
+      <CardExportModal isOpen={showCardExportModal} onClose={() => setShowCardExportModal(false)} />
     </motion.header>
   );
 }

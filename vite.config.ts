@@ -20,12 +20,22 @@ export default defineConfig(({mode}) => {
               req.on('data', chunk => { body += chunk; });
               req.on('end', () => {
                 try {
-                  const { type, content } = JSON.parse(body);
-                  const filePath = type === 'template' 
-                    ? path.resolve(__dirname, 'src/constants/default_template.bbc')
-                    : path.resolve(__dirname, 'src/constants/default_data.pf1');
+                  const { type, content, id } = JSON.parse(body);
+                  let filePath = '';
+                  if (type === 'template') {
+                    filePath = path.resolve(__dirname, 'src/constants/default_template.bbc');
+                  } else if (type === 'svgt') {
+                    const fileMap: Record<string, string> = {
+                      'svg-badge': 'src/templates/svg/badge.svgt',
+                      'svg-parchment': 'src/templates/svg/parchment.svgt',
+                      'svg-dark': 'src/templates/svg/tactical-dark.svgt'
+                    };
+                    filePath = path.resolve(__dirname, fileMap[id] || `src/templates/svg/${id}.svgt`);
+                  } else {
+                    filePath = path.resolve(__dirname, 'src/constants/default_data.pf1');
+                  }
                   
-                  fs.writeFileSync(filePath, type === 'template' ? content : JSON.stringify(content, null, 2));
+                  fs.writeFileSync(filePath, (type === 'template' || type === 'svgt') ? content : JSON.stringify(content, null, 2));
                   
                   res.statusCode = 200;
                   res.setHeader('Content-Type', 'application/json');
@@ -37,6 +47,43 @@ export default defineConfig(({mode}) => {
                   res.end(JSON.stringify({ error: e.message }));
                 }
               });
+            } else if (req.method === 'GET' && (req.url.startsWith('/api/render') || req.url.startsWith('/render/'))) {
+              try {
+                const parsedUrl = new URL(req.url, 'http://localhost:3000');
+                let charId = parsedUrl.searchParams.get('charId') || '';
+                let templateId = parsedUrl.searchParams.get('templateId') || '';
+                let ext = 'svg';
+
+                if (req.url.startsWith('/render/')) {
+                  const match = req.url.match(/^\/render\/([^\/]+)\/([^\.]+)\.([a-z]+)/);
+                  if (match) {
+                    charId = match[1];
+                    templateId = match[2];
+                    ext = match[3];
+                  }
+                }
+
+                const templateFileMap: Record<string, { file: string, mime: string }> = {
+                  'svg-badge': { file: 'src/templates/svg/badge.svgt', mime: 'image/svg+xml' },
+                  'svg-parchment': { file: 'src/templates/svg/parchment.svgt', mime: 'image/svg+xml' },
+                  'svg-dark': { file: 'src/templates/svg/tactical-dark.svgt', mime: 'image/svg+xml' },
+                  'bbcode-default': { file: 'src/templates/bbcode/default.bbc', mime: 'text/plain' },
+                  'bbcode-compact': { file: 'src/templates/bbcode/compact.bbc', mime: 'text/plain' }
+                };
+
+                const targetTpl = templateFileMap[templateId] || templateFileMap['svg-badge'];
+                const tplPath = path.resolve(__dirname, targetTpl.file);
+                const tplContent = fs.readFileSync(tplPath, 'utf-8');
+
+                res.statusCode = 200;
+                res.setHeader('Content-Type', `${targetTpl.mime}; charset=utf-8`);
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.end(tplContent);
+              } catch (e: any) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+                res.end('Dev Render Error: ' + e.message);
+              }
             } else {
               next();
             }

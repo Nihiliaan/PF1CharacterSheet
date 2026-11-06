@@ -9,7 +9,7 @@ export interface FolderMetadata {
   updatedAt: any;
 }
 
-export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'datalist' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight' | 'markdown' | 'dailyUses';
+export type InputType = 'text' | 'float' | 'quantity' | 'select' | 'datalist' | 'int' | 'posInt' | 'checkbox' | 'bonus' | 'level' | 'distance' | 'attributeIndex' | 'cost' | 'weight' | 'markdown' | 'dailyUses' | 'link' | 'date' | 'pfsFaction' | 'checkGroup' | 'halfInt';
 
 export interface Column {
   key: string;
@@ -28,6 +28,7 @@ export interface DynamicTableProps {
   data: Record<string, any>;
   originalData?: Record<string, any>;
   onChange: (data: Record<string, any>) => void;
+  onColumnsChange?: (columns: Column[]) => void;
   newItemGenerator?: () => Record<string, any>;
   fixedRows?: boolean;
   readonlyColumns?: string[];
@@ -179,7 +180,74 @@ export interface CharacterDocument {
   createdAt?: any;
 }
 
+export interface PfsGoalItem {
+  id: string;
+  checkedCount: number;
+  maxChecks: number;
+}
+
+export interface PfsBoonsSoA {
+  uses: number[];
+  name: string[];
+  desc: string[];
+  sheetNo: number[];
+}
+
+export interface PfsChroniclesSoA {
+  date: string[];
+  scenario: string[];
+  gm: string[];
+  event: string[];
+  faction: number[];
+  prestige: number[];
+  notes: string[];
+  link: string[];
+}
+
+export interface PfsData {
+  playerNumber: string;
+  characterNumber: string;
+  faction: number;
+  xp: number;
+  fame: number;
+  prestige: number;
+  goals: PfsGoalItem[];
+  boons: PfsBoonsSoA;
+  chronicles: PfsChroniclesSoA;
+  factionBoonChecks?: Record<string, number>;
+}
+
+export interface ForumBindingItem {
+  msgId: number;
+  titleTemplate?: string;
+  subtitleTemplate?: string;
+}
+
+export type ForumBinding = number | ForumBindingItem;
+
+export interface ForumPostBinding {
+  msgId: number;
+  title?: string;
+  subtitle?: string;
+  lastSyncedAt?: string;
+  status?: 'idle' | 'syncing' | 'success' | 'error';
+  errorMessage?: string;
+}
+
+export interface AdditionalBlock {
+  id: string;
+  type: 'text' | 'table' | 'image';
+  title: string;
+  content?: string;
+  url?: string;
+  caption?: string;
+  columns?: Column[];
+  tableData?: Record<string, any[]>;
+}
+
 export interface CharacterData {
+  forumBindings?: ForumBinding[];
+  forumTitleTemplate?: string;
   id: string;
   folderId?: string | null;
   ownerId?: string;
@@ -252,7 +320,8 @@ export interface CharacterData {
     };
     notes: string;
   };
-  additionalData: any[];
+  additionalData: AdditionalBlock[];
+  pfs?: PfsData;
 }
 
 export const ATTRIBUTE_NAMES = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];

@@ -1,0 +1,234 @@
+{
+  "concordance": {
+    "name": "The Concordance",
+    "leader": "Ashasar",
+    "description": "The Concordance of Elements is an ancient and diverse organization that concerns itself with the balance between the primal forces of the elements. Until recently, the Concordance had focused its efforts on the elemental planes. It now seeks to gain insight into Golarion’s most unstable regions and teach its agents to harness the power of natural forces to their advantage. Concordance faction members seek to save the Hao Jin Tapestry demiplane and develop new techniques for safeguarding planar stability.",
+    "boons": {
+      "inured_to_the_elements": {
+        "name": "Inured to the Elements",
+        "desc": "Once per adventure before rolling a saving throw against an effect with the acid, air, cold, earth, fire, electricity, or water descriptor, you can gain a bonus on the save equal to 1 + half the number of goals you have completed."
+      },
+      "elemental_ray": {
+        "name": "Elemental Ray",
+        "desc": "Once per adventure, you can shoot a ray of elemental energy at a target within 30 feet as a spell-like ability. This is a touch attack that deals a number of points of acid, cold, electricity, or fire damage equal to 1d6 × half your character level."
+      },
+      "elemental_aegis": {
+        "name": "Elemental Aegis",
+        "desc": "You begin each day with a shield that functions as protection from energy. Whenever you or an ally within 30 feet of you would take acid, cold, electricity, or fire damage, the shield absorbs the damage. The shield can absorb a number of points of damage equal to 3 × the number of goals you have completed, after which the shield dissipates."
+      }
+    },
+    "goals": {
+      "con_1": "Participate in an adventure in the Hao Jin Tapestry or an area significant to Hao Jin and her collections.",
+      "con_2": "Peacefully resolve an encounter with a creature with the air, earth, fire, or water subtype.",
+      "con_3": "Help grow the Concordance by recruiting a named NPC with either a significant connection to the natural world (such as a druid) or a significant connection to another plane (such an extraplanar outsider). Recruitment requires a successful Diplomacy or Knowledge (local) check with a DC equal to 15 + your character level.",
+      "con_4": "Forgo your Downtime to map ley lines attuned to the elements. Doing so requires a successful Craft (maps), Knowledge (geography), Knowledge (planes), or Profession (cartographer) check with a DC equal to 15 + your character level.",
+      "con_5": "Restore balance to an area by closing a planar portal or removing a significant elemental disturbance.",
+      "con_6": "Recover a valuable magic item that produces an effect that is strongly tied to air, earth, fire, or water during the course of an adventure. To qualify, this item must be worth at least 400 gp plus 100 gp × your character level.",
+      "con_7": "Have a number of ranks in one of the following skills equal to your character level (minimum 4): Diplomacy, Handle Animal, or Knowledge (planes).",
+      "con_gm": "Serve as the GM for an adventure that grants 1 or more XP, and apply credit and the Chronicle sheet to this character. Checking 3 boxes counts as one goal for the purpose of earning faction rewards; checking all 5 counts as two goals."
+    }
+  },
+  "dark_archive": {
+    "name": "Dark Archive",
+    "leader": "Zarta Dralneen",
+    "description": "Deep beneath the Grand Lodge in Absalom lie the fruits of countless expeditions, deemed too insignificant for immediate examination but too dangerous for inexperienced agents to handle. The Dark Archive formed with the Decemvirate’s blessing to catalogue centuries of finds and recover powerful artifacts—a job far more exciting than it seems given the unpredictable and occult nature of the collection. The Dark Archive faction seeks to recover and study artifacts of historical significance and use its resources to combat evil forces.",
+    "boons": {
+      "enduring_scholar": {
+        "name": "Enduring Scholar",
+        "desc": "Your exposure to dangerous magic has conditioned you to resist spells. Once per adventure before rolling a saving throw against a spell, you can apply a bonus equal to 1 + half the number of goals you have completed."
+      },
+      "magical_tinkerer": {
+        "name": "Magical Tinkerer",
+        "desc": "You have a knack for analyzing and activating magic items. Use Magic Device is a class skill for you. Once per adventure, you can use a bonus equal to 5 + twice the number of goals you have completed to a Use Magic Device check. If your own skill bonus is higher, you instead gain a +2 bonus on that check."
+      },
+      "pactmaker": {
+        "name": "Pactmaker",
+        "desc": "You made a pact with an outsider, gaining magical power. You start each adventure with a number of spell points equal to half the number of goals you have completed (rounded down). You gain spell-like abilities from one of the following lists that matches the outsider’s alignment, which you can spent 2 points to cast. Good: aid, speak with animals; Chaotic: blur, entropic shield; Lawful: darkvision, identify. These spells are more effective when used on allies, costing only 1 point if you picked good or lawful, or affecting a second random ally within 30 feet if you picked chaotic."
+      }
+    },
+    "goals": {
+      "da_1": "Recover a named text (typically listed in italics or quotes) found during the course of an adventure.",
+      "da_2": "Recruit a named NPC scholar, knowledgeable spellcaster, or similar figure to the Dark Archive. Recruitment requires a successful Diplomacy or Knowledge (arcana) check with a DC equal to 15 + your character level.",
+      "da_3": "Participate in a magical or occult ritual during the course of an adventure.",
+      "da_4": "As a part of defeating an undead creature, use a consumable magic item worth at least 100 gp per character level.",
+      "da_5": "Have a number of ranks equal to your character level (minimum 4) in one of the following skills: Bluff, Knowledge (arcana), Profession (archivist, librarian, or scribe), Spellcraft, or Use Magic Device.",
+      "da_6": "Participate in an adventure that takes place in the Blakros Museum or that features a member of the Blakros family. Alternatively, participate in an adventure that takes place on a demiplane.",
+      "da_7": "During the course of an adventure, acquire a unique magic item and deliver it safely to the Pathfinder Society.",
+      "da_gm": "Serve as the GM for an adventure that grants 1 or more XP, and apply the Chronicle sheet to this character. Checking 3 boxes counts as one goal for earning faction rewards; checking all 5 counts as two goals."
+    }
+  },
+  "the_exchange": {
+    "name": "The Exchange",
+    "leader": "Guaril Karela",
+    "description": "The Exchange’s board of directors merges the independent wealth of Qadiran merchant-nobility and the resourceful cunning of Sczarni smugglers. There are countless ways to earn a fortune, and the Exchange rewards Pathfinders for any number of them. Exchange members often must choose between an aggressive approach and a more reputable one, and those choices help to shape the faction’s practices. The Exchange is focusing its efforts on forging new mercantile relationships with non-human cultures.",
+    "boons": {
+      "resourceful": {
+        "name": "Resourceful",
+        "desc": "You can call in favors with your mercantile contacts to gain additional supplies. You can check a box before this boon when you are not in combat to gain two items from the following list: antitoxin, disguise kit, healer’s kit, potion of cure light wounds, or tanglefoot bag (3 boxes total). If you have completed at least 5 goals, you can instead check a box to gain any feather token or elixir with a price of 500 gp or less. These items have a resale value of 0 gp."
+      },
+      "showmanship": {
+        "name": "Showmanship",
+        "desc": "Once per adventure, you can use your bonus for any Craft or Profession skill in place of your bonus for a Disable Device, Knowledge (engineering), or Use Magic Device check as if you were trained in that skill."
+      },
+      "unparalleled_supplier": {
+        "name": "Unparalleled Supplier",
+        "desc": "Your access to superior resources makes your team deadlier. You can re-roll a total number of your or your allies’ weapon or spell damage dice per day equal to your number of goals completed; you must use the new result."
+      }
+    },
+    "goals": {
+      "ex_1": "Visit a city or town whose population is predominantly non-human during the course of an adventure. While in the settlement, purchase or sell an item worth at least 100 gp × your character level.",
+      "ex_2": "Recruit a named NPC merchant, smuggler, trader, or similar figure to cooperate with the Exchange. Doing so requires a successful Diplomacy or Profession (merchant) check with a DC equal to 15 + your character level.",
+      "ex_3": "Resolve a combat encounter nonviolently through bribery, diplomacy, trickery, or a similar tactic.",
+      "ex_4": "Gain access to a unique or variant item during the course of an adventure whose rules are printed on your Chronicle sheet.",
+      "ex_5": "Create a lasting impression on a sapient creature by exceeding the DC of the Intimidate check to make the creature friendly by 10 or more. Alternatively, foster peaceful interactions by learning how to speak and read seven or more languages, at least two of which must be non-human racial languages. If you do so, check both of this goal’s boxes.",
+      "ex_6": "Undermine a rival entrepreneur or merchant so that you can claim his market share. Doing so requires a successful Bluff, Intimidate, or Profession (merchant) check with a DC equal to 15 + your character level.",
+      "ex_7": "Create a new trade route, either by mapping a legitimate path or opening doors to a smuggling enterprise. Doing so requires a successful Intimidate, Knowledge (geography), or Survival check with a DC equal to 15 + your character level.",
+      "ex_gm": "Serve as the GM for an adventure that grants 1 or more XP, and apply the Chronicle sheet to this character. Checking 3 boxes counts as one goal for earning faction rewards; checking all 5 counts as two goals."
+    }
+  },
+  "grand_lodge": {
+    "name": "Grand Lodge",
+    "leader": "Ambrus Valsin",
+    "description": "Members of the Pathfinder Society consider the Grand Lodge in Absalom a second home, regardless of their national origin. Many Pathfinders have spent years training within the Grand Lodge’s walls, and those agents who reject distractions from outside political or religious factions are the pride of the Grand Lodge. Often, Pathfinders who acquire lost knowledge and forgotten treasures benefit directly from their discoveries. The Grand Lodge faction will help chart the future course for the Pathfinder Society and its leadership.",
+    "boons": {
+      "prepared_agent": {
+        "name": "Prepared Agent",
+        "desc": "You are more prepared for missions than most Pathfinders. When you attempt a Knowledge check as a part of an adventure’s mission briefing, treat all Knowledge skills as trained. Once per adventure, you can add a bonus equal to half the number of goals you have completed to one Knowledge check or Diplomacy check to gather information."
+      },
+      "guiding_compass": {
+        "name": "Guiding Compass",
+        "desc": "Your wayfinder guides you to safety in all circumstances. If you fail a saving throw against an effect that allows additional saving throws to mitigate the effect (for example, dominate person or glitterdust), you gain a bonus on subsequent saves against such effects equal to 1 for every three goals you have completed."
+      },
+      "published_trailblazer": {
+        "name": "Published Trailblazer",
+        "desc": "Your outstanding work has made you a star in the Pathfinder Chronicles, and a shining example of the motto Explore, Report, Cooperate. Pick and circle one skill from each of the following categories— Explore: Perception, Sense Motive, or Survival; Report: Knowledge (history), Linguistics, or Profession (scribe). You and your allies gain a +2 insight bonus on checks for these skills."
+      }
+    },
+    "goals": {
+      "gl_1": "Adventure in a nation other than Absalom. You can receive credit for visiting a particular nation only once. Checking one of this goal’s boxes does not prevent you from checking one box for a different goal.",
+      "gl_2": "Forgo your Downtime to finalize a report to the Pathfinder Society. Doing so requires a successful DC 15 Intelligence, Wisdom, or Profession (scribe) check.",
+      "gl_3": "Complete at least three consecutive scenarios in which you completed both the primary and secondary success conditions. Sanctioned adventures that do not include secondary success conditions neither interrupt nor contribute to this goal.",
+      "gl_4": "Convince an NPC to work as a Pathfinder Society contact, or convince a disaffected agent to work with the Society again. This requires a successful Diplomacy or Knowledge (local) check with a DC equal to 15 + your character level.",
+      "gl_5": "Participate in an adventure that features two or more individuals with significant influence in the Pathfinder Society, such as venture-captains or faction leaders.",
+      "gl_6": "Successfully complete a scenario in Season 5 of the Pathfinder Adventure Card Guild: Season of Tapestry’s Tides.",
+      "gl_7": "Participate in an adventure that directly assists an NPC Pathfinder agent or agent of an allied organization, such as by mounting a rescue, recovering an important object, or defending that group’s resources and reputation.",
+      "gl_gm": "Serve as the GM for an adventure that grants 1 or more XP, and apply the Chronicle sheet to this character. Checking 3 boxes counts as one goal for earning faction rewards; checking all 5 counts as two goals."
+    }
+  },
+  "libertys_edge": {
+    "name": "Liberty's Edge",
+    "leader": "Major Colson Maldris",
+    "description": "The past century has ushered in a series of rebellions that founded revolutionary nations like Andoran and Galt. The Liberty’s Edge faction hopes to see all forms of tyranny wiped from the Inner Sea region while cleansing corruption from even the good-intentioned states. A Liberty’s Edge operative improves his reputation by spreading freedom’s ideals wherever he goes, even bending the rules of tyrannical law to plant the seed of liberty. Under new leadership, Liberty’s Edge members expand their reach to provide ongoing support to the newly free.",
+    "boons": {
+      "orator": {
+        "name": "Orator",
+        "desc": "You are skilled at inspiring people, particularly when you oppose tyranny. Once per adventure before rolling a skill check to convince an NPC to cooperate with you, you can add a bonus to your check equal to 1 + half the number of goals you have completed (rounded down). Double this bonus if the check involves convincing the NPC to participate in an uprising."
+      },
+      "bond_breaker": {
+        "name": "Bond Breaker",
+        "desc": "Once per adventure, you can perform one of two liberating acts. You can cast shatter as a spell-like ability, with a DC equal to 12 + half the number of goals you have completed (rounded down). Alternatively, you can deal 1d10 additional points of damage on your next attack against a creature or object with hardness. If your weapon’s critical multiplier is ×3 or ×4, you deal 2d10 or 3d10 additional points of damage, respectively."
+      },
+      "emancipator": {
+        "name": "Emancipator",
+        "desc": "When you or an ally you can see rolls a check to escape a grapple, an Escape Artist check, or a saving throw against a charm or compulsion effect, that person can treat a roll on the die of 10 or less as a roll of 11. A single creature can benefit from this ability only once per adventure."
+      }
+    },
+    "goals": {
+      "le_1": "Liberate one or more captives, hostages, or slaves during an adventure.",
+      "le_2": "Forgo your Downtime to nonviolently fight for the cause of liberty by spending time organizing protests, freeing slaves, or distributing revolutionary material. Doing so requires a successful Disable Device, Knowledge (local), or Stealth check with a DC equal to 15 + your character level.",
+      "le_3": "Defy local law or tradition in a way that assists you and your allies without endangering the mission or threatening innocent lives.",
+      "le_4": "Defeat a known slaver whose Challenge Rating is at least equal to your character level. For the purposes of this goal, a slaver is a creature that owns at least five slaves, is maintaining a compulsion spell or effect to control a creature for at least 1 day, or is explicitly cited as trafficking slaves.",
+      "le_5": "Forgo your Downtime to aid to people recently freed from slavery or another form of oppression. Doing so requires a successful Craft, Heal, or Profession check (DC = 15 + your level) or a donation of resources worth 100 gp per character level.",
+      "le_6": "Convince an NPC who serves an oppressive or tyrannical leader to abandon that leader of their own free will by succeeding at a Diplomacy or Perform (oratory) check with a DC equal to 15 + your character level.",
+      "le_7": "With an NPC of a type listed in the goals above as a witness, demonstrate your panache and bravado. Once per adventure, you can roll twice and take the lower result on a significant check (you may not reroll). If you still succeed, check a box.",
+      "le_gm": "Serve as the GM for an adventure that grants 1 or more XP, and apply the Chronicle sheet to this character. Checking 3 boxes counts as one goal for earning faction rewards; checking all 5 counts as two goals."
+    }
+  },
+  "silver_crusade": {
+    "name": "Silver Crusade",
+    "leader": "Ollysta Zadok",
+    "description": "An influential group of Pathfinder clerics, paladins, and servants of good-aligned deities has banded together in a valiant effort to use the Society’s influence and resources to do good throughout the Inner Sea region and beyond. A crusade in name only, the faction models itself after the staunchly virtuous silver dragons. Its members deliver aid, vanquish evil, and leave the indelible mark of good wherever they go, whether they are combating forces of national significance, recovering relics of ancient heroes, or bringing hope to the downtrodden.",
+    "boons": {
+      "purifier": {
+        "name": "Purifier",
+        "desc": "When attempting a caster level check to remove a curse, disease, or other condition, increase your effective caster level by half the number of goals you have completed (rounded down). You can also apply this benefit when others attempt caster level checks to remove such conditions from you."
+      },
+      "cleansing_crusader": {
+        "name": "Cleansing Crusader",
+        "desc": "At the beginning of each adventure, you can chose a single mercy that a paladin of your character level would qualify for (minimum 3rd). A number of times equal to half the number of goals you have completed (rounded down), you can apply the benefits of this mercy to yourself or an ally, as if using lay on hands without healing any hit points. If you have lay on hands, you can apply this mercy in addition to another mercy by expending a use of this boon."
+      },
+      "celestial_blessing": {
+        "name": "Celestial Blessing",
+        "desc": "Once per adventure, you can call upon your deity as a free action to grant yourself and all allies within 30 feet to whom you have line of effect DR/evil equal to half the number of goals you have completed (rounded down) for 2 rounds."
+      }
+    },
+    "goals": {
+      "sc_1": "Defeat an outsider that has the evil subtype or an undead creature whose CR is at least equal to your character level.",
+      "sc_2": "Defeat a divine spellcaster whose patron is an evil deity and whose CR is at least equal to your character level.",
+      "sc_3": "Forgo your Downtime and succeed at a Diplomacy, Knowledge (local), or Perform (oratory) check with a DC equal 15 + your character level to organize a charity event. Alternatively, donate resources worth 100 gp per character level to charity.",
+      "sc_4": "Accept the surrender of an enemy combatant (other than an evil outsider or undead creature), and ensure his fair treatment until he can safely be released, ransomed, or delivered to authorities for justice. Alternatively, allow such an enemy combatant with no means of escape to flee without further harm.",
+      "sc_5": "Rescue a named NPC who is a divine spellcaster with a good-aligned deity or a named outsider with the good subtype. Alternatively, collaborate with the NPC to overcome an obstacle directly related to the PCs’ success conditions, such as defeating a foe; summoned outsiders do not contribute to this goal, but called ones do if not coerced into service.",
+      "sc_6": "Have a number of ranks equal to your character level (minimum 4) in Diplomacy, Heal, or Knowledge (religion).",
+      "sc_7": "In the course of an adventure, recover a relic or artifact associated with a good-aligned deity or a holy crusade.",
+      "sc_gm": "Serve as the GM for an adventure that grants 1 or more XP, and apply the Chronicle sheet to this character. Checking 3 boxes counts as one goal for earning faction rewards; checking all 5 counts as two goals."
+    }
+  },
+  "sovereign_court": {
+    "name": "Sovereign Court",
+    "leader": "Lady Gloriana Morilla",
+    "description": "Through deception, diplomacy, intrigue, and the occasional act of sabotage, the Sovereign Court aims to unite the nobles of the Inner Sea and eventually forge a new, glorious empire. Many monarchs would view the Sovereign Court as a rival, if not a criminal operation, so its agents have avoided publicizing the faction’s existence and goals except when dealing with potential recruits. The Sovereign court seeks to expand its influence through leaders and social elites of numerous cultures, including those connected to the Hao Jin Tapestry.",
+    "boons": {
+      "practiced_diplomat": {
+        "name": "Practiced Diplomat",
+        "desc": "Circle one of the following skills: Bluff, Diplomacy, Disguise, or Knowledge (nobility). When you attempt a check using your chosen skill, you always receive a final result of at least 10 + the number of goals you have completed."
+      },
+      "well_connected": {
+        "name": "Well-Connected",
+        "desc": "Your network of contacts is vast. Once per adventure, before rolling a skill check that involves concealing evidence of your presence, gathering intelligence, influencing members of high society, or other tasks directly relevant to the Sovereign Court’s goals, you can call upon the assistance of a contact to gain a +4 bonus on the check."
+      },
+      "skilled_negotiator": {
+        "name": "Skilled Negotiator",
+        "desc": "When you use Bluff, Diplomacy, or Intimidate to resolve an encounter with a potentially hostile force without resorting to combat, you and any of your allies who witnessed your actions gain a morale bonus on Will saves equal to half the number of goals you have completed (rounded down) for 1 hour."
+      }
+    },
+    "goals": {
+      "sov_1": "Recruit a named NPC ambassador, aristocrat, noble, or similar figure to cooperate with the faction with a successful Diplomacy or Knowledge (nobility) check (DC = 14 + your character level + 3 for each of this goal’s checked boxes).",
+      "sov_2": "Fulfill one of the three goals above without revealing your faction affiliation to anyone other than a present member of the faction or a prospective NPC recruit. Checking a box for this goal does not prevent you from checking a box for another goal.",
+      "sov_3": "Recover blackmail or incriminating evidence against a named NPC ambassador, aristocrat, noble, or similar figure.",
+      "sov_4": "Dissuade an NPC from working with an organization that directly opposes the Pathfinder Society or the Sovereign Court’s goals during an adventure by presenting the NPC with evidence that doing so is contrary to her interests. This requires a successful Bluff, Intimidate, Knowledge (local), or Sense Motive check with a DC equal to 15 + your character level.",
+      "sov_5": "Forgo your Downtime to reinforce your political connections. Doing so requires a successful Knowledge (local) or Knowledge (nobility) check with a DC equal to 15 + your character level.",
+      "sov_6": "Have a number of ranks in one of the following skills equal to your character level (minimum 4): Bluff, Diplomacy, Disguise, Knowledge (nobility), or Sense Motive.",
+      "sov_7": "During the course of an adventure, secure an alliance with a powerful political figure or a governing body.",
+      "sov_gm": "Serve as the GM for an adventure that grants 1 or more XP, and apply the Chronicle sheet to this character. Checking 3 boxes counts as one goal for earning faction rewards; checking all 5 counts as two goals."
+    }
+  },
+  "scarab_sages": {
+    "name": "Scarab Sages",
+    "leader": "Amenopheus & Tahira",
+    "description": "Originating from the ancient order of the Jeweled Sages, the Scarab Sages seek to recover the lost sage jewels and memory crystals of Osirion. Spanning millennia, they uncover wisdom left by ancient masters to combat dark conspiracies threatening the Inner Sea.",
+    "boons": {
+      "sages_lore": {
+        "name": "Sage's Lore",
+        "desc": "You retain fragmented memories of the ancient sages. When making an untrained Knowledge check, the DC cap increases to 20. 1/day, gain an insight bonus on one Knowledge check equal to 1 + half your completed goals."
+      },
+      "ancestral_relic": {
+        "name": "Ancestral Relic",
+        "desc": "You carry an ancient talisman blessed by the sages. Gain a morale bonus on Will saves against necromancy or curse effects equal to 1/3 of your completed goals."
+      },
+      "scarabs_aegis": {
+        "name": "Scarab's Aegis",
+        "desc": "1/day as an immediate action when taking fatal damage or falling unconscious, scarab wards burst forward to absorb damage equal to 5 × completed goals."
+      }
+    },
+    "goals": {
+      "ss_1": "Recruit a named NPC historian, archaeologist, or descendant of an ancient bloodline to cooperate with the Scarab Sages with a successful Diplomacy or Knowledge (history) check (DC = 15 + character level).",
+      "ss_2": "Recover a historical artifact, holy symbol, or ancient text during an adventure.",
+      "ss_3": "Solve an ancient puzzle or disarm a trap in ruins, tombs, or lost sites with a successful Disable Device, Knowledge (engineering), or Linguistics check (DC = 15 + character level).",
+      "ss_4": "Protect a historian, excavation team, or culturally significant site from looters and destruction.",
+      "ss_5": "Have ranks in one of the following skills equal to your character level (minimum 4): Knowledge (history), Knowledge (religion), Linguistics, or Appraise.",
+      "ss_6": "Forgo Downtime to decipher and translate ancient texts or parchment scrolls with a successful Linguistics or Knowledge (history) check (DC = 15 + character level).",
+      "ss_7": "Prevail in combat against an ancient evil menace or haunting curse.",
+      "ss_gm": "GM credit with at least 1 XP applied to this character (3 boxes = 1 goal; all 5 boxes = 2 goals)."
+    }
+  }
+}

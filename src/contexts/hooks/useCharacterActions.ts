@@ -88,15 +88,20 @@ export const useCharacterActions = (
 
   const addAdditionalBlock = (type: 'text' | 'table' | 'image') => {
     const newBlock = {
-      id: 'add-' + Math.random(),
+      id: 'add-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
       type,
       title: type === 'text' ? '自定文本' : type === 'table' ? '自定表格' : '附加图片',
       content: '',
       url: '',
-      columns: [{ key: 'col0', label: '列1' }, { key: 'col1', label: '列2' }, { key: 'col2', label: '列3' }],
-      tableData: []
+      caption: '',
+      columns: type === 'table' ? [
+        { key: 'col0', label: '列1' },
+        { key: 'col1', label: '列2' },
+        { key: 'col2', label: '列3' }
+      ] : undefined,
+      tableData: type === 'table' ? { col0: [], col1: [], col2: [] } : {}
     };
-    setData(p => ({ ...p, additionalData: [...p.additionalData, newBlock] }));
+    setData(p => ({ ...p, additionalData: [...(p.additionalData || []), newBlock] }));
   };
 
   const removeAdditionalBlock = (id: string) => {

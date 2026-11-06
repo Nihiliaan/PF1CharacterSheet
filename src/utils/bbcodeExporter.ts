@@ -2,10 +2,22 @@ import i18n from '../i18n/config';
 import Handlebars from 'handlebars';
 import { get } from 'lodash-es';
 import { CharacterData, ATTRIBUTE_NAMES } from '../schema/types';
+import { DEFAULT_BBCODE_TEMPLATE } from '../constants/index';
 import { getExportValue } from './formatters';
 import { getHandlerByPath } from '../schema/fieldRegistry';
-import { calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from './calculations';
+import { getAttributeModifiers, calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from './calculations';
+import {
+  PFS_FACTIONS,
+  calculateCompletedGoals,
+  getDefaultGoalsForFaction,
+  getFactionById,
+  getFactionKeyById,
+  getLocalizedFactionText
+} from '../database/pfsFactions';
+import { PfsGoalItem } from '../schema/types';
 import handlers from '../schema/handlers';
+import { injectPfsViewObject } from './pfsBbcodeHelper';
+import { getStoredSettings } from '../contexts/SettingsContext';
 
 // 创建隔离的 Handlebars 实例
 const hbs = Handlebars.create();
@@ -250,6 +262,31 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
     view.equipment.totalCost = calculateTotalCost(data);
     view.equipment.totalWeight = calculateTotalWeightNum(data).toFixed(1);
     view.equipment.encumbrance = getComputedEncumbrance(data);
+
+    // 多件物品导出时显示总价和总重
+    const settings = getStoredSettings();
+    if (settings.export.showTotalForMultipleItems && data.equipment?.container && Array.isArray(view.equipment?.container)) {
+      view.equipment.container.forEach((bag: any, bagIdx: number) => {
+        const rawBag = data.equipment.container[bagIdx];
+        if (!rawBag || !Array.isArray(rawBag.item)) return;
+        const count = rawBag.item.length;
+        for (let i = 0; i < count; i++) {
+          const qty = parseInt(rawBag.quantity?.[i] as any, 10);
+          if (qty > 1) {
+            const rawCost = parseFloat(rawBag.cost?.[i] as any);
+            if (!isNaN(rawCost) && rawCost > 0 && Array.isArray(bag.cost)) {
+              const totalCost = parseFloat((rawCost * qty).toFixed(2));
+              bag.cost[i] = handlers.CostHandler.formatDisplay(totalCost, { t });
+            }
+            const rawWeight = parseFloat(rawBag.weight?.[i] as any);
+            if (!isNaN(rawWeight) && rawWeight > 0 && Array.isArray(bag.weight)) {
+              const totalWeight = parseFloat((rawWeight * qty).toFixed(2));
+              bag.weight[i] = handlers.WeightHandler.formatDisplay(totalWeight, { t });
+            }
+          }
+        }
+      });
+    }
   }
 
   // 处理法术块 (注入虚拟 level 数组以支持 SoA 遍历)
@@ -290,6 +327,7 @@ export function buildViewObject(data: any, t: any, characterContext?: any): any 
     view.senses = view.basic.senses;
   }
 
+  injectPfsViewObject(data, view, t);
   return view;
 }
 
@@ -307,6 +345,65 @@ export function generateBBCode(data: CharacterData, template: string, t: any, ch
   } catch (error: any) {
     console.error('BBCode Export Error:', error);
     return `[color=red]导出错误: ${error.message}[/color]\n\n模板源码:\n${template}`;
+  }
+}
+
+/**
+ * 统一的人物卡 BBCode 输出核心业务函数
+ * 所有复制到剪贴板、手动论坛同步、自动论坛同步业务必须唯一调用此函数获取人物卡 BBCode
+ */
+export function getCharacterBBCode(
+  data: CharacterData,
+  computed: any,
+  t: (key: string, defaultValue?: string) => string = ((k, d) => d || k)
+): string {
+  const template = localStorage.getItem('bbcode_template') || DEFAULT_BBCODE_TEMPLATE;
+  return generateBBCode(data, template, t, { computed, data });
+}
+
+/**
+ * 针对论坛帖子标题/副标题模板进行 Handlebars 解析与数据填充
+ * 注入当前角色卡全量视图数据，并额外提供 originalTitle 与 subject（原帖标题）上下文变量
+ */
+export function renderTitleTemplate(
+  template: string,
+  data: CharacterData,
+  t: any,
+  characterContext?: any,
+  extraContext?: {
+    originalTitle?: string;
+    subject?: string;
+    originalSubtitle?: string;
+    description?: string;
+    subtitle?: string;
+  }
+): string {
+  if (!template || !template.trim()) return '';
+  try {
+    const viewObject = buildViewObject(data, t, characterContext);
+    Object.defineProperty(viewObject, '_storage', {
+      value: data,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    });
+
+    const orig = extraContext?.originalTitle || extraContext?.subject || '';
+    viewObject.originalTitle = orig;
+    viewObject.subject = orig;
+
+    const origSub = extraContext?.originalSubtitle || extraContext?.description || extraContext?.subtitle || '';
+    viewObject.originalSubtitle = origSub;
+    viewObject.subtitle = origSub;
+    viewObject.description = origSub;
+
+    const compile = hbs.compile(template, { noEscape: true });
+    const rendered = compile(viewObject).trim();
+    // 自动剥离论坛标题中无法渲染的 Markdown 链接 [text](url) -> text
+    return rendered.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  } catch (error: any) {
+    // 输入中的不完整宏标签属于正常中间状态，不打印控制台噪音
+    return '';
   }
 }
 

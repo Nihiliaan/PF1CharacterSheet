@@ -23,6 +23,22 @@ export const getSizeModifier = (size: string): number => {
   return 0;
 };
 
+/**
+ * 计算钱币区的所有钱币的价值合计 (折合为 GP 数值，不含任何装备资产)
+ */
+export const calculateCurrencyTotal = (data: CharacterData): number => {
+  const currency = data?.equipment?.currency;
+  const pp = parseFloat(currency?.pp as any) || 0;
+  const gp = parseFloat(currency?.gp as any) || 0;
+  const sp = parseFloat(currency?.sp as any) || 0;
+  const cp = parseFloat(currency?.cp as any) || 0;
+  const total = pp * 10 + gp + sp * 0.1 + cp * 0.01;
+  return Math.round(total * 100) / 100;
+};
+
+/**
+ * 计算角色总资产价值 (装备价值合计 + 钱币价值合计，格式化为带千位分隔符的字符串)
+ */
 export const calculateTotalCost = (data: CharacterData): string => {
   let total = 0;
   const equipment = data.equipment;
@@ -39,12 +55,8 @@ export const calculateTotalCost = (data: CharacterData): string => {
     });
   }
 
-  const currency = equipment?.currency;
-  const pp = parseInt(currency?.pp as any) || 0;
-  const gp = parseInt(currency?.gp as any) || 0;
-  const sp = parseInt(currency?.sp as any) || 0;
-  const cp = parseInt(currency?.cp as any) || 0;
-  total += pp * 10 + gp + sp * 0.1 + cp * 0.01;
+  // 直接复用钱币价值合计，杜绝重复计算与类型解析差异
+  total += calculateCurrencyTotal(data);
 
   return total.toLocaleString('en-US', { maximumFractionDigits: 2 });
 };

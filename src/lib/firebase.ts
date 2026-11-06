@@ -1,5 +1,6 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, GithubAuthProvider, OAuthProvider } from 'firebase/auth'; 
+import { getStorage } from 'firebase/storage';
 import { 
   initializeFirestore, 
   getFirestore, 
@@ -26,6 +27,7 @@ const firestoreDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || firebas
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 
 // 启用带有多标签页支持的本地离线持久化缓存 (IndexedDB)
 export const db = (() => {

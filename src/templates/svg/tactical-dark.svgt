@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300" width="600" height="300" style="background: transparent; font-family: 'Consolas', 'Fira Code', 'Noto Sans SC', monospace;">
+  <defs>
+    <linearGradient id="dark-card-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <filter id="glow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#f59e0b" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Base Card -->
+  <rect x="5" y="5" width="590" height="290" rx="8" fill="url(#dark-card-bg)" stroke="#334155" stroke-width="1.5" />
+  <rect x="7" y="7" width="586" height="286" rx="6" fill="none" stroke="#f59e0b" stroke-width="0.75" stroke-opacity="0.5" filter="url(#glow)" />
+
+  <!-- Corner Accents -->
+  <path d="M7 25 L7 7 L25 7" fill="none" stroke="#f59e0b" stroke-width="2" />
+  <path d="M593 25 L593 7 L575 7" fill="none" stroke="#f59e0b" stroke-width="2" />
+  <path d="M7 275 L7 293 L25 293" fill="none" stroke="#f59e0b" stroke-width="2" />
+  <path d="M593 275 L593 293 L575 293" fill="none" stroke="#f59e0b" stroke-width="2" />
+
+  <!-- Header -->
+  <text x="24" y="38" font-size="20" font-weight="bold" fill="#f8fafc" letter-spacing="1">/// {{xmlEscape (default name 'OPERATIVE')}}</text>
+  <text x="576" y="38" font-size="12" font-weight="bold" fill="#f59e0b" text-anchor="end">SYS: PF1E // LV {{default basic.classes '1'}}</text>
+
+  <text x="24" y="60" font-size="11" fill="#94a3b8">
+    ALIGN: {{xmlEscape (default basic.alignment 'N')}} | RACE: {{xmlEscape (default basic.race 'HUMAN')}} | CLASS: {{xmlEscape (default basic.classes 'ADVENTURER')}}
+  </text>
+  <line x1="24" y1="70" x2="576" y2="70" stroke="#1e293b" stroke-width="1" />
+
+  <!-- Core Combat Matrix -->
+  <!-- HP -->
+  <rect x="24" y="80" width="130" height="52" rx="4" fill="#18181b" stroke="#ef4444" stroke-width="1" />
+  <text x="34" y="98" font-size="10" font-weight="bold" fill="#f87171">HEALTH POINTS</text>
+  <text x="34" y="122" font-size="18" font-weight="bold" fill="#ffffff">{{default defenses.hp.current '—'}} <tspan font-size="11" fill="#71717a">/ {{default defenses.hp.total '—'}}</tspan></text>
+
+  <!-- AC -->
+  <rect x="162" y="80" width="130" height="52" rx="4" fill="#18181b" stroke="#3b82f6" stroke-width="1" />
+  <text x="172" y="98" font-size="10" font-weight="bold" fill="#60a5fa">ARMOR CLASS</text>
+  <text x="172" y="122" font-size="18" font-weight="bold" fill="#ffffff">{{default defenses.ac.total '10'}} <tspan font-size="10" fill="#64748b">T:{{default defenses.ac.touch '10'}} FF:{{default defenses.ac.flatFooted '10'}}</tspan></text>
+
+  <!-- SAVES -->
+  <rect x="300" y="80" width="140" height="52" rx="4" fill="#18181b" stroke="#10b981" stroke-width="1" />
+  <text x="310" y="98" font-size="10" font-weight="bold" fill="#34d399">SAVING THROWS</text>
+  <text x="310" y="122" font-size="15" font-weight="bold" fill="#ffffff">F{{signed defenses.fortitude.total}} R{{signed defenses.reflex.total}} W{{signed defenses.will.total}}</text>
+
+  <!-- INITIATIVE & SPEED -->
+  <rect x="448" y="80" width="128" height="52" rx="4" fill="#18181b" stroke="#f59e0b" stroke-width="1" />
+  <text x="458" y="98" font-size="10" font-weight="bold" fill="#fbbf24">INIT / SPEED</text>
+  <text x="458" y="122" font-size="16" font-weight="bold" fill="#ffffff">{{signed defenses.initiative.total}} <tspan font-size="12" fill="#71717a">/ {{default speed.base '30'}}FT</tspan></text>
+
+  <!-- Attributes Row -->
+  <g transform="translate(24, 142)">
+    <rect x="0" y="0" width="88" height="38" rx="4" fill="#0f172a" stroke="#334155" />
+    <text x="8" y="15" font-size="9" fill="#64748b">STR 力量</text>
+    <text x="8" y="31" font-size="13" font-weight="bold" fill="#f8fafc">{{default attributes.total.[0] '10'}} <tspan font-size="11" fill="#38bdf8">({{attrMod attributes.total.[0]}})</tspan></text>
+
+    <rect x="92" y="0" width="88" height="38" rx="4" fill="#0f172a" stroke="#334155" />
+    <text x="100" y="15" font-size="9" fill="#64748b">DEX 敏捷</text>
+    <text x="100" y="31" font-size="13" font-weight="bold" fill="#f8fafc">{{default attributes.total.[1] '10'}} <tspan font-size="11" fill="#38bdf8">({{attrMod attributes.total.[1]}})</tspan></text>
+
+    <rect x="184" y="0" width="88" height="38" rx="4" fill="#0f172a" stroke="#334155" />
+    <text x="192" y="15" font-size="9" fill="#64748b">CON 体质</text>
+    <text x="192" y="31" font-size="13" font-weight="bold" fill="#f8fafc">{{default attributes.total.[2] '10'}} <tspan font-size="11" fill="#38bdf8">({{attrMod attributes.total.[2]}})</tspan></text>
+
+    <rect x="276" y="0" width="88" height="38" rx="4" fill="#0f172a" stroke="#334155" />
+    <text x="284" y="15" font-size="9" fill="#64748b">INT 智力</text>
+    <text x="284" y="31" font-size="13" font-weight="bold" fill="#f8fafc">{{default attributes.total.[3] '10'}} <tspan font-size="11" fill="#38bdf8">({{attrMod attributes.total.[3]}})</tspan></text>
+
+    <rect x="368" y="0" width="88" height="38" rx="4" fill="#0f172a" stroke="#334155" />
+    <text x="376" y="15" font-size="9" fill="#64748b">WIS 感知</text>
+    <text x="376" y="31" font-size="13" font-weight="bold" fill="#f8fafc">{{default attributes.total.[4] '10'}} <tspan font-size="11" fill="#38bdf8">({{attrMod attributes.total.[4]}})</tspan></text>
+
+    <rect x="460" y="0" width="92" height="38" rx="4" fill="#0f172a" stroke="#334155" />
+    <text x="468" y="15" font-size="9" fill="#64748b">CHA 魅力</text>
+    <text x="468" y="31" font-size="13" font-weight="bold" fill="#f8fafc">{{default attributes.total.[5] '10'}} <tspan font-size="11" fill="#38bdf8">({{attrMod attributes.total.[5]}})</tspan></text>
+  </g>
+
+  <!-- Weapons Line -->
+  <rect x="24" y="190" width="552" height="42" rx="4" fill="#090d16" stroke="#1e293b" />
+  <text x="36" y="208" font-size="10" font-weight="bold" fill="#f59e0b">PRIMARY LOADOUT 武器与攻击</text>
+  <text x="36" y="224" font-size="11" fill="#e2e8f0">
+    {{#if attacks.weapon.name.[0]}}⚔️ {{xmlEscape attacks.weapon.name.[0]}} (ATK: {{signed attacks.weapon.attackBonus.[0]}} / DMG: {{xmlEscape attacks.weapon.damage.[0]}}){{else}}⚔️ 徒手打击 (ATK: +0 / DMG: 1d3){{/if}}
+    {{#if attacks.weapon.name.[1]}} | ⚔️ {{xmlEscape attacks.weapon.name.[1]}} (ATK: {{signed attacks.weapon.attackBonus.[1]}} / DMG: {{xmlEscape attacks.weapon.damage.[1]}}){{/if}}
+  </text>
+
+  <!-- Tactical Feats / Skills -->
+  <rect x="24" y="240" width="552" height="34" rx="4" fill="#090d16" stroke="#1e293b" />
+  <text x="36" y="261" font-size="10" fill="#94a3b8">
+    <tspan fill="#38bdf8" font-weight="bold">BAB/CMB/CMD:</tspan> {{signed attacks.bab.total}} / {{signed attacks.cmb.total}} / {{default defenses.cmd.total '10'}} | <tspan fill="#38bdf8" font-weight="bold">FEATS:</tspan> {{#if feats.feat.name.[0]}}{{xmlEscape feats.feat.name.[0]}}{{#if feats.feat.name.[1]}}, {{xmlEscape feats.feat.name.[1]}}{{/if}}{{else}}NONE{{/if}}
+  </text>
+
+  <!-- Footer ID -->
+  <text x="576" y="286" font-size="8" fill="#475569" text-anchor="end">SECURE PROTOCOL // PURE-EP NETWORK</text>
+</svg>

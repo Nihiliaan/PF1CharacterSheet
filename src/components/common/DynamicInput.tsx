@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { InputType } from '../../schema/types';
@@ -8,7 +9,11 @@ import handlers from '../../schema/handlers';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { cn } from '../../lib/utils';
 import { Combobox } from '../ui/combobox';
-import { X } from 'lucide-react';
+import { X, ExternalLink, Link as LinkIcon, Edit3, Plus } from 'lucide-react';
+import CheckGroupInput, { CheckGroupInputProps, encodeCheckGroup, decodeCheckGroup } from './CheckGroupInput';
+export { CheckGroupInput, encodeCheckGroup, decodeCheckGroup };
+export type { CheckGroupInputProps };
+
 import { isEqual } from 'lodash-es';
 
 const { getHandlerByType } = handlers;
@@ -76,6 +81,7 @@ export const DynamicInput = React.memo(({
   const characterContext = useCharacter();
   const [isFocused, setIsFocused] = useState(false);
   const [isComboboxOpen, setIsComboboxOpen] = useState(false);
+  const [cellRect, setCellRect] = useState<{ top: number; left: number; height: number; width: number } | null>(null);
   const [draggedTagIndex, setDraggedTagIndex] = useState<number | null>(null);
   const [dragOverTagIndex, setDragOverTagIndex] = useState<number | null>(null);
   const lastClickCoords = useRef<{ x: number, y: number } | null>(null);
@@ -146,21 +152,102 @@ export const DynamicInput = React.memo(({
   }, [readOnly, isFocused]);
 
   const handleAutoBlur = useCallback((e: React.FocusEvent) => {
+    if (type === 'link' || handler?.ui === 'link') return;
     if (!document.hasFocus()) return;
     const currentTarget = e.currentTarget;
     setTimeout(() => {
       if (!currentTarget.contains(document.activeElement)) setIsFocused(false);
     }, 50);
-  }, []);
+  }, [type, handler]);
 
   const renderContent = () => {
+    const ui = handler?.ui;
+
+    if (ui === 'link' || type === 'link') {
+      const url = String(value || '').trim();
+      const hasUrl = Boolean(url);
+
+      const handleCellClick = () => {
+        if (readOnly) return;
+        const targetEl = containerRef.current;
+        if (targetEl) {
+          const rect = targetEl.getBoundingClientRect();
+          setCellRect({
+            top: rect.top,
+            left: rect.left,
+            height: rect.height,
+            width: rect.width
+          });
+        }
+        setIsFocused(true);
+      };
+
+      return (
+        <div 
+          className={cn(sharedStyles, "justify-center items-center py-1 relative cursor-pointer whitespace-nowrap overflow-visible")}
+          onClick={handleCellClick}
+          title={hasUrl ? `${url}\n(点击空白处编辑)` : (!readOnly ? t('editor.pfs.click_to_add_url', '点击添加外链') : '')}
+        >
+          {hasUrl ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              className="p-1 rounded text-amber-800 hover:text-amber-600 hover:bg-amber-100/60 transition-colors cursor-pointer"
+              title={`${url}\n(在新窗口打开)`}
+            >
+              <LinkIcon size={15} />
+            </a>
+          ) : (
+            !readOnly ? (
+              <span className="text-stone-300 hover:text-stone-500 p-1">
+                <LinkIcon size={13} className="opacity-40 hover:opacity-100 transition-opacity" />
+              </span>
+            ) : (
+              <span className="text-stone-300">—</span>
+            )
+          )}
+
+          {/* 完全挂载在 body 顶层、无缝盖在原单元格上、可无限长出任何父容器且不超出视口边缘的极简输入框 */}
+          {isFocused && !readOnly && cellRect && createPortal(
+            <input
+              type="text"
+              value={tempValue ?? ''}
+              onChange={(e) => handleChange(e.target.value)}
+              onBlur={() => setIsFocused(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur();
+                }
+              }}
+              autoFocus={true}
+              placeholder={placeholder || t('editor.pfs.enter_url', '输入外链...')}
+              style={{
+                position: 'fixed',
+                top: `${cellRect.top}px`,
+                left: `${cellRect.left}px`,
+                height: `${cellRect.height}px`,
+                minWidth: `${Math.max(cellRect.width, 160)}px`,
+                width: tempValue && String(tempValue).length > 20 ? `${Math.min(String(tempValue).length * 8 + 32, window.innerWidth - cellRect.left - 16)}px` : 'auto',
+                maxWidth: `calc(100vw - ${cellRect.left + 16}px)`,
+                zIndex: 9999,
+              }}
+              className="bg-white text-xs text-stone-900 outline-none border border-amber-500 rounded-xs px-2 shadow-xl whitespace-nowrap font-sans m-0 box-border leading-normal"
+            />,
+            document.body
+          )}
+        </div>
+      );
+    }
+
     if (readOnly) return (
       <div className={sharedStyles} style={{ fontFamily: fontStack }}>
         <div className={cn(!singleLine && "w-full")}><MarkdownLinkRenderer text={getDisplayValue(value, type || 'text', t, { isFocused, path, context })} /></div>
       </div>
     );
-
-    const ui = handler?.ui;
 
     if (ui === 'datalist') {
       const options = (optionIndices || (handler.getOptions ? handler.getOptions(context) : handler.optionIndices) || []).map((opt: any) => 
@@ -283,6 +370,42 @@ export const DynamicInput = React.memo(({
       </button>
     );
 
+    if (ui === 'date' || type === 'date') {
+      if (isFocused) {
+        return (
+          <div className={cn(sharedStyles, "items-center group-focus-within:bg-white/90")}>
+            <input
+              type="date"
+              value={tempValue || ''}
+              onChange={(e) => handleChange(e.target.value)}
+              onBlur={() => setIsFocused(false)}
+              autoFocus={true}
+              className="w-full bg-transparent outline-none border-none p-0 m-0 text-xs text-stone-800 font-sans"
+            />
+          </div>
+        );
+      }
+      return (
+        <div 
+          className={cn(sharedStyles, "items-center text-xs cursor-pointer select-none")}
+          onClick={() => !readOnly && setIsFocused(true)}
+        >
+          <span>{tempValue || getDisplayValue(value, 'date', t, { isFocused, path, context }) || '—'}</span>
+        </div>
+      );
+    }
+
+    if (ui === 'checkGroup' || type === 'checkGroup') {
+      return (
+        <CheckGroupInput
+          value={value}
+          readOnly={readOnly}
+          className={sharedStyles}
+          onChange={onChange}
+        />
+      );
+    }
+
     // 对于 Text/Markdown 字段，才需要特殊的 Mousedown 拦截来精准定位
     return (
       <div className={cn(sharedStyles, "group-focus-within:bg-white/50")} style={{ fontFamily: fontStack }} onMouseDown={handleManualFocus}>
@@ -294,7 +417,14 @@ export const DynamicInput = React.memo(({
           />
         ) : (
           isFocused ? (
-            <SimpleInlineEditor value={tempValue} onChange={handleChange} autoFocus={true} placeholder={placeholder} className={align ? `text-${align}` : ''} onFocus={() => setIsFocused(true)} />
+            <SimpleInlineEditor
+              value={tempValue}
+              onChange={handleChange}
+              autoFocus={true}
+              placeholder={placeholder}
+              className={align ? `text-${align}` : ''}
+              onFocus={() => setIsFocused(true)}
+            />
           ) : (
             <div className={cn(singleLine && "whitespace-nowrap")}>
               {getDisplayValue(value, type || 'text', t, { isFocused, path, context }) || <span className="text-stone-300 italic">{placeholder}</span>}

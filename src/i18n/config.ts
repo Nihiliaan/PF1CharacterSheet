@@ -5,6 +5,8 @@ import * as OpenCC from 'opencc-js';
 
 import zh from './locales/zh.json';
 import en from './locales/en.json';
+import pfsFactionsZh from './locales/pfs-factions.zh.json';
+import pfsFactionsEn from './locales/pfs-factions.en.json';
 
 // 初始化 OpenCC 转换器 (简体 -> 繁体)
 export const converter = OpenCC.Converter({ from: 'cn', to: 'tw' });
@@ -32,10 +34,10 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      zh: { translation: zh },
-      en: { translation: en },
-      'zh-TW': { translation: {} },
-      'zh-HK': { translation: {} }
+      zh: { translation: zh, pfs_factions: pfsFactionsZh },
+      en: { translation: en, pfs_factions: pfsFactionsEn },
+      'zh-TW': { translation: {}, pfs_factions: {} },
+      'zh-HK': { translation: {} , pfs_factions: {} }
     },
     fallbackLng: {
       'zh-TW': ['zh'],

@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 490" width="660" height="490" style="background: transparent; font-family: 'Times New Roman', Times, 'Noto Serif SC', serif;">
+  <defs>
+    <filter id="parchment-shadow" x="-3%" y="-3%" width="106%" height="106%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#78350f" flood-opacity="0.15" />
+    </filter>
+    <linearGradient id="parchment-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fffef9" />
+      <stop offset="100%" stop-color="#f7f3e8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Parchment Base with Double Border -->
+  <rect x="5" y="5" width="650" height="480" rx="4" fill="url(#parchment-bg)" stroke="#78350f" stroke-width="2" filter="url(#parchment-shadow)" />
+  <rect x="9" y="9" width="642" height="472" rx="2" fill="none" stroke="#b45309" stroke-width="0.75" />
+
+  <!-- HEADER -->
+  <text x="24" y="38" font-size="24" font-weight="bold" fill="#451a03" letter-spacing="0.5">{{xmlEscape (default name '未命名角色')}}</text>
+  <text x="636" y="38" font-size="14" font-weight="bold" fill="#78350f" text-anchor="end">LEVEL {{default basic.classes '1'}}</text>
+  <text x="24" y="56" font-size="12" font-style="italic" fill="#78350f">
+    {{xmlEscape (default basic.gender '—')}} {{xmlEscape (default basic.race '人类')}} {{xmlEscape (default basic.classes '冒险者')}}
+  </text>
+  <text x="24" y="72" font-size="12" fill="#451a03">
+    <tspan font-weight="bold">阵营与体型：</tspan>{{xmlEscape (default basic.alignment '中立')}} {{xmlEscape (default basic.size '中型')}} · <tspan font-weight="bold">先攻：</tspan>{{signed defenses.initiative.total}} · <tspan font-weight="bold">感官：</tspan>{{xmlEscape (default basic.senses '普通')}}
+  </text>
+
+  <!-- LINE DIVIDER -->
+  <line x1="24" y1="82" x2="636" y2="82" stroke="#78350f" stroke-width="1.5" />
+
+  <!-- SECTION: DEFENSE -->
+  <rect x="24" y="90" width="612" height="18" fill="#eaddc7" />
+  <text x="28" y="103" font-size="11" font-weight="bold" fill="#451a03" letter-spacing="1">DEFENSE / 防御能力</text>
+
+  <text x="24" y="124" font-size="12" fill="#292524">
+    <tspan font-weight="bold">防御等级 AC：</tspan>{{default defenses.ac.total '10'}}，接触 {{default defenses.ac.touch '10'}}，措手不及 {{default defenses.ac.flatFooted '10'}}
+  </text>
+  <text x="24" y="142" font-size="12" fill="#292524">
+    <tspan font-weight="bold">生命值 HP：</tspan>{{default defenses.hp.current '—'}} / {{default defenses.hp.total '—'}}
+  </text>
+  <text x="24" y="160" font-size="12" fill="#292524">
+    <tspan font-weight="bold">豁免检定：</tspan>强韧 {{signed defenses.fortitude.total}}，反射 {{signed defenses.reflex.total}}，意志 {{signed defenses.will.total}}
+  </text>
+  <text x="24" y="178" font-size="12" fill="#292524">
+    <tspan font-weight="bold">战头防御 CMD：</tspan>{{default defenses.cmd.total '10'}} · <tspan font-weight="bold">伤害减免 DR/抗力：</tspan>{{default defenses.damageReduction '无'}}
+  </text>
+
+  <!-- LINE DIVIDER -->
+  <line x1="24" y1="188" x2="636" y2="188" stroke="#78350f" stroke-width="1" />
+
+  <!-- SECTION: OFFENSE -->
+  <rect x="24" y="196" width="612" height="18" fill="#eaddc7" />
+  <text x="28" y="209" font-size="11" font-weight="bold" fill="#451a03" letter-spacing="1">OFFENSE / 进攻能力</text>
+
+  <text x="24" y="230" font-size="12" fill="#292524">
+    <tspan font-weight="bold">基础速度：</tspan>{{default speed.base '30'}} 尺
+  </text>
+  {{#if attacks.weapon.name.[0]}}
+  <text x="24" y="248" font-size="12" fill="#292524">
+    <tspan font-weight="bold">主要攻击：</tspan>{{xmlEscape attacks.weapon.name.[0]}} {{signed attacks.weapon.attackBonus.[0]}} ({{xmlEscape attacks.weapon.damage.[0]}}, 致命 {{default attacks.weapon.critical.[0] '20/x2'}})
+  </text>
+  {{else}}
+  <text x="24" y="248" font-size="12" fill="#292524">
+    <tspan font-weight="bold">近战攻击：</tspan>徒手打击 +0 (1d3, 20/x2)
+  </text>
+  {{/if}}
+  {{#if attacks.weapon.name.[1]}}
+  <text x="24" y="266" font-size="12" fill="#292524">
+    <tspan font-weight="bold">副武器/远程：</tspan>{{xmlEscape attacks.weapon.name.[1]}} {{signed attacks.weapon.attackBonus.[1]}} ({{xmlEscape attacks.weapon.damage.[1]}})
+  </text>
+  {{/if}}
+
+  <!-- LINE DIVIDER -->
+  <line x1="24" y1="276" x2="636" y2="276" stroke="#78350f" stroke-width="1" />
+
+  <!-- SECTION: STATISTICS -->
+  <rect x="24" y="284" width="612" height="18" fill="#eaddc7" />
+  <text x="28" y="297" font-size="11" font-weight="bold" fill="#451a03" letter-spacing="1">STATISTICS / 基础属性与数据</text>
+
+  <text x="24" y="320" font-size="13" font-weight="bold" fill="#451a03">
+    力量 {{default attributes.total.[0] '10'}} ({{attrMod attributes.total.[0]}})，敏捷 {{default attributes.total.[1] '10'}} ({{attrMod attributes.total.[1]}})，体质 {{default attributes.total.[2] '10'}} ({{attrMod attributes.total.[2]}})，智力 {{default attributes.total.[3] '10'}} ({{attrMod attributes.total.[3]}})，感知 {{default attributes.total.[4] '10'}} ({{attrMod attributes.total.[4]}})，魅力 {{default attributes.total.[5] '10'}} ({{attrMod attributes.total.[5]}})
+  </text>
+
+  <text x="24" y="342" font-size="12" fill="#292524">
+    <tspan font-weight="bold">基础攻击加值 BAB：</tspan>{{signed attacks.bab.total}} · <tspan font-weight="bold">战头加值 CMB：</tspan>{{signed attacks.cmb.total}}
+  </text>
+
+  <text x="24" y="362" font-size="12" fill="#292524">
+    <tspan font-weight="bold">专长能力 Feats：</tspan>{{#if feats.feat.name.[0]}}{{xmlEscape feats.feat.name.[0]}}{{#if feats.feat.name.[1]}}，{{xmlEscape feats.feat.name.[1]}}{{/if}}{{#if feats.feat.name.[2]}}，{{xmlEscape feats.feat.name.[2]}}{{/if}}{{#if feats.feat.name.[3]}}，{{xmlEscape feats.feat.name.[3]}}等{{/if}}{{else}}未选择专长{{/if}}
+  </text>
+
+  <text x="24" y="382" font-size="12" fill="#292524">
+    <tspan font-weight="bold">掌握语言 Languages：</tspan>{{xmlEscape (default basic.languages '通用语')}}
+  </text>
+
+  <!-- SPECIAL NOTES / GEAR -->
+  <line x1="24" y1="392" x2="636" y2="392" stroke="#d6d3d1" stroke-width="0.75" />
+  <text x="24" y="412" font-size="11" fill="#57534e">
+    <tspan font-weight="bold">特殊能力 SQ：</tspan>{{#if sq.sq.name.[0]}}{{xmlEscape sq.sq.name.[0]}}{{#if sq.sq.name.[1]}}，{{xmlEscape sq.sq.name.[1]}}{{/if}}{{#if sq.sq.name.[2]}}，{{xmlEscape sq.sq.name.[2]}}{{/if}}{{else}}无{{/if}}
+  </text>
+  <text x="24" y="430" font-size="11" fill="#57534e">
+    <tspan font-weight="bold">资产与负重：</tspan>总负重 {{default equipment.totalWeight '0'}} 磅 ({{default equipment.encumbrance '轻载'}}) · 现金 {{default equipment.currency.gp '0'}} GP
+  </text>
+
+  <!-- FOOTER -->
+  <line x1="24" y1="448" x2="636" y2="448" stroke="#78350f" stroke-width="0.75" />
+  <text x="24" y="468" font-size="10" font-style="italic" fill="#78350f">Pathfinder 1st Edition 角色卡 · 纯美苹果园社区</text>
+  <text x="636" y="468" font-size="10" fill="#a8a29e" text-anchor="end">PF1CharacterSheet</text>
+</svg>

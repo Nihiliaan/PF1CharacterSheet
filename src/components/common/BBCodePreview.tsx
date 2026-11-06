@@ -163,7 +163,52 @@ const smfPreset = presetReact.extend((tags) => ({
   }),
 }));
 
-const plugins = [smfPreset()];
+const ALLOWED_TAGS = new Set([
+  'b', 'i', 'u', 's', 'quote', 'code', 'img', 'url', 'size', 'color', 'font',
+  'center', 'left', 'right', 'table', 'tr', 'td', 'list', 'li', '*', 'hr',
+  'shadow', 'glow', 'nobbc', 'sub', 'sup', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'div', 'span', 'p', 'br', 'em', 'strong', 'pre'
+]);
+
+/**
+ * 安全渲染未知或非法的 BBCode 标签组件，降级输出为原生纯文本，
+ * 避免 React 调用 document.createElement('15+角色等级') 触发 InvalidCharacterError 崩溃。
+ */
+const SafeUnknownTag: React.FC<{ rawTag?: string; [key: string]: any }> = ({ rawTag, children }) => {
+  const tag = rawTag || '';
+  if (!children) {
+    return <span>{'[' + tag + ']'}</span>;
+  }
+  return (
+    <span>
+      {'[' + tag + ']'}
+      {children}
+      {'[/' + tag + ']'}
+    </span>
+  );
+};
+
+/**
+ * AST 安全过滤器插件：检查所有标签节点，未命中白名单的标签转为 SafeUnknownTag 组件
+ */
+const safeUnknownTagsPlugin = () => (tree: any) => {
+  if (typeof tree?.walk === 'function') {
+    tree.walk((node: any) => {
+      if (node && typeof node === 'object' && typeof node.tag === 'string') {
+        const lower = node.tag.toLowerCase();
+        if (!ALLOWED_TAGS.has(lower)) {
+          const rawTag = node.tag;
+          node.tag = SafeUnknownTag;
+          node.attrs = { ...(node.attrs || {}), rawTag };
+        }
+      }
+      return node;
+    });
+  }
+  return tree;
+};
+
+const plugins = [smfPreset(), safeUnknownTagsPlugin()];
 
 /**
  * A component that parses and renders BBCode as HTML using bbob/react,

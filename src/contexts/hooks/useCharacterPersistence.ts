@@ -12,6 +12,8 @@ import {
   saveLink
 } from '../../services/characterService';
 import { auth } from '../../lib/firebase';
+import { getStoredSettings } from '../SettingsContext';
+import { triggerForumSync } from '../../utils/forumSyncHelper';
 
 const KEY_LAST_CHAR = 'last_active_character_id';
 const KEY_LAST_TEMP = 'last_active_template_id';
@@ -38,8 +40,9 @@ export const useCharacterPersistence = (
   setCurrentFolderId: (id: string | null) => void,
   isDirty: boolean,
   setBbcodeTemplate: (t: string) => void,
-  setLastSavedTemplate: (t: string) => void
-  ) => {
+  setLastSavedTemplate: (t: string) => void,
+  computed?: any
+) => {
   const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'offline'>('idle');
@@ -74,7 +77,22 @@ export const useCharacterPersistence = (
 
         const name = isTemplate ? (('name' in saveData ? saveData.name : null) || '未命名模板') : ((saveData as CharacterData)?.basic?.name || '未命名人物');
         addToRecent({ id: newId, name, data: saveData, isTemplate });
-        setToast({ message: id ? (isTemplate ? "模板保存成功！" : "人物卡保存成功！") : ("已创建并保存新项目") });
+        // 保存成功后清除本地草稿缓存
+        const draftKey = `pf1_char_draft_${newId || id || 'default'}`;
+        localStorage.removeItem(draftKey);
+
+        const settings = getStoredSettings();
+        let toastMsg = id ? (isTemplate ? "模板保存成功！" : "人物卡保存成功！") : ("已创建并保存新项目");
+
+        // 若开启自动同步果园，尝试同步
+        if (!isTemplate && settings.storage.autoSyncToForumOnSave) {
+          const synced = triggerForumSync(saveData as CharacterData, computed, t);
+          if (synced) {
+            toastMsg += "，已自动同步到纯美苹果园";
+          }
+        }
+
+        setToast({ message: toastMsg, type: 'success' });
         // 后台静默刷新档案库列表，不阻塞保存状态与用户交互
         refreshCharacterList().catch(console.error);
         return newId;
@@ -142,7 +160,8 @@ export const useCharacterPersistence = (
   };
 
   const handleNew = async () => {
-    if (isDirty) {
+    const settings = getStoredSettings();
+    if (isDirty && !settings.storage.enableLocalAutoCache) {
       setConfirmModal({
         title: "确定要新建角色吗？是否保存当前修改？",
         onConfirm: () => performCreateNew(),
@@ -182,6 +201,22 @@ export const useCharacterPersistence = (
         setLastSavedData(JSON.parse(JSON.stringify(merged)));
         setCurrentCharacterId(char.id);
         localStorage.setItem(KEY_LAST_CHAR, char.id);
+
+        const settings = getStoredSettings();
+        if (settings.storage.enableLocalAutoCache) {
+          const draftKey = `pf1_char_draft_${char.id}`;
+          const localDraft = localStorage.getItem(draftKey);
+          if (localDraft) {
+            try {
+              const draftData = JSON.parse(localDraft);
+              setData(dataMigration.mergeWithDefault(draftData));
+              setToast({ message: "已自动载入本地保留的未保存修改", type: 'info' });
+            } catch (err) {
+              console.error("Failed to parse local draft", err);
+            }
+          }
+        }
+
         if (shouldSwitchView) setView('editor');
       }
       if (char.folderId) setCurrentFolderId(char.folderId);
@@ -308,7 +343,8 @@ export const useCharacterPersistence = (
       }
     };
 
-    if (isDirty && !skipDirtyCheck) {
+    const settings = getStoredSettings();
+    if (isDirty && !skipDirtyCheck && !settings.storage.enableLocalAutoCache) {
       setConfirmModal({
         title: "是否保存当前修改后再打开新项目？",
         onConfirm: () => performSelect(),

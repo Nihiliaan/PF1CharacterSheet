@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trash2, GripVertical } from 'lucide-react';
+import { Trash2, GripVertical, FileSpreadsheet } from 'lucide-react';
 import DynamicTable from '../../common/DynamicTable';
 import { useUI } from '../../../contexts/UIContext';
 import { useCharacter } from '../../../contexts/CharacterContext';
+import EquipmentBatchImportModal from '../EquipmentBatchImportModal';
+import { ParsedEquipmentItem } from '../../../utils/equipmentBatchParser';
 
 interface EquipmentBagItemProps {
   bag: any;
@@ -37,12 +39,43 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
   const { t } = useTranslation();
   const { setConfirmModal } = useUI();
   const { removeBag } = useCharacter();
+  const [showBatchImport, setShowBatchImport] = useState(false);
 
   const handleRemove = () => {
     setConfirmModal({
       title: t('common.confirm_delete_container'),
       onConfirm: () => removeBag(bag.id)
     });
+  };
+
+  const handleBatchImport = (items: ParsedEquipmentItem[], strategy: 'append' | 'replace') => {
+    const newItems = items.map(i => i.item);
+    const newQuantities = items.map(i => i.quantity);
+    const newCosts = items.map(i => i.cost);
+    const newWeights = items.map(i => i.weight);
+    const newNotes = items.map(i => i.notes);
+
+    if (strategy === 'replace') {
+      const newBag = {
+        ...bag,
+        item: newItems,
+        quantity: newQuantities,
+        cost: newCosts,
+        weight: newWeights,
+        notes: newNotes
+      };
+      update(`equipment.container[${bagIndex}]`, newBag);
+    } else {
+      const newBag = {
+        ...bag,
+        item: [...(bag.item || []), ...newItems],
+        quantity: [...(bag.quantity || []), ...newQuantities],
+        cost: [...(bag.cost || []), ...newCosts],
+        weight: [...(bag.weight || []), ...newWeights],
+        notes: [...(bag.notes || []), ...newNotes]
+      };
+      update(`equipment.container[${bagIndex}]`, newBag);
+    }
   };
 
   return (
@@ -84,12 +117,23 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
             {t('editor.items.ignore_cost')}
           </label>
         </div>
-        <button
-          onClick={handleRemove}
-          className="text-stone-400 hover:text-red-500 text-sm flex items-center gap-1 transition-colors"
-        >
-          <Trash2 size={14} /> {t('common.delete_container')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowBatchImport(true)}
+            className="text-stone-500 hover:text-primary text-xs flex items-center gap-1.5 transition-colors px-2 py-1 rounded border border-stone-200 bg-white hover:bg-stone-50 shadow-xs"
+            title={t('editor.items.batch_import')}
+          >
+            <FileSpreadsheet size={13} /> {t('editor.items.batch_import')}
+          </button>
+          <button
+            type="button"
+            onClick={handleRemove}
+            className="text-stone-400 hover:text-red-500 text-xs flex items-center gap-1 transition-colors px-1.5 py-1"
+          >
+            <Trash2 size={13} /> {t('common.delete_container')}
+          </button>
+        </div>
       </div>
       <DynamicTable
         path={`equipment.container[${bagIndex}]`}
@@ -102,6 +146,13 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
         onRowDragStart={(idx, e) => onItemDragStart(bag.id, idx, e)}
         onRowDragOver={(idx, e) => onItemDragOver(bag.id, idx, e)}
         onRowDrop={(idx, e) => onItemDrop(bag.id, idx, e)}
+      />
+
+      <EquipmentBatchImportModal
+        isOpen={showBatchImport}
+        onClose={() => setShowBatchImport(false)}
+        bagName={bag.name}
+        onImport={handleBatchImport}
       />
     </div>
   );
