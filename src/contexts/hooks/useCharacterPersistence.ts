@@ -35,7 +35,7 @@ export const useCharacterPersistence = (
   setConfirmModal: (modal: any) => void,
   setView: (view: any) => void,
   addToRecent: (char: any) => void,
-  refreshCharacterList: () => void,
+  refreshCharacterList: () => Promise<void> | void,
   currentFolderId: string | null,
   setCurrentFolderId: (id: string | null) => void,
   isDirty: boolean,
@@ -94,7 +94,7 @@ export const useCharacterPersistence = (
 
         setToast({ message: toastMsg, type: 'success' });
         // 后台静默刷新档案库列表，不阻塞保存状态与用户交互
-        refreshCharacterList().catch(console.error);
+        Promise.resolve(refreshCharacterList()).catch(console.error);
         return newId;
       }
     } catch (e: any) {
@@ -140,7 +140,7 @@ export const useCharacterPersistence = (
       try {
         const newId = await saveCharacterService(newData, undefined, currentFolderId);
         if (newId) {
-          refreshCharacterList().catch(console.error);
+          Promise.resolve(refreshCharacterList()).catch(console.error);
           await selectCharacter(newId, true);
         }
       } catch (e: any) {
@@ -177,7 +177,7 @@ export const useCharacterPersistence = (
 
   const checkIsReadOnly = (charDoc: any, currentUser?: any) => {
     if (!charDoc) return true;
-    if (charDoc.name?.endsWith('.lnk')) return true;
+    if (charDoc.targetId || charDoc.data?.targetId || charDoc.name?.endsWith('.lnk')) return true;
     const activeUser = auth.currentUser || currentUser;
     if (!activeUser) return true;
     const ownerId = charDoc.ownerId || charDoc.data?.ownerId;
@@ -208,9 +208,28 @@ export const useCharacterPersistence = (
           const localDraft = localStorage.getItem(draftKey);
           if (localDraft) {
             try {
-              const draftData = JSON.parse(localDraft);
-              setData(dataMigration.mergeWithDefault(draftData));
-              setToast({ message: "已自动载入本地保留的未保存修改", type: 'info' });
+              const parsed = JSON.parse(localDraft);
+              const draftData = parsed.data || parsed;
+              const baseUpdatedAt = typeof parsed.baseUpdatedAt === 'number' ? parsed.baseUpdatedAt : 0;
+              const cloudUpdatedAt = char.updatedAt?.toMillis?.() || (typeof char.updatedAt === 'number' ? char.updatedAt : 0);
+
+              // 冲突检测：若云端更新时间晚于草稿基准时间，弹窗让用户选择，防止旧数据静默覆盖
+              if (baseUpdatedAt > 0 && cloudUpdatedAt > baseUpdatedAt) {
+                setConfirmModal({
+                  title: "检测到版本冲突：该角色在云端已有更新版本。是否仍要载入此设备上的本地未保存草稿？",
+                  onConfirm: () => {
+                    setData(dataMigration.mergeWithDefault(draftData));
+                    setToast({ message: "已载入本地未保存草稿", type: 'info' });
+                  },
+                  onCancel: () => {
+                    localStorage.removeItem(draftKey);
+                    setToast({ message: "已丢弃旧草稿，加载云端最新版本", type: 'info' });
+                  }
+                });
+              } else {
+                setData(dataMigration.mergeWithDefault(draftData));
+                setToast({ message: "已自动载入本地保留的未保存修改", type: 'info' });
+              }
             } catch (err) {
               console.error("Failed to parse local draft", err);
             }
@@ -477,6 +496,7 @@ export const useCharacterPersistence = (
     handleSaveInternal,
     handleNew,
     selectCharacter,
-    loadSharedCharacter
+    loadSharedCharacter,
+    activeDocRef
   };
 };

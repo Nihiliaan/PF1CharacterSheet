@@ -11,3 +11,4 @@ security_spec.md
 log/
 .temp/
 cache/
+src/database/packs/

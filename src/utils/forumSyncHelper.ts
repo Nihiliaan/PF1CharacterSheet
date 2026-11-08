@@ -14,7 +14,7 @@ export interface ForumSyncOptions {
 export function triggerForumSync(
   data: CharacterData,
   computed: any,
-  t: (key: string, defaultValue?: string) => string,
+  t: any,
   options?: ForumSyncOptions
 ): boolean {
   const rawBindings = options?.bindings || (Array.isArray(data.forumBindings) ? data.forumBindings : []);

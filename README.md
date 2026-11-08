@@ -1,54 +1,61 @@
-# PF1CharacterSheet: 让角色卡回归本质
+# PF1CharacterSheet
 
 [![Project Status](https://img.shields.io/badge/status-active-brightgreen.svg)]()
 [![Pathfinder 1E](https://img.shields.io/badge/System-Pathfinder%201e-blue.svg)]()
 [![PureEP Friendly](https://img.shields.io/badge/Community-纯美苹果园-orange.svg)]()
 
-> **“手动填卡不仅仅是录入数据，它是玩家理解角色灵魂的过程。”**
+PF1CharacterSheet 是一款专为 Pathfinder 1st Edition (PF1) 玩家设计的角色卡管理与排版工具，旨在满足桌面角色扮演游戏（TRPG）玩家在论坛开团与跑团记录中的录入、管理与导出需求。
 
-PF1CharacterSheet 是一款专为 **Pathfinder 1st Edition (PF1)** 玩家设计的角色卡管理工具。它起源于“纯美苹果园”跑团社区的需求，旨在解决新人入门时面临的“排版难、录入慢、数据陌生”三大痛点。
+## 设计原则
 
-## 🌟 核心理念：回归手动，拒绝“全自动”黑盒
+- **手动输入与逻辑校验**：保留属性、豁免、攻击加值等核心战斗数值的手动计算与录入流程，帮助玩家明确各项数值的规则来源与加值类型。
+- **辅助性自动计算**：对变动频繁且规则计算繁琐的负重（Encumbrance）与资产（Assets）模块提供即时自动计算与超重校验。
 
-在 Roll20 或 Foundry VTT 等平台中，自动化的角色卡虽然方便，但也让玩家逐渐失去了对数值来源和规则逻辑的敏感度。
+## 功能特性
 
-PF1CharacterSheet 坚持 **“填表 + 校验”** 的逻辑：
-- **拒绝过度自动化**：我们不会帮你计算 AC、豁免或攻击加值。我们相信，亲自计算这些数值是掌握规则的最佳方式。
-- **繁琐工作自动化**：仅对负重（Encumbrance）和资产（Assets）进行自动计算，因为这些数据变动频繁且与规则逻辑理解关联较小。
-- **数据敏感度**：通过手动输入，确保你对角色的每一项能力都了如指掌。
+### 1. 论坛排版导出 (BBCode 导出)
+提供面向跑团论坛的 BBCode 模板渲染能力。用户在结构化表单中录入数据后，可一键生成兼容主流论坛语法的 BBCode 文本，直接用于开团登记与角色发布。
 
-## 🔥 特色功能
+### 2. AI 角色信息提取 (AI Extraction)
+集成 Google Gemini API，支持用户录入文本或格式混乱的旧角色卡信息。通过大语言模型结构化解析，将分散的数值与描述自动映射并填充至对应的数据字段中。API Key 由用户本地提供并在前端调用，不经由后端中转。
 
-### 1. 论坛排版救星 (BBCode 导出)
-专为网团环境设计。内置强大的模板引擎，你可以像使用富文本编辑器一样填写卡片，然后一键生成排版精美的 BBCode，直接发布到“纯美苹果园”或其他论坛。
+### 3. 可扩展导出模板
+除默认论坛模板外，支持用户自定义导出模板（涵盖 Markdown、HTML 及纯文本格式），满足不同组织与平台的存档要求。
 
-### 2. AI 角色识别 (AI Extraction)
-手中有一份 PDF 或混乱的文本卡？通过集成的 AI 提取功能，无论原始内容是什么格式，AI 都能理解并自动帮你填充到对应的表格中，大幅缩短录入时间。
+### 4. 数据存储与云端同步
+- **云端存储**：用户角色档案及目录结构托管于 Google Cloud Firestore，支持多端登录与数据拉取。
+- **Google Drive 云同步**：支持对接用户的 Google Drive，提供角色数据的云端导入、导出与独立备份机制。
+- **本地存储支持**：提供本地文件导入与导出能力，确保数据可离线归档。
 
-### 3. 万能导出模板
-不受限于固定格式。你可以自定义任何文本模板（Markdown, HTML, 纯文本），让你的角色卡以任何你想要的样子呈现。
+## 技术栈
 
-### 4. 深度数据库集成
-内置海量的 PF1 规则数据库（职业、专长、法术、物品），提供即时的输入校验和参考，确保你的每一项数据都有据可依。
+- **前端框架**：React 18 + TypeScript + Vite
+- **样式方案**：Tailwind CSS v4
+- **状态管理**：React Context + 自定义 Hooks
+- **持久化与认证**：Firebase Authentication + Cloud Firestore
+- **备份与同步**：Google Drive API
+- **AI 能力**：Google Gemini API (`@google/genai`)
 
-### 5. 数据自主与同步
-- **Google Drive 云同步**：数据不存储在第三方服务器，而是直接保存在你自己的云端硬盘中。
-- **本地存储**：数据完全属于你，随时可以导出备份。
+## 快速开始
 
-## 🛠 技术栈
-- **Frontend**: React + TypeScript + Vite
-- **Styling**: Vanilla CSS (Focus on performance and customizability)
-- **State Management**: React Context + Hooks
-- **Storage**: Firebase (Auth) + Google Drive API
-- **AI**: OpenAI / Claude API Integration
+### 开发环境要求
+- Node.js >= 18.0.0
+- npm / pnpm / yarn
 
-## 🚀 快速开始
-1. 访问 [项目地址](#)
-2. 登录 Google 账号以启用同步功能。
-3. 开始创建你的第一个 PF1 角色！
+### 安装与启动
+```bash
+# 安装依赖
+npm install
 
-## 🤝 贡献与反馈
-本项目由社区驱动。如果你发现数据库缺失、AI 识别准确率问题或有更好的 BBCode 模板，欢迎提交 Issue 或 Pull Request。
+# 启动开发服务器
+npm run dev
 
----
-*由跑团玩家为跑团玩家打造。愿你的 20 总是大成功。*
+# 构建生产产物
+npm run build
+```
+
+## 贡献与反馈
+欢迎针对 BBCode 模板规范、字段校验逻辑或多语言支持提交 Issue 与 Pull Request。
+
+## 致谢
+- 感谢纯美苹果园社区提供的 Pathfinder 1e 规则资料与论坛模板范例。

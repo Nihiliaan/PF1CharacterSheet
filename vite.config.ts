@@ -5,7 +5,6 @@ import fs from 'node:fs';
 import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
-  const env = loadEnv(mode, '.', '');
   return {
     plugins: [
       react(), 
@@ -25,12 +24,13 @@ export default defineConfig(({mode}) => {
                   if (type === 'template') {
                     filePath = path.resolve(__dirname, 'src/constants/default_template.bbc');
                   } else if (type === 'svgt') {
+                    const safeId = path.basename(id || '');
                     const fileMap: Record<string, string> = {
                       'svg-badge': 'src/templates/svg/badge.svgt',
                       'svg-parchment': 'src/templates/svg/parchment.svgt',
                       'svg-dark': 'src/templates/svg/tactical-dark.svgt'
                     };
-                    filePath = path.resolve(__dirname, fileMap[id] || `src/templates/svg/${id}.svgt`);
+                    filePath = path.resolve(__dirname, fileMap[safeId] || `src/templates/svg/${safeId}.svgt`);
                   } else {
                     filePath = path.resolve(__dirname, 'src/constants/default_data.pf1');
                   }
@@ -92,17 +92,30 @@ export default defineConfig(({mode}) => {
       }
     ],
     base: './',
-    define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('firebase')) return 'vendor-firebase';
+              if (id.includes('@codemirror') || id.includes('codemirror') || id.includes('@lezer')) return 'vendor-codemirror';
+              if (id.includes('@google/genai')) return 'vendor-genai';
+              if (id.includes('motion') || id.includes('lucide-react')) return 'vendor-ui';
+              return 'vendor';
+            }
+          }
+        }
+      }
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
+      // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
     },
   };

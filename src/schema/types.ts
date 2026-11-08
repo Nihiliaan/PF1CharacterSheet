@@ -246,9 +246,10 @@ export interface AdditionalBlock {
 }
 
 export interface CharacterData {
+  schemaVersion?: number;
   forumBindings?: ForumBinding[];
   forumTitleTemplate?: string;
-  id: string;
+  id?: string;
   folderId?: string | null;
   ownerId?: string;
   targetId?: string;

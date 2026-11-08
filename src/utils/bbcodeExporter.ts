@@ -355,7 +355,7 @@ export function generateBBCode(data: CharacterData, template: string, t: any, ch
 export function getCharacterBBCode(
   data: CharacterData,
   computed: any,
-  t: (key: string, defaultValue?: string) => string = ((k, d) => d || k)
+  t: any = ((k: string, d?: string) => d || k)
 ): string {
   const template = localStorage.getItem('bbcode_template') || DEFAULT_BBCODE_TEMPLATE;
   return generateBBCode(data, template, t, { computed, data });

@@ -78,7 +78,7 @@ const smfPreset = presetReact.extend((tags) => ({
     };
   },
   size: (node) => {
-    let fontSize = node.attrs.size;
+    let fontSize = String(node.attrs.size ?? '');
     if (/^\d+$/.test(fontSize)) fontSize = `${fontSize}pt`;
     return {
       ...node,
@@ -122,7 +122,7 @@ const smfPreset = presetReact.extend((tags) => ({
   tr: (node) => ({ ...node, tag: 'tr' }),
   td: (node) => ({ ...node, tag: 'td' }),
   list: (node) => {
-    const type = node.attrs.list;
+    const type = String(node.attrs.list ?? '');
     const isOrdered = ['1', 'a', 'A', 'i', 'I'].includes(type);
     const listStyleType = type === '1' ? 'decimal' : type === 'a' ? 'lower-alpha' : type === 'A' ? 'upper-alpha' : type === 'i' ? 'lower-roman' : type === 'I' ? 'upper-roman' : undefined;
     
@@ -141,7 +141,7 @@ const smfPreset = presetReact.extend((tags) => ({
   u: (node) => ({ ...node, tag: 'span', attrs: { className: 'bbc_u' } }),
   s: (node) => ({ ...node, tag: 'del' }),
   shadow: (node) => {
-    const [color] = (node.attrs.shadow || '').split(',');
+    const [color] = String(node.attrs.shadow || '').split(',');
     return {
       ...node,
       tag: 'span',
@@ -149,7 +149,7 @@ const smfPreset = presetReact.extend((tags) => ({
     };
   },
   glow: (node) => {
-    const [color, , strength] = (node.attrs.glow || '').split(',');
+    const [color, , strength] = String(node.attrs.glow || '').split(',');
     return {
       ...node,
       tag: 'span',

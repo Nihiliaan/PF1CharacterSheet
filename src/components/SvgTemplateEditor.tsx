@@ -30,7 +30,7 @@ import { renderTemplate } from '../templates/templateEngine';
 import { TemplateDefinition } from '../templates/types';
 import { getRenderUrl } from '../services/cardUploadService';
 
-const TreeItem = ({ item, level = 0, defaultOpen = false, onInsert }: { item: BBCodeTreeItem; level?: number; defaultOpen?: boolean; onInsert?: (key: string) => void }) => {
+const TreeItem = ({ item, level = 0, defaultOpen = false, onInsert }: { item: BBCodeTreeItem; level?: number; defaultOpen?: boolean; onInsert?: (key: string) => void; key?: string }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultOpen || level < 1);
   const hasChildren = item.children && item.children.length > 0;

@@ -16,6 +16,23 @@ function resolvePath(obj: any, part: string): any {
 }
 
 /**
+ * 字段联动规则映射表
+ */
+export type LinkageRule = (draft: CharacterData, value: any) => void;
+
+export const LINKAGE_RULES: Record<string, LinkageRule> = {
+  'basic.race': (draft, value) => {
+    if (draft.basic) {
+      const mapping = getCreatureTypeByRace(value);
+      if (mapping) {
+        draft.basic.type = mapping.type;
+        draft.basic.subtype = [...mapping.subtype];
+      }
+    }
+  }
+};
+
+/**
  * 处理 CharacterData 深层更新的业务逻辑
  */
 export const dataUpdateService = {
@@ -35,7 +52,10 @@ export const dataUpdateService = {
       
       for (let i = 0; i < parts.length - 1; i++) {
         current = resolvePath(current, parts[i]);
-        if (current === undefined) return; // 路径不存在
+        if (current === undefined) {
+          console.error(`[dataUpdateService] Invalid update path "${path}": segment "${parts[i]}" is undefined`);
+          return;
+        }
       }
 
       const lastPart = parts[parts.length - 1];
@@ -48,13 +68,10 @@ export const dataUpdateService = {
         current[lastPart] = finalValue;
       }
 
-      // 联动：当玩家修改种族时，自动更新生物类型与子类
-      if (path === 'basic.race' && draft.basic) {
-        const mapping = getCreatureTypeByRace(finalValue);
-        if (mapping) {
-          draft.basic.type = mapping.type;
-          draft.basic.subtype = [...mapping.subtype];
-        }
+      // 联动：遍历联动规则注册表
+      const linkageRule = LINKAGE_RULES[path];
+      if (linkageRule) {
+        linkageRule(draft as CharacterData, finalValue);
       }
     });
   },

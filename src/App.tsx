@@ -1,20 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, ShieldCheck } from 'lucide-react';
+import { User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { googleProvider } from './lib/firebase';
 
-// Components
-import BBCodeTemplateEditor from './components/BBCodeTemplateEditor';
-import SvgTemplateEditor from './components/SvgTemplateEditor';
-import VaultContent from './components/vault/VaultContent';
-import SettingsCenter from './components/settings/SettingsCenter';
+// Lazy-loaded Views (Code Splitting)
+const BBCodeTemplateEditor = lazy(() => import('./components/BBCodeTemplateEditor'));
+const SvgTemplateEditor = lazy(() => import('./components/SvgTemplateEditor'));
+const VaultContent = lazy(() => import('./components/vault/VaultContent'));
+const SettingsCenter = lazy(() => import('./components/settings/SettingsCenter'));
+const GMStatBlockView = lazy(() => import('./components/gm/GMStatBlockView'));
 
-// Layout & Editor Components
+// Eager Components
+import CharacterEditor from './components/editor/CharacterEditor';
 import AppHeader from './components/layout/AppHeader';
 import AppOverlays from './components/layout/AppOverlays';
-import CharacterEditor from './components/editor/CharacterEditor';
-import GMStatBlockView from './components/gm/GMStatBlockView';
 
 // Context
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -22,6 +22,12 @@ import { UIProvider, useUI } from './contexts/UIContext';
 import { VaultProvider, useVault } from './contexts/VaultContext';
 import { CharacterProvider, useCharacter } from './contexts/CharacterContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+
+const ViewLoadingFallback = () => (
+  <div className="h-full w-full flex items-center justify-center bg-stone-50/50">
+    <div className="w-8 h-8 border-3 border-stone-800 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 export default function App() {
   return (
@@ -75,12 +81,19 @@ function AppContent() {
       <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
           {view === 'editor' && <CharacterEditor user={user} />}
-          {view === 'gm-view' && <GMStatBlockView />}
+          
+          {view === 'gm-view' && (
+            <Suspense fallback={<ViewLoadingFallback />}>
+              <GMStatBlockView />
+            </Suspense>
+          )}
 
           {view === 'vault' && (
             <motion.div key="vault" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full overflow-hidden">
               {user ? (
-                <VaultContent user={user} onAdd={handleNew} />
+                <Suspense fallback={<ViewLoadingFallback />}>
+                  <VaultContent user={user} onAdd={handleNew} />
+                </Suspense>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-stone-50">
                   <User size={64} className="text-stone-300 mb-6" />
@@ -93,19 +106,25 @@ function AppContent() {
 
           {view === 'settings' && (
             <motion.div key="settings" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="h-full overflow-hidden">
-              <SettingsCenter />
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <SettingsCenter />
+              </Suspense>
             </motion.div>
           )}
 
           {view === 'bbcode-template' && (
             <motion.div key="bbcode-template" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full overflow-hidden">
-              <BBCodeTemplateEditor />
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <BBCodeTemplateEditor />
+              </Suspense>
             </motion.div>
           )}
 
           {view === 'svg-template' && (
             <motion.div key="svg-template" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full overflow-hidden">
-              <SvgTemplateEditor />
+              <Suspense fallback={<ViewLoadingFallback />}>
+                <SvgTemplateEditor />
+              </Suspense>
             </motion.div>
           )}
 
@@ -135,7 +154,7 @@ function AppContent() {
                     </ul>
 
                     <div className="pt-6 border-t border-stone-100 text-center">
-                      <p className="text-stone-400 text-sm italic italic font-serif">
+                      <p className="text-stone-400 text-sm italic font-serif">
                         {t('about.footer')}
                       </p>
                     </div>

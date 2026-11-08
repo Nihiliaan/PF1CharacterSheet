@@ -21,40 +21,15 @@ export const useCharacterActions = (
   /**
    * 列表项管理
    */
-  const addBag = () => {
-    setData(p => ({
-      ...p,
-      equipment: {
-        ...p.equipment,
-        container: [
-          ...(p.equipment.container || []),
-          {
-            id: 'bag-' + Math.random(),
-            name: '新容器',
-            ignoreWeight: false,
-            ignoreCost: false,
-            item: [],
-            quantity: [],
-            cost: [],
-            weight: [],
-            notes: []
-          }
-        ]
-      }
-    }));
-  };
+  const addBag = useCallback(() => {
+    setData(p => dataUpdateService.addBag(p));
+  }, [setData]);
 
-  const removeBag = (id: string) => {
-    setData(p => ({
-      ...p,
-      equipment: {
-        ...p.equipment,
-        container: p.equipment.container.filter(b => b.id !== id)
-      }
-    }));
-  };
+  const removeBag = useCallback((id: string) => {
+    setData(p => dataUpdateService.removeBag(p, id));
+  }, [setData]);
 
-  const addMagicBlock = (type: 'text' | 'table' | 'spell', spellType?: number) => {
+  const addMagicBlock = useCallback((type: 'text' | 'table' | 'spell', spellType?: number) => {
     let newBlock: any;
     if (type === 'spell') {
       const sType = spellType ?? 2;
@@ -80,13 +55,13 @@ export const useCharacterActions = (
       };
     }
     setData(p => ({ ...p, magicBlocks: [...(p.magicBlocks || []), newBlock] }));
-  };
+  }, [setData]);
 
-  const removeMagicBlock = (id: string) => {
+  const removeMagicBlock = useCallback((id: string) => {
     setData(p => ({ ...p, magicBlocks: p.magicBlocks.filter(b => b.id !== id) }));
-  };
+  }, [setData]);
 
-  const addAdditionalBlock = (type: 'text' | 'table' | 'image') => {
+  const addAdditionalBlock = useCallback((type: 'text' | 'table' | 'image') => {
     const newBlock = {
       id: 'add-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
       type,
@@ -102,11 +77,11 @@ export const useCharacterActions = (
       tableData: type === 'table' ? { col0: [], col1: [], col2: [] } : {}
     };
     setData(p => ({ ...p, additionalData: [...(p.additionalData || []), newBlock] }));
-  };
+  }, [setData]);
 
-  const removeAdditionalBlock = (id: string) => {
+  const removeAdditionalBlock = useCallback((id: string) => {
     setData(p => ({ ...p, additionalData: p.additionalData.filter(b => b.id !== id) }));
-  };
+  }, [setData]);
 
   return {
     update,

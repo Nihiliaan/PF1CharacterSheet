@@ -5,13 +5,30 @@ import { DEFAULT_DATA } from '../constants';
  * 数据版本迁移与默认值合并工具
  * 核心逻辑：旧数据 -> 迁移规则 -> 与默认模板递归合并 -> 完整合规角色卡数据
  */
+export const CURRENT_SCHEMA_VERSION = 1;
+
 export const dataMigration = {
+  CURRENT_SCHEMA_VERSION,
+
   /**
-   * 迁移旧版本的数据结构到当前最新版本
+   * 迁移旧版本的数据结构到当前最新版本（版本链流水线）
    */
   migrate(data: any): any {
     if (typeof data !== 'object' || data === null) return data;
     
+    let current = { ...data };
+    const version = typeof current.schemaVersion === 'number' ? current.schemaVersion : 0;
+
+    // 阶段 0 -> 1: 历史无版本号启发式数据迁移
+    if (version < 1) {
+      current = this._migrateV0ToV1(current);
+      current.schemaVersion = 1;
+    }
+
+    return current;
+  },
+
+  _migrateV0ToV1(data: any): any {
     const migrated = { ...data };
 
     // 1. 战斗战技与防御 (Combat Maneuvers & Defenses)

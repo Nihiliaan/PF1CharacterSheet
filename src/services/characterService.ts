@@ -6,6 +6,7 @@ import {
   getDocFromServer, 
   getDocs, 
   addDoc, 
+  setDoc, 
   updateDoc, 
   deleteDoc, 
   query, 
@@ -164,37 +165,41 @@ export async function saveCharacter(characterData: any, id?: string | null, fold
       }
     }
 
+    // Clean business data tree: eliminate metadata stirring
+    const cleanData: any = { ...sanitizedData };
+    cleanData.schemaVersion = cleanData.schemaVersion || 1;
+    delete cleanData.id;
+    delete cleanData.ownerId;
+    delete cleanData.folderId;
+    delete cleanData.targetId;
+    delete cleanData.isLink;
+    delete cleanData.isTemplate;
+
+    const finalFolderId = folderId !== undefined ? folderId : (characterData.folderId || null);
+
     const payload: any = {
       name: filename,
-      data: {
-        ...sanitizedData,
-        id: id || '', // Will be updated after creation if new
-        folderId: folderId !== undefined ? folderId : (characterData.folderId || null),
-        ownerId: finalOwnerId,
-        targetId: characterData.targetId || ''
-      },
+      data: cleanData,
       isPublic: true,
       updatedAt: serverTimestamp(),
       isTemplate: isTemplate,
       ownerId: finalOwnerId,
-      folderId: folderId !== undefined ? folderId : (characterData.folderId || null),
+      folderId: finalFolderId,
       targetId: characterData.targetId || ''
     };
 
+    const docRef = id ? doc(db, path, id) : doc(collection(db, path));
+    const finalId = docRef.id;
 
     if (id) {
-      const docRef = doc(db, path, id);
       await updateDoc(docRef, payload);
-      return id;
     } else {
-      const docRef = await addDoc(collection(db, path), {
+      await setDoc(docRef, {
         ...payload,
         createdAt: serverTimestamp(),
       });
-      // 创建后反向更新 ID
-      await updateDoc(docRef, { "data.id": docRef.id });
-      return docRef.id;
     }
+    return finalId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, path);
   }
@@ -228,10 +233,7 @@ export async function saveLink(targetChar: any, folderId: string | null) {
     const payload: any = {
       name: finalName,
       data: {
-         id: '', // Will be updated
          targetId: targetId,
-         folderId: folderId,
-         ownerId: auth.currentUser.uid,
          basic: {
             name: targetChar.data?.basic?.name || '未命名人物(分享)',
             avatars: targetChar.data?.basic?.avatars || { url: [], note: [] },
@@ -246,8 +248,8 @@ export async function saveLink(targetChar: any, folderId: string | null) {
       targetId: targetId,
       createdAt: serverTimestamp()
     };
-    const docRef = await addDoc(collection(db, path), payload);
-    await updateDoc(docRef, { "data.id": docRef.id });
+    const docRef = doc(collection(db, path));
+    await setDoc(docRef, payload);
     return docRef.id;
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);

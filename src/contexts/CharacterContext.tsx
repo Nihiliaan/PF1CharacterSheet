@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext';
 import { useUI } from './UIContext';
@@ -16,11 +16,18 @@ import { saveCharacter as saveCharacterService } from '../services/characterServ
 import { useSettings } from './SettingsContext';
 import { ensureLocalFolder as ensureLocalFolderService } from '../services/characterService';
 
+export type ComputedCharacterData = {
+  modifiers: ReturnType<typeof getAttributeModifiers>;
+  totalCost: ReturnType<typeof calculateTotalCost>;
+  totalWeight: ReturnType<typeof calculateTotalWeightNum>;
+  encumbrance: ReturnType<typeof getComputedEncumbrance>;
+};
+
 interface CharacterContextType {
   // State
   data: CharacterData;
   setData: React.Dispatch<React.SetStateAction<CharacterData>>;
-  computed: any;
+  computed: ComputedCharacterData;
   lastSavedData: CharacterData;
   isReadOnly: boolean;
   setIsReadOnly: (val: boolean) => void;
@@ -144,7 +151,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIsTemplateDirty(bbcodeTemplate !== lastSavedTemplate);
   }, [bbcodeTemplate, lastSavedTemplate]);
 
-  const computed = useMemo(() => {
+  const computed: ComputedCharacterData = useMemo(() => {
     const modifiers = getAttributeModifiers(data);
     return {
       modifiers,
@@ -164,8 +171,6 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const keysB = Object.keys(b);
     if (keysA.length !== keysB.length) return false;
 
-    // 对于大型数组或对象，深比较开销极大。
-    // 这里使用简单的每一项递归，但尽量保持浅层。
     for (const key of keysA) {
       if (!keysB.includes(key)) return false;
       const valA = a[key];
@@ -183,21 +188,26 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // 使用 useEffect 但增加性能防护：如果数据引用没变（Immer 保证了这一点），setIsDirty 不会触发频繁计算
   useEffect(() => {
-    // 只有在数据发生变化时才执行比较
     const timer = setTimeout(() => {
       setIsDirty(!isEqual(data, lastSavedData));
     }, 500); // 增加 500ms 防抖，避免输入时每下按键都触发全量比较
     return () => clearTimeout(timer);
   }, [data, lastSavedData]);
 
-  // 开启本地缓存时：有修改自动防抖写入本地草稿
+  // 开启本地缓存时：有修改自动防抖写入本地草稿（记录 baseUpdatedAt 以便冲突比对）
   useEffect(() => {
     if (!settings.storage.enableLocalAutoCache) return;
     if (isDirty) {
       const timer = setTimeout(() => {
         try {
           const draftKey = `pf1_char_draft_${currentCharacterId || 'new_character'}`;
-          localStorage.setItem(draftKey, JSON.stringify(data));
+          const baseUpdatedAt = activeDocRef.current?.updatedAt?.toMillis?.() || (typeof activeDocRef.current?.updatedAt === 'number' ? activeDocRef.current?.updatedAt : 0);
+          const draftPayload = {
+            data,
+            baseUpdatedAt,
+            draftSavedAt: Date.now()
+          };
+          localStorage.setItem(draftKey, JSON.stringify(draftPayload));
         } catch (e) {
           console.error('Failed to write draft to localStorage:', e);
         }
@@ -219,7 +229,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [isDirty, settings.storage.enableLocalAutoCache]);
 
   // 放弃修改重新载入
-  const handleRevertChanges = () => {
+  const handleRevertChanges = useCallback(() => {
     setConfirmModal({
       title: "确定要放弃当前所有未保存修改并重新载入吗？本地缓存的修改将丢失。",
       onConfirm: () => {
@@ -230,7 +240,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setToast({ message: "已放弃修改，重置为上次保存的状态", type: 'info' });
       }
     });
-  };
+  }, [setConfirmModal, currentCharacterId, lastSavedData, setToast]);
 
   const {
     isSaving,
@@ -240,7 +250,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     handleSaveInternal,
     handleNew,
     selectCharacter,
-    loadSharedCharacter
+    loadSharedCharacter,
+    activeDocRef
   } = useCharacterPersistence(
     user, data, setData, lastSavedData, setLastSavedData,
     currentCharacterId, setCurrentCharacterId,
@@ -279,7 +290,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     isAILoading, aiStatusMsg, handleAIExtract
   } = useCharacterAI(setData, setCurrentCharacterId);
 
-  const handleShare = () => {
+  const handleShare = useCallback(() => {
     const id = ui.view === 'bbcode-template' ? currentTemplateId : currentCharacterId;
     if (!id) {
       setToast({ message: "请先打开一个人物卡或模板", type: 'error' });
@@ -288,17 +299,14 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const shareUrl = `${window.location.origin}${window.location.pathname}?id=${id}`;
     navigator.clipboard.writeText(shareUrl);
     setToast({ message: "分享链接已复制到剪贴板！" });
-  };
+  }, [ui.view, currentTemplateId, currentCharacterId, setToast]);
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     const isTemplate = ui.view === 'bbcode-template';
     const ext = isTemplate ? '.bbc' : '.pf1';
     
     // Try to get filename from current document id
-    let filename = '';
-    // Since we don't have access to VaultContext easily here without potential circular deps 
-    // (though in App.tsx it's fine), we'll use character name as fallback.
-    filename = (isTemplate ? 'template' : (data.basic?.name || 'character')) + ext;
+    let filename = (isTemplate ? 'template' : (data.basic?.name || 'character')) + ext;
 
     const exportData = isTemplate ? { content: bbcodeTemplate, name: 'template' } : data;
 
@@ -309,15 +317,15 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-  };
+  }, [ui.view, data, bbcodeTemplate]);
 
-  const handleExportBBCode = () => {
+  const handleExportBBCode = useCallback(() => {
     const bbcode = getCharacterBBCode(data, computed, t);
     navigator.clipboard.writeText(bbcode);
     setToast({ message: "BBCode 已复制到剪贴板！" });
-  };
+  }, [data, computed, t, setToast]);
 
-  const saveAsTemplate = async (name: string, content: string) => {
+  const saveAsTemplate = useCallback(async (name: string, content: string) => {
     if (!user) return setToast({ message: "请先登录", type: 'error' });
     try {
       const templateFolderId = await ensureLocalFolderService('模板', null, user.uid);
@@ -326,14 +334,14 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setLastSavedTemplate(content);
         setCurrentTemplateId(newId);
         setToast({ message: "模板已保存", type: 'success' });
-        refreshCharacterList().catch(console.error);
+        Promise.resolve(refreshCharacterList()).catch(console.error);
       }
     } catch (e) {
       setToast({ message: "保存模板失败", type: 'error' });
     }
-  };
+  }, [user, setToast, setCurrentTemplateId, refreshCharacterList]);
 
-  const updateExistingTemplate = async (id: string, content: string) => {
+  const updateExistingTemplate = useCallback(async (id: string, content: string) => {
     if (!user) return;
     try {
       await saveCharacterService({ content }, id, undefined, true);
@@ -342,9 +350,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } catch (e) {
       setToast({ message: "更新模板失败", type: 'error' });
     }
-  };
+  }, [user, setToast]);
 
-  const value: CharacterContextType = {
+  const value: CharacterContextType = useMemo(() => ({
     data, setData, computed, lastSavedData, isReadOnly: effectiveReadOnly, setIsReadOnly, 
     currentCharacterId, setCurrentCharacterId,
     currentTemplateId, setCurrentTemplateId,
@@ -370,7 +378,31 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     driveModal, setDriveModal, isSyncingDrive,
     handleBrowseDrive, handleBrowseDriveRoot, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore,
     getItemPath
-  };
+  }), [
+    data, setData, computed, lastSavedData, effectiveReadOnly, setIsReadOnly,
+    currentCharacterId, setCurrentCharacterId,
+    currentTemplateId, setCurrentTemplateId,
+    isSaving,
+    isSyncing, setIsSyncing, syncStatus, isDirty, isTemplateDirty,
+    tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor,
+    update, addBag, removeBag,
+    addMagicBlock, removeMagicBlock,
+    addAdditionalBlock, removeAdditionalBlock,
+    handleSave, handleSaveAs, handleNew, handleShare, handleExport, handleExportBBCode, handleRevertChanges, selectCharacter, loadSharedCharacter,
+    handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
+    handleBagDragStart, handleBagDragOver, handleBagDrop,
+    handleItemDragStart, handleItemDragOver, handleItemDrop,
+    handleDragStart, handleDragOver, handleDrop,
+    bbcodeTemplate, setBbcodeTemplate, saveAsTemplate, updateExistingTemplate,
+    handleSaveInternal,
+    userApiKey, setUserApiKey, showApiKeyInput, setShowApiKeyInput,
+    aiModel, setAiModel, availableModels, isFetchingModels, fetchAvailableModels,
+    aiInputText, setAiInputText, showAIModal, setShowAIModal,
+    isAILoading, aiStatusMsg, handleAIExtract,
+    driveModal, setDriveModal, isSyncingDrive,
+    handleBrowseDrive, handleBrowseDriveRoot, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore,
+    getItemPath
+  ]);
 
   return (
     <CharacterContext.Provider value={value}>
