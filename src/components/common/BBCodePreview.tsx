@@ -164,10 +164,13 @@ const smfPreset = presetReact.extend((tags) => ({
 }));
 
 const ALLOWED_TAGS = new Set([
+  // BBCode 原始标签
   'b', 'i', 'u', 's', 'quote', 'code', 'img', 'url', 'size', 'color', 'font',
   'center', 'left', 'right', 'table', 'tr', 'td', 'list', 'li', '*', 'hr',
   'shadow', 'glow', 'nobbc', 'sub', 'sup', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-  'div', 'span', 'p', 'br', 'em', 'strong', 'pre'
+  'div', 'span', 'p', 'br', 'em', 'strong', 'pre',
+  // preset 转换后的标准 HTML 目标标签
+  'a', 'ol', 'ul', 'del'
 ]);
 
 /**
