@@ -15,8 +15,9 @@ export const dataMigration = {
    */
   migrate(data: any): any {
     if (typeof data !== 'object' || data === null) return data;
-    
-    let current = { ...data };
+
+    // 纯函数化：深拷贝输入，避免迁移过程中突变调用方的原始数据
+    let current = JSON.parse(JSON.stringify(data));
     const version = typeof current.schemaVersion === 'number' ? current.schemaVersion : 0;
 
     // 阶段 0 -> 1: 历史无版本号启发式数据迁移
@@ -316,7 +317,8 @@ export const dataMigration = {
       return JSON.parse(JSON.stringify(source));
     }
 
-    const result = { ...target };
+    // 纯函数化：深拷贝目标，避免结果与输入 target / 默认模板 source 共享嵌套引用
+    const result = JSON.parse(JSON.stringify(target));
     for (const key in source) {
       const sourceVal = source[key];
       const targetVal = target[key];
@@ -324,10 +326,10 @@ export const dataMigration = {
       if (sourceVal?.constructor === Object) {
         result[key] = this._deepMerge(targetVal, sourceVal);
       } else if (targetVal === undefined) {
-        // 仅在目标值不存在时使用默认值
-        result[key] = Array.isArray(sourceVal) 
-          ? [...sourceVal] 
-          : (typeof sourceVal === 'object' && sourceVal !== null ? JSON.parse(JSON.stringify(sourceVal)) : sourceVal);
+        // 仅在目标值不存在时使用默认值（深拷贝，防止共享默认模板的数组/对象引用）
+        result[key] = typeof sourceVal === 'object' && sourceVal !== null
+          ? JSON.parse(JSON.stringify(sourceVal))
+          : sourceVal;
       }
     }
     return result;

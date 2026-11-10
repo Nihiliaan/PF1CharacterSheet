@@ -6,6 +6,37 @@
 
 ---
 
+## 修复进度（2026-11-11 更新）
+
+**已修复**：
+- 2.1.1 packs 已移出 git（105MB 仓库瘦身）
+- 2.1.2 全部 12 个类型错误已修复，`tsc --noEmit` 通过
+- 2.1.3 代码分割已落地（App.tsx 视图级 React.lazy + manualChunks）
+- 2.1.4 CharacterContext 已 useMemo/useCallback，`computed` 已有类型
+- 1.5 `schemaVersion` 版本链迁移已建立（v0→v1）
+- 1.6 草稿冲突已加 `baseUpdatedAt` 检测弹窗（原文"无条件覆盖"的描述已过时）
+- 1.7 联动规则注册表（LINKAGE_RULES）+ 路径失败告警已落地
+- 2.2.1 / 2.2.2 vite.config 与依赖归类已清理
+- 1.2(b) `.lnk` 只读判断及 1.2 列表查询：已改为 REST runQuery + fieldMask 投影
+- 1.4 元数据搅拌已随模板独立存储部分缓解；saveCharacter 用 setDoc 一次写入
+
+**原报告勘误**：
+- 1.7(c) "dataUpdateService.addBag 是死代码"记载有误：它与 useCharacterActions.addBag 是调用关系（后者委托前者），并非重复实现
+
+**本轮新增（2026-11-10/11）**：
+- vitest + 122 个测试（dataMigration / calculations / bbcodeExporter / equipmentBatchParser）
+- BBCode 模板独立到 Firestore `templates` 集合（templateService，旧模板"编辑即搬"迁移；需 `firebase deploy --only firestore:rules`）
+- dataMigration 纯函数化（不再突变输入）
+- 四个巨型文件拆分：handlers.ts（1337→5 域文件+转发层）、PFSSection（1074）、ForumSyncModal（967）、AppHeader（905）
+- useCharacterPersistence 参数 24 → 1 个 options 对象（15 字段），保存流程拆 persist/afterSave
+
+**仍未做**：
+- 2.2.4 测试覆盖扩展（forumSyncHelper、statBlockFormatter 等）
+- 1.3 `isPublic` 隐私模型的产品决策
+- 2.3 小项（TrustedTypes、metadata 等）
+
+---
+
 ## 总评
 
 项目整体完成度不错，有几处值得肯定的设计：

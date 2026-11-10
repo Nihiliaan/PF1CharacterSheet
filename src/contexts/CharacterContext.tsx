@@ -15,6 +15,8 @@ import { getAttributeModifiers, calculateTotalCost, calculateTotalWeightNum, get
 import { saveCharacter as saveCharacterService } from '../services/characterService';
 import { useSettings } from './SettingsContext';
 import { ensureLocalFolder as ensureLocalFolderService } from '../services/characterService';
+import { saveTemplate, saveTemplateMigrating } from '../services/templateService';
+import { KEY_LAST_TEMP } from './hooks/useCharacterPersistence';
 
 export type ComputedCharacterData = {
   modifiers: ReturnType<typeof getAttributeModifiers>;
@@ -252,14 +254,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     selectCharacter,
     loadSharedCharacter,
     activeDocRef
-  } = useCharacterPersistence(
-    user, data, setData, lastSavedData, setLastSavedData,
+  } = useCharacterPersistence({
+    data, setData, lastSavedData, setLastSavedData,
     currentCharacterId, setCurrentCharacterId,
     currentTemplateId, setCurrentTemplateId,
     isReadOnly, setIsReadOnly, setIsSyncing,
-    setToast, setConfirmModal, setView, addToRecent, refreshCharacterList,
-    currentFolderId, setCurrentFolderId, isDirty, setBbcodeTemplate, setLastSavedTemplate, computed
-  );
+    isDirty, setBbcodeTemplate, setLastSavedTemplate, computed
+  });
 
   const {
     driveModal, setDriveModal, isSyncingDrive,
@@ -329,7 +330,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!user) return setToast({ message: "请先登录", type: 'error' });
     try {
       const templateFolderId = await ensureLocalFolderService('模板', null, user.uid);
-      const newId = await saveCharacterService({ content, name }, undefined, templateFolderId, true);
+      // 模板存入独立的 templates 集合（不再作为特殊人物卡写入 characters）
+      const newId = await saveTemplate({ content, name }, null, templateFolderId);
       if (newId) {
         setLastSavedTemplate(content);
         setCurrentTemplateId(newId);
@@ -344,13 +346,20 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const updateExistingTemplate = useCallback(async (id: string, content: string) => {
     if (!user) return;
     try {
-      await saveCharacterService({ content }, id, undefined, true);
+      // 旧模板（characters 集合遗留文档）保存时自动迁移到 templates 集合并清理旧文档
+      const newId = await saveTemplateMigrating({ content }, id, undefined);
       setLastSavedTemplate(content);
+      // 迁移会生成新文档 ID，同步"当前激活模板"指针
+      if (newId && newId !== id) {
+        setCurrentTemplateId(newId);
+        localStorage.setItem(KEY_LAST_TEMP, newId);
+      }
       setToast({ message: "模板已更新", type: 'success' });
+      Promise.resolve(refreshCharacterList()).catch(console.error);
     } catch (e) {
       setToast({ message: "更新模板失败", type: 'error' });
     }
-  }, [user, setToast]);
+  }, [user, setToast, setCurrentTemplateId, refreshCharacterList]);
 
   const value: CharacterContextType = useMemo(() => ({
     data, setData, computed, lastSavedData, isReadOnly: effectiveReadOnly, setIsReadOnly, 

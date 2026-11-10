@@ -14,39 +14,140 @@ import {
 import { auth } from '../../lib/firebase';
 import { getStoredSettings } from '../SettingsContext';
 import { triggerForumSync } from '../../utils/forumSyncHelper';
+import { saveTemplateMigrating, getTemplateById, templateToCharacterDoc } from '../../services/templateService';
+import { useAuth } from '../AuthContext';
+import { useUI } from '../UIContext';
+import { useVault } from '../VaultContext';
 
 const KEY_LAST_CHAR = 'last_active_character_id';
-const KEY_LAST_TEMP = 'last_active_template_id';
+// 导出供 CharacterContext 复用（模板保存后同步"当前激活模板"指针）
+export const KEY_LAST_TEMP = 'last_active_template_id';
 
-export const useCharacterPersistence = (
-  user: any,
-  data: CharacterData,
-  setData: React.Dispatch<React.SetStateAction<CharacterData>>,
-  lastSavedData: CharacterData,
-  setLastSavedData: (data: CharacterData) => void,
-  currentCharacterId: string | null,
-  setCurrentCharacterId: (id: string | null) => void,
-  currentTemplateId: string | null,
-  setCurrentTemplateId: (id: string | null) => void,
-  isReadOnly: boolean,
-  setIsReadOnly: (val: boolean) => void,
-  setIsSyncing: (val: boolean) => void,
-  setToast: (toast: any) => void,
-  setConfirmModal: (modal: any) => void,
-  setView: (view: any) => void,
-  addToRecent: (char: any) => void,
-  refreshCharacterList: () => Promise<void> | void,
-  currentFolderId: string | null,
-  setCurrentFolderId: (id: string | null) => void,
-  isDirty: boolean,
-  setBbcodeTemplate: (t: string) => void,
-  setLastSavedTemplate: (t: string) => void,
-  computed?: any
-) => {
+/**
+ * 持久化 hook 的选项对象
+ *
+ * 仅包含 CharacterProvider 自身的 state（Context 不能消费自身，必须由 Provider 透传）；
+ * 其余依赖（user / setToast / setConfirmModal / setView / addToRecent /
+ * refreshCharacterList / currentFolderId / setCurrentFolderId）
+ * 已改为 hook 内部直接消费对应 Context，不再作为参数传入。
+ */
+export interface UseCharacterPersistenceOptions {
+  // ===== 角色数据 =====
+  data: CharacterData;
+  setData: React.Dispatch<React.SetStateAction<CharacterData>>;
+  lastSavedData: CharacterData;
+  setLastSavedData: (data: CharacterData) => void;
+  // ===== 当前打开的文档标识 =====
+  currentCharacterId: string | null;
+  setCurrentCharacterId: (id: string | null) => void;
+  currentTemplateId: string | null;
+  setCurrentTemplateId: (id: string | null) => void;
+  // ===== 只读 / 同步状态 =====
+  isReadOnly: boolean;
+  setIsReadOnly: (val: boolean) => void;
+  setIsSyncing: (val: boolean) => void;
+  isDirty: boolean;
+  // ===== 模板 =====
+  setBbcodeTemplate: (t: string) => void;
+  setLastSavedTemplate: (t: string) => void;
+  // ===== 计算层（供论坛同步导出 BBCode 使用）=====
+  computed?: any;
+}
+
+export const useCharacterPersistence = ({
+  data,
+  setData,
+  lastSavedData,
+  setLastSavedData,
+  currentCharacterId,
+  setCurrentCharacterId,
+  currentTemplateId,
+  setCurrentTemplateId,
+  isReadOnly,
+  setIsReadOnly,
+  setIsSyncing,
+  isDirty,
+  setBbcodeTemplate,
+  setLastSavedTemplate,
+  computed
+}: UseCharacterPersistenceOptions) => {
   const { t } = useTranslation();
+  // 内部直接消费各 Context（CharacterProvider 的祖先节点已挂载对应 Provider）
+  const { user } = useAuth();
+  const { setToast, setConfirmModal, setView, addToRecent } = useUI();
+  const { refreshCharacterList, currentFolderId, setCurrentFolderId } = useVault();
+
   const [isSaving, setIsSaving] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'offline'>('idle');
   const activeDocRef = React.useRef<CharacterDocument | any>(null);
+
+  /**
+   * persist：纯保存层 —— 只负责把数据写入 Firestore，返回新文档 ID（失败/无返回时为 undefined）
+   */
+  const persist = async (
+    saveData: CharacterData | { content: string, name?: string },
+    id?: string | null,
+    folderId?: string | null,
+    isTemplate: boolean = false
+  ): Promise<string | undefined> => {
+    // 模板走独立的 templates 集合（旧模板在保存时自动迁移搬运）
+    if (isTemplate) {
+      return await saveTemplateMigrating(saveData as { content: string, name?: string }, id, folderId);
+    }
+    const newId = await saveCharacterService(saveData, id || undefined, folderId, isTemplate);
+    return newId || undefined;
+  };
+
+  /**
+   * afterSave：保存成功后的后续副作用管线
+   * （本地状态回写、URL 更新、localStorage、最近列表、草稿清理、论坛同步、toast、档案库刷新）
+   * 注意：副作用顺序必须与拆分前完全一致，勿随意调整
+   */
+  const afterSave = (
+    newId: string,
+    saveData: CharacterData | { content: string, name?: string },
+    id?: string | null,
+    isTemplate: boolean = false
+  ) => {
+    if (isTemplate) {
+      setCurrentTemplateId(newId);
+      localStorage.setItem(KEY_LAST_TEMP, newId);
+      if ('content' in saveData) {
+        setLastSavedTemplate(saveData.content);
+      }
+    } else {
+      setCurrentCharacterId(newId);
+      localStorage.setItem(KEY_LAST_CHAR, newId);
+      setLastSavedData(JSON.parse(JSON.stringify(saveData)));
+      const url = new URL(window.location.href);
+      url.searchParams.set('id', newId);
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    // New files are never links, so they are editable
+    setIsReadOnly(false);
+
+    const name = isTemplate ? (('name' in saveData ? saveData.name : null) || '未命名模板') : ((saveData as CharacterData)?.basic?.name || '未命名人物');
+    addToRecent({ id: newId, name, data: saveData, isTemplate });
+    // 保存成功后清除本地草稿缓存
+    const draftKey = `pf1_char_draft_${newId || id || 'default'}`;
+    localStorage.removeItem(draftKey);
+
+    const settings = getStoredSettings();
+    let toastMsg = id ? (isTemplate ? "模板保存成功！" : "人物卡保存成功！") : ("已创建并保存新项目");
+
+    // 若开启自动同步果园，尝试同步
+    if (!isTemplate && settings.storage.autoSyncToForumOnSave) {
+      const synced = triggerForumSync(saveData as CharacterData, computed, t);
+      if (synced) {
+        toastMsg += "，已自动同步到纯美苹果园";
+      }
+    }
+
+    setToast({ message: toastMsg, type: 'success' });
+    // 后台静默刷新档案库列表，不阻塞保存状态与用户交互
+    Promise.resolve(refreshCharacterList()).catch(console.error);
+  };
 
   const handleSaveInternal = async (saveData: CharacterData | { content: string, name?: string }, id?: string | null, folderId?: string | null, isTemplate: boolean = false) => {
     if (!user) {
@@ -55,46 +156,9 @@ export const useCharacterPersistence = (
     }
     setIsSaving(true);
     try {
-      const newId = await saveCharacterService(saveData, id || undefined, folderId, isTemplate);
+      const newId = await persist(saveData, id, folderId, isTemplate);
       if (newId) {
-        if (isTemplate) {
-          setCurrentTemplateId(newId);
-          localStorage.setItem(KEY_LAST_TEMP, newId);
-          if ('content' in saveData) {
-            setLastSavedTemplate(saveData.content);
-          }
-        } else {
-          setCurrentCharacterId(newId);
-          localStorage.setItem(KEY_LAST_CHAR, newId);
-          setLastSavedData(JSON.parse(JSON.stringify(saveData)));
-          const url = new URL(window.location.href);
-          url.searchParams.set('id', newId);
-          window.history.replaceState({}, '', url.toString());
-        }
-
-        // New files are never links, so they are editable
-        setIsReadOnly(false);
-
-        const name = isTemplate ? (('name' in saveData ? saveData.name : null) || '未命名模板') : ((saveData as CharacterData)?.basic?.name || '未命名人物');
-        addToRecent({ id: newId, name, data: saveData, isTemplate });
-        // 保存成功后清除本地草稿缓存
-        const draftKey = `pf1_char_draft_${newId || id || 'default'}`;
-        localStorage.removeItem(draftKey);
-
-        const settings = getStoredSettings();
-        let toastMsg = id ? (isTemplate ? "模板保存成功！" : "人物卡保存成功！") : ("已创建并保存新项目");
-
-        // 若开启自动同步果园，尝试同步
-        if (!isTemplate && settings.storage.autoSyncToForumOnSave) {
-          const synced = triggerForumSync(saveData as CharacterData, computed, t);
-          if (synced) {
-            toastMsg += "，已自动同步到纯美苹果园";
-          }
-        }
-
-        setToast({ message: toastMsg, type: 'success' });
-        // 后台静默刷新档案库列表，不阻塞保存状态与用户交互
-        Promise.resolve(refreshCharacterList()).catch(console.error);
+        afterSave(newId, saveData, id, isTemplate);
         return newId;
       }
     } catch (e: any) {
@@ -114,17 +178,17 @@ export const useCharacterPersistence = (
     const name = window.prompt(t('editor.save_as_prompt') || "请输入新人物卡的名称", (data.basic?.name || t('editor.save_as_default_name') || '人物卡副本'));
     if (name) {
       // Reset ownership and ID for the new copy
-      const newData = { 
-        ...data, 
+      const newData = {
+        ...data,
         basic: { ...data.basic, name },
         ownerId: user.uid,
-        id: '' 
+        id: ''
       };
-      
-      // If the current document is read-only (shared/link), 
+
+      // If the current document is read-only (shared/link),
       // default 'Save As' to the Vault root (null).
       const targetFolderId = isReadOnly ? null : currentFolderId;
-      
+
       const newId = await handleSaveInternal(newData, null, targetFolderId);
       if (newId) {
         setData(newData);
@@ -341,6 +405,16 @@ export const useCharacterPersistence = (
             setTimeout(() => setSyncStatus('idle'), 3000);
             setIsReadOnly(checkIsReadOnly(cachedDoc, auth.currentUser || user));
           } else {
+            // 兜底：可能是存放在独立 templates 集合的新一代模板
+            const tpl = await getTemplateById(id).catch(() => null);
+            if (tpl) {
+              renderCharacterDocument(templateToCharacterDoc(tpl), shouldSwitchView);
+              setIsReadOnly(false);
+              setSyncStatus('synced');
+              setTimeout(() => setSyncStatus('idle'), 2000);
+              setIsSyncing(false);
+              return;
+            }
             throw new Error("Document not found");
           }
         } catch (e: any) {
@@ -387,7 +461,7 @@ export const useCharacterPersistence = (
       try {
         const urlParams = new URLSearchParams(window.location.search);
         let charId = urlParams.get('id');
-        
+
         // Restore both types from localStorage if not explicitly requested via URL
         const lastCharId = localStorage.getItem(KEY_LAST_CHAR);
         const lastTempId = localStorage.getItem(KEY_LAST_TEMP);
@@ -395,7 +469,7 @@ export const useCharacterPersistence = (
         if (charId) {
           // If URL has an ID, we determine its type and load it as the primary
           await selectCharacter(charId, true, true);
-          
+
           // Then try to restore the "other" type in the background if it's different
           if (lastCharId && lastCharId !== charId) {
              try {
@@ -414,7 +488,12 @@ export const useCharacterPersistence = (
           }
           if (lastTempId && lastTempId !== charId) {
              try {
-               const t = await getCharacterById(lastTempId);
+               let t = await getCharacterById(lastTempId);
+               if (!t || !t.isTemplate) {
+                 // 兜底：模板可能已迁移到独立的 templates 集合
+                 const tpl = await getTemplateById(lastTempId).catch(() => null);
+                 t = tpl ? templateToCharacterDoc(tpl) : null;
+               }
                if (t && t.isTemplate) {
                   const content = t.data.content || '';
                   setBbcodeTemplate(content);
@@ -479,6 +558,11 @@ export const useCharacterPersistence = (
       getCharacterFromCache(targetId).then(async (doc) => {
         if (!doc) {
           doc = await getCharacterById(targetId);
+        }
+        if (!doc && targetId === currentTemplateId) {
+          // 兜底：模板可能已迁移到独立的 templates 集合
+          const tpl = await getTemplateById(targetId).catch(() => null);
+          if (tpl) doc = templateToCharacterDoc(tpl);
         }
         if (doc) {
           activeDocRef.current = doc;

@@ -1,34 +1,37 @@
-﻿import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { produce } from 'immer';
-import {
-  Shield, Award, Scroll, RotateCcw,
-  Check, Calculator, Sparkles, Lock, Unlock, CheckCircle2, LogIn,
-  DownloadCloud, AlertTriangle, ExternalLink, RefreshCw, X, Copy
-} from 'lucide-react';
+import { Award, Sparkles } from 'lucide-react';
 import Section from '../../common/Section';
-import InlineInput from '../../common/InlineInput';
-import DynamicTable from '../../common/DynamicTable';
-import CheckGroupInput, { decodeCheckGroup } from '../../common/CheckGroupInput';
 import { useCharacter } from '../../../contexts/CharacterContext';
 import { useUI } from '../../../contexts/UIContext';
 import {
   PFS_FACTIONS,
-  PFS_FACTION_ENUM,
   calculateCompletedGoals,
   getDefaultGoalsForFaction,
-  getFactionById,
   getFactionKeyById,
   getFactionIdByKey,
-  getFactionDisplayName,
   getFactionIdByName,
   getLocalizedFactionText
 } from '../../../database/pfsFactions';
-import { toTraditional } from '../../../i18n/config';
-import { cn } from '../../../lib/utils';
-import { PfsGoalItem, PfsChroniclesSoA } from '../../../schema/types';
+import { PfsChroniclesSoA } from '../../../schema/types';
 import { hasPfsContent } from '../../../utils/pfsBbcodeHelper';
+import { PfsConflictData, PfsMergeStrategy } from './PFSSection/shared';
+import PfsEnablePanel from './PFSSection/PfsEnablePanel';
+import PfsBasicFields from './PFSSection/PfsBasicFields';
+import PfsTierBoons from './PFSSection/PfsTierBoons';
+import PfsGoalsList from './PFSSection/PfsGoalsList';
+import PfsBoonsTable from './PFSSection/PfsBoonsTable';
+import PfsChroniclesTable from './PFSSection/PfsChroniclesTable';
+import PfsConflictMergeModal from './PFSSection/PfsConflictMergeModal';
+import PfsLoginModal from './PFSSection/PfsLoginModal';
+import PfsHelperModal from './PFSSection/PfsHelperModal';
 
+/**
+ * PFSSection（组织者/ Pathfinder Society 角色卡片区）容器组件：
+ * 负责状态编排（同步、冲突合并、记录单锁定等）与整体布局，
+ * 各 UI 块拆分为 PFSSection/ 子目录下的子组件（PfsEnablePanel、PfsBasicFields、
+ * PfsTierBoons、PfsGoalsList、PfsBoonsTable、PfsChroniclesTable 与三个模态框）。
+ */
 const PFSSection: React.FC = () => {
   const { t, i18n } = useTranslation();
   const {
@@ -46,11 +49,8 @@ const PFSSection: React.FC = () => {
   // 同步状态与冲突合并状态
   const [isSyncing, setIsSyncing] = useState(false);
   const [showHelperModal, setShowHelperModal] = useState(false);
-  const [conflictData, setConflictData] = useState<{
-    incoming: any[];
-    local: PfsChroniclesSoA;
-  } | null>(null);
-  const [mergeStrategy, setMergeStrategy] = useState<'incremental' | 'overwrite' | 'append'>('incremental');
+  const [conflictData, setConflictData] = useState<PfsConflictData | null>(null);
+  const [mergeStrategy, setMergeStrategy] = useState<PfsMergeStrategy>('incremental');
   const [isChroniclesUnlocked, setIsChroniclesUnlocked] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
@@ -140,10 +140,7 @@ const PFSSection: React.FC = () => {
   const currentFactionKey = getFactionKeyById(effectiveFactionId);
   const factionDef = PFS_FACTIONS[currentFactionKey] || PFS_FACTIONS['grand_lodge'];
 
-  // 2. 动态计算 XP (有效场次数)
-  const computedXP = validChroniclesCount;
-
-  // 3. 动态计算 Fame (所有记录单 prestige 累加之和)
+  // 2. 动态计算 Fame (所有记录单 prestige 累加之和)
   const computedFame = useMemo(() => {
     const prestiges = chronicles.prestige || [];
     const scenarios = chronicles.scenario || [];
@@ -399,185 +396,37 @@ const PFSSection: React.FC = () => {
     }
   };
 
-  // 切换目标复选框打勾状态（数量控制，阶梯式）
-  const toggleGoalCheck = (goalIdx: number, checkIdx: number) => {
-    const updated = produce(goals, draft => {
-      if (!draft[goalIdx]) return;
-      const currentCount = draft[goalIdx].checkedCount || 0;
-      // 若点击的是当前最右侧已选中的块，则取消该块（减 1）
-      // 否则，点亮到当前点击的位置（checkIdx + 1）
-      if (checkIdx === currentCount - 1) {
-        draft[goalIdx].checkedCount = checkIdx;
-      } else {
-        draft[goalIdx].checkedCount = checkIdx + 1;
-      }
-    });
-    update('pfs.goals', updated);
-  };
-
-  // 获取目标显示文本（语言自适应）
-  const getGoalDisplayText = (goal: PfsGoalItem) => {
-    const stdGoal = factionDef.goals.find(g => g.id === goal.id);
-    if (stdGoal) {
-      return getLocalizedFactionText(stdGoal.text, i18n.language);
+  // 记录单表格只读锁定 / 解锁编辑切换（含解锁二次确认）
+  const handleToggleChroniclesUnlock = () => {
+    if (!isChroniclesUnlocked) {
+      const confirmUnlock = window.confirm(
+        t('editor.pfs.unlock_warning', '从官网同步的跑团记录单建议保持只读锁定。手动修改场次或添加新行可能会导致后续官网同步时发生冲突。是否确认解锁编辑？')
+      );
+      if (confirmUnlock) setIsChroniclesUnlocked(true);
+    } else {
+      setIsChroniclesUnlocked(false);
     }
-    return '';
-  };
-
-  // 检查目标达成状态：GM 满 5 格为 2，满 3 格为 1；普通达到 maxChecks
-  const getGoalCompletionStatus = (goal: PfsGoalItem) => {
-    const count = goal.checkedCount || 0;
-    const isGM = goal.id?.endsWith('_gm');
-    if (isGM) {
-      if (count >= 5) return 'completed_x2';
-      if (count >= 3) return 'completed';
-      return 'none';
-    }
-    return count >= (goal.maxChecks || 1) ? 'completed' : 'none';
-  };
-
-  // 根据记录单汇总统计
-  const handleSummarizeChronicles = () => {
-    const ch = pfs.chronicles;
-    if (!ch || !Array.isArray(ch.scenario) || ch.scenario.length === 0) {
-      setToast({ message: t('editor.pfs.no_chronicles', '暂无记录单数据'), type: 'info' });
-      return;
-    }
-
-    let totalPP = 0;
-    (ch.prestige || []).forEach(v => { totalPP += parseInt(v as any, 10) || 0; });
-
-    update('pfs.prestige', totalPP);
-    setToast({ message: t('editor.pfs.summarize_success'), type: 'success' });
   };
 
   return (
     <Section id="pfs" title={t('editor.sections.pfs')}>
       <div className="flex flex-col gap-8">
         {!isPfsActive ? (
-          <div className="p-6 bg-stone-50 border border-stone-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 shadow-inner">
-                <Shield size={24} />
-              </div>
-              <div>
-                <h4 className="font-bold text-stone-800 text-base">{t('editor.pfs.title')}</h4>
-                <p className="text-sm text-stone-500 mt-0.5">{t('editor.pfs.enable_pfs_desc')}</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleEnablePFS}
-              className="px-5 py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-medium text-sm rounded shadow transition-colors shrink-0 flex items-center gap-2 cursor-pointer"
-            >
-              <Award size={16} />
-              {t('editor.pfs.enable_pfs')}
-            </button>
-          </div>
+          <PfsEnablePanel onEnable={handleEnablePFS} />
         ) : (
           <>
-        {/* PFS 基础概览面板 */}
-        <div className="bg-stone-50/80 border border-stone-200 rounded-lg p-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 mb-4 border-b border-stone-200 gap-3">
-            <div className="flex items-center gap-2 text-stone-800 font-bold text-base">
-              <Shield size={18} className="text-amber-700" />
-              <span>{t('editor.pfs.title')}</span>
-                <div className="flex items-center gap-2">
-                  <label className="inline-flex items-center gap-1.5 text-xs text-stone-500 ml-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isPfsActive}
-                      onChange={e => {
-                        if (!e.target.checked) handleDisablePFS();
-                      }}
-                      className="rounded border-stone-300 text-amber-700 focus:ring-amber-500"
-                    />
-                    <span>{t('editor.pfs.enable_pfs')}</span>
-                  </label>
-                </div>
-            </div>
-          </div>
-
-              <div className="grid grid-cols-12 gap-4">
-                {/* 势力选择：有记录单时锁定，无记录单时允许选择初始势力 */}
-                <div className="col-span-12 sm:col-span-6 md:col-span-4 flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-stone-600">{t('editor.pfs.faction')}</span>
-                    {hasChronicles && (
-                      <span className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-medium">
-                        由最新记录单锁定
-                      </span>
-                    )}
-                  </div>
-                  <select
-                    value={effectiveFactionId}
-                    disabled={hasChronicles}
-                    onChange={handleFactionChange}
-                    title={hasChronicles ? "角色势力已根据最新记录单自动确定，无法手动修改" : "新角色无记录单时可自由选择初始势力"}
-                    className="w-full h-[34px] px-3 bg-white disabled:bg-stone-100 disabled:text-stone-500 disabled:cursor-not-allowed border border-stone-300 rounded text-sm text-stone-800 focus:outline-hidden focus:border-amber-600 focus:ring-1 focus:ring-amber-600 transition-colors"
-                  >
-                    {PFS_FACTION_ENUM.filter(f => (!f.retired && f.id > 0) || f.id === effectiveFactionId).map(f => (
-                      <option key={f.id} value={f.id}>
-                        {getLocalizedFactionText(f.name, i18n.language)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* PFS 编号：拆分为 [ 玩家编号 ] — [ 角色编号 ]，均限制正整数 */}
-                <div className="col-span-12 sm:col-span-6 md:col-span-4 flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-stone-600">{t('editor.pfs.pfs_number', 'PFS 编号')}</span>
-                  <div className="flex items-center gap-1.5 h-[34px]">
-                    <input
-                      type="text"
-                      value={pfs.playerNumber || ''}
-                      onChange={e => update('pfs.playerNumber', e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder={t('editor.pfs.player_no_placeholder', '玩家编号')}
-                      className="w-full h-full px-2.5 bg-white border border-stone-300 rounded text-sm text-stone-800 focus:outline-hidden focus:border-amber-600 focus:ring-1 focus:ring-amber-600"
-                    />
-                    <span className="text-stone-400 font-bold select-none">—</span>
-                    <input
-                      type="text"
-                      value={pfs.characterNumber || ''}
-                      onChange={e => update('pfs.characterNumber', e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder={t('editor.pfs.char_no_placeholder', '角色')}
-                      className="w-20 h-full px-2 bg-white border border-stone-300 rounded text-sm text-stone-800 text-center focus:outline-hidden focus:border-amber-600 focus:ring-1 focus:ring-amber-600"
-                    />
-                  </div>
-                </div>
-
-                {/* 当前经验 (XP)：允许手动输入与滚轮步进，支持半整数 */}
-                <InlineInput
-                  className="col-span-4 sm:col-span-4 md:col-span-4"
-                  label={t('editor.pfs.xp')}
-                  value={pfs.xp ?? 0}
-                  path="pfs.xp"
-                  originalValue={lastSavedData.pfs?.xp ?? 0}
-                  onChange={v => update('pfs.xp', v)}
-                  type="halfInt"
-                />
-
-                {/* 累积声誉 (Fame)：由所有记录单获得的声望点自动汇总，禁止手动输入 */}
-                <div className="col-span-4 sm:col-span-4 md:col-span-4 flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-stone-600">{t('editor.pfs.fame')}</span>
-                  <div className="w-full h-[34px] px-3 bg-stone-100/80 border border-stone-200 rounded flex items-center justify-between" title="由所有记录单获得的声望点（Prestige）自动汇总，无需手动输入">
-                    <span className="font-mono font-bold text-stone-900 text-sm">{computedFame}</span>
-                    <span className="text-[10px] text-stone-400">声望总额累计</span>
-                  </div>
-                </div>
-
-                {/* 可用声望 (Prestige) */}
-                <InlineInput
-                  className="col-span-4 sm:col-span-4 md:col-span-4"
-                  label={t('editor.pfs.prestige')}
-                  value={pfs.prestige ?? 0}
-                  path="pfs.prestige"
-                  originalValue={lastSavedData.pfs?.prestige ?? 0}
-                  onChange={v => update('pfs.prestige', v)}
-                  type="halfInt"
-                />
-              </div>
-            </div>
+            {/* PFS 基础概览面板 */}
+            <PfsBasicFields
+              pfs={pfs}
+              lastSavedData={lastSavedData}
+              effectiveFactionId={effectiveFactionId}
+              hasChronicles={hasChronicles}
+              computedFame={computedFame}
+              isPfsActive={isPfsActive}
+              update={update}
+              onFactionChange={handleFactionChange}
+              onDisablePFS={handleDisablePFS}
+            />
 
             {/* 势力任务卡与三阶福利面板 */}
             <div className="bg-stone-50/60 border border-stone-200 rounded-lg p-5 flex flex-col gap-6">
@@ -607,465 +456,78 @@ const PFSSection: React.FC = () => {
               </div>
 
               {/* 三档势力福利 (按行紧凑分布，类似势力任务) */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <h5 className="text-xs font-bold text-stone-600 uppercase tracking-wider flex items-center gap-1.5">
-                    <Award size={14} className="text-amber-700" />
-                    <span>{t('editor.pfs.tier_1_boon')} / {t('editor.pfs.tier_2_boon')} / {t('editor.pfs.tier_3_boon')}</span>
-                  </h5>
-                  <span className="text-[11px] text-stone-400">
-                    {t('editor.pfs.completed_goals_count')}：{t('editor.pfs.goal_progress', { count: completedGoalsCount })}
-                  </span>
-                </div>
-                <div className="bg-white border border-stone-200 rounded-md overflow-hidden divide-y divide-stone-100 text-sm shadow-2xs">
-                  {factionDef.boons.map(b => {
-                    const isUnlocked = completedGoalsCount >= b.requiredGoals;
-                    const boonChecks = (pfs.factionBoonChecks && b.id && pfs.factionBoonChecks[b.id]) || 0;
-                    const hasLimit = typeof b.maxChecks === 'number' && b.maxChecks > 0;
-
-                    return (
-                      <div
-                        key={b.id || b.tier}
-                        className={`px-3 py-2 flex flex-col gap-1 transition-colors ${
-                          isUnlocked
-                            ? 'bg-amber-50/40 text-stone-900'
-                            : 'hover:bg-stone-50/70 text-stone-700'
-                        }`}
-                      >
-                        {/* 标题单独占一行 */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                            {isUnlocked ? (
-                              <Sparkles size={15} className="text-amber-600 shrink-0" />
-                            ) : (
-                              <Lock size={14} className="text-stone-400 shrink-0" />
-                            )}
-
-                            {/* 若该 Boon 拥有限定次数且已解锁，在名称前显示紧凑复选框 */}
-                            {hasLimit && isUnlocked && b.id && (
-                              <CheckGroupInput
-                                value={boonChecks}
-                                overrideMax={b.maxChecks}
-                                compact={true}
-                                allowEditMax={false}
-                                onChange={(newEncoded) => {
-                                  const { checks } = decodeCheckGroup(newEncoded);
-                                  const nextBoonChecks = { ...(pfs.factionBoonChecks || {}), [b.id!]: checks };
-                                  update('pfs.factionBoonChecks', nextBoonChecks);
-                                }}
-                              />
-                            )}
-
-                            <span className="font-bold text-sm text-stone-800">
-                              {getLocalizedFactionText(b.name, i18n.language)}
-                            </span>
-                          </div>
-
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded shrink-0 ${
-                              isUnlocked
-                                ? 'bg-amber-500 text-white'
-                                : 'bg-stone-100 text-stone-400'
-                            }`}
-                          >
-                            {isUnlocked
-                              ? t('editor.pfs.unlocked')
-                              : t('editor.pfs.locked', { count: b.requiredGoals })}
-                          </span>
-                        </div>
-
-                        {/* 福利效果描述（独立一行） */}
-                        <div className="text-sm leading-relaxed text-stone-600 pl-5">
-                          {getLocalizedFactionText(b.desc, i18n.language)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <PfsTierBoons
+                factionDef={factionDef}
+                completedGoalsCount={completedGoalsCount}
+                factionBoonChecks={pfs.factionBoonChecks}
+                onBoonChecksChange={(nextBoonChecks) => update('pfs.factionBoonChecks', nextBoonChecks)}
+              />
 
               {/* 势力任务目标列表 (紧凑段落清单) */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <h5 className="text-xs font-bold text-stone-600 uppercase tracking-wider flex items-center gap-1.5">
-                    <Scroll size={14} className="text-stone-500" />
-                    <span>{t('editor.pfs.goals_checklist_title')}</span>
-                  </h5>
-                  <button
-                    type="button"
-                    onClick={handleResetGoals}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] text-stone-500 hover:text-stone-800 bg-white hover:bg-stone-100 border border-stone-200 rounded transition-colors cursor-pointer"
-                    title={t('editor.pfs.reset_goals')}
-                  >
-                    <RotateCcw size={11} />
-                    <span>{t('editor.pfs.reset_goals')}</span>
-                  </button>
-                </div>
-
-                {/* 统一紧凑段落容器 */}
-                <div className="bg-white border border-stone-200 rounded-md overflow-hidden divide-y divide-stone-100 text-sm shadow-2xs">
-                  {goals.map((goal, goalIdx) => {
-                    const status = getGoalCompletionStatus(goal);
-                    const isCompleted = status !== 'none';
-                    const maxChecks = goal.maxChecks || 1;
-                    const checkedCount = goal.checkedCount || 0;
-                    const isGM = goal.id?.endsWith('_gm');
-
-                    return (
-                      <div
-                        key={goal.id || goalIdx}
-                        className={`px-2.5 py-1.5 flex items-start gap-2.5 transition-colors ${
-                          isCompleted
-                            ? 'bg-amber-50/40 text-stone-900'
-                            : 'hover:bg-stone-50/70 text-stone-700'
-                        }`}
-                      >
-                        {/* 紧凑打勾控件 */}
-                        <div className="shrink-0 pt-0.5">
-                          <CheckGroupInput
-                            value={checkedCount}
-                            overrideMax={maxChecks}
-                            isGM={isGM}
-                            compact={true}
-                            allowEditMax={false}
-                            onChange={(newEncoded) => {
-                              const { checks } = decodeCheckGroup(newEncoded);
-                              const nextGoals = [...goals];
-                              nextGoals[goalIdx] = { ...nextGoals[goalIdx], checkedCount: checks };
-                              update('pfs.goals', nextGoals);
-                            }}
-                          />
-                        </div>
-
-                        {/* 目标文本 */}
-                        <div className="flex-1 text-sm leading-relaxed pt-0.5">
-                          <span className={isCompleted ? 'font-medium text-stone-900' : 'text-stone-700'}>
-                            {getGoalDisplayText(goal)}
-                          </span>
-                        </div>
-
-                        {/* 达成徽标 */}
-                        <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
-                          {status === 'completed_x2' && (
-                            <span className="px-2 py-0.5 text-xs font-bold bg-amber-500 text-white rounded flex items-center gap-1 shadow-2xs">
-                              <CheckCircle2 size={12} className="text-white" />
-                              <span>{t('editor.pfs.goal_completed_badge_x2', '达成×2')}</span>
-                            </span>
-                          )}
-                          {status === 'completed' && (
-                            <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 rounded flex items-center gap-1">
-                              <CheckCircle2 size={12} className="text-amber-700" />
-                              <span>{t('editor.pfs.goal_completed_badge')}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <PfsGoalsList
+                goals={goals}
+                factionDef={factionDef}
+                onResetGoals={handleResetGoals}
+                onGoalsChange={(nextGoals) => update('pfs.goals', nextGoals)}
+              />
             </div>
 
             {/* 特惠卡 (Boons) 表格 */}
-            <div className="flex flex-col gap-2">
-              <h4 className="font-bold text-stone-800 text-sm flex items-center gap-1.5">
-                <Award size={16} className="text-amber-700" />
-                <span>{t('editor.pfs.boons_title')}</span>
-              </h4>
-              <DynamicTable
-                path="pfs.boons"
-                data={pfs.boons || { uses: [], maxUses: [], name: [], desc: [], sheetNo: [] }}
-                originalData={lastSavedData.pfs?.boons}
-                onChange={v => update('pfs.boons', v)}
-                rowDraggable={true}
-                rowActionMode={tableActionMode}
-                onRowActionModeToggle={toggleTableActionMode}
-                onRowDragStart={(idx, e) => handleTableItemDragStart('pfs.boons', idx, e)}
-                onRowDragOver={(idx, e) => handleTableItemDragOver('pfs.boons', idx, e)}
-                onRowDrop={(idx, e) => handleTableItemDrop('pfs.boons', idx, e)}
-              />
-            </div>
+            <PfsBoonsTable
+              data={pfs.boons || { uses: [], maxUses: [], name: [], desc: [], sheetNo: [] }}
+              originalData={lastSavedData.pfs?.boons}
+              rowActionMode={tableActionMode}
+              onRowActionModeToggle={toggleTableActionMode}
+              onRowDragStart={(idx, e) => handleTableItemDragStart('pfs.boons', idx, e)}
+              onRowDragOver={(idx, e) => handleTableItemDragOver('pfs.boons', idx, e)}
+              onRowDrop={(idx, e) => handleTableItemDrop('pfs.boons', idx, e)}
+              onChange={v => update('pfs.boons', v)}
+            />
 
             {/* 跑团编年史记录单 (Chronicles) 表格 */}
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h4 className="font-bold text-stone-800 text-sm flex items-center gap-1.5">
-                  <Scroll size={16} className="text-amber-700" />
-                  <span>{t('editor.pfs.chronicles_title')}</span>
-                </h4>
-                <div className="flex items-center gap-2">
-                  {/* 表格只读锁定 / 解锁编辑切换按钮 */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!isChroniclesUnlocked) {
-                        const confirmUnlock = window.confirm(
-                          t('editor.pfs.unlock_warning', '从官网同步的跑团记录单建议保持只读锁定。手动修改场次或添加新行可能会导致后续官网同步时发生冲突。是否确认解锁编辑？')
-                        );
-                        if (confirmUnlock) setIsChroniclesUnlocked(true);
-                      } else {
-                        setIsChroniclesUnlocked(false);
-                      }
-                    }}
-                    className={cn(
-                      "inline-flex items-center gap-1 px-2.5 py-1.5 text-xs rounded border transition-colors cursor-pointer",
-                      isChroniclesUnlocked
-                        ? "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200"
-                        : "bg-white text-stone-600 border-stone-300 hover:bg-stone-50"
-                    )}
-                    title={isChroniclesUnlocked ? "点击锁定表格以保护数据免受误改" : "点击解锁以手动编辑字段或添加新行"}
-                  >
-                    {isChroniclesUnlocked ? <Unlock size={13} className="text-amber-700" /> : <Lock size={13} className="text-stone-500" />}
-                    <span>{isChroniclesUnlocked ? t('editor.pfs.lock_chronicles', '锁定保护') : t('editor.pfs.unlock_chronicles', '解锁编辑')}</span>
-                  </button>
-                  {/* 一键在油猴中安装/更新脚本入口 */}
-                  <a
-                    href="/scripts/pf1-cross-site-sync-helper.user.js"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-stone-600 hover:text-amber-900 bg-white hover:bg-amber-50 border border-stone-300 rounded shadow-xs transition-colors cursor-pointer"
-                    title="点击一键在浏览器油猴插件中安装或更新同步助手脚本"
-                  >
-                    <ExternalLink size={13} className="text-amber-700" />
-                    <span>{t('editor.pfs.install_userscript')}</span>
-                  </a>
-                  {/* 从官网同步记录单按钮 */}
-                  <button
-                    type="button"
-                    onClick={handleStartSync}
-                    disabled={isSyncing}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-700 hover:bg-amber-800 disabled:bg-stone-300 text-white rounded shadow-xs transition-colors cursor-pointer"
-                    title="通过油猴脚本直接从 Paizo 官网抓取并导入本角色跑团记录"
-                  >
-                    <DownloadCloud size={14} className={isSyncing ? "animate-bounce" : ""} />
-                    <span>{isSyncing ? t('editor.pfs.syncing_from_paizo') : t('editor.pfs.sync_from_paizo')}</span>
-                  </button>
-                </div>
-              </div>
-
-              <DynamicTable
-                path="pfs.chronicles"
-                data={pfs.chronicles || { date: [], scenario: [], gm: [], event: [], faction: [], prestige: [], notes: [], link: [] }}
-                originalData={lastSavedData.pfs?.chronicles}
-                onChange={v => update('pfs.chronicles', v)}
-                readonlyColumns={isChroniclesUnlocked ? [] : ['date', 'scenario', 'gm', 'event', 'faction', 'prestige', 'notes']}
-                fixedRows={!isChroniclesUnlocked}
-                rowDraggable={isChroniclesUnlocked}
-                rowActionMode={tableActionMode}
-                onRowActionModeToggle={toggleTableActionMode}
-                onRowDragStart={(idx, e) => handleTableItemDragStart('pfs.chronicles', idx, e)}
-                onRowDragOver={(idx, e) => handleTableItemDragOver('pfs.chronicles', idx, e)}
-                onRowDrop={(idx, e) => handleTableItemDrop('pfs.chronicles', idx, e)}
-              />
-            </div>
+            <PfsChroniclesTable
+              data={pfs.chronicles || { date: [], scenario: [], gm: [], event: [], faction: [], prestige: [], notes: [], link: [] }}
+              originalData={lastSavedData.pfs?.chronicles}
+              isChroniclesUnlocked={isChroniclesUnlocked}
+              onToggleUnlock={handleToggleChroniclesUnlock}
+              isSyncing={isSyncing}
+              onSync={handleStartSync}
+              rowActionMode={tableActionMode}
+              onRowActionModeToggle={toggleTableActionMode}
+              onRowDragStart={(idx, e) => handleTableItemDragStart('pfs.chronicles', idx, e)}
+              onRowDragOver={(idx, e) => handleTableItemDragOver('pfs.chronicles', idx, e)}
+              onRowDrop={(idx, e) => handleTableItemDrop('pfs.chronicles', idx, e)}
+              onChange={v => update('pfs.chronicles', v)}
+            />
           </>
         )}
       </div>
 
       {/* 冲突合并确认模态框 */}
       {conflictData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
-              <h3 className="font-bold text-stone-800 text-base flex items-center gap-2">
-                <AlertTriangle size={18} className="text-amber-600" />
-                <span>{t('editor.pfs.conflict_modal_title')}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setConflictData(null)}
-                className="text-stone-400 hover:text-stone-600"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <p className="text-xs text-stone-600 leading-relaxed">
-              {t('editor.pfs.conflict_summary', {
-                incoming: conflictData.incoming.length,
-                local: (conflictData.local.scenario || []).length
-              })}
-            </p>
-
-            <div className="flex flex-col gap-3 my-2">
-              {/* 策略 1：智能增量合并 */}
-              <label className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer transition-colors ${
-                mergeStrategy === 'incremental' ? 'border-amber-500 bg-amber-50/40 ring-1 ring-amber-500' : 'border-stone-200 hover:bg-stone-50'
-              }`}>
-                <input
-                  type="radio"
-                  name="mergeStrategy"
-                  checked={mergeStrategy === 'incremental'}
-                  onChange={() => setMergeStrategy('incremental')}
-                  className="mt-1 text-amber-600 focus:ring-amber-500"
-                />
-                <div className="flex flex-col text-xs">
-                  <span className="font-bold text-stone-900">{t('editor.pfs.merge_strategy_incremental')}</span>
-                  <span className="text-stone-500 mt-0.5">{t('editor.pfs.merge_strategy_incremental_desc')}</span>
-                </div>
-              </label>
-
-              {/* 策略 2：全量覆盖 */}
-              <label className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer transition-colors ${
-                mergeStrategy === 'overwrite' ? 'border-red-500 bg-red-50/40 ring-1 ring-red-500' : 'border-stone-200 hover:bg-stone-50'
-              }`}>
-                <input
-                  type="radio"
-                  name="mergeStrategy"
-                  checked={mergeStrategy === 'overwrite'}
-                  onChange={() => setMergeStrategy('overwrite')}
-                  className="mt-1 text-red-600 focus:ring-red-500"
-                />
-                <div className="flex flex-col text-xs">
-                  <span className="font-bold text-red-800">{t('editor.pfs.merge_strategy_overwrite')}</span>
-                  <span className="text-stone-500 mt-0.5">{t('editor.pfs.merge_strategy_overwrite_desc')}</span>
-                </div>
-              </label>
-
-              {/* 策略 3：纯末尾追加 */}
-              <label className={`p-3 rounded-lg border flex items-start gap-3 cursor-pointer transition-colors ${
-                mergeStrategy === 'append' ? 'border-amber-500 bg-amber-50/40 ring-1 ring-amber-500' : 'border-stone-200 hover:bg-stone-50'
-              }`}>
-                <input
-                  type="radio"
-                  name="mergeStrategy"
-                  checked={mergeStrategy === 'append'}
-                  onChange={() => setMergeStrategy('append')}
-                  className="mt-1 text-amber-600 focus:ring-amber-500"
-                />
-                <div className="flex flex-col text-xs">
-                  <span className="font-bold text-stone-900">{t('editor.pfs.merge_strategy_append')}</span>
-                  <span className="text-stone-500 mt-0.5">{t('editor.pfs.merge_strategy_append_desc')}</span>
-                </div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-200">
-              <button
-                type="button"
-                onClick={() => setConflictData(null)}
-                className="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 rounded transition-colors cursor-pointer"
-              >
-                {t('editor.pfs.btn_cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={handleApplyMerge}
-                className="px-4 py-2 text-xs font-semibold bg-amber-700 hover:bg-amber-800 text-white rounded transition-colors shadow-xs cursor-pointer"
-              >
-                {t('editor.pfs.btn_confirm_merge')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PfsConflictMergeModal
+          conflictData={conflictData}
+          mergeStrategy={mergeStrategy}
+          onStrategyChange={setMergeStrategy}
+          onClose={() => setConflictData(null)}
+          onApply={handleApplyMerge}
+        />
       )}
 
       {/* 未安装油猴脚本引导模态框 */}
-            {/* 需要登录 Paizo 官网引导模态框 */}
+      {/* 需要登录 Paizo 官网引导模态框 */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
-              <h3 className="font-bold text-stone-800 text-base flex items-center gap-2">
-                <LogIn size={18} className="text-amber-600" />
-                <span>{t('editor.pfs.login_modal_title')}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowLoginModal(false)}
-                className="text-stone-400 hover:text-stone-600"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <p className="text-xs text-stone-600 leading-relaxed">
-              {t('editor.pfs.login_modal_desc')}
-            </p>
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-200">
-              <button
-                type="button"
-                onClick={() => setShowLoginModal(false)}
-                className="px-3 py-1.5 text-xs text-stone-600 hover:bg-stone-100 rounded border border-stone-300"
-              >
-                {t('common.cancel')}
-              </button>
-              <a
-                href="https://paizo.com/organizedPlay/myAccount"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-700 hover:bg-amber-800 text-white rounded shadow-xs"
-              >
-                <span>{t('editor.pfs.go_to_login')}</span>
-                <ExternalLink size={13} />
-              </a>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowLoginModal(false);
-                  handleStartSync();
-                }}
-                className="px-3 py-1.5 text-xs font-semibold bg-stone-800 hover:bg-stone-900 text-white rounded shadow-xs"
-              >
-                {t('editor.pfs.retry_after_login')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PfsLoginModal
+          onClose={() => setShowLoginModal(false)}
+          onRetry={() => {
+            setShowLoginModal(false);
+            handleStartSync();
+          }}
+        />
       )}
 
-{showHelperModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
-              <h3 className="font-bold text-stone-800 text-base flex items-center gap-2">
-                <AlertTriangle size={18} className="text-amber-600" />
-                <span>{t('editor.pfs.tampermonkey_missing_title')}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowHelperModal(false)}
-                className="text-stone-400 hover:text-stone-600"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <p className="text-xs text-stone-600 leading-relaxed">
-              {t('editor.pfs.tampermonkey_missing_desc')}
-            </p>
-
-            <div className="p-3 bg-stone-50 border border-stone-200 rounded text-xs text-stone-700 leading-relaxed flex flex-col gap-2">
-              <p className="font-semibold text-stone-800">安装步骤：</p>
-              <ol className="list-decimal pl-4 space-y-1 text-stone-600">
-                <li>安装 Tampermonkey（油猴）或 Violentmonkey 浏览器扩展；</li>
-                <li>新建用户脚本，粘贴项目根目录下 <code className="bg-stone-200 px-1 py-0.5 rounded text-amber-900 font-mono">scripts/pf1-cross-site-sync-helper.user.js</code> 代码；</li>
-                <li>保存脚本并在当前浏览器登录 Paizo 官网，重新点击同步即可。</li>
-              </ol>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-200">
-              <button
-                type="button"
-                onClick={() => setShowHelperModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-100 rounded transition-colors cursor-pointer"
-              >
-                {t('editor.pfs.btn_cancel')}
-              </button>
-              <a
-                href="/scripts/pf1-cross-site-sync-helper.user.js"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowHelperModal(false)}
-                className="px-4 py-2 text-xs font-semibold bg-amber-700 hover:bg-amber-800 text-white rounded transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <DownloadCloud size={14} />
-                <span>{t('editor.pfs.one_click_install')}</span>
-              </a>
-            </div>
-          </div>
-        </div>
+      {showHelperModal && (
+        <PfsHelperModal onClose={() => setShowHelperModal(false)} />
       )}
     </Section>
   );

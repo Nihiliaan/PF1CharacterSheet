@@ -1,7 +1,8 @@
 rules_version = '2';
+// 注意：本文件的修改需要部署后才生效 —— `firebase deploy --only firestore:rules`
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // 0. Global Safety Net
     match /{document=**} {
       allow read, write: if false;
@@ -48,6 +49,40 @@ service cloud.firestore {
         && (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'data', 'isPublic', 'updatedAt', 'folderId', 'ownerId']));
 
       allow delete: if isValidId(characterId) && isVerified() && isOwner(existing().ownerId);
+    }
+
+    // --- Template Rules ---
+    // BBCode 模板专用集合（已从 characters 中独立出来，文档即模板本身，
+    // 扁平结构：{ name, content, folderId, ownerId, isTemplate, createdAt, updatedAt }）
+    function isValidTemplate(data) {
+      return data.keys().hasAll(['name', 'content', 'folderId', 'ownerId', 'isTemplate', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.content is string && data.content.size() <= 1000000
+        && data.ownerId is string && data.ownerId.size() <= 128
+        && data.isTemplate == true
+        && (data.folderId == null || data.folderId is string);
+    }
+
+    match /templates/{templateId} {
+      allow get: if isValidId(templateId) && isOwner(existing().ownerId);
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+
+      allow create: if isValidId(templateId)
+        && isVerified()
+        && isValidTemplate(incoming())
+        && incoming().ownerId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(templateId)
+        && isVerified()
+        && isOwner(existing().ownerId)
+        && isValidTemplate(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().ownerId == existing().ownerId
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'content', 'folderId', 'ownerId', 'isTemplate', 'updatedAt']);
+
+      allow delete: if isValidId(templateId) && isVerified() && isOwner(existing().ownerId);
     }
 
     // --- Folder Rules ---

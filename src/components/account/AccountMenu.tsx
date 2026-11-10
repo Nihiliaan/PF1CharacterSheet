@@ -3,8 +3,26 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, LayoutGrid, RotateCcw, ChevronRight, X, Settings, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import MarkdownPreview from '../common/MarkdownPreview';
+import type { User as FirebaseUser } from 'firebase/auth';
+import type { ViewType } from '../../contexts/UIContext';
+import type { RecentCharacterItem } from '../layout/AppHeader/shared';
 
-const AccountMenu = ({ user, view, setView, recentCharacters, onSelect, onRemoveRecent, onLogout, confirmNavigation }: any) => {
+interface AccountMenuProps {
+  user: FirebaseUser;
+  view: ViewType;
+  setView: (view: ViewType) => void;
+  recentCharacters: RecentCharacterItem[];
+  /** 由容器传入但本组件未使用，保留以对齐调用侧 */
+  currentCharacterId?: string | null;
+  currentTemplateId?: string | null;
+  /** 导航确认钩子（容器侧当前为穿透脏检查的空实现） */
+  confirmNavigation: (action: () => void) => void;
+  onSelect: (id: string, fromRecent?: boolean) => void;
+  onRemoveRecent: (id: string) => void;
+  onLogout: () => void;
+}
+
+const AccountMenu = ({ user, view, setView, recentCharacters, onSelect, onRemoveRecent, onLogout, confirmNavigation }: AccountMenuProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [showRecent, setShowRecent] = useState(false);
@@ -30,7 +48,7 @@ const AccountMenu = ({ user, view, setView, recentCharacters, onSelect, onRemove
 
   const displayRecent = recentCharacters.slice(0, 5);
 
-  const handleViewChange = (newView: string) => {
+  const handleViewChange = (newView: ViewType) => {
     setView(newView);
     setIsOpen(false);
   };
@@ -93,7 +111,7 @@ const AccountMenu = ({ user, view, setView, recentCharacters, onSelect, onRemove
                     {displayRecent.length === 0 ? (
                       <div className="px-4 py-3 text-xs text-stone-400 italic text-center">{t('common.no_recent')}</div>
                     ) : (
-                      displayRecent.map((char: any) => (
+                      displayRecent.map((char: RecentCharacterItem) => (
                         <div key={char.id} className="relative group/item">
                           <button
                             onClick={() => {

@@ -1,28 +1,38 @@
+/**
+ * 应用顶栏容器组件（AppHeader）。
+ * 职责：持有全部状态（导航/文件/分享菜单、搜索、模态框等）与业务回调，
+ * 负责顶栏整体布局编排；具体 UI 块拆分在同目录 AppHeader/ 子组件中，
+ * 全部通过 props 传入数据与回调（不含状态上提/下沉，行为与拆分前一致）。
+ */
 import ForumSyncModal from '../editor/ForumSyncModal';
 import CardExportModal from '../export/CardExportModal';
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  LayoutGrid, Globe, Save, Share2, Download, Copy, FilePlus, Sparkles, Plus, Pin, User, Languages, Settings, 
-  ChevronDown, Info, RotateCcw, X, Search, HardDrive, Folder, Check, CloudUpload, Grid, List as ListIcon,
-  FolderPlus, ChevronRight, Loader2, CheckCircle2, CloudOff, FileText, ArrowLeft
-} from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { motion } from 'motion/react';
+import { LayoutGrid, FileText, Copy, Info, Save, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import AccountMenu from '../account/AccountMenu';
 import { googleProvider } from '../../lib/firebase';
-import { logout } from '../../services/authService';
 
 import { useUI, ViewType } from '../../contexts/UIContext';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useVault } from '../../contexts/VaultContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { useCharacterAI } from '../../contexts/hooks/useCharacterAI';
 import { DEFAULT_BBCODE_TEMPLATE } from '../../constants';
 
+import HeaderNav from './AppHeader/HeaderNav';
+import HeaderBreadcrumb from './AppHeader/HeaderBreadcrumb';
+import FileMenu from './AppHeader/FileMenu';
+import ShareMenu from './AppHeader/ShareMenu';
+import GmViewToolbar from './AppHeader/GmViewToolbar';
+import BbcodeToolbar from './AppHeader/BbcodeToolbar';
+import VaultToolbar from './AppHeader/VaultToolbar';
+import SyncStatusCapsule from './AppHeader/SyncStatusCapsule';
+import HeaderAccountArea from './AppHeader/HeaderAccountArea';
+import type { NavItem, RecentCharacterItem } from './AppHeader/shared';
+
 export default function AppHeader() {
-  const { t, i18n } = useTranslation();
-  const { user, handleLogin, handleLogout } = useAuth();
+  const { t } = useTranslation();
+  const { user, handleLogin } = useAuth();
   const { settings } = useSettings();
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -99,7 +109,7 @@ export default function AppHeader() {
     isHeaderPinned,
     setIsHeaderPinned
   } = useUI();
-  
+
   const {
     myCharacters,
     currentFolderId,
@@ -111,11 +121,10 @@ export default function AppHeader() {
     setViewMode,
     createFolder,
     refreshCharacterList,
-    importFromClipboard,
-    onPaste
+    importFromClipboard
   } = useVault();
 
-  const recentCharacters = useMemo(() => {
+  const recentCharacters = useMemo<RecentCharacterItem[]>(() => {
     return recentCharacterIds.map(id => {
       const found = myCharacters?.find((c: any) => c.id === id);
       if (found) {
@@ -165,33 +174,6 @@ export default function AppHeader() {
     isSyncingDrive
   } = useCharacter();
 
-  const toggleLanguage = () => {
-    const current = i18n.language;
-    let next = 'zh';
-    if (current.startsWith('zh-TW') || current.startsWith('zh-HK')) {
-      next = 'en';
-    } else if (current.startsWith('zh')) {
-      next = 'zh-TW';
-    } else {
-      next = 'zh';
-    }
-    i18n.changeLanguage(next);
-  };
-
-  const getLanguageLabel = () => {
-    const lng = i18n.language;
-    if (lng.startsWith('zh-TW') || lng.startsWith('zh-HK')) return '繁体';
-    if (lng.startsWith('zh')) return '简体';
-    return 'EN';
-  };
-
-  const getLanguageTitle = () => {
-    const lng = i18n.language;
-    if (lng.startsWith('zh-TW') || lng.startsWith('zh-HK')) return '切换至英文 / Switch to English';
-    if (lng.startsWith('zh')) return '切换至繁体 / Switch to Traditional';
-    return 'Switch to Chinese / 切换至中文';
-  };
-
   useEffect(() => {
     return () => {
       if (navCloseTimeout.current) clearTimeout(navCloseTimeout.current);
@@ -240,7 +222,7 @@ export default function AppHeader() {
 
     return t('common.unnamed_character');
   }, [view, currentTemplateId, currentCharacterId, getItemPath, syncStatus, data.basic?.name, t]);
-  
+
   const isCurrentDirty = view === 'bbcode-template' ? isTemplateDirty : isDirty;
   const displayPath = currentPath + (isCurrentDirty ? '*' : '') + (isReadOnly ? ` (${t('common.read_only')})` : '');
 
@@ -304,9 +286,9 @@ export default function AppHeader() {
   };
 
   return (
-    <motion.header 
+    <motion.header
       initial={false}
-      animate={{ 
+      animate={{
         y: (isHeaderVisible || isHeaderPinned) ? 0 : -100,
         opacity: (isHeaderVisible || isHeaderPinned) ? 1 : 0.8
       }}
@@ -317,264 +299,73 @@ export default function AppHeader() {
     >
       <div className="flex items-center gap-4">
         {/* Navigation Dropdown */}
-        <div 
-          className="relative" 
-          ref={navRef}
+        <HeaderNav
+          navRef={navRef}
+          isNavOpen={isNavOpen}
+          onToggle={() => setIsNavOpen(!isNavOpen)}
           onMouseEnter={handleNavMouseEnter}
           onMouseLeave={handleNavMouseLeave}
-        >
-          <button 
-            onClick={() => setIsNavOpen(!isNavOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 rounded-lg transition-colors group"
-          >
-            <div className="bg-primary p-1 rounded">
-              {React.cloneElement(currentNavItem.icon as React.ReactElement, { size: 16, className: "text-white" })}
-            </div>
-            <span className="font-bold text-sm hidden sm:inline">{currentNavItem.label}</span>
-            <ChevronDown size={14} className={`text-stone-400 group-hover:text-white transition-transform ${isNavOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          <AnimatePresence>
-            {isNavOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute left-0 mt-2 w-56 bg-white border border-stone-200 rounded-xl shadow-xl z-[70] py-1"
-              >
-                {navItems.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setView(item.id as ViewType);
-                      setIsNavOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${view === item.id ? 'bg-primary/5 text-primary font-bold' : 'text-stone-700 hover:bg-stone-50'}`}
-                  >
-                    <div className={view === item.id ? 'text-primary' : 'text-stone-400'}>
-                      {item.icon}
-                    </div>
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+          navItems={navItems}
+          currentNavItem={currentNavItem}
+          view={view}
+          onSelectView={(id) => {
+            setView(id as ViewType);
+            setIsNavOpen(false);
+          }}
+        />
 
         {/* Path/Breadcrumb Display */}
-        <div className="h-6 w-px bg-stone-600 hidden md:block"></div>
-        {view === 'vault' ? (
-          <div className="hidden md:flex items-center gap-2 text-stone-400 text-xs font-medium">
-             <button 
-                onClick={() => setCurrentFolderId(null)}
-                className="hover:text-white transition-colors flex items-center gap-1"
-              >
-                <User size={14} /> {t('common.vault')}
-              </button>
-              {breadcrumbs.map(f => (
-                <React.Fragment key={f.id}>
-                  <ChevronRight size={12} className="text-stone-600" />
-                  <button 
-                    onClick={() => setCurrentFolderId(f.id)}
-                    className="hover:text-white transition-colors"
-                  >
-                    {f.name}
-                  </button>
-                </React.Fragment>
-              ))}
-          </div>
-        ) : (
-          <div className="hidden md:flex items-center gap-2 text-stone-400 text-xs font-medium max-w-[300px] truncate">
-            <span className="truncate" title={currentPath}>{displayPath}</span>
-          </div>
-        )}
+        <HeaderBreadcrumb
+          view={view}
+          breadcrumbs={breadcrumbs}
+          currentPath={currentPath}
+          displayPath={displayPath}
+          onSelectFolder={setCurrentFolderId}
+        />
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
         {view === 'editor' && (
           <div className="flex items-center gap-1.5 sm:gap-2">
             {/* 文件下拉菜单 */}
-            <div 
-              className="relative" 
-              ref={fileMenuRef}
+            <FileMenu
+              menuRef={fileMenuRef}
+              isOpen={isFileMenuOpen}
+              onToggle={() => {
+                setIsFileMenuOpen(!isFileMenuOpen);
+                setIsShareMenuOpen(false);
+              }}
               onMouseEnter={handleFileMouseEnter}
               onMouseLeave={handleFileMouseLeave}
-            >
-              <button
-                onClick={() => {
-                  setIsFileMenuOpen(!isFileMenuOpen);
-                  setIsShareMenuOpen(false);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  isFileMenuOpen ? 'bg-stone-600 text-white shadow-inner' : 'bg-stone-700 hover:bg-stone-600 text-stone-100'
-                }`}
-                title="文件操作"
-              >
-                <FileText size={16} />
-                <span>文件</span>
-                <ChevronDown size={14} className={`text-stone-400 transition-transform ${isFileMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              <AnimatePresence>
-                {isFileMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                    className="absolute left-0 mt-2 w-48 bg-white border border-stone-200 rounded-xl shadow-xl z-[70] py-1 text-stone-800"
-                  >
-                    <button
-                      onClick={() => {
-                        handleNew();
-                        setIsFileMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors cursor-pointer"
-                    >
-                      <FilePlus size={15} className="text-stone-500" />
-                      <span>{t('common.new')}</span>
-                    </button>
-
-                    {!isReadOnly && (
-                      <button
-                        onClick={() => {
-                          handleSave();
-                          setIsFileMenuOpen(false);
-                        }}
-                        disabled={isSaving}
-                        className="w-full flex items-center justify-between px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors disabled:opacity-50 cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <Save size={15} className="text-emerald-600" />
-                          <span>{isSaving ? t('common.saving') : t('common.save')}</span>
-                        </div>
-                        {isDirty && <span className="w-2 h-2 rounded-full bg-amber-500"></span>}
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        handleSaveAs();
-                        setIsFileMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors cursor-pointer"
-                    >
-                      <Copy size={15} className="text-stone-500" />
-                      <span>{t('common.save_as')}</span>
-                    </button>
-
-                    {settings.storage.enableLocalAutoCache && isDirty && (
-                      <>
-                        <div className="h-px bg-stone-100 my-1" />
-                        <button
-                          onClick={() => {
-                            handleRevertChanges();
-                            setIsFileMenuOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-rose-50 text-rose-600 text-left transition-colors cursor-pointer"
-                        >
-                          <RotateCcw size={15} className="text-rose-600" />
-                          <span>放弃修改并重新载入</span>
-                        </button>
-                      </>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+              onClose={() => setIsFileMenuOpen(false)}
+              isReadOnly={isReadOnly}
+              isSaving={isSaving}
+              isDirty={isDirty}
+              enableLocalAutoCache={settings.storage.enableLocalAutoCache}
+              onNew={handleNew}
+              onSave={handleSave}
+              onSaveAs={handleSaveAs}
+              onRevert={handleRevertChanges}
+            />
 
             {/* 分享与导出下拉菜单 */}
-            <div 
-              className="relative" 
-              ref={shareMenuRef}
+            <ShareMenu
+              menuRef={shareMenuRef}
+              isOpen={isShareMenuOpen}
+              onToggle={() => {
+                setIsShareMenuOpen(!isShareMenuOpen);
+                setIsFileMenuOpen(false);
+              }}
               onMouseEnter={handleShareMouseEnter}
               onMouseLeave={handleShareMouseLeave}
-            >
-              <button
-                onClick={() => {
-                  setIsShareMenuOpen(!isShareMenuOpen);
-                  setIsFileMenuOpen(false);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  isShareMenuOpen ? 'bg-stone-600 text-white shadow-inner' : 'bg-stone-700 hover:bg-stone-600 text-stone-100'
-                }`}
-                title="分享与导出"
-              >
-                <Share2 size={16} />
-                <span>分享</span>
-                <ChevronDown size={14} className={`text-stone-400 transition-transform ${isShareMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              <AnimatePresence>
-                {isShareMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                    className="absolute left-0 mt-2 w-52 bg-white border border-stone-200 rounded-xl shadow-xl z-[70] py-1 text-stone-800"
-                  >
-                    <button
-                      onClick={() => {
-                        setShowCardExportModal(true);
-                        setIsShareMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold hover:bg-amber-50 text-amber-900 text-left transition-colors cursor-pointer"
-                    >
-                      <Sparkles size={15} className="text-amber-600" />
-                      <span>论坛卡片与外链 (.svgt/.bbc)</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        handleExportBBCode();
-                        setIsShareMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors cursor-pointer"
-                    >
-                      <Copy size={15} className="text-stone-500" />
-                      <span>复制 BBCode</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowForumSyncModal(true);
-                        setIsShareMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-amber-800 text-left transition-colors cursor-pointer"
-                    >
-                      <Globe size={15} className="text-amber-700" />
-                      <span>{t('editor.forum_sync.btn_header', '果园同步')}</span>
-                    </button>
-
-                    {!isReadOnly && (
-                      <button
-                        onClick={() => {
-                          handleShare();
-                          setIsShareMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors cursor-pointer"
-                      >
-                        <Share2 size={15} className="text-stone-500" />
-                        <span>{t('common.share')} (在线链接)</span>
-                      </button>
-                    )}
-
-                    <div className="h-px bg-stone-100 my-1" />
-
-                    <button
-                      onClick={() => {
-                        handleExport();
-                        setIsShareMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium hover:bg-stone-100 text-stone-700 text-left transition-colors cursor-pointer"
-                    >
-                      <Download size={15} className="text-stone-500" />
-                      <span>{t('common.export')} (.pf1)</span>
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+              onClose={() => setIsShareMenuOpen(false)}
+              isReadOnly={isReadOnly}
+              onShowCardExport={() => setShowCardExportModal(true)}
+              onExportBBCode={handleExportBBCode}
+              onShowForumSync={() => setShowForumSyncModal(true)}
+              onShare={handleShare}
+              onExport={handleExport}
+            />
 
             {/* 快捷保存图标按钮 */}
             {!isReadOnly && (
@@ -582,8 +373,8 @@ export default function AppHeader() {
                 onClick={handleSave}
                 disabled={isSaving}
                 className={`p-2 rounded-full transition-colors cursor-pointer ${
-                  isDirty 
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs' 
+                  isDirty
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
                     : 'text-stone-400 hover:bg-stone-700 hover:text-white'
                 } disabled:opacity-50`}
                 title={`${isSaving ? t('common.saving') : t('common.save')} (Ctrl+S)`}
@@ -606,297 +397,68 @@ export default function AppHeader() {
         )}
 
         {view === 'gm-view' && (
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setView('editor')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-              title={t('common.switch_to_editor', '返回编辑')}
-            >
-              <ArrowLeft size={16} />
-              <span className="hidden sm:inline">{t('common.switch_to_editor', '返回编辑')}</span>
-            </button>
-
-            <button 
-              onClick={handleExport}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-              title={t('common.export')}
-            >
-              <Download size={16} />
-              <span className="hidden sm:inline">{t('common.export')}</span>
-            </button>
-          </div>
+          <GmViewToolbar
+            onBackToEditor={() => setView('editor')}
+            onExport={handleExport}
+          />
         )}
 
         {view === 'bbcode-template' && (
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleNewTemplate}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-            >
-              <FilePlus size={16} />
-              <span className="hidden sm:inline">{t('common.new')}</span>
-            </button>
-
-            {!isReadOnly && (
-              <button 
-                onClick={handleBBCodeSave}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors"
-              >
-                <Save size={16} />
-                <span className="hidden sm:inline">{t('common.save')}</span>
-              </button>
-            )}
-
-            <button 
-              onClick={handleBBCodeSaveAs}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
-            >
-              <Copy size={16} />
-              <span className="hidden sm:inline">{t('editor.bbcode.save_as')}</span>
-            </button>
-
-            {!isReadOnly && (
-              <>
-                <button 
-                  onClick={handleShare}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-                >
-                  <Share2 size={16} />
-                  <span className="hidden sm:inline">{t('common.share')}</span>
-                </button>
-
-                <button 
-                  onClick={handleImportDefault}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
-                >
-                  <RotateCcw size={16} />
-                  <span className="hidden sm:inline">{t('common.import_default')}</span>
-                </button>
-              </>
-            )}
-          </div>
+          <BbcodeToolbar
+            isReadOnly={isReadOnly}
+            onNewTemplate={handleNewTemplate}
+            onSave={handleBBCodeSave}
+            onSaveAs={handleBBCodeSaveAs}
+            onShare={handleShare}
+            onImportDefault={handleImportDefault}
+          />
         )}
 
         {view === 'vault' && (
-          <div className="flex items-center gap-2">
-            <div className="relative flex items-center h-8">
-              <motion.div
-                initial={false}
-                animate={{ 
-                  width: isSearchExpanded || search ? 150 : 32,
-                  backgroundColor: isSearchExpanded || search ? 'rgba(68, 64, 60, 0.5)' : 'transparent'
-                }}
-                className="flex items-center rounded-lg border border-transparent focus-within:border-stone-600 focus-within:ring-2 focus-within:ring-primary/20 transition-all overflow-hidden"
-              >
-                <button 
-                  onClick={() => {
-                    setIsSearchExpanded(!isSearchExpanded);
-                    if (!isSearchExpanded) {
-                      setTimeout(() => searchInputRef.current?.focus(), 100);
-                    }
-                  }}
-                  className={`p-2 flex-shrink-0 transition-colors ${isSearchExpanded || search ? 'text-stone-400' : 'text-stone-400 hover:bg-stone-700 hover:text-white'}`}
-                >
-                  <Search size={16} />
-                </button>
-                <input 
-                  ref={searchInputRef}
-                  type="text" 
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  onBlur={() => {
-                    if (!search) setIsSearchExpanded(false);
-                  }}
-                  className="w-full bg-transparent border-none outline-none text-xs text-stone-100 pr-3"
-                  style={{ display: isSearchExpanded || search ? 'block' : 'none' }}
-                />
-              </motion.div>
-            </div>
-
-            <div className="h-6 w-px bg-stone-600 mx-1"></div>
-
-            <div className="relative group">
-              <button 
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 rounded-lg transition-colors text-xs font-bold"
-              >
-                <Download size={16} /> {t('common.import')}
-              </button>
-              <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-stone-200 shadow-xl rounded-xl py-1 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                <button 
-                  onClick={() => document.getElementById('local-import-input')?.click()}
-                  className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
-                >
-                  <HardDrive size={14} /> {t('common.local_file')}
-                </button>
-                <button 
-                  onClick={() => document.getElementById('local-folder-import-input')?.click()}
-                  className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
-                >
-                  <Folder size={14} /> {t('common.local_folder')}
-                </button>
-                <button 
-                  onClick={importFromClipboard}
-                  className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
-                >
-                  <Check size={14} /> {t('common.clipboard_content')}
-                </button>
-                <div className="h-px bg-stone-100 my-1"></div>
-                <button 
-                  onClick={handleBrowseDrive}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2 font-bold text-primary"
-                >
-                  <Search size={14} /> {t('common.browse_cloud_backup')}
-                </button>
-                <button 
-                  onClick={handleBrowseDriveRoot}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-stone-50 flex items-center gap-2 font-bold text-indigo-600"
-                >
-                  <Grid size={14} /> {t('common.browse_all_cloud_files')}
-                </button>
-                <button 
-                  onClick={handleCloudRestore}
-                  className="w-full text-left px-4 py-2 text-xs text-stone-700 hover:bg-stone-50 flex items-center gap-2"
-                >
-                  <RotateCcw size={14} /> {t('common.cloud_restore')}
-                </button>
-              </div>
-            </div>
-
-            <button 
-              onClick={handleCloudBackup}
-              disabled={isSyncingDrive}
-              className={`p-2 rounded-lg transition-all ${
-                isSyncingDrive 
-                ? 'text-blue-400 animate-pulse' 
-                : 'text-stone-400 hover:bg-stone-700 hover:text-blue-400'
-              }`}
-              title={t('common.cloud_backup')}
-            >
-              <CloudUpload size={18} />
-            </button>
-
-            <button 
-              onClick={handleCreateFolder}
-              className="p-2 text-stone-400 hover:bg-stone-700 hover:text-white rounded-lg transition-colors"
-              title={t('common.new_folder')}
-            >
-              <FolderPlus size={18} />
-            </button>
-
-            <div className="flex bg-stone-700 rounded-lg p-0.5 ml-1">
-              <button 
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'text-stone-400 hover:text-white'}`}
-              >
-                <Grid size={14} />
-              </button>
-              <button 
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'text-stone-400 hover:text-white'}`}
-              >
-                <ListIcon size={14} />
-              </button>
-            </div>
-          </div>
+          <VaultToolbar
+            searchInputRef={searchInputRef}
+            search={search}
+            onSearchChange={setSearch}
+            isSearchExpanded={isSearchExpanded}
+            onToggleSearch={() => {
+              setIsSearchExpanded(!isSearchExpanded);
+              if (!isSearchExpanded) {
+                setTimeout(() => searchInputRef.current?.focus(), 100);
+              }
+            }}
+            onSearchBlur={() => {
+              if (!search) setIsSearchExpanded(false);
+            }}
+            onImportFromClipboard={importFromClipboard}
+            onBrowseDrive={handleBrowseDrive}
+            onBrowseDriveRoot={handleBrowseDriveRoot}
+            onCloudRestore={handleCloudRestore}
+            onCloudBackup={handleCloudBackup}
+            isSyncingDrive={isSyncingDrive}
+            onCreateFolder={handleCreateFolder}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+          />
         )}
 
         {/* Sync Status Capsule */}
-        <AnimatePresence>
-          {syncStatus && syncStatus !== 'idle' && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, x: 5 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.9, x: 5 }}
-              className="flex items-center"
-            >
-              {syncStatus === 'syncing' && (
-                <div 
-                  className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-full text-xs font-medium backdrop-blur-sm"
-                  title={t('common.syncing_cloud')}
-                >
-                  <Loader2 size={13} className="animate-spin text-amber-400" />
-                  <span className="hidden sm:inline">{t('common.syncing')}</span>
-                </div>
-              )}
-              {syncStatus === 'synced' && (
-                <div 
-                  className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-full text-xs font-medium backdrop-blur-sm"
-                  title={t('common.synced_cloud')}
-                >
-                  <CheckCircle2 size={13} className="text-emerald-400" />
-                  <span className="hidden sm:inline">{t('common.synced')}</span>
-                </div>
-              )}
-              {syncStatus === 'offline' && (
-                <div 
-                  className="flex items-center gap-1.5 px-2.5 py-1 bg-stone-700/60 border border-stone-600 text-stone-300 rounded-full text-xs font-medium"
-                  title={t('common.offline_cache_tip')}
-                >
-                  <CloudOff size={13} className="text-stone-400" />
-                  <span className="hidden sm:inline">{t('common.cached')}</span>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <SyncStatusCapsule syncStatus={syncStatus} />
 
         <div className="h-6 w-px bg-stone-600 mx-1"></div>
 
-        <div className="flex items-center gap-1 sm:gap-2">
-          {/* Language Switcher */}
-          <button
-            onClick={toggleLanguage}
-            className="p-2 text-stone-400 hover:bg-stone-700 hover:text-white rounded-full transition-colors flex items-center gap-1"
-            title={getLanguageTitle()}
-          >
-            <Languages size={16} />
-            <span className="text-[10px] font-bold uppercase">{getLanguageLabel()}</span>
-          </button>
-
-          <button
-            onClick={() => setIsHeaderPinned(!isHeaderPinned)}
-            className={`p-2 rounded-full transition-colors ${isHeaderPinned ? 'bg-primary text-white' : 'text-stone-400 hover:bg-stone-700 hover:text-white'}`}
-            title={isHeaderPinned ? t('common.pinned') : t('common.unpinned')}
-          >
-            <motion.div
-              animate={{ rotate: isHeaderPinned ? -90 : 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            >
-              <Pin size={16} className="rotate-135" />
-            </motion.div>
-          </button>
-
-          {/* Settings Button */}
-          <button
-            onClick={() => setView('settings')}
-            className={`p-2 rounded-full transition-colors ${view === 'settings' ? 'bg-primary text-white shadow-xs' : 'text-stone-400 hover:bg-stone-700 hover:text-white'}`}
-            title="系统设置"
-          >
-            <Settings size={16} />
-          </button>
-
-          {user ? (
-            <AccountMenu 
-              user={user} 
-              view={view} 
-              setView={setView} 
-              recentCharacters={recentCharacters}
-              currentCharacterId={currentCharacterId}
-              currentTemplateId={currentTemplateId}
-              confirmNavigation={(a: any) => a()}
-              onSelect={selectCharacter}
-              onRemoveRecent={removeFromRecent}
-              onLogout={logout}
-            />
-          ) : (
-            <button 
-              onClick={() => handleLogin(googleProvider)}
-              className="px-3 py-1.5 bg-white text-stone-800 rounded text-xs font-bold flex items-center gap-1.5 hover:bg-stone-100 transition-colors ml-1"
-            >
-              <User size={14} /> {t('common.login')}
-            </button>
-          )}
-        </div>
+        <HeaderAccountArea
+          user={user}
+          onLogin={() => handleLogin(googleProvider)}
+          isHeaderPinned={isHeaderPinned}
+          onTogglePin={() => setIsHeaderPinned(!isHeaderPinned)}
+          view={view}
+          setView={setView}
+          recentCharacters={recentCharacters}
+          currentCharacterId={currentCharacterId}
+          currentTemplateId={currentTemplateId}
+          onSelectCharacter={selectCharacter}
+          onRemoveRecent={removeFromRecent}
+        />
       </div>
       <ForumSyncModal isOpen={showForumSyncModal} onClose={() => setShowForumSyncModal(false)} />
       <CardExportModal isOpen={showCardExportModal} onClose={() => setShowCardExportModal(false)} />

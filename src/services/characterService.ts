@@ -9,14 +9,15 @@ import {
   setDoc, 
   updateDoc, 
   deleteDoc, 
-  query, 
-  where, 
+  query,
+  where,
   serverTimestamp,
   Timestamp,
   orderBy
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { CharacterData } from '../schema/types';
+import firebaseAppletConfig from '../../firebase-applet-config.json';
 
 export enum OperationType {
   CREATE = 'create',
@@ -403,33 +404,128 @@ export async function deleteFolder(id: string) {
   }
 }
 
+// 档案库列表的投影字段：只拉列表消费者实际用到的元数据，
+// 避免把每个角色的完整 data（技能/装备/法术等）全量下载。
+// data 内嵌字段用点路径投影；注意旧格式文档的 basic.avatars 是数组，
+// 此时 'data.basic.avatars.url' 不存在，消费方有可选链兜底，渲染不受影响。
+const LIST_PROJECTION_FIELDS = [
+  // 文档顶层元数据（排序、目录过滤、路径展示、打开角色）
+  'name',
+  'folderId',
+  'ownerId',
+  'targetId',
+  'isTemplate',
+  'updatedAt',
+  'createdAt',
+  // data 内嵌字段（列表项缩略图与副标题、最近打开列表）
+  'data.basic.name',
+  'data.basic.race',
+  'data.basic.classes',
+  'data.basic.avatars.url'
+] as const;
+
+// 将 Firestore REST 返回的强类型字段值转换为普通 JS 值。
+// timestampValue 需转回 Firestore Timestamp，保证 updatedAt.toMillis() 等调用方兼容
+function convertRestValue(value: any): any {
+  if (!value) return null;
+  const type = Object.keys(value)[0];
+  switch (type) {
+    case 'nullValue': return null;
+    case 'booleanValue': return value.booleanValue;
+    case 'integerValue': return Number(value.integerValue);
+    case 'doubleValue': return Number(value.doubleValue);
+    case 'timestampValue': return Timestamp.fromMillis(Date.parse(value.timestampValue));
+    case 'stringValue': return value.stringValue;
+    case 'bytesValue': return value.bytesValue;
+    case 'referenceValue': return value.referenceValue;
+    case 'arrayValue': return (value.arrayValue.values || []).map(convertRestValue);
+    case 'mapValue': return convertRestFields(value.mapValue.fields || {});
+    default: return null;
+  }
+}
+
+function convertRestFields(fields: any): any {
+  const out: any = {};
+  for (const key of Object.keys(fields)) {
+    out[key] = convertRestValue(fields[key]);
+  }
+  return out;
+}
+
+// 通过 Firestore REST runQuery 的 fieldMask 实现投影查询。
+// 说明：浏览器版 Firebase JS SDK 不提供 select() 投影（QueryConstraintType 只有
+// where/orderBy/limit/startAt/endAt 等，select 仅存在于服务端 Admin SDK），
+// 因此这里直接调用官方 REST 接口。安全规则照常在服务端按完整文档评估，
+// fieldMask 只限制返回的字段，不影响权限判定。
+async function runProjectedCharactersQuery(uid: string, folderId?: string | null) {
+  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || (firebaseAppletConfig as any).projectId;
+  const databaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || (firebaseAppletConfig as any).firestoreDatabaseId || '(default)';
+  if (!auth.currentUser) throw new Error('Must be logged in to list characters');
+  const token = await auth.currentUser.getIdToken();
+
+  const filters: any[] = [
+    { fieldFilter: { field: { fieldPath: 'ownerId' }, op: 'EQUAL', value: { stringValue: uid } } }
+  ];
+  if (folderId !== undefined) {
+    filters.push({
+      fieldFilter: {
+        field: { fieldPath: 'folderId' },
+        op: 'EQUAL',
+        value: folderId === null ? { nullValue: null } : { stringValue: folderId }
+      }
+    });
+  }
+
+  const body = {
+    structuredQuery: {
+      from: [{ collectionId: 'characters', allDescendants: false }],
+      where: filters.length === 1 ? filters[0] : { compositeFilter: { op: 'AND', filters } },
+      // 投影语法是 structuredQuery.select（Projection.fields），不是 mask——
+      // mask 只存在于 Documents.get / Write 等接口，runQuery 会报 400 Unknown name "mask"
+      select: {
+        fields: [...LIST_PROJECTION_FIELDS].map(fieldPath => ({ fieldPath }))
+      }
+    }
+  };
+
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${databaseId}/documents:runQuery`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body)
+    }
+  );
+  if (!response.ok) {
+    throw new Error(`Firestore runQuery failed: ${response.status} ${await response.text()}`);
+  }
+
+  const rows = await response.json();
+  return rows
+    .filter((row: any) => row.document)
+    .map((row: any) => {
+      // document.name 形如 projects/{p}/databases/{db}/documents/characters/{id}
+      const docName: string = row.document.name;
+      return {
+        id: docName.substring(docName.lastIndexOf('/') + 1),
+        fields: convertRestFields(row.document.fields || {})
+      };
+    });
+}
+
 export async function getCharacterList(uid: string, folderId?: string | null) {
   const path = 'characters';
   try {
-    let q;
-    if (folderId !== undefined) {
-      q = query(
-        collection(db, path),
-        where('ownerId', '==', uid),
-        where('folderId', '==', folderId)
-      );
-    } else {
-      q = query(
-        collection(db, path),
-        where('ownerId', '==', uid)
-      );
-    }
-    const snapshot = await getDocs(q);
-    const items = snapshot.docs.map(doc => {
-      const d = doc.data() as any;
+    const rows = await runProjectedCharactersQuery(uid, folderId);
+    const items = rows.map(({ id, fields: d }) => {
       return {
         ...d,
-        id: doc.id,
+        id,
         isLink: !!d.targetId,
         isTemplate: !!d.isTemplate,
         data: {
           ...d.data,
-          id: doc.id,
+          id,
           ownerId: d.ownerId,
           folderId: d.folderId,
           targetId: d.targetId || '',

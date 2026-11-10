@@ -6,6 +6,7 @@ import {
   Copy, Move, Settings, Cloud, Link, FileText
 } from 'lucide-react';
 import { getCharacterById } from '../../services/characterService';
+import { getTemplateById, templateToCharacterDoc } from '../../services/templateService';
 import { FirebaseUser, FolderMetadata } from '../../schema/types';
 import Toast from '../common/Toast';
 import Dialog from '../common/Dialog';
@@ -102,6 +103,30 @@ const VaultContent = ({
   const explorerRef = useRef<HTMLDivElement>(null);
 
   const allItems = [...filteredFolders.map(f => ({ ...f, type: 'folder' })), ...filteredChars.map(c => ({ ...c, type: 'character' }))];
+
+  // 列表数据是投影（仅含名称/头像等元数据，不含完整 data），
+  // 打开角色前必须按 id 拉取完整文档，否则编辑器会拿到残缺数据
+  const openCharacter = async (item: any) => {
+    try {
+      if (item.isTemplate) {
+        // 模板优先从独立的 templates 集合加载；
+        // 未命中则回落到 characters（兼容尚未迁移的旧模板）
+        const tpl = await getTemplateById(item.id).catch(() => null);
+        if (tpl) {
+          onSelect(templateToCharacterDoc(tpl));
+          return;
+        }
+      }
+      const full = await getCharacterById(item.id);
+      if (full) {
+        onSelect(full);
+        return;
+      }
+    } catch (e) {
+      console.error('打开角色失败', e);
+    }
+    setToast({ message: '打开失败：无法加载角色数据', type: 'error' });
+  };
 
   const handleDragStart = (e: React.DragEvent, id: string, type: 'folder' | 'character') => {
     if (selectedIds.includes(id)) {
@@ -641,7 +666,7 @@ const VaultContent = ({
                   }
                   onClick={(e) => handleItemClick(e, char.id, idx)}
                   onDoubleClick={() => {
-                    onSelect(char);
+                    openCharacter(char);
                   }}
                   onContextMenu={e => {
                     e.preventDefault();
@@ -720,9 +745,9 @@ const VaultContent = ({
                     if (contextMenu.isFolder) {
                       setCurrentFolderId(contextMenu.item.id);
                     } else {
-                      onSelect(contextMenu.item);
+                      openCharacter(contextMenu.item);
                     }
-                  } 
+                  }
                 },
                 { label: t('common.rename'), icon: Settings, onClick: () => handleAction('rename', contextMenu.item, contextMenu.isFolder) },
                 ...(contextMenu.item.data?.targetId && !contextMenu.isFolder ? [
