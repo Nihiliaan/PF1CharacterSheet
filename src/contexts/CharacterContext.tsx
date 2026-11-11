@@ -169,9 +169,9 @@ export interface CharacterContextType {
   /** 新建一个"新建标签页"（chooser 伪标签，页面内呈现新建人物卡/模板/最近文件选项） */
   openChooserTab: () => void;
   /** 把当前 chooser 标签就地改造成空白的人物卡/模板标签（新建标签页上的选择动作） */
-  convertChooserTab: (kind: 'character' | 'template') => void;
+  convertChooserTab: (kind: 'character' | 'template', targetKey?: string) => void;
   /** 从"新建标签页"打开一个最近文档：关闭 chooser 标签并按常规流程打开该文档 */
-  openDocFromChooser: (id: string) => void;
+  openDocFromChooser: (id: string, targetKey?: string) => void;
 
   // Editor Panes（分栏：VS Code 式向右拆分，标签可在栏间拖拽）
   panes: EditorPane[];
@@ -550,11 +550,15 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const stashActiveSnapshot = useCallback(() => {
     const key = activeTabKeyRef.current;
     if (!key) return;
+    // chooser（新建标签页）没有文档状态：不暂存，否则会把上一个文档的残留 live 数据
+    // 错误地挂到 chooser 的 key 下，之后切回时 applySnapshot 会弹出错误的编辑器
+    const activeTab = tabsRef.current.find(t => t.key === key);
+    if (activeTab?.kind === 'chooser') return;
     snapshotsRef.current.set(key, {
       data, lastSavedData, bbcodeTemplate, lastSavedTemplate, isReadOnly, activeDoc: activeDocRef.current
     });
     // 快照同时落盘：意外关闭浏览器后重开应用，切换到该标签页时可自动恢复未保存内容
-    const tab = tabsRef.current.find(t => t.key === key);
+    const tab = activeTab;
     const liveDirty = isDirty || isTemplateDirty;
     if (tab?.docId && liveDirty && settings.storage.enableLocalAutoCache) {
       writeDraftForDoc(tab.docId, tab.kind === 'character'
@@ -581,7 +585,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setCurrentTemplateId(tab.docId);
       setCurrentCharacterId(null);
     }
-    setView(tab.kind === 'character' ? 'editor' : 'bbcode-template');
+    // chooser 永远不应该走快照换入（防御：若有残留快照也只切视图，避免弹出错误编辑器）
+    setView(tab.kind === 'chooser' ? 'new-tab' : (tab.kind === 'character' ? 'editor' : 'bbcode-template'));
     const url = new URL(window.location.href);
     if (tab.docId) url.searchParams.set('id', tab.docId);
     window.history.replaceState({}, '', url.toString());
@@ -595,11 +600,15 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setView(tab.kind === 'chooser' ? 'new-tab' : (tab.kind === 'character' ? 'editor' : 'bbcode-template'));
       return;
     }
-    // 1. 暂存当前活动 tab 的 live 状态与脏标记
-    stashActiveSnapshot();
+    // 1. 暂存当前活动 tab 的 live 状态与脏标记（chooser 无文档状态，跳过）
+    const prevTab = tabsRef.current.find(t => t.key === activeTabKeyRef.current);
+    const prevIsChooser = prevTab?.kind === 'chooser';
+    if (!prevIsChooser) stashActiveSnapshot();
     const liveDirty = isDirty || isTemplateDirty;
     const prevKey = activeTabKeyRef.current;
-    setTabs(prev => prev.map(t => t.key === prevKey ? { ...t, dirty: liveDirty } : t));
+    if (!prevIsChooser) {
+      setTabs(prev => prev.map(t => t.key === prevKey ? { ...t, dirty: liveDirty } : t));
+    }
     // 2. 激活目标 tab，并聚焦其所在分栏
     setActiveTabKey(key);
     const targetPane = panesRef.current.find(p => p.tabKeys.includes(key));
@@ -607,12 +616,16 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setFocusedPaneId(targetPane.id);
       setPanes(prev => prev.map(p => p.id === targetPane.id ? { ...p, activeTabKey: key } : p));
     }
-    // 3. 有快照 → 整份换入；chooser → 切视图即可；无快照（本会话首次激活）→ 走正常加载
+    // 3. chooser → 切视图即可（并清理可能被污染的残留快照）；
+    //    有快照 → 整份换入；无快照（本会话首次激活）→ 走正常加载
+    if (tab.kind === 'chooser') {
+      snapshotsRef.current.delete(key);
+      setView('new-tab');
+      return;
+    }
     const snap = snapshotsRef.current.get(key);
     if (snap) {
       applySnapshot(snap, tab);
-    } else if (tab.kind === 'chooser') {
-      setView('new-tab');
     } else {
       await selectCharacter(tab.docId, true, true);
       // 加载失败（文档已删除等）：live 状态未变，撤销激活并移除失效 tab
@@ -835,8 +848,23 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     window.history.replaceState({}, '', url.toString());
   }, [stashAndMarkDirty, assignTabToFocusedPane]);
 
-  /** 把当前 chooser 标签就地改造成空白的人物卡/模板标签（新建标签页上的选择动作，浏览器同页跳转语义） */
-  const convertChooserTab = useCallback((kind: 'character' | 'template') => {
+  /** 把 chooser 标签就地改造成空白的人物卡/模板标签（新建标签页上的选择动作，浏览器同页跳转语义）。
+   *  targetKey：未聚焦分栏的 chooser 需显式指定要改造的标签 key；缺省为当前活动标签。 */
+  const convertChooserTab = useCallback((kind: 'character' | 'template', targetKey?: string) => {
+    const chooserKey = targetKey ?? activeTabKeyRef.current;
+    if (!chooserKey) return;
+    const isFocused = chooserKey === activeTabKeyRef.current;
+    if (!isFocused) {
+      // 未聚焦的 chooser：先把当前 live 暂存回其所属标签，再聚焦 chooser
+      stashActiveSnapshot();
+      const pane = panesRef.current.find(p => p.tabKeys.includes(chooserKey));
+      if (pane) {
+        setFocusedPaneId(pane.id);
+        setPanes(prev => prev.map(p => p.id === pane.id ? { ...p, activeTabKey: chooserKey } : p));
+      }
+      setActiveTabKey(chooserKey);
+    }
+    // 重置 live 为空白内容
     if (kind === 'character') {
       const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
       setData(fresh);
@@ -849,29 +877,29 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCurrentTemplateId(null);
     setIsReadOnly(false);
     activeDocRef.current = null;
-    const ak = activeTabKeyRef.current;
-    if (ak) {
-      setTabs(prev => prev.map(t => t.key === ak
-        ? { ...t, kind, title: kind === 'character' ? '新人物卡' : '未命名模板', dirty: false }
-        : t));
-    }
+    // 就地改造标签记录
+    setTabs(prev => prev.map(t => t.key === chooserKey
+      ? { ...t, kind, title: kind === 'character' ? '新人物卡' : '未命名模板', dirty: false }
+      : t));
     setView(kind === 'character' ? 'editor' : 'bbcode-template');
     const url = new URL(window.location.href);
     url.searchParams.delete('id');
     window.history.replaceState({}, '', url.toString());
-  }, [activeDocRef]);
+  }, [activeDocRef, stashActiveSnapshot]);
 
-  /** 从"新建标签页"打开一个最近文档：chooser 标签被新文档标签原位顶替（保持其分栏与位置） */
-  const openDocFromChooser = useCallback((id: string) => {
-    const ak = activeTabKeyRef.current;
-    const atab = tabsRef.current.find(t => t.key === ak);
+  /** 从"新建标签页"打开一个最近文档：chooser 标签被新文档标签原位顶替（保持其分栏与位置）。
+   *  targetKey：未聚焦分栏的 chooser 需显式指定其标签 key；缺省为当前活动标签。 */
+  const openDocFromChooser = useCallback((id: string, targetKey?: string) => {
+    const chooserKey = targetKey ?? activeTabKeyRef.current;
+    const atab = tabsRef.current.find(t => t.key === chooserKey);
     if (atab?.kind === 'chooser') {
-      pendingReplaceKeyRef.current = ak;
-      snapshotsRef.current.delete(ak);
+      pendingReplaceKeyRef.current = chooserKey;
+      snapshotsRef.current.delete(chooserKey);
     }
     // 目标文档已在其它分栏打开：直接聚焦它（chooser 由 handleOpenDocument 清理）
     const existing = tabsRef.current.find(t => t.docId === id);
-    if (existing && existing.key !== ak) {
+    if (existing && existing.key !== chooserKey) {
+      pendingReplaceKeyRef.current = null;
       switchTab(existing.key);
       return;
     }

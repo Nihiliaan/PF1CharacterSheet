@@ -6,8 +6,8 @@
  *   点击分栏任意位置即聚焦（live 状态切换到该栏文档）。
  * chooser 标签渲染"新建标签页"大页面。
  */
-import React, { useMemo, useRef, useState } from 'react';
-import { X, FileText, Braces } from 'lucide-react';
+import React, { useMemo, useRef } from 'react';
+import { FileText, Braces } from 'lucide-react';
 import {
   CharacterContext, useCharacter,
   type EditorPane, type TabSnapshot, type CharacterContextType,
@@ -64,10 +64,8 @@ function PaneContent({ pane, focused }: { pane: EditorPane; focused: boolean }) 
   const activeTab = tabs.find(t => t.key === pane.activeTabKey);
 
   if (!activeTab || activeTab.kind === 'chooser') {
-    // 新建标签页（聚焦栏可操作；未聚焦栏点击任意位置即聚焦）
-    return focused ? <NewTabPage /> : (
-      <div className="flex-1 flex items-center justify-center text-xs text-stone-400 italic">新建标签页（点击聚焦此栏）</div>
-    );
+    // 新建标签页：所有分栏都渲染完整页面；未聚焦栏的动作通过 chooserKey 作用于自身标签
+    return <NewTabPage chooserKey={focused ? undefined : pane.activeTabKey ?? undefined} />;
   }
 
   const snap = getTabSnapshot(pane.activeTabKey!);
@@ -101,73 +99,6 @@ function PaneContent({ pane, focused }: { pane: EditorPane; focused: boolean }) 
   );
 }
 
-/** 单栏小标签条：本栏的文档标签，可拖拽到其它分栏 */
-function PaneStrip({ pane, focused }: { pane: EditorPane; focused: boolean }) {
-  const { tabs, switchTab, closeTab, moveTabToPane, isDirty, isTemplateDirty } = useCharacter();
-  const [dragOver, setDragOver] = useState(false);
-
-  return (
-    <div
-      className={`shrink-0 flex items-stretch gap-1 px-1.5 overflow-x-auto custom-scrollbar ${
-        focused ? 'bg-white border-b border-transparent' : 'bg-stone-100 border-b border-stone-200'
-      }`}
-      onDragOver={e => {
-        if (e.dataTransfer.types.includes(TAB_MIME)) {
-          e.preventDefault();
-          setDragOver(true);
-        }
-      }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={e => {
-        setDragOver(false);
-        const raw = e.dataTransfer.getData(TAB_MIME);
-        if (!raw) return;
-        try {
-          const { tabKey } = JSON.parse(raw);
-          if (tabKey) moveTabToPane(tabKey, pane.id);
-        } catch { /* 忽略无效负载 */ }
-      }}
-    >
-      {pane.tabKeys.map(key => {
-        const tab = tabs.find(t => t.key === key);
-        if (!tab) return null;
-        const active = focused && pane.activeTabKey === key;
-        const dirty = active ? (isDirty || isTemplateDirty) : tab.dirty;
-        const Icon = tab.kind === 'chooser' ? FileText : (tab.kind === 'character' ? FileText : Braces);
-        return (
-          <div
-            key={tab.key}
-            draggable
-            onDragStart={e => {
-              e.dataTransfer.setData(TAB_MIME, JSON.stringify({ tabKey: tab.key }));
-              e.dataTransfer.effectAllowed = 'move';
-            }}
-            onClick={() => switchTab(tab.key)}
-            onMouseDown={e => { if (e.button === 1) { e.preventDefault(); closeTab(tab.key); } }}
-            title={tab.title}
-            className={`group flex items-center gap-1.5 px-2.5 py-1.5 rounded-t-lg cursor-pointer select-none text-xs whitespace-nowrap transition-colors border-t border-x ${
-              active
-                ? 'bg-white border-stone-200 text-stone-800 font-bold shadow-sm'
-                : 'bg-transparent border-transparent text-stone-500 hover:bg-stone-200/60 hover:text-stone-700'
-            }`}
-          >
-            <Icon size={12} className={active ? 'text-primary' : 'text-stone-400'} />
-            <span className="max-w-[130px] truncate">{tab.title}</span>
-            {dirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="有未保存的修改" />}
-            <span
-              onClick={e => { e.stopPropagation(); closeTab(tab.key); }}
-              className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-stone-300 text-stone-500"
-              title="关闭标签页"
-            >
-              <X size={11} />
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 /** 分栏布局主组件：把 panes 渲染为横向排列的编辑栏 */
 export default function EditorPanes() {
   const { panes, focusedPaneId, focusPane } = useCharacter();
@@ -181,10 +112,9 @@ export default function EditorPanes() {
             key={pane.id}
             onPointerDown={() => { if (!focused) focusPane(pane.id); }}
             className={`flex-1 min-w-0 flex flex-col overflow-hidden ${
-              focused ? 'bg-white' : 'bg-stone-100/70'
+              'bg-white'
             } ${i < panes.length - 1 ? 'border-r border-stone-300' : ''}`}
           >
-            <PaneStrip pane={pane} focused={focused} />
             <PaneContent pane={pane} focused={focused} />
           </div>
         );

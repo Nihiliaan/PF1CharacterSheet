@@ -10,7 +10,7 @@ import { useCharacter } from '../../contexts/CharacterContext';
 import { useUI } from '../../contexts/UIContext';
 import { useVault } from '../../contexts/VaultContext';
 
-export default function NewTabPage() {
+export default function NewTabPage({ chooserKey }: { chooserKey?: string } = {}) {
   const { convertChooserTab, openDocFromChooser } = useCharacter();
   const { recentCharacterIds, removeFromRecent } = useUI();
   const { myCharacters } = useVault();
@@ -44,7 +44,7 @@ export default function NewTabPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
           <button
-            onClick={() => convertChooserTab('character')}
+            onClick={() => convertChooserTab('character', chooserKey)}
             className="group text-left bg-white border border-stone-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all"
           >
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
@@ -55,7 +55,7 @@ export default function NewTabPage() {
           </button>
 
           <button
-            onClick={() => convertChooserTab('template')}
+            onClick={() => convertChooserTab('template', chooserKey)}
             className="group text-left bg-white border border-stone-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all"
           >
             <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center mb-3 group-hover:bg-indigo-200 transition-colors">
@@ -77,7 +77,7 @@ export default function NewTabPage() {
             {recentItems.map(item => (
               <div key={item.id} className="relative group/item">
                 <button
-                  onClick={() => openDocFromChooser(item.id)}
+                  onClick={() => openDocFromChooser(item.id, chooserKey)}
                   className="w-full flex items-center gap-3 bg-white border border-stone-200 rounded-lg px-4 py-3 shadow-xs hover:shadow-sm hover:border-primary/40 transition-all text-left pr-9"
                 >
                   <img
