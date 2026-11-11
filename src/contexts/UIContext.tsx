@@ -12,6 +12,9 @@ interface UIContextType {
   setGmCompactMode: (mode: boolean) => void;
 
   // Toast
+  /** BBCode 变量参考弹窗（触发点：模板标签右键菜单） */
+  bbcodeHelpOpen: boolean;
+  setBbcodeHelpOpen: (open: boolean) => void;
   /** 显示全局通知（底层由 sonner 渲染，支持堆叠） */
   setToast: (toast: { message: string; type?: 'success' | 'error' | 'info' } | null) => void;
 
@@ -57,6 +60,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [confirmModal, setConfirmModal] = useState<{ title: string, onConfirm: () => void, onSecondaryConfirm?: () => void, onCancel?: () => void } | null>(null);
   const [forumSyncOpen, setForumSyncOpen] = useState(false);
   const [cardExportOpen, setCardExportOpen] = useState(false);
+  const [bbcodeHelpOpen, setBbcodeHelpOpen] = useState(false);
 
   const [isHeaderPinned, setIsHeaderPinnedState] = useState(() => localStorage.getItem('header_pinned') !== 'false');
   const [isHeaderVisible, setIsHeaderVisible] = useState(false);
@@ -112,6 +116,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setToast,
     forumSyncOpen, setForumSyncOpen,
     cardExportOpen, setCardExportOpen,
+    bbcodeHelpOpen, setBbcodeHelpOpen,
     confirmModal, setConfirmModal,
     isHeaderPinned, setIsHeaderPinned,
     isHeaderVisible, setIsHeaderVisible,

@@ -24,6 +24,7 @@ import {
 import CharacterEditor from './CharacterEditor';
 import BBCodeTemplateEditor from '../BBCodeTemplateEditor';
 import NewTabPage from './NewTabPage';
+import { DEFAULT_BBCODE_TEMPLATE } from '../../constants';
 import BBCodePreview from '../common/BBCodePreview';
 import ContextMenu from '../common/ContextMenu';
 
@@ -79,12 +80,12 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
   const { t } = useTranslation();
   const {
     tabs, activeTabKey, switchTab, closeTab, moveTabToPane, isDirty, isTemplateDirty, isReadOnly,
-    data, getItemPath, bbcodeTemplate, currentTemplateId,
+    data, getItemPath, bbcodeTemplate, setBbcodeTemplate, currentTemplateId,
     handleSave, handleSaveAs, handleShare, handleExport, handleExportBBCode,
     updateExistingTemplate, saveAsTemplate, setShowAIModal,
     openChooserTab, addPane, openPreviewTab, focusPane, getTabSnapshot,
   } = useCharacter();
-  const { gmCompactMode, setGmCompactMode, setForumSyncOpen } = useUI();
+  const { gmCompactMode, setGmCompactMode, setForumSyncOpen, setBbcodeHelpOpen, setToast } = useUI();
   const { user } = useAuth();
   const [dragOver, setDragOver] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<TabContextMenu | null>(null);
@@ -135,10 +136,28 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
             if (name) void saveAsTemplate(name, bbcodeTemplate);
           },
         });
+        items.push({ label: '变量参考', icon: ClipboardCopy, onClick: () => setBbcodeHelpOpen(true) });
+        items.push({
+          label: '导入默认模板', icon: FileDown,
+          onClick: () => {
+            if (window.confirm(t('editor.bbcode.confirm_reset'))) {
+              setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
+              setToast({ message: t('editor.bbcode.reset_success'), type: 'success' });
+            }
+          },
+        });
       }
       items.push({ label: '分享链接', icon: Share2, onClick: () => { void handleShare(); } });
       items.push({ label: '导出文件', icon: FileDown, onClick: () => { void handleExport(); } });
-      items.push({ label: '复制 BBCode', icon: ClipboardCopy, onClick: () => { void handleExportBBCode(); } });
+      if (tab.kind === 'character') {
+        items.push({ label: '复制 BBCode', icon: ClipboardCopy, onClick: () => { void handleExportBBCode(); } });
+      } else {
+        // 模板标签：复制原始模板文本（非渲染结果）
+        items.push({
+          label: '复制模板文本', icon: ClipboardCopy,
+          onClick: () => { void navigator.clipboard.writeText(bbcodeTemplate); },
+        });
+      }
       if (tab.kind === 'character') {
         items.push({ label: '同步到论坛', icon: Share2, onClick: () => setForumSyncOpen(true) });
         items.push({

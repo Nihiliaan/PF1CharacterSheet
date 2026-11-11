@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { ChevronRight, ChevronDown, HelpCircle, Copy, Eye, Code, X, GripVertical, Save, FilePlus, Share2, RotateCcw, SaveAll } from 'lucide-react';
+/**
+ * BBCode 模板编辑器（纯编辑区）。
+ * 无工具条：文件操作（保存/另存为/导入默认/分享/复制）在文档标签的右键菜单；
+ * 实时预览已解绑为独立的预览标签页；变量参考弹窗由模板标签右键菜单触发。
+ */
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { X, ChevronDown, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCharacter } from '../contexts/CharacterContext';
 import { useUI } from '../contexts/UIContext';
 import { BBCODE_SYNTAX_GUIDE, BBCODE_DATA_TREE, BBCodeTreeItem } from '../constants/bbcodeHelp';
-import { DEFAULT_BBCODE_TEMPLATE } from '../constants';
-import { generateBBCode } from '../utils/bbcodeExporter';
-import BBCodePreview from './common/BBCodePreview';
 
 const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeItem; level?: number; defaultOpen?: boolean; key?: any }) => {
   const { t } = useTranslation();
@@ -55,277 +57,37 @@ const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeIt
 
 export default function BBCodeTemplateEditor() {
   const { t } = useTranslation();
-  const { data: characterData, computed, bbcodeTemplate, setBbcodeTemplate, isReadOnly, currentTemplateId, updateExistingTemplate, saveAsTemplate, handleShare, openTemplateTab } = useCharacter();
-  const { setToast } = useUI();
-  const [showHelp, setShowHelp] = useState(false);
-  const [viewMode, setViewMode] = useState<'split' | 'edit' | 'preview'>('split');
-
-  // ===== 文件操作（自原 ChromeBar BbcodeToolbar 迁入，工具条统一为页面内一条）=====
-  const handleNewTemplate = () => openTemplateTab(true);
-  const handleBBCodeSave = async () => {
-    if (currentTemplateId) {
-      await updateExistingTemplate(currentTemplateId, bbcodeTemplate);
-    } else {
-      const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
-      if (name) await saveAsTemplate(name, bbcodeTemplate);
-    }
-  };
-  const handleBBCodeSaveAs = async () => {
-    const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
-    if (name) await saveAsTemplate(name, bbcodeTemplate);
-  };
-  const handleImportDefault = () => {
-    if (window.confirm(t('editor.bbcode.confirm_reset'))) {
-      setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
-      setToast({ message: t('editor.bbcode.reset_success'), type: 'success' });
-    }
-  };
-
-  // Resizable split-pane state
-  const [leftWidth, setLeftWidth] = useState(50); // percentage
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isResizing = useRef(false);
-
-  const startResizing = useCallback(() => {
-    isResizing.current = true;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  }, []);
-
-  const stopResizing = useCallback(() => {
-    isResizing.current = false;
-    document.body.style.cursor = 'default';
-    document.body.style.userSelect = 'auto';
-  }, []);
-
-  const onResize = useCallback((e: MouseEvent) => {
-    if (!isResizing.current || !containerRef.current) return;
-    
-    const containerWidth = containerRef.current.offsetWidth;
-    const newLeftWidth = (e.clientX / containerWidth) * 100;
-    
-    // Constraints
-    if (newLeftWidth > 20 && newLeftWidth < 80) {
-      setLeftWidth(newLeftWidth);
-    }
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('mousemove', onResize);
-    window.addEventListener('mouseup', stopResizing);
-    return () => {
-      window.removeEventListener('mousemove', onResize);
-      window.removeEventListener('mouseup', stopResizing);
-    };
-  }, [onResize, stopResizing]);
-
-  // 计算即时预览内容
-  const previewContent = useMemo(() => {
-    if (!characterData || !bbcodeTemplate) return '';
-    return generateBBCode(characterData, bbcodeTemplate, t, { computed, data: characterData });
-  }, [characterData, computed, bbcodeTemplate, t]);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(previewContent);
-    setToast({ message: t('editor.bbcode.copy_success'), type: 'success' });
-  };
-
-  const handleDevSync = async () => {
-    try {
-      const response = await fetch('/api/dev/sync-default', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'template', content: bbcodeTemplate })
-      });
-      if (response.ok) {
-        setToast({ message: "开发者同步：默认模板已更新至源码", type: 'success' });
-      } else {
-        throw new Error("同步失败");
-      }
-    } catch (e) {
-      setToast({ message: "开发者同步失败：请确保项目在开发模式下运行", type: 'error' });
-    }
-  };
-
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const { bbcodeTemplate, setBbcodeTemplate, isReadOnly } = useCharacter();
+  const { bbcodeHelpOpen, setBbcodeHelpOpen } = useUI();
 
   return (
-    <div className="flex flex-col h-full bg-stone-50 overflow-hidden relative">
-      {/* Header Toolbar */}
-      <div className="absolute top-0 left-0 right-0 h-14 bg-white/80 backdrop-blur-md border-b border-stone-200 z-10 flex items-center justify-between px-4 sm:px-8">
-        <div className="flex items-center gap-4">
-          <h2 className="text-sm font-bold text-stone-800 flex items-center gap-2">
-            <Code size={16} className="text-primary" />
-            {t('editor.bbcode.title')}
-          </h2>
-          
-          <div className="h-6 w-px bg-stone-200 mx-2 hidden sm:block" />
-          
-          <div className="flex bg-stone-100 p-0.5 rounded-lg border border-stone-200">
-            <button 
-              onClick={() => setViewMode('edit')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'edit' ? 'bg-white shadow-sm text-primary' : 'text-stone-500 hover:text-stone-700'}`}
-            >
-              <Code size={14} />
-              <span className="hidden sm:inline">{t('editor.bbcode.view_edit')}</span>
-            </button>
-            <button 
-              onClick={() => setViewMode('split')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'split' ? 'bg-white shadow-sm text-primary' : 'text-stone-500 hover:text-stone-700'}`}
-            >
-              <div className="flex gap-0.5">
-                <div className="w-1.5 h-3 bg-current opacity-50 rounded-sm" />
-                <div className="w-1.5 h-3 bg-current opacity-50 rounded-sm" />
-              </div>
-              <span className="hidden sm:inline">{t('editor.bbcode.view_split')}</span>
-            </button>
-            <button 
-              onClick={() => setViewMode('preview')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${viewMode === 'preview' ? 'bg-white shadow-sm text-primary' : 'text-stone-500 hover:text-stone-700'}`}
-            >
-              <Eye size={14} />
-              <span className="hidden sm:inline">{t('editor.bbcode.view_preview')}</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setShowHelp(true)}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
-          >
-            <HelpCircle size={16} />
-            <span className="hidden sm:inline">{t('common.help')}</span>
-          </button>
-          
-          {isLocalhost && (
-            <button
-              onClick={handleDevSync}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg border border-indigo-200 transition-all"
-              title="将当前模板保存为项目默认模板"
-            >
-              <Save size={16} />
-              <span className="hidden sm:inline">同步至源码</span>
-            </button>
-          )}
-
-          <div className="h-6 w-px bg-stone-200 mx-1" />
-
-          {/* 文件操作（自原 ChromeBar BbcodeToolbar 迁入） */}
-          <button
-            onClick={handleNewTemplate}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
-            title="新建模板"
-          >
-            <FilePlus size={16} />
-            <span className="hidden lg:inline">新建</span>
-          </button>
-          <button
-            onClick={handleBBCodeSave}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
-            title="保存模板"
-          >
-            <Save size={16} />
-            <span className="hidden lg:inline">保存</span>
-          </button>
-          <button
-            onClick={handleBBCodeSaveAs}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
-            title="另存为"
-          >
-            <SaveAll size={16} />
-            <span className="hidden lg:inline">另存为</span>
-          </button>
-          <button
-            onClick={handleImportDefault}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
-            title="导入默认模板"
-          >
-            <RotateCcw size={16} />
-            <span className="hidden lg:inline">导入默认</span>
-          </button>
-          <button
-            onClick={handleShare}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
-            title="复制分享链接"
-          >
-            <Share2 size={16} />
-            <span className="hidden lg:inline">分享</span>
-          </button>
-
-          <button 
-            onClick={handleCopy}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold bg-primary text-white hover:brightness-110 rounded-lg shadow-sm transition-all"
-          >
-            <Copy size={16} />
-            <span>{t('editor.bbcode.copy_bbcode')}</span>
-          </button>
-        </div>
+    <div className="flex flex-col h-full bg-white overflow-hidden">
+      {/* 字符数信息条 */}
+      <div className="shrink-0 p-2 bg-stone-50/50 border-b border-stone-100 flex justify-between items-center px-4">
+        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{t('editor.bbcode.content_label')}</span>
+        <span className="text-[10px] font-mono text-stone-400">{bbcodeTemplate.length} {t('editor.bbcode.chars')}</span>
       </div>
+      <textarea
+        value={bbcodeTemplate}
+        onChange={(e) => setBbcodeTemplate(e.target.value)}
+        readOnly={isReadOnly}
+        className={`flex-1 w-full p-6 outline-none resize-none font-mono text-sm leading-relaxed text-stone-700 custom-scrollbar ${isReadOnly ? 'bg-stone-50/50' : ''}`}
+        spellCheck={false}
+        placeholder={t('editor.bbcode.editor_placeholder')}
+      />
 
-      {/* Main Content Area */}
-      <div ref={containerRef} className="flex-1 mt-14 flex overflow-hidden">
-        {/* Editor Pane */}
-        {(viewMode === 'edit' || viewMode === 'split') && (
-          <div 
-            style={{ width: viewMode === 'split' ? `${leftWidth}%` : '100%' }}
-            className={`flex flex-col bg-white border-r border-stone-200 transition-[width] duration-75 ease-out`}
-          >
-            <div className="p-2 bg-stone-50/50 border-b border-stone-100 flex justify-between items-center px-4">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{t('editor.bbcode.content_label')}</span>
-              <span className="text-[10px] font-mono text-stone-400">{bbcodeTemplate.length} {t('editor.bbcode.chars')}</span>
-            </div>
-            <textarea
-              value={bbcodeTemplate}
-              onChange={(e) => setBbcodeTemplate(e.target.value)}
-              readOnly={isReadOnly}
-              className={`flex-1 w-full p-6 outline-none resize-none font-mono text-sm leading-relaxed text-stone-700 custom-scrollbar ${isReadOnly ? 'bg-stone-50/50' : ''}`}
-              spellCheck={false}
-              placeholder={t('editor.bbcode.editor_placeholder')}
-            />
-          </div>
-        )}
-
-        {/* Draggable Divider */}
-        {viewMode === 'split' && (
-          <div 
-            onMouseDown={startResizing}
-            className="w-1.5 bg-stone-200 hover:bg-primary/50 transition-colors cursor-col-resize flex items-center justify-center group z-10"
-          >
-            <div className="w-0.5 h-8 bg-stone-400 group-hover:bg-white rounded-full transition-colors" />
-          </div>
-        )}
-
-        {/* Preview Pane */}
-        {(viewMode === 'preview' || viewMode === 'split') && (
-          <div 
-            style={{ width: viewMode === 'split' ? `${100 - leftWidth}%` : '100%' }}
-            className={`flex flex-col bg-stone-50 transition-[width] duration-75 ease-out`}
-          >
-            <div className="p-2 bg-stone-50/50 border-b border-stone-200 flex justify-between items-center px-4">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{t('editor.bbcode.live_preview')}</span>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar">
-              <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-8 min-h-full">
-                <BBCodePreview bbcode={previewContent} />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Help Modal */}
+      {/* 变量参考 / 语法帮助弹窗（触发点：模板标签右键菜单） */}
       <AnimatePresence>
-        {showHelp && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
+        {bbcodeHelpOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-            onClick={() => setShowHelp(false)}
+            onClick={() => setBbcodeHelpOpen(false)}
           >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 20 }} 
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
@@ -336,8 +98,8 @@ export default function BBCodeTemplateEditor() {
                   <h3 className="text-lg font-bold text-stone-800">{t('editor.bbcode.var_ref')}</h3>
                   <p className="text-xs text-stone-500 mt-1">{t('editor.bbcode.help_subtitle')}</p>
                 </div>
-                <button 
-                  onClick={() => setShowHelp(false)}
+                <button
+                  onClick={() => setBbcodeHelpOpen(false)}
                   className="p-2 hover:bg-stone-200 rounded-full transition-colors text-stone-400"
                 >
                   <X size={20} />
@@ -382,8 +144,8 @@ export default function BBCodeTemplateEditor() {
               </div>
 
               <div className="p-4 border-t border-stone-100 bg-stone-50/50 text-center">
-                <button 
-                  onClick={() => setShowHelp(false)}
+                <button
+                  onClick={() => setBbcodeHelpOpen(false)}
                   className="px-8 py-2 bg-stone-800 text-white rounded-lg font-bold text-sm hover:bg-stone-700 transition-all"
                 >
                   {t('common.confirm')}
