@@ -17,7 +17,8 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
     showTotalForMultipleItems: false,
   },
   storage: {
-    enableLocalAutoCache: false,
+    // 默认开启：未保存内容自动写入本地草稿，意外关闭浏览器后重开应用可自动恢复（带冲突检测）
+    enableLocalAutoCache: true,
     autoSyncToForumOnSave: false,
   },
 };

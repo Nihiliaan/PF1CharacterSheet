@@ -52,6 +52,13 @@ export interface UseCharacterPersistenceOptions {
   setLastSavedTemplate: (t: string) => void;
   // ===== 计算层（供论坛同步导出 BBCode 使用）=====
   computed?: any;
+  // ===== 选项卡系统集成点（由 CharacterContext 提供）=====
+  /** 文档被渲染进 live 状态（即"打开了一个文档"）：创建或激活对应选项卡 */
+  onOpenDocument?: (docId: string, kind: 'character' | 'template', title?: string) => void;
+  /** 文档保存后 id 变化（另存为 / 模板迁移 / 首次保存）：就地更新活动选项卡的 docId */
+  onSaveDocument?: (docId: string, kind: 'character' | 'template') => void;
+  /** 启动时恢复持久化的选项卡列表（此时仅登记，不加载内容，切换到时再按需加载） */
+  onRestoreTabs?: (tabs: { key: string; docId: string; kind: 'character' | 'template'; title?: string }[]) => void;
 }
 
 export const useCharacterPersistence = ({
@@ -69,7 +76,10 @@ export const useCharacterPersistence = ({
   isDirty,
   setBbcodeTemplate,
   setLastSavedTemplate,
-  computed
+  computed,
+  onOpenDocument,
+  onSaveDocument,
+  onRestoreTabs
 }: UseCharacterPersistenceOptions) => {
   const { t } = useTranslation();
   // 内部直接消费各 Context（CharacterProvider 的祖先节点已挂载对应 Provider）
@@ -109,6 +119,8 @@ export const useCharacterPersistence = ({
     id?: string | null,
     isTemplate: boolean = false
   ) => {
+    // 保存导致活动文档的 id 变化（另存为 / 模板迁移 / 未保存新卡首次保存）：就地更新活动选项卡
+    onSaveDocument?.(newId, isTemplate ? 'template' : 'character');
     if (isTemplate) {
       setCurrentTemplateId(newId);
       localStorage.setItem(KEY_LAST_TEMP, newId);
@@ -129,9 +141,10 @@ export const useCharacterPersistence = ({
 
     const name = isTemplate ? (('name' in saveData ? saveData.name : null) || '未命名模板') : ((saveData as CharacterData)?.basic?.name || '未命名人物');
     addToRecent({ id: newId, name, data: saveData, isTemplate });
-    // 保存成功后清除本地草稿缓存
-    const draftKey = `pf1_char_draft_${newId || id || 'default'}`;
-    localStorage.removeItem(draftKey);
+    // 保存成功后清除本地草稿缓存（人物卡与模板两种 key 都清理）
+    const draftId = newId || id || 'default';
+    localStorage.removeItem(`pf1_char_draft_${draftId}`);
+    localStorage.removeItem(`pf1_tpl_draft_${draftId}`);
 
     const settings = getStoredSettings();
     let toastMsg = id ? (isTemplate ? "模板保存成功！" : "人物卡保存成功！") : ("已创建并保存新项目");
@@ -253,9 +266,26 @@ export const useCharacterPersistence = ({
     const renderCharacterDocument = (char: CharacterDocument, shouldSwitchView: boolean = true) => {
       activeDocRef.current = char;
       if (char.isTemplate) {
-        const content = char.data?.content || '';
+        const serverContent = char.data?.content || '';
+        let content = serverContent;
+        // 模板本地草稿恢复：上次会话有未保存修改时自动载入（lastSaved 仍用服务器内容，
+        // 保证脏标记正确反映"有未保存修改"）
+        if (getStoredSettings().storage.enableLocalAutoCache) {
+          try {
+            const tplDraftRaw = localStorage.getItem(`pf1_tpl_draft_${char.id}`);
+            if (tplDraftRaw) {
+              const tplDraft = JSON.parse(tplDraftRaw);
+              if (typeof tplDraft?.content === 'string' && tplDraft.content !== serverContent) {
+                content = tplDraft.content;
+                setToast({ message: "已自动恢复该模板未保存的修改", type: 'info' });
+              }
+            }
+          } catch (err) {
+            console.error("Failed to parse template draft", err);
+          }
+        }
         setBbcodeTemplate(content);
-        setLastSavedTemplate(content);
+        setLastSavedTemplate(serverContent);
         if (shouldSwitchView) setView('bbcode-template');
         setCurrentTemplateId(char.id);
         localStorage.setItem(KEY_LAST_TEMP, char.id);
@@ -307,6 +337,11 @@ export const useCharacterPersistence = ({
       const url = new URL(window.location.href);
       url.searchParams.set('id', char.id);
       window.history.replaceState({}, '', url.toString());
+      // 选项卡系统：文档渲染进 live 状态即视为"打开"，登记/激活对应选项卡
+      const openTitle = char.isTemplate
+        ? (char.name || '')
+        : (char.data?.basic?.name || char.name || '');
+      onOpenDocument?.(char.id, char.isTemplate ? 'template' : 'character', openTitle);
     };
 
     const performSelect = async () => {
@@ -455,77 +490,41 @@ export const useCharacterPersistence = ({
     await selectCharacter(id, true, true);
   };
 
-  // Initial Load: 组件挂载时立即拉取展示，不等待跨国 Auth 鉴权阻塞
+  // Initial Load: 组件挂载时恢复选项卡列表并只加载活动文档，其余选项卡在切换到时按需加载
   useEffect(() => {
     const loadInitial = async () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
-        let charId = urlParams.get('id');
-
-        // Restore both types from localStorage if not explicitly requested via URL
+        const urlId = urlParams.get('id');
         const lastCharId = localStorage.getItem(KEY_LAST_CHAR);
         const lastTempId = localStorage.getItem(KEY_LAST_TEMP);
 
-        if (charId) {
-          // If URL has an ID, we determine its type and load it as the primary
-          await selectCharacter(charId, true, true);
+        // 重建选项卡列表：优先用持久化的打开列表，否则回退到"上次角色 + 上次模板"
+        let restored: { key: string; docId: string; kind: 'character' | 'template'; title?: string }[] = [];
+        try {
+          restored = JSON.parse(localStorage.getItem('pf1_open_tabs') || '[]');
+        } catch { /* 忽略损坏的持久化数据 */ }
+        const tabs: { key: string; docId: string; kind: 'character' | 'template'; title?: string }[] = [];
+        for (const rt of restored) {
+          if (rt?.docId && !tabs.some(t => t.docId === rt.docId)) tabs.push(rt);
+        }
+        if (lastCharId && !tabs.some(t => t.docId === lastCharId)) {
+          tabs.push({ key: lastCharId, docId: lastCharId, kind: 'character' });
+        }
+        if (lastTempId && !tabs.some(t => t.docId === lastTempId)) {
+          tabs.push({ key: lastTempId, docId: lastTempId, kind: 'template' });
+        }
+        // URL 直达的文档可能不在列表里（分享链接等）：补登一个 tab（kind 先猜测为 character，
+        // 实际加载完成后由 onOpenDocument 依据真实类型修正）
+        if (urlId && !tabs.some(t => t.docId === urlId)) {
+          tabs.push({ key: urlId, docId: urlId, kind: 'character' });
+        }
+        onRestoreTabs?.(tabs);
 
-          // Then try to restore the "other" type in the background if it's different
-          if (lastCharId && lastCharId !== charId) {
-             try {
-               const c = await getCharacterById(lastCharId);
-               if (c && !c.isTemplate) {
-                  const merged = dataMigration.mergeWithDefault(c.data);
-                  setData(merged);
-                  setLastSavedData(JSON.parse(JSON.stringify(merged)));
-                  setCurrentCharacterId(c.id);
-               }
-             } catch (e: any) {
-               if (e.message?.includes('permission')) {
-                 localStorage.removeItem(KEY_LAST_CHAR);
-               }
-             }
-          }
-          if (lastTempId && lastTempId !== charId) {
-             try {
-               let t = await getCharacterById(lastTempId);
-               if (!t || !t.isTemplate) {
-                 // 兜底：模板可能已迁移到独立的 templates 集合
-                 const tpl = await getTemplateById(lastTempId).catch(() => null);
-                 t = tpl ? templateToCharacterDoc(tpl) : null;
-               }
-               if (t && t.isTemplate) {
-                  const content = t.data.content || '';
-                  setBbcodeTemplate(content);
-                  setLastSavedTemplate(content);
-                  setCurrentTemplateId(t.id);
-               }
-             } catch (e: any) {
-               if (e.message?.includes('permission')) {
-                 localStorage.removeItem(KEY_LAST_TEMP);
-               }
-             }
-          }
-        } else {
-          // No ID in URL, restore both
-          if (lastCharId) {
-            try {
-              await selectCharacter(lastCharId, true, false);
-            } catch (e: any) {
-              if (e.message?.includes('permission')) {
-                localStorage.removeItem(KEY_LAST_CHAR);
-              }
-            }
-          }
-          if (lastTempId) {
-            try {
-              await selectCharacter(lastTempId, true, false);
-            } catch (e: any) {
-              if (e.message?.includes('permission')) {
-                localStorage.removeItem(KEY_LAST_TEMP);
-              }
-            }
-          }
+        // 只加载活动文档：URL 直达优先，其次上次角色，最后上次模板
+        const activeId = urlId || lastCharId || lastTempId;
+        if (activeId) {
+          await selectCharacter(activeId, true, true);
         }
       } catch (error) {
         console.error("[useCharacterPersistence] Initial load failed:", error);
@@ -534,6 +533,7 @@ export const useCharacterPersistence = ({
       }
     };
     loadInitial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 当 Firebase Auth 异步鉴权完成后，核验当前已打开卡片的所有权并动态解锁只读

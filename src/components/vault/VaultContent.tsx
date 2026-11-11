@@ -81,7 +81,7 @@ const VaultContent = ({
 
   const getDeepAvatars = (folderId: string): { url: string; isTemplate?: boolean }[] => {
     const directChars = characters.filter(c => c.folderId === folderId);
-    let items = directChars.map(c => ({
+    let items: { url: string; isTemplate?: boolean }[] = directChars.map(c => ({
       url: c.data?.basic?.avatars?.url?.[0] || 'https://ui-avatars.com/api/?name=' + (c.name || ''),
       isTemplate: !!c.isTemplate
     }));

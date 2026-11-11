@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type ViewType = 'editor' | 'vault' | 'settings' | 'bbcode-template' | 'svg-template' | 'about' | 'gm-view';
+export type ViewType = 'editor' | 'vault' | 'settings' | 'bbcode-template' | 'svg-template' | 'about' | 'gm-view' | 'new-tab';
 
 interface UIContextType {
   // Navigation
@@ -12,8 +12,8 @@ interface UIContextType {
   setToast: (toast: { message: string; type?: 'success' | 'error' | 'info' } | null) => void;
 
   // Confirm Modal
-  confirmModal: { title: string, onConfirm: () => void, onSecondaryConfirm?: () => void } | null;
-  setConfirmModal: (modal: { title: string, onConfirm: () => void, onSecondaryConfirm?: () => void } | null) => void;
+  confirmModal: { title: string, onConfirm: () => void, onSecondaryConfirm?: () => void, onCancel?: () => void } | null;
+  setConfirmModal: (modal: { title: string, onConfirm: () => void, onSecondaryConfirm?: () => void, onCancel?: () => void } | null) => void;
 
   // Header state
   isHeaderPinned: boolean;
@@ -38,7 +38,7 @@ export const useUI = () => {
 export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [view, setViewState] = useState<ViewType>('editor');
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' | 'info' } | null>(null);
-  const [confirmModal, setConfirmModal] = useState<{ title: string, onConfirm: () => void, onSecondaryConfirm?: () => void } | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ title: string, onConfirm: () => void, onSecondaryConfirm?: () => void, onCancel?: () => void } | null>(null);
 
   const [isHeaderPinned, setIsHeaderPinnedState] = useState(() => localStorage.getItem('header_pinned') !== 'false');
   const [isHeaderVisible, setIsHeaderVisible] = useState(false);
