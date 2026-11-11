@@ -1,8 +1,8 @@
 import React from 'react';
 import { AnimatePresence } from 'motion/react';
+import { Toaster } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import Dialog from '../common/Dialog';
-import Toast from '../common/Toast';
 import AIExtractionModal from '../editor/AIExtractionModal';
 
 import { useUI } from '../../contexts/UIContext';
@@ -14,8 +14,6 @@ export default function AppOverlays() {
   const {
     confirmModal,
     setConfirmModal,
-    toast,
-    setToast,
   } = useUI();
 
   const {
@@ -42,18 +40,17 @@ export default function AppOverlays() {
 
   return (
     <>
+      {/* 全局通知（sonner 渲染，UIContext.setToast 触发） */}
+      <Toaster position="top-center" richColors />
 
-      {/* Dialogs and Toasts */}
+      {/* 确认弹窗 */}
       <AnimatePresence>
         {confirmModal && (
-          <Dialog 
-            type="confirm" title={confirmModal.title} onConfirm={() => { confirmModal.onConfirm(); setConfirmModal(null); }} onCancel={() => setConfirmModal(null)} 
+          <Dialog
+            type="confirm" title={confirmModal.title} onConfirm={() => { confirmModal.onConfirm(); setConfirmModal(null); }} onCancel={() => { confirmModal.onCancel?.(); setConfirmModal(null); }}
             onSecondaryConfirm={confirmModal.onSecondaryConfirm ? () => { confirmModal.onSecondaryConfirm!(); setConfirmModal(null); } : undefined}
             secondaryLabel={t('overlays.save_and_continue')}
           />
-        )}
-        {toast && (
-          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         )}
       </AnimatePresence>
 

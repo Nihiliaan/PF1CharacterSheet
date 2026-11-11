@@ -8,7 +8,6 @@ import {
 import { getCharacterById } from '../../services/characterService';
 import { getTemplateById, templateToCharacterDoc } from '../../services/templateService';
 import { FirebaseUser, FolderMetadata } from '../../schema/types';
-import Toast from '../common/Toast';
 import Dialog from '../common/Dialog';
 import ContextMenu from '../common/ContextMenu';
 import DriveBrowser from './DriveBrowser';
@@ -48,7 +47,6 @@ const VaultContent = ({
   } = useCharacter();
 
   const {
-    toast,
     setToast
   } = useUI();
 
@@ -767,16 +765,6 @@ const VaultContent = ({
           } 
         />
       )}
-
-      <AnimatePresence>
-        {toast && (
-          <Toast 
-            message={toast.message} 
-            type={toast.type} 
-            onClose={() => setToast(null)} 
-          />
-        )}
-      </AnimatePresence>
 
       {driveModal && (
         <DriveBrowser 

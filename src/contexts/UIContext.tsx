@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { toast as sonnerToast } from 'sonner';
 
 export type ViewType = 'editor' | 'vault' | 'settings' | 'bbcode-template' | 'svg-template' | 'about' | 'gm-view' | 'new-tab';
 
@@ -8,7 +9,7 @@ interface UIContextType {
   setView: (view: ViewType) => void;
 
   // Toast
-  toast: { message: string; type?: 'success' | 'error' | 'info' } | null;
+  /** 显示全局通知（底层由 sonner 渲染，支持堆叠） */
   setToast: (toast: { message: string; type?: 'success' | 'error' | 'info' } | null) => void;
 
   // Confirm Modal
@@ -37,7 +38,13 @@ export const useUI = () => {
 
 export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [view, setViewState] = useState<ViewType>('editor');
-  const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' | 'info' } | null>(null);
+  // Toast：API 保持不变（调用方零改动），渲染交给 sonner（支持堆叠/动画/自动消失）
+  const setToast = useCallback((t: { message: string; type?: 'success' | 'error' | 'info' } | null) => {
+    if (!t) return;
+    if (t.type === 'success') sonnerToast.success(t.message);
+    else if (t.type === 'error') sonnerToast.error(t.message);
+    else sonnerToast.info(t.message);
+  }, []);
   const [confirmModal, setConfirmModal] = useState<{ title: string, onConfirm: () => void, onSecondaryConfirm?: () => void, onCancel?: () => void } | null>(null);
 
   const [isHeaderPinned, setIsHeaderPinnedState] = useState(() => localStorage.getItem('header_pinned') !== 'false');
@@ -88,7 +95,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const value: UIContextType = {
     view, setView,
-    toast, setToast,
+    setToast,
     confirmModal, setConfirmModal,
     isHeaderPinned, setIsHeaderPinned,
     isHeaderVisible, setIsHeaderVisible,
