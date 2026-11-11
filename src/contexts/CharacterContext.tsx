@@ -42,7 +42,24 @@ export interface EditorTab {
   dirty: boolean;
 }
 
-interface CharacterContextType {
+/** 编辑器分栏（VS Code 式）：每栏有自己的标签序列与活动标签 */
+export interface EditorPane {
+  id: string;
+  tabKeys: string[];
+  activeTabKey: string | null;
+}
+
+/** 某个标签被暂存时的完整 live 状态快照 */
+export interface TabSnapshot {
+  data: CharacterData;
+  lastSavedData: CharacterData;
+  bbcodeTemplate: string;
+  lastSavedTemplate: string;
+  isReadOnly: boolean;
+  activeDoc: any;
+}
+
+export interface CharacterContextType {
   // State
   data: CharacterData;
   setData: React.Dispatch<React.SetStateAction<CharacterData>>;
@@ -155,9 +172,21 @@ interface CharacterContextType {
   convertChooserTab: (kind: 'character' | 'template') => void;
   /** 从"新建标签页"打开一个最近文档：关闭 chooser 标签并按常规流程打开该文档 */
   openDocFromChooser: (id: string) => void;
+
+  // Editor Panes（分栏：VS Code 式向右拆分，标签可在栏间拖拽）
+  panes: EditorPane[];
+  focusedPaneId: string;
+  /** 在标签栏右侧新增一栏（以"新建标签页"开场，上限 4 栏） */
+  addPane: () => void;
+  /** 把标签移动到目标分栏（拖拽放置），源栏空了会自动剪除 */
+  moveTabToPane: (tabKey: string, paneId: string) => void;
+  /** 聚焦某个分栏（点击未聚焦分栏时，live 状态切换到其活动文档） */
+  focusPane: (paneId: string) => void;
+  /** 读取某标签被暂存时的 live 快照（供未聚焦分栏只读渲染） */
+  getTabSnapshot: (tabKey: string) => TabSnapshot | null;
 }
 
-const CharacterContext = createContext<CharacterContextType | undefined>(undefined);
+export const CharacterContext = createContext<CharacterContextType | undefined>(undefined);
 
 export const useCharacter = () => {
   const context = useContext(CharacterContext);
@@ -210,6 +239,57 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const currentTemplateIdRef = useRef<string | null>(null);
   currentTemplateIdRef.current = currentTemplateId;
 
+  // ===== 分栏（panes）状态 =====
+  const [panes, setPanes] = useState<EditorPane[]>([{ id: 'pane-1', tabKeys: [], activeTabKey: null }]);
+  const [focusedPaneId, setFocusedPaneId] = useState('pane-1');
+  const panesRef = useRef<EditorPane[]>([]);
+  panesRef.current = panes;
+  const focusedPaneIdRef = useRef(focusedPaneId);
+  focusedPaneIdRef.current = focusedPaneId;
+  /** openDocFromChooser 的"原位顶替"标记：新文档标签顶替 chooser 标签（保持其分栏与位置） */
+  const pendingReplaceKeyRef = useRef<string | null>(null);
+
+  // 分栏持久化
+  useEffect(() => {
+    try {
+      localStorage.setItem('pf1_panes', JSON.stringify(panes));
+      localStorage.setItem('pf1_focused_pane', focusedPaneId);
+    } catch (e) {
+      console.error('Failed to persist panes:', e);
+    }
+  }, [panes, focusedPaneId]);
+
+  // ===== 分栏簿记辅助 =====
+  /** 从分栏列表中移除某标签（返回新列表；栏空则剪除，但保底不返回空列表） */
+  const removeTabFromPanes = (list: EditorPane[], key: string): EditorPane[] => {
+    let next = list.map(p => {
+      if (!p.tabKeys.includes(key)) return p;
+      const remaining = p.tabKeys.filter(k => k !== key);
+      return { ...p, tabKeys: remaining, activeTabKey: p.activeTabKey === key ? (remaining[remaining.length - 1] ?? null) : p.activeTabKey };
+    });
+    const nonEmpty = next.filter(p => p.tabKeys.length > 0);
+    return nonEmpty.length ? nonEmpty : list;
+  };
+
+  /** 把标签挂入聚焦分栏（若已在某栏则激活该栏）；返回其最终所在分栏 id */
+  const assignTabToFocusedPane = useCallback((tabKey: string): string => {
+    const existingPane = panesRef.current.find(p => p.tabKeys.includes(tabKey));
+    if (existingPane) {
+      setFocusedPaneId(existingPane.id);
+      setPanes(prev => prev.map(p => p.id === existingPane.id ? { ...p, activeTabKey: tabKey } : p));
+      return existingPane.id;
+    }
+    const fpId = focusedPaneIdRef.current;
+    const fp = panesRef.current.find(p => p.id === fpId) || panesRef.current[0];
+    if (!fp) {
+      setPanes([{ id: 'pane-1', tabKeys: [tabKey], activeTabKey: tabKey }]);
+      setFocusedPaneId('pane-1');
+      return 'pane-1';
+    }
+    setPanes(prev => prev.map(p => p.id === fp.id ? { ...p, tabKeys: [...p.tabKeys, tabKey], activeTabKey: tabKey } : p));
+    return fp.id;
+  }, []);
+
   // 选项卡列表持久化：只保存已落库的文档（docId 非空），未保存的新卡不入册
   useEffect(() => {
     const persisted = tabs
@@ -222,19 +302,50 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [tabs]);
 
-  /** 文档渲染进 live 状态（= 打开了一个文档）：创建或激活对应选项卡 */
+  /** 文档渲染进 live 状态（= 打开了一个文档）：创建或激活对应选项卡，并挂入聚焦分栏 */
   const handleOpenDocument = useCallback((docId: string, kind: 'character' | 'template', title?: string) => {
+    const replaceKey = pendingReplaceKeyRef.current;
     const existing = tabsRef.current.find(t => t.docId === docId);
     if (existing) {
       // 已登记：修正类型（URL 直达时 kind 是猜测的）并激活
       setTabs(prev => prev.map(t => t.key === existing.key ? { ...t, kind, title: title || t.title } : t));
       setActiveTabKey(existing.key);
+      // 聚焦其所在分栏
+      const pane = panesRef.current.find(p => p.tabKeys.includes(existing.key));
+      if (pane) setFocusedPaneId(pane.id);
+      if (replaceKey && replaceKey !== existing.key) {
+        // chooser 顶替目标已存在于其它分栏：移除 chooser 标签
+        pendingReplaceKeyRef.current = null;
+        setTabs(prev => prev.filter(t => t.key !== replaceKey));
+        setPanes(prev => removeTabFromPanes(prev, replaceKey));
+      }
+      return;
+    }
+    if (replaceKey) {
+      // 原位顶替：新文档标签就地取代 chooser 标签（保持其分栏与位置）
+      pendingReplaceKeyRef.current = null;
+      setTabs(prev => prev.map(t => t.key === replaceKey
+        ? { key: docId, docId, kind, title: title || (kind === 'character' ? '人物卡' : '模板'), dirty: false }
+        : t));
+      setPanes(prev => prev.map(p => p.tabKeys.includes(replaceKey)
+        ? { ...p, tabKeys: p.tabKeys.map(k => (k === replaceKey ? docId : k)), activeTabKey: p.activeTabKey === replaceKey ? docId : p.activeTabKey }
+        : p));
+      setActiveTabKey(docId);
       return;
     }
     setTabs(prev => prev.some(t => t.docId === docId)
       ? prev
       : [...prev, { key: docId, docId, kind, title: title || (kind === 'character' ? '人物卡' : '模板'), dirty: false }]);
     setActiveTabKey(docId);
+    // 挂入聚焦分栏
+    const fpId = focusedPaneIdRef.current;
+    const fp = panesRef.current.find(p => p.id === fpId) || panesRef.current[0];
+    if (fp) {
+      setPanes(prev => prev.map(p => p.id === fp.id ? { ...p, tabKeys: [...p.tabKeys, docId], activeTabKey: docId } : p));
+    } else {
+      setPanes([{ id: 'pane-1', tabKeys: [docId], activeTabKey: docId }]);
+      setFocusedPaneId('pane-1');
+    }
   }, []);
 
   /** 保存导致活动文档 id 变化（另存为 / 迁移 / 首次保存）：就地更新活动选项卡的 docId，key 不变 */
@@ -244,11 +355,42 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setTabs(prev => prev.map(t => (t.key === ak && t.kind === kind) ? { ...t, docId } : t));
   }, []);
 
-  /** 启动时恢复持久化的选项卡列表（仅登记，不加载内容；切换到时按需加载） */
+  /** 启动时恢复持久化的选项卡列表与分栏结构（仅登记，不加载内容；切换到时按需加载） */
   const handleRestoreTabs = useCallback((restored: { key: string; docId: string; kind: 'character' | 'template'; title?: string }[]) => {
     setTabs(prev => {
       if (prev.length) return prev;
       return restored.map(t => ({ key: t.key, docId: t.docId, kind: t.kind, title: t.title || '', dirty: false }));
+    });
+    setPanes(prev => {
+      // StrictMode 双跑 / 已有结构时跳过
+      if (prev.some(p => p.tabKeys.length > 0)) return prev;
+      const keys = new Set(restored.map(t => t.key));
+      let restoredPanes: EditorPane[] = [];
+      let restoredFocus = 'pane-1';
+      try {
+        const stored = JSON.parse(localStorage.getItem('pf1_panes') || '[]') as EditorPane[];
+        restoredPanes = stored
+          .map(p => ({ ...p, tabKeys: (p.tabKeys || []).filter(k => keys.has(k)) }))
+          .filter(p => p.tabKeys.length > 0);
+        const storedFocus = localStorage.getItem('pf1_focused_pane');
+        if (storedFocus && restoredPanes.some(p => p.id === storedFocus)) restoredFocus = storedFocus;
+      } catch { /* 忽略损坏数据 */ }
+      // 未被任何分栏收录的标签补进第一栏
+      const missing = restored.filter(t => !restoredPanes.some(p => p.tabKeys.includes(t.key))).map(t => t.key);
+      if (!restoredPanes.length) {
+        restoredPanes = [{ id: 'pane-1', tabKeys: restored.map(t => t.key), activeTabKey: restored[0]?.key ?? null }];
+      } else if (missing.length) {
+        restoredPanes = restoredPanes.map((p, i) => i === 0 ? { ...p, tabKeys: [...p.tabKeys, ...missing] } : p);
+      }
+      if (!restoredPanes.some(p => p.id === restoredFocus)) restoredFocus = restoredPanes[0].id;
+      return restoredPanes;
+    });
+    setFocusedPaneId(prev => {
+      try {
+        const stored = localStorage.getItem('pf1_focused_pane');
+        if (stored) return stored;
+      } catch { /* ignore */ }
+      return prev;
     });
   }, []);
 
@@ -458,19 +600,29 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const liveDirty = isDirty || isTemplateDirty;
     const prevKey = activeTabKeyRef.current;
     setTabs(prev => prev.map(t => t.key === prevKey ? { ...t, dirty: liveDirty } : t));
-    // 2. 激活目标 tab
+    // 2. 激活目标 tab，并聚焦其所在分栏
     setActiveTabKey(key);
-    // 3. 有快照 → 整份换入；无快照（本会话首次激活）→ 走正常加载
+    const targetPane = panesRef.current.find(p => p.tabKeys.includes(key));
+    if (targetPane) {
+      setFocusedPaneId(targetPane.id);
+      setPanes(prev => prev.map(p => p.id === targetPane.id ? { ...p, activeTabKey: key } : p));
+    }
+    // 3. 有快照 → 整份换入；chooser → 切视图即可；无快照（本会话首次激活）→ 走正常加载
     const snap = snapshotsRef.current.get(key);
     if (snap) {
       applySnapshot(snap, tab);
+    } else if (tab.kind === 'chooser') {
+      setView('new-tab');
     } else {
       await selectCharacter(tab.docId, true, true);
       // 加载失败（文档已删除等）：live 状态未变，撤销激活并移除失效 tab
       if (currentCharacterIdRef.current !== tab.docId && currentTemplateIdRef.current !== tab.docId) {
         snapshotsRef.current.delete(key);
         setTabs(prev => prev.filter(t => t.key !== key));
+        setPanes(prev => removeTabFromPanes(prev, key));
         setActiveTabKey(prevKey);
+        const prevPane = panesRef.current.find(p => p.tabKeys.includes(prevKey));
+        if (prevPane) setFocusedPaneId(prevPane.id);
       }
     }
   }, [stashActiveSnapshot, isDirty, isTemplateDirty, selectCharacter, applySnapshot]);
@@ -487,25 +639,18 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         localStorage.removeItem(`pf1_char_draft_${tab.docId}`);
         localStorage.removeItem(`pf1_tpl_draft_${tab.docId}`);
       }
-      const idx = tabsRef.current.findIndex(t => t.key === key);
-      const remaining = tabsRef.current.filter(t => t.key !== key);
-      if (!isActive) {
-        setTabs(remaining);
-        return;
-      }
-      const neighbor = remaining.length ? remaining[Math.min(idx, remaining.length - 1)] : null;
-      setTabs(remaining);
-      if (neighbor) {
-        setActiveTabKey(neighbor.key);
-        const snap = snapshotsRef.current.get(neighbor.key);
-        if (snap) {
-          applySnapshot(snap, neighbor);
-        } else {
-          // 邻居从未在本会话加载过：走正常加载
-          selectCharacter(neighbor.docId, true, true);
-        }
-      } else {
-        // 关闭最后一个选项卡：重置为全新空白人物卡
+      const paneIdx = panesRef.current.findIndex(p => p.tabKeys.includes(key));
+      const ownerPane = panesRef.current[paneIdx];
+      // 分栏簿记：从所属栏移除；栏空则剪除；聚焦栏被剪除时聚焦转移到相邻栏
+      let nextPanes = panesRef.current.map(p => {
+        if (!p.tabKeys.includes(key)) return p;
+        const remaining = p.tabKeys.filter(k => k !== key);
+        return { ...p, tabKeys: remaining, activeTabKey: p.activeTabKey === key ? (remaining[remaining.length - 1] ?? null) : p.activeTabKey };
+      });
+      const nonEmpty = nextPanes.filter(p => p.tabKeys.length > 0);
+      const remainingTabs = tabsRef.current.filter(t => t.key !== key);
+      if (nonEmpty.length === 0) {
+        // 关闭最后一个选项卡：重置为全新空白人物卡，重建唯一分栏
         const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
         setData(fresh);
         setLastSavedData(JSON.parse(JSON.stringify(fresh)));
@@ -518,7 +663,47 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         window.history.replaceState({}, '', url.toString());
         setView('editor');
         setTabs([{ key: 'new-character', docId: null, kind: 'character', title: '新人物卡', dirty: false }]);
+        setPanes([{ id: 'pane-1', tabKeys: ['new-character'], activeTabKey: 'new-character' }]);
+        setFocusedPaneId('pane-1');
         setActiveTabKey('new-character');
+        return;
+      }
+      let focusedNext = focusedPaneIdRef.current;
+      let nextActiveTab: string | null = activeTabKeyRef.current;
+      if (ownerPane && ownerPane.tabKeys.length - 1 <= 0) {
+        // 该栏被剪除
+        nextPanes = nonEmpty;
+        if (focusedNext === ownerPane.id) {
+          const neighbor = nonEmpty[Math.min(paneIdx, nonEmpty.length - 1)];
+          focusedNext = neighbor.id;
+          nextActiveTab = neighbor.activeTabKey ?? neighbor.tabKeys[neighbor.tabKeys.length - 1] ?? null;
+        }
+      } else if (isActive && ownerPane) {
+        // 关闭的是聚焦栏的活动标签：该栏活动标签已顺延为 remaining 最后一个
+        const p = nextPanes.find(pp => pp.id === ownerPane.id);
+        nextActiveTab = p?.activeTabKey ?? nextActiveTab;
+      }
+      setPanes(nextPanes);
+      setFocusedPaneId(focusedNext);
+      setTabs(remainingTabs);
+      if (isActive) {
+        if (nextActiveTab && nextActiveTab !== key) {
+          setActiveTabKey(nextActiveTab);
+          const nt = remainingTabs.find(t => t.key === nextActiveTab);
+          if (nt) {
+            if (nt.kind === 'chooser') {
+              setView('new-tab');
+            } else {
+              const snap = snapshotsRef.current.get(nextActiveTab);
+              if (snap) {
+                applySnapshot(snap, nt);
+              } else {
+                // 该标签从未在本会话加载过：走正常加载
+                selectCharacter(nextActiveTab, true, true);
+              }
+            }
+          }
+        }
       }
     };
     if (tabDirty) {
@@ -591,11 +776,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const key = `new-${kind}-${Date.now()}`;
     setTabs(prev => [...prev, { key, docId: null, kind, title: kind === 'character' ? '新人物卡' : '未命名模板', dirty: false }]);
     setActiveTabKey(key);
+    assignTabToFocusedPane(key);
     setView(kind === 'character' ? 'editor' : 'bbcode-template');
     const url = new URL(window.location.href);
     url.searchParams.delete('id');
     window.history.replaceState({}, '', url.toString());
-  }, [activeDocRef]);
+  }, [activeDocRef, assignTabToFocusedPane]);
 
   /** 激活同类标签的最近一个；若它已是活动标签（可能正停留在其他视图）则仅切回编辑视图 */
   const activateLastTabOfKind = useCallback((kind: 'character' | 'template'): boolean => {
@@ -642,11 +828,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const key = `chooser-${Date.now()}`;
     setTabs(prev => [...prev, { key, docId: null, kind: 'chooser', title: '新建标签页', dirty: false }]);
     setActiveTabKey(key);
+    assignTabToFocusedPane(key);
     setView('new-tab');
     const url = new URL(window.location.href);
     url.searchParams.delete('id');
     window.history.replaceState({}, '', url.toString());
-  }, [stashAndMarkDirty]);
+  }, [stashAndMarkDirty, assignTabToFocusedPane]);
 
   /** 把当前 chooser 标签就地改造成空白的人物卡/模板标签（新建标签页上的选择动作，浏览器同页跳转语义） */
   const convertChooserTab = useCallback((kind: 'character' | 'template') => {
@@ -674,15 +861,78 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     window.history.replaceState({}, '', url.toString());
   }, [activeDocRef]);
 
-  /** 从"新建标签页"打开一个最近文档：先关闭 chooser 标签，再按常规流程打开该文档（生成正常文档标签） */
+  /** 从"新建标签页"打开一个最近文档：chooser 标签被新文档标签原位顶替（保持其分栏与位置） */
   const openDocFromChooser = useCallback((id: string) => {
     const ak = activeTabKeyRef.current;
-    if (ak) {
+    const atab = tabsRef.current.find(t => t.key === ak);
+    if (atab?.kind === 'chooser') {
+      pendingReplaceKeyRef.current = ak;
       snapshotsRef.current.delete(ak);
-      setTabs(prev => prev.filter(t => t.key !== ak));
+    }
+    // 目标文档已在其它分栏打开：直接聚焦它（chooser 由 handleOpenDocument 清理）
+    const existing = tabsRef.current.find(t => t.docId === id);
+    if (existing && existing.key !== ak) {
+      switchTab(existing.key);
+      return;
     }
     selectCharacter(id, true, true);
-  }, [selectCharacter]);
+  }, [selectCharacter, switchTab]);
+
+  /** 在标签栏右侧新增一栏（以"新建标签页"开场），并聚焦它；上限 4 栏 */
+  const addPane = useCallback(() => {
+    if (panesRef.current.length >= 4) return;
+    stashAndMarkDirty();
+    const paneId = `pane-${Date.now()}`;
+    const chooserKey = `chooser-${Date.now()}`;
+    setTabs(prev => [...prev, { key: chooserKey, docId: null, kind: 'chooser', title: '新建标签页', dirty: false }]);
+    setPanes(prev => [...prev, { id: paneId, tabKeys: [chooserKey], activeTabKey: chooserKey }]);
+    setActiveTabKey(chooserKey);
+    setFocusedPaneId(paneId);
+    setView('new-tab');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    window.history.replaceState({}, '', url.toString());
+  }, [stashAndMarkDirty]);
+
+  /** 把标签移动到目标分栏（拖拽放置）；源栏空了自动剪除，目标栏激活该标签 */
+  const moveTabToPane = useCallback((tabKey: string, targetPaneId: string) => {
+    const source = panesRef.current.find(p => p.tabKeys.includes(tabKey));
+    const target = panesRef.current.find(p => p.id === targetPaneId);
+    if (!source || !target || source.id === targetPaneId) return;
+    let next = panesRef.current.map(p => {
+      if (p.id === source.id) {
+        const remaining = p.tabKeys.filter(k => k !== tabKey);
+        return { ...p, tabKeys: remaining, activeTabKey: p.activeTabKey === tabKey ? (remaining[remaining.length - 1] ?? null) : p.activeTabKey };
+      }
+      if (p.id === targetPaneId) {
+        return { ...p, tabKeys: [...p.tabKeys, tabKey], activeTabKey: tabKey };
+      }
+      return p;
+    });
+    const nonEmpty = next.filter(p => p.tabKeys.length > 0);
+    if (nonEmpty.length !== next.length) next = nonEmpty.length ? nonEmpty : next;
+    setPanes(next);
+    // 移动的是全局活动标签：聚焦跟随到目标栏
+    if (tabKey === activeTabKeyRef.current) setFocusedPaneId(targetPaneId);
+  }, []);
+
+  /** 聚焦某个分栏：live 状态切换到其活动文档（未聚焦分栏为只读快照渲染） */
+  const focusPane = useCallback((paneId: string) => {
+    if (paneId === focusedPaneIdRef.current) return;
+    const pane = panesRef.current.find(p => p.id === paneId);
+    if (!pane) return;
+    const tabKey = pane.activeTabKey ?? pane.tabKeys[pane.tabKeys.length - 1] ?? null;
+    if (!tabKey) {
+      setFocusedPaneId(paneId);
+      return;
+    }
+    switchTab(tabKey);
+  }, [switchTab]);
+
+  /** 读取某标签被暂存时的 live 快照（供未聚焦分栏只读渲染） */
+  const getTabSnapshot = useCallback((tabKey: string) => {
+    return snapshotsRef.current.get(tabKey) ?? null;
+  }, []);
 
   // 综合只读保护：权限只读 或 正在后台同步数据时，必须激活只读保护锁
   const isSyncingActive = isSyncing || syncStatus === 'syncing' || isSyncingDrive;
@@ -796,6 +1046,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     selectCharacter: openDocumentAsTab,
     loadSharedCharacter: (id: string) => openDocumentAsTab(id, true, true),
     tabs, activeTabKey, activeTabTitle, switchTab, closeTab, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser,
+    panes, focusedPaneId, addPane, moveTabToPane, focusPane, getTabSnapshot,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
     handleItemDragStart, handleItemDragOver, handleItemDrop,
@@ -835,7 +1086,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     driveModal, setDriveModal, isSyncingDrive,
     handleBrowseDrive, handleBrowseDriveRoot, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore,
     getItemPath,
-    openDocumentAsTab, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser, tabs, activeTabKey, activeTabTitle, switchTab, closeTab
+    openDocumentAsTab, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser,
+    tabs, activeTabKey, activeTabTitle, switchTab, closeTab,
+    panes, focusedPaneId, addPane, moveTabToPane, focusPane, getTabSnapshot
   ]);
 
   return (

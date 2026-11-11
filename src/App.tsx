@@ -11,9 +11,8 @@ const VaultContent = lazy(() => import('./components/vault/VaultContent'));
 const SettingsCenter = lazy(() => import('./components/settings/SettingsCenter'));
 
 // Eager Components
-import CharacterEditor from './components/editor/CharacterEditor';
 import EditorTabBar from './components/editor/EditorTabBar';
-import NewTabPage from './components/editor/NewTabPage';
+import EditorPanes from './components/editor/EditorPanes';
 import ChromeBar from './components/layout/ChromeBar';
 import FloatingBall from './components/layout/FloatingBall';
 import ExplorerSidebar from './components/layout/ExplorerSidebar';
@@ -104,9 +103,7 @@ function AppContent() {
         <ChromeBar />
         <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
-          {view === 'new-tab' && <NewTabPage />}
-
-          {view === 'editor' && <CharacterEditor user={user} />}
+          {(view === 'editor' || view === 'new-tab') && <EditorPanes />}
 
           {view === 'vault' && (
             <motion.div key="vault" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full overflow-hidden">
