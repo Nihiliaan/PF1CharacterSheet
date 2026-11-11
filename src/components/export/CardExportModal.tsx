@@ -128,7 +128,7 @@ const CardExportModal: React.FC<CardExportModalProps> = ({
 
   // 下载文件到本地
   const handleDownload = () => {
-    const filename = `${data.name || 'character'}_${currentTemplate.id}.${currentTemplate.extension}`;
+    const filename = `${data.basic?.name || 'character'}_${currentTemplate.id}.${currentTemplate.extension}`;
     const blob = new Blob([renderResult.content], { type: renderResult.mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -299,7 +299,7 @@ const CardExportModal: React.FC<CardExportModalProps> = ({
                 <label className="text-xs text-stone-600 block mb-1">自定义标题 / 别名 (可选)</label>
                 <input
                   type="text"
-                  placeholder={data.name || '默认使用人物卡姓名'}
+                  placeholder={data.basic?.name || '默认使用人物卡姓名'}
                   value={customTitle}
                   onChange={e => setCustomTitle(e.target.value)}
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-stone-300 outline-none focus:border-stone-500 bg-white"
