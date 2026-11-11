@@ -67,7 +67,7 @@ export const SafeMarkdownText: React.FC<{
 export default function GMStatBlockView() {
   const { t } = useTranslation();
   const { data } = useCharacter();
-  const { setView, setToast } = useUI();
+  const { gmCompactMode, setGmCompactMode, setToast } = useUI();
 
   const defaultCR = useMemo(() => getEstimatedCR(data), [data]);
   const [customCR, setCustomCR] = useState<number | string>(defaultCR);
@@ -112,7 +112,7 @@ export default function GMStatBlockView() {
       <div className="max-w-5xl mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 bg-white border border-stone-200 rounded-lg px-4 py-2.5 shadow-sm print:hidden">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setView('editor')}
+            onClick={() => setGmCompactMode(false)}
             className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded transition-colors"
             title={t('common.switch_to_editor', '返回编辑')}
           >

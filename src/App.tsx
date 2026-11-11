@@ -9,7 +9,6 @@ const BBCodeTemplateEditor = lazy(() => import('./components/BBCodeTemplateEdito
 const SvgTemplateEditor = lazy(() => import('./components/SvgTemplateEditor'));
 const VaultContent = lazy(() => import('./components/vault/VaultContent'));
 const SettingsCenter = lazy(() => import('./components/settings/SettingsCenter'));
-const GMStatBlockView = lazy(() => import('./components/gm/GMStatBlockView'));
 
 // Eager Components
 import CharacterEditor from './components/editor/CharacterEditor';
@@ -108,12 +107,6 @@ function AppContent() {
           {view === 'new-tab' && <NewTabPage />}
 
           {view === 'editor' && <CharacterEditor user={user} />}
-          
-          {view === 'gm-view' && (
-            <Suspense fallback={<ViewLoadingFallback />}>
-              <GMStatBlockView />
-            </Suspense>
-          )}
 
           {view === 'vault' && (
             <motion.div key="vault" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full overflow-hidden">

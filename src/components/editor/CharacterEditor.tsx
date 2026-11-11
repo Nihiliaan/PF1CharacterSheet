@@ -6,6 +6,9 @@ import { User as FirebaseUser } from 'firebase/auth';
 import TableOfContents from './TableOfContents';
 
 import { useCharacter } from '../../contexts/CharacterContext';
+import { useUI } from '../../contexts/UIContext';
+
+const GMStatBlockView = React.lazy(() => import('../gm/GMStatBlockView'));
 
 // Section Components
 import BasicInfoSection from './sections/BasicInfoSection';
@@ -36,6 +39,20 @@ export default function CharacterEditor({
     data,
     saveCharacter
   } = useCharacter();
+  const { gmCompactMode } = useUI();
+
+  // GM 紧凑数据卡模式：编辑器内的显示模式（ChromeBar 工具条保持原位，⚔ 按钮开关切换）
+  if (gmCompactMode) {
+    return (
+      <React.Suspense fallback={
+        <div className="h-full flex items-center justify-center bg-stone-100">
+          <div className="w-8 h-8 border-3 border-stone-800 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
+        <GMStatBlockView />
+      </React.Suspense>
+    );
+  }
 
   return (
     <motion.div

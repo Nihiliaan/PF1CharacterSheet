@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast as sonnerToast } from 'sonner';
 
-export type ViewType = 'editor' | 'vault' | 'settings' | 'bbcode-template' | 'svg-template' | 'about' | 'gm-view' | 'new-tab';
+export type ViewType = 'editor' | 'vault' | 'settings' | 'bbcode-template' | 'svg-template' | 'about' | 'new-tab';
 
 interface UIContextType {
   // Navigation
   view: ViewType;
   setView: (view: ViewType) => void;
+  /** GM 紧凑数据卡模式：人物卡编辑器内的显示模式开关（工具条保持原位） */
+  gmCompactMode: boolean;
+  setGmCompactMode: (mode: boolean) => void;
 
   // Toast
   /** 显示全局通知（底层由 sonner 渲染，支持堆叠） */
@@ -51,6 +54,8 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [isHeaderVisible, setIsHeaderVisible] = useState(false);
 
   const [recentCharacterIds, setRecentCharacterIds] = useState<string[]>([]);
+  // GM 紧凑数据卡模式：人物卡编辑器内的显示模式开关（非独立视图，工具条保持原位）
+  const [gmCompactMode, setGmCompactMode] = useState(false);
 
   // Persistence
   useEffect(() => {
@@ -95,6 +100,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const value: UIContextType = {
     view, setView,
+    gmCompactMode, setGmCompactMode,
     setToast,
     confirmModal, setConfirmModal,
     isHeaderPinned, setIsHeaderPinned,

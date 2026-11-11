@@ -21,7 +21,6 @@ import { useVault } from '../../contexts/VaultContext';
 import HeaderBreadcrumb from './AppHeader/HeaderBreadcrumb';
 import FileMenu from './AppHeader/FileMenu';
 import ShareMenu from './AppHeader/ShareMenu';
-import GmViewToolbar from './AppHeader/GmViewToolbar';
 import VaultToolbar from './AppHeader/VaultToolbar';
 import SyncStatusCapsule from './AppHeader/SyncStatusCapsule';
 
@@ -81,7 +80,8 @@ export default function ChromeBar() {
 
   const {
     view,
-    setView,
+    gmCompactMode,
+    setGmCompactMode,
     setToast,
   } = useUI();
 
@@ -112,7 +112,6 @@ export default function ChromeBar() {
     handleExportBBCode,
     handleRevertChanges,
     handleNew,
-    openCharacterTab,
     currentCharacterId,
     currentTemplateId,
     bbcodeTemplate,
@@ -200,7 +199,7 @@ export default function ChromeBar() {
 
   // 有工具栏的视图才渲染第二行（高度不留白）
   // 注：bbcode-template 的工具条已统一进 BBCodeTemplateEditor 页面内部（含文件操作）
-  const hasToolbar = view === 'editor' || view === 'gm-view' || view === 'vault';
+  const hasToolbar = view === 'editor' || view === 'vault';
 
   return (
     <div className="shrink-0 bg-stone-50 border-b border-stone-200 text-stone-800">
@@ -292,23 +291,19 @@ export default function ChromeBar() {
                 </button>
               )}
 
-              {/* GM 紧凑数据卡入口（点击后进入 GM 视图） */}
+              {/* GM 紧凑数据卡模式开关（亮 = 编辑器内容切换为 GM 视角，工具条保持原位） */}
               <button
-                onClick={() => setView('gm-view')}
-                className="p-2 rounded-full text-stone-500 hover:bg-stone-200 hover:text-stone-900 transition-colors shadow-xs cursor-pointer"
+                onClick={() => setGmCompactMode(!gmCompactMode)}
+                className={`p-2 rounded-full transition-colors shadow-xs cursor-pointer ${
+                  gmCompactMode
+                    ? 'bg-stone-800 text-white shadow-md'
+                    : 'text-stone-500 hover:bg-stone-200 hover:text-stone-900'
+                }`}
                 title={t('common.gm_view', 'GM 紧凑数据卡')}
               >
                 <Swords size={16} />
               </button>
             </div>
-          )}
-
-          {view === 'gm-view' && (
-            <GmViewToolbar
-              // 返回编辑：直接打开/激活人物卡标签，避免视图与活动标签不一致
-              onBackToEditor={() => openCharacterTab()}
-              onExport={handleExport}
-            />
           )}
 
           {view === 'vault' && (
