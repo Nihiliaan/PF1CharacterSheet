@@ -11,9 +11,7 @@ const VaultContent = lazy(() => import('./components/vault/VaultContent'));
 const SettingsCenter = lazy(() => import('./components/settings/SettingsCenter'));
 
 // Eager Components
-import EditorTabBar from './components/editor/EditorTabBar';
 import EditorPanes from './components/editor/EditorPanes';
-import PathBar from './components/layout/PathBar';
 import FloatingBall from './components/layout/FloatingBall';
 import ExplorerSidebar from './components/layout/ExplorerSidebar';
 import AppOverlays from './components/layout/AppOverlays';
@@ -89,19 +87,14 @@ function AppContent() {
   } = useAuth();
 
   return (
-    <div className="min-h-screen bg-stone-100 font-sans text-ink selection:bg-primary/20 flex flex-col h-screen overflow-hidden relative">
+    <div className="min-h-screen bg-stone-100 font-sans text-ink selection:bg-primary/20 flex h-screen overflow-hidden relative">
       <AppOverlays />
 
+      {/* 左侧常驻资源管理器（VS Code 式：全高贴顶，含打开的编辑器与档案库树） */}
+      <ExplorerSidebar />
+
+      {/* 右侧：分栏编辑器 或 全屏视图（档案库网格/SVG工坊/设置/关于） */}
       <div className="flex-1 overflow-hidden relative flex flex-col">
-        {/* 常驻标签栏：文档标签（人物卡+BBCode模板）+ 固定的档案库/SVG 工坊标签（应用主导航） */}
-        <EditorTabBar />
-        <div className="flex-1 overflow-hidden relative flex">
-          {/* 左侧常驻资源管理器（VS Code 式：全高，位于标签页之外） */}
-          <ExplorerSidebar />
-          {/* 右侧：当前标签页（ChromeBar 路径/工具条 + 视图内容） */}
-          <div className="flex-1 overflow-hidden relative flex flex-col">
-        <PathBar />
-        <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
           {(view === 'editor' || view === 'new-tab') && <EditorPanes />}
 
@@ -182,9 +175,6 @@ function AppContent() {
           )}
         </AnimatePresence>
         </div>
-        </div>
-        </div>
-      </div>
 
       {/* 悬浮球：固定右侧的全局控制入口（视图导航 / 语言 / 设置 / 账号） */}
       <FloatingBall />

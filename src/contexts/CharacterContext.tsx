@@ -167,7 +167,7 @@ export interface CharacterContextType {
   /** 打开 BBCode 模板编辑器（forceNew=true 时强制新开未命名模板标签） */
   openTemplateTab: (forceNew?: boolean) => void;
   /** 新建一个"新建标签页"（chooser 伪标签，页面内呈现新建人物卡/模板/最近文件选项） */
-  openChooserTab: () => void;
+  openChooserTab: (targetPaneId?: string) => void;
   /** 把当前 chooser 标签就地改造成空白的人物卡/模板标签（新建标签页上的选择动作） */
   convertChooserTab: (kind: 'character' | 'template' | 'preview', targetKey?: string) => void;
   /** 打开预览标签页（newPane=true 时在新建分栏中打开）；预览实时渲染当前编辑中的模板内容 */
@@ -837,13 +837,21 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     createUntitledTab(kind);
   }, [stashAndMarkDirty, createUntitledTab]);
 
-  /** 新建一个"新建标签页"（chooser 伪标签）：点击"+"瞬间开标签，页面内呈现选项 */
-  const openChooserTab = useCallback(() => {
+  /** 新建一个"新建标签页"（chooser 伪标签）：点击"+"瞬间开标签，页面内呈现选项。
+   *  targetPaneId：指定落入的分栏（缺省为当前聚焦分栏）。 */
+  const openChooserTab = useCallback((targetPaneId?: string) => {
     stashAndMarkDirty();
     const key = `chooser-${Date.now()}`;
     setTabs(prev => [...prev, { key, docId: null, kind: 'chooser', title: '新建标签页', dirty: false }]);
     setActiveTabKey(key);
-    assignTabToFocusedPane(key);
+    const target = targetPaneId ?? focusedPaneIdRef.current;
+    const tp = panesRef.current.find(p => p.id === target);
+    if (tp) {
+      setFocusedPaneId(tp.id);
+      setPanes(prev => prev.map(p => p.id === tp.id ? { ...p, tabKeys: [...p.tabKeys, key], activeTabKey: key } : p));
+    } else {
+      assignTabToFocusedPane(key);
+    }
     setView('new-tab');
     const url = new URL(window.location.href);
     url.searchParams.delete('id');

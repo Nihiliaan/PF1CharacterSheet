@@ -12,3 +12,4 @@ log/
 .temp/
 cache/
 src/database/packs/
+tsc-out.txt

@@ -9,7 +9,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PanelLeftClose, PanelLeftOpen, RefreshCw, ChevronDown, ChevronRight,
-  FileText, Braces, Link2, Folder, FolderOpen, X, FolderPlus, Scissors, ClipboardPaste, Pencil, Trash2, ExternalLink, CloudUpload, CloudDownload
+  FileText, Braces, Link2, Folder, FolderOpen, X, FolderPlus, Scissors, ClipboardPaste, Pencil, Trash2, ExternalLink, CloudUpload, CloudDownload, Grid3x3, Sparkles
 } from 'lucide-react';
 import { Tree, type NodeRendererProps } from 'react-arborist';
 import { useCharacter } from '../../contexts/CharacterContext';
@@ -49,7 +49,7 @@ interface SidebarContextMenu {
 }
 
 export default function ExplorerSidebar() {
-  const { tabs, activeTabKey, switchTab, closeTab, activeTabTitle, isDirty, isTemplateDirty, selectCharacter, openCharacterTab } = useCharacter();
+  const { tabs, activeTabKey, panes, focusedPaneId, switchTab, closeTab, activeTabTitle, isDirty, isTemplateDirty, selectCharacter, openCharacterTab } = useCharacter();
   const { view, setView, setConfirmModal } = useUI();
   const {
     myCharacters, folders, currentFolderId, setCurrentFolderId, refreshCharacterList,
@@ -64,6 +64,12 @@ export default function ExplorerSidebar() {
   const activeDocId = useMemo(() => {
     return tabs.find(t => t.key === activeTabKey)?.docId ?? null;
   }, [tabs, activeTabKey]);
+
+  // 返回聚焦文档对应的编辑视图（快速入口的"再点一次"行为）
+  const backToFocusedView = () => {
+    const activeTab = tabs.find(t => t.key === activeTabKey);
+    setView(activeTab?.kind === 'template' ? 'bbcode-template' : 'editor');
+  };
 
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(KEY_COLLAPSED) === '1');
   const [width, setWidth] = useState(() => {
@@ -400,6 +406,28 @@ export default function ExplorerSidebar() {
         </div>
       </div>
 
+      {/* 快速视图入口（档案库网格 / SVG 工坊） */}
+      <div className="shrink-0 flex items-center gap-1 px-2 py-1 border-b border-stone-200">
+        <button
+          onClick={() => { if (view === 'vault') backToFocusedView(); else setView('vault'); }}
+          className={`flex-1 flex items-center justify-center gap-1 py-1 rounded text-[11px] font-bold transition-colors ${
+            view === 'vault' ? 'bg-primary/10 text-primary' : 'text-stone-500 hover:bg-stone-200'
+          }`}
+          title="档案库（网格视图）"
+        >
+          <Grid3x3 size={12} /> 档案库
+        </button>
+        <button
+          onClick={() => { if (view === 'svg-template') backToFocusedView(); else setView('svg-template'); }}
+          className={`flex-1 flex items-center justify-center gap-1 py-1 rounded text-[11px] font-bold transition-colors ${
+            view === 'svg-template' ? 'bg-primary/10 text-primary' : 'text-stone-500 hover:bg-stone-200'
+          }`}
+          title="SVG 模板工坊"
+        >
+          <Sparkles size={12} /> SVG 工坊
+        </button>
+      </div>
+
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* 区块一：打开的编辑器 */}
         <button
@@ -414,34 +442,44 @@ export default function ExplorerSidebar() {
             {tabs.length === 0 && (
               <div className="px-4 py-1.5 text-xs text-stone-400 italic">暂无打开的标签页</div>
             )}
-            {tabs.map(tab => {
-              const active = view !== 'vault' && view !== 'svg-template' && tab.key === activeTabKey;
-              const title = active ? activeTabTitle : (tab.title || (tab.kind === 'character' ? '人物卡' : '模板'));
-              const dirty = active ? liveDirty : tab.dirty;
-              const Icon = tab.kind === 'character' ? FileText : Braces;
-              return (
-                <div
-                  key={tab.key}
-                  onClick={() => switchTab(tab.key)}
-                  className={`group flex items-center gap-1.5 px-2 py-1 cursor-pointer text-xs transition-colors ${
-                    active
-                      ? 'bg-primary/10 text-primary font-bold'
-                      : 'text-stone-600 hover:bg-stone-200/60'
-                  }`}
-                >
-                  <Icon size={13} className={active ? 'text-primary' : 'text-stone-400'} />
-                  <span className="flex-1 min-w-0 truncate">{title}</span>
-                  {dirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="有未保存的修改" />}
-                  <span
-                    onClick={e => { e.stopPropagation(); closeTab(tab.key); }}
-                    className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-stone-300 text-stone-500"
-                    title="关闭标签页"
-                  >
-                    <X size={12} />
-                  </span>
+            {/* 按分栏分组显示（对标 VS Code 的打开的编辑器分组） */}
+            {panes.map((pane, paneIdx) => (
+              <div key={pane.id}>
+                <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-bold text-stone-400">
+                  第{paneIdx + 1}栏
                 </div>
-              );
-            })}
+                {pane.tabKeys.map(key => {
+                  const tab = tabs.find(t => t.key === key);
+                  if (!tab) return null;
+                  const active = view !== 'vault' && view !== 'svg-template' && tab.key === activeTabKey;
+                  const title = active ? activeTabTitle : (tab.title || (tab.kind === 'character' ? '人物卡' : '模板'));
+                  const dirty = active ? liveDirty : tab.dirty;
+                  const Icon = tab.kind === 'character' ? FileText : Braces;
+                  return (
+                    <div
+                      key={tab.key}
+                      onClick={() => switchTab(tab.key)}
+                      className={`group flex items-center gap-1.5 px-2 py-1 cursor-pointer text-xs transition-colors ${
+                        active
+                          ? 'bg-primary/10 text-primary font-bold'
+                          : 'text-stone-600 hover:bg-stone-200/60'
+                      }`}
+                    >
+                      <Icon size={13} className={active ? 'text-primary' : 'text-stone-400'} />
+                      <span className="flex-1 min-w-0 truncate">{title}</span>
+                      {dirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="有未保存的修改" />}
+                      <span
+                        onClick={e => { e.stopPropagation(); closeTab(tab.key); }}
+                        className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-stone-300 text-stone-500"
+                        title="关闭标签页"
+                      >
+                        <X size={12} />
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         )}
 
