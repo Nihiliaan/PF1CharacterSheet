@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { ChevronRight, ChevronDown, HelpCircle, Copy, Eye, Code, X, GripVertical, Save } from 'lucide-react';
+import { ChevronRight, ChevronDown, HelpCircle, Copy, Eye, Code, X, GripVertical, Save, FilePlus, Share2, RotateCcw, SaveAll } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { useCharacter } from '../contexts/CharacterContext';
 import { useUI } from '../contexts/UIContext';
 import { BBCODE_SYNTAX_GUIDE, BBCODE_DATA_TREE, BBCodeTreeItem } from '../constants/bbcodeHelp';
+import { DEFAULT_BBCODE_TEMPLATE } from '../constants';
 import { generateBBCode } from '../utils/bbcodeExporter';
 import BBCodePreview from './common/BBCodePreview';
 
@@ -54,11 +55,32 @@ const TreeItem = ({ item, level = 0, defaultOpen = false }: { item: BBCodeTreeIt
 
 export default function BBCodeTemplateEditor() {
   const { t } = useTranslation();
-  const { data: characterData, computed, bbcodeTemplate, setBbcodeTemplate, isReadOnly } = useCharacter();
+  const { data: characterData, computed, bbcodeTemplate, setBbcodeTemplate, isReadOnly, currentTemplateId, updateExistingTemplate, saveAsTemplate, handleShare, openTemplateTab } = useCharacter();
   const { setToast } = useUI();
   const [showHelp, setShowHelp] = useState(false);
   const [viewMode, setViewMode] = useState<'split' | 'edit' | 'preview'>('split');
-  
+
+  // ===== 文件操作（自原 ChromeBar BbcodeToolbar 迁入，工具条统一为页面内一条）=====
+  const handleNewTemplate = () => openTemplateTab(true);
+  const handleBBCodeSave = async () => {
+    if (currentTemplateId) {
+      await updateExistingTemplate(currentTemplateId, bbcodeTemplate);
+    } else {
+      const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
+      if (name) await saveAsTemplate(name, bbcodeTemplate);
+    }
+  };
+  const handleBBCodeSaveAs = async () => {
+    const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
+    if (name) await saveAsTemplate(name, bbcodeTemplate);
+  };
+  const handleImportDefault = () => {
+    if (window.confirm(t('editor.bbcode.confirm_reset'))) {
+      setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
+      setToast({ message: t('editor.bbcode.reset_success'), type: 'success' });
+    }
+  };
+
   // Resizable split-pane state
   const [leftWidth, setLeftWidth] = useState(50); // percentage
   const containerRef = useRef<HTMLDivElement>(null);
@@ -177,7 +199,7 @@ export default function BBCodeTemplateEditor() {
           </button>
           
           {isLocalhost && (
-            <button 
+            <button
               onClick={handleDevSync}
               className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg border border-indigo-200 transition-all"
               title="将当前模板保存为项目默认模板"
@@ -186,6 +208,50 @@ export default function BBCodeTemplateEditor() {
               <span className="hidden sm:inline">同步至源码</span>
             </button>
           )}
+
+          <div className="h-6 w-px bg-stone-200 mx-1" />
+
+          {/* 文件操作（自原 ChromeBar BbcodeToolbar 迁入） */}
+          <button
+            onClick={handleNewTemplate}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
+            title="新建模板"
+          >
+            <FilePlus size={16} />
+            <span className="hidden lg:inline">新建</span>
+          </button>
+          <button
+            onClick={handleBBCodeSave}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
+            title="保存模板"
+          >
+            <Save size={16} />
+            <span className="hidden lg:inline">保存</span>
+          </button>
+          <button
+            onClick={handleBBCodeSaveAs}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
+            title="另存为"
+          >
+            <SaveAll size={16} />
+            <span className="hidden lg:inline">另存为</span>
+          </button>
+          <button
+            onClick={handleImportDefault}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
+            title="导入默认模板"
+          >
+            <RotateCcw size={16} />
+            <span className="hidden lg:inline">导入默认</span>
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-stone-600 hover:text-primary hover:bg-stone-100 rounded-lg transition-all"
+            title="复制分享链接"
+          >
+            <Share2 size={16} />
+            <span className="hidden lg:inline">分享</span>
+          </button>
 
           <button 
             onClick={handleCopy}

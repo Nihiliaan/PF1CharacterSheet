@@ -17,13 +17,11 @@ import { useUI } from '../../contexts/UIContext';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useVault } from '../../contexts/VaultContext';
-import { DEFAULT_BBCODE_TEMPLATE } from '../../constants';
 
 import HeaderBreadcrumb from './AppHeader/HeaderBreadcrumb';
 import FileMenu from './AppHeader/FileMenu';
 import ShareMenu from './AppHeader/ShareMenu';
 import GmViewToolbar from './AppHeader/GmViewToolbar';
-import BbcodeToolbar from './AppHeader/BbcodeToolbar';
 import VaultToolbar from './AppHeader/VaultToolbar';
 import SyncStatusCapsule from './AppHeader/SyncStatusCapsule';
 
@@ -114,13 +112,11 @@ export default function ChromeBar() {
     handleRevertChanges,
     handleNew,
     openCharacterTab,
-    openTemplateTab,
     currentCharacterId,
     currentTemplateId,
     bbcodeTemplate,
     updateExistingTemplate,
     saveAsTemplate,
-    setBbcodeTemplate,
     getItemPath,
     setShowAIModal,
     // 从 CharacterContext 获取 Drive 相关
@@ -175,36 +171,6 @@ export default function ChromeBar() {
   const isCurrentDirty = view === 'bbcode-template' ? isTemplateDirty : isDirty;
   const displayPath = currentPath + (isCurrentDirty ? '*' : '') + (isReadOnly ? ` (${t('common.read_only')})` : '');
 
-  const handleBBCodeSave = async () => {
-    if (currentTemplateId) {
-      await updateExistingTemplate(currentTemplateId, bbcodeTemplate);
-    } else {
-      const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
-      if (name) {
-        await saveAsTemplate(name, bbcodeTemplate);
-      }
-    }
-  };
-
-  const handleBBCodeSaveAs = async () => {
-    const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
-    if (name) {
-      await saveAsTemplate(name, bbcodeTemplate);
-    }
-  };
-
-  const handleImportDefault = () => {
-    if (window.confirm(t('editor.bbcode.confirm_reset'))) {
-      setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
-      setToast({ message: t('editor.bbcode.reset_success'), type: 'success' });
-    }
-  };
-
-  const handleNewTemplate = () => {
-    // 强制新开一个未命名模板标签（当前模板的未保存内容会被快照保留，无需确认弹窗）
-    openTemplateTab(true);
-  };
-
   const breadcrumbs = (() => {
     let p = [];
     let curId = currentFolderId;
@@ -232,7 +198,8 @@ export default function ChromeBar() {
   };
 
   // 有工具栏的视图才渲染第二行（高度不留白）
-  const hasToolbar = view === 'editor' || view === 'gm-view' || view === 'bbcode-template' || view === 'vault';
+  // 注：bbcode-template 的工具条已统一进 BBCodeTemplateEditor 页面内部（含文件操作）
+  const hasToolbar = view === 'editor' || view === 'gm-view' || view === 'vault';
 
   return (
     <div className="shrink-0 bg-stone-50 border-b border-stone-200 text-stone-800">
@@ -331,17 +298,6 @@ export default function ChromeBar() {
               // 返回编辑：直接打开/激活人物卡标签，避免视图与活动标签不一致
               onBackToEditor={() => openCharacterTab()}
               onExport={handleExport}
-            />
-          )}
-
-          {view === 'bbcode-template' && (
-            <BbcodeToolbar
-              isReadOnly={isReadOnly}
-              onNewTemplate={handleNewTemplate}
-              onSave={handleBBCodeSave}
-              onSaveAs={handleBBCodeSaveAs}
-              onShare={handleShare}
-              onImportDefault={handleImportDefault}
             />
           )}
 
