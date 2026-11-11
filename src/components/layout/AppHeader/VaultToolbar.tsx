@@ -2,7 +2,7 @@
  * AppHeader 子组件：保险库视图下的工具栏。
  * 包含可展开的搜索框、导入下拉菜单（本地文件/文件夹/剪贴板/云端）、云备份、
  * 新建文件夹以及网格/列表视图切换。
- * 纯展示组件：状态与回调由容器 AppHeader.tsx 通过 props 传入。
+ * 纯展示组件：状态与回调由容器 ChromeBar.tsx 通过 props 传入。
  */
 import React from 'react';
 import { motion } from 'motion/react';
@@ -58,13 +58,13 @@ export default function VaultToolbar({
           initial={false}
           animate={{
             width: isSearchExpanded || search ? 150 : 32,
-            backgroundColor: isSearchExpanded || search ? 'rgba(68, 64, 60, 0.5)' : 'transparent'
+            backgroundColor: isSearchExpanded || search ? '#ffffff' : 'transparent'
           }}
-          className="flex items-center rounded-lg border border-transparent focus-within:border-stone-600 focus-within:ring-2 focus-within:ring-primary/20 transition-all overflow-hidden"
+          className={`flex items-center rounded-lg border transition-all overflow-hidden focus-within:border-stone-400 focus-within:ring-2 focus-within:ring-primary/20 ${isSearchExpanded || search ? 'border-stone-300 shadow-xs' : 'border-transparent'}`}
         >
           <button
             onClick={onToggleSearch}
-            className={`p-2 flex-shrink-0 transition-colors ${isSearchExpanded || search ? 'text-stone-400' : 'text-stone-400 hover:bg-stone-700 hover:text-white'}`}
+            className={`p-2 flex-shrink-0 transition-colors ${isSearchExpanded || search ? 'text-stone-500' : 'text-stone-500 hover:bg-stone-200 hover:text-stone-900'}`}
           >
             <Search size={16} />
           </button>
@@ -74,17 +74,17 @@ export default function VaultToolbar({
             value={search}
             onChange={e => onSearchChange(e.target.value)}
             onBlur={onSearchBlur}
-            className="w-full bg-transparent border-none outline-none text-xs text-stone-100 pr-3"
+            className="w-full bg-transparent border-none outline-none text-xs text-stone-700 pr-3"
             style={{ display: isSearchExpanded || search ? 'block' : 'none' }}
           />
         </motion.div>
       </div>
 
-      <div className="h-6 w-px bg-stone-600 mx-1"></div>
+      <div className="h-6 w-px bg-stone-300 mx-1"></div>
 
       <div className="relative group">
         <button
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 rounded-lg transition-colors text-xs font-bold"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-700 rounded-lg transition-colors text-xs font-bold"
         >
           <Download size={16} /> {t('common.import')}
         </button>
@@ -134,8 +134,8 @@ export default function VaultToolbar({
         disabled={isSyncingDrive}
         className={`p-2 rounded-lg transition-all ${
           isSyncingDrive
-          ? 'text-blue-400 animate-pulse'
-          : 'text-stone-400 hover:bg-stone-700 hover:text-blue-400'
+          ? 'text-blue-600 animate-pulse'
+          : 'text-stone-500 hover:bg-stone-200 hover:text-blue-600'
         }`}
         title={t('common.cloud_backup')}
       >
@@ -144,22 +144,22 @@ export default function VaultToolbar({
 
       <button
         onClick={onCreateFolder}
-        className="p-2 text-stone-400 hover:bg-stone-700 hover:text-white rounded-lg transition-colors"
+        className="p-2 text-stone-500 hover:bg-stone-200 hover:text-stone-900 rounded-lg transition-colors"
         title={t('common.new_folder')}
       >
         <FolderPlus size={18} />
       </button>
 
-      <div className="flex bg-stone-700 rounded-lg p-0.5 ml-1">
+      <div className="flex bg-stone-200 rounded-lg p-0.5 ml-1">
         <button
           onClick={() => onViewModeChange('grid')}
-          className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'text-stone-400 hover:text-white'}`}
+          className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'text-stone-500 hover:text-stone-800'}`}
         >
           <Grid size={14} />
         </button>
         <button
           onClick={() => onViewModeChange('list')}
-          className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'text-stone-400 hover:text-white'}`}
+          className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'text-stone-500 hover:text-stone-800'}`}
         >
           <ListIcon size={14} />
         </button>

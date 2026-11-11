@@ -13,7 +13,11 @@ const GMStatBlockView = lazy(() => import('./components/gm/GMStatBlockView'));
 
 // Eager Components
 import CharacterEditor from './components/editor/CharacterEditor';
-import AppHeader from './components/layout/AppHeader';
+import EditorTabBar from './components/editor/EditorTabBar';
+import NewTabPage from './components/editor/NewTabPage';
+import ChromeBar from './components/layout/ChromeBar';
+import FloatingBall from './components/layout/FloatingBall';
+import ExplorerSidebar from './components/layout/ExplorerSidebar';
 import AppOverlays from './components/layout/AppOverlays';
 
 // Context
@@ -22,6 +26,7 @@ import { UIProvider, useUI } from './contexts/UIContext';
 import { VaultProvider, useVault } from './contexts/VaultContext';
 import { CharacterProvider, useCharacter } from './contexts/CharacterContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { listenForOpenRequests } from './utils/tabHandoff';
 
 const ViewLoadingFallback = () => (
   <div className="h-full w-full flex items-center justify-center bg-stone-50/50">
@@ -53,11 +58,32 @@ function AppContent() {
   }, [t, i18n.language]);
   const {
     view,
-    isHeaderPinned,
-    setIsHeaderVisible,
   } = useUI();
 
-  const { handleNew } = useCharacter();
+  const { handleNew, selectCharacter, handleSave } = useCharacter();
+
+  // 监听其他标签页转交来的打开请求：以新选项卡方式打开文档并聚焦本窗口
+  useEffect(() => {
+    const cleanup = listenForOpenRequests(docId => {
+      Promise.resolve(selectCharacter(docId, true, true)).catch(console.error);
+      window.focus();
+    });
+    return cleanup;
+  }, [selectCharacter]);
+
+  // 全局 Ctrl+S / Cmd+S：保存当前编辑中的人物卡（工具栏快捷按钮的 title 一直承诺了这个快捷键）
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (view === 'editor') {
+          Promise.resolve(handleSave()).catch(console.error);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [view, handleSave]);
 
   const {
     user,
@@ -66,20 +92,21 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-stone-100 font-sans text-ink selection:bg-primary/20 flex flex-col h-screen overflow-hidden relative">
-      <div className="fixed top-0 left-0 right-0 h-[36px] z-[60] pointer-events-auto" onMouseEnter={() => setIsHeaderVisible(true)} />
-
-      <AppHeader />
-
       <AppOverlays />
 
-      <motion.div 
-        animate={{ height: isHeaderPinned ? 56 : 0, opacity: isHeaderPinned ? 1 : 0 }}
-        transition={{ type: 'spring', damping: 20, stiffness: 120 }}
-        className="shrink-0 overflow-hidden"
-      />
-
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 overflow-hidden relative flex flex-col">
+        {/* 常驻标签栏：文档标签（人物卡+BBCode模板）+ 固定的档案库/SVG 工坊标签（应用主导航） */}
+        <EditorTabBar />
+        <div className="flex-1 overflow-hidden relative flex">
+          {/* 左侧常驻资源管理器（VS Code 式：全高，位于标签页之外） */}
+          <ExplorerSidebar />
+          {/* 右侧：当前标签页（ChromeBar 路径/工具条 + 视图内容） */}
+          <div className="flex-1 overflow-hidden relative flex flex-col">
+        <ChromeBar />
+        <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
+          {view === 'new-tab' && <NewTabPage />}
+
           {view === 'editor' && <CharacterEditor user={user} />}
           
           {view === 'gm-view' && (
@@ -164,7 +191,13 @@ function AppContent() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
+        </div>
+        </div>
       </div>
+
+      {/* 悬浮球：固定右侧的全局控制入口（视图导航 / 语言 / 设置 / 账号） */}
+      <FloatingBall />
 
       <GlobalSavingOverlay />
     </div>

@@ -1,7 +1,7 @@
 /**
  * AppHeader 子组件：编辑器视图下的"文件"下拉菜单。
  * 包含新建 / 保存 / 另存为 / 放弃修改等操作项。
- * 纯展示组件：开关状态、悬停回调与各操作回调均由容器 AppHeader.tsx 通过 props 传入。
+ * 纯展示组件：开关状态、悬停回调与各操作回调均由容器 ChromeBar.tsx 通过 props 传入。
  */
 import { motion, AnimatePresence } from 'motion/react';
 import { FileText, ChevronDown, FilePlus, Save, Copy, RotateCcw } from 'lucide-react';
@@ -55,7 +55,7 @@ export default function FileMenu({
       <button
         onClick={onToggle}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-          isOpen ? 'bg-stone-600 text-white shadow-inner' : 'bg-stone-700 hover:bg-stone-600 text-stone-100'
+          isOpen ? 'bg-primary/10 text-primary border-primary/30' : 'bg-white hover:bg-stone-100 text-stone-700 border border-stone-200'
         }`}
         title="文件操作"
       >
@@ -70,7 +70,7 @@ export default function FileMenu({
             initial={{ opacity: 0, y: 8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            className="absolute left-0 mt-2 w-48 bg-white border border-stone-200 rounded-xl shadow-xl z-[70] py-1 text-stone-800"
+            className="absolute right-0 mt-2 w-48 bg-white border border-stone-200 rounded-xl shadow-xl z-[70] py-1 text-stone-800"
           >
             <button
               onClick={() => {

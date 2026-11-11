@@ -1,7 +1,7 @@
 /**
  * AppHeader 子组件：BBCode 模板编辑器视图下的动作条。
  * 包含新建 / 保存 / 另存为 / 分享 / 导入默认模板等按钮。
- * 纯展示组件：回调由容器 AppHeader.tsx 通过 props 传入。
+ * 纯展示组件：回调由容器 ChromeBar.tsx 通过 props 传入。
  */
 import { FilePlus, Save, Copy, Share2, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +28,7 @@ export default function BbcodeToolbar({
     <div className="flex items-center gap-2">
       <button
         onClick={onNewTemplate}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-700 hover:text-stone-900 rounded text-sm font-medium transition-colors"
       >
         <FilePlus size={16} />
         <span className="hidden sm:inline">{t('common.new')}</span>
@@ -56,7 +56,7 @@ export default function BbcodeToolbar({
         <>
           <button
             onClick={onShare}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-700 hover:text-stone-900 rounded text-sm font-medium transition-colors"
           >
             <Share2 size={16} />
             <span className="hidden sm:inline">{t('common.share')}</span>
@@ -64,7 +64,7 @@ export default function BbcodeToolbar({
 
           <button
             onClick={onImportDefault}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-200 hover:bg-stone-300 text-stone-700 hover:text-stone-900 rounded text-sm font-medium transition-colors"
           >
             <RotateCcw size={16} />
             <span className="hidden sm:inline">{t('common.import_default')}</span>
