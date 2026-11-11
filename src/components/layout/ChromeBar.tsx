@@ -10,7 +10,7 @@
 import ForumSyncModal from '../editor/ForumSyncModal';
 import CardExportModal from '../export/CardExportModal';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Save, Sparkles } from 'lucide-react';
+import { Save, Sparkles, Swords } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useUI } from '../../contexts/UIContext';
@@ -81,6 +81,7 @@ export default function ChromeBar() {
 
   const {
     view,
+    setView,
     setToast,
   } = useUI();
 
@@ -290,6 +291,15 @@ export default function ChromeBar() {
                   <Sparkles size={16} />
                 </button>
               )}
+
+              {/* GM 紧凑数据卡入口（点击后进入 GM 视图） */}
+              <button
+                onClick={() => setView('gm-view')}
+                className="p-2 rounded-full text-stone-500 hover:bg-stone-200 hover:text-stone-900 transition-colors shadow-xs cursor-pointer"
+                title={t('common.gm_view', 'GM 紧凑数据卡')}
+              >
+                <Swords size={16} />
+              </button>
             </div>
           )}
 
