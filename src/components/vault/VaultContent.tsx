@@ -136,23 +136,43 @@ const VaultContent = ({
     }
   };
 
-  const handleDropOnFolder = async (targetId: string | null) => {
-    if (!draggedItem) return;
-    try {
+  // 从拖拽事件或内部状态解析被拖拽项（支持档案库视图与侧栏文件树之间的双向拖拽）
+  const collectDropItems = (e?: React.DragEvent): { id: string; type: 'character' | 'folder' }[] => {
+    const raw = e?.dataTransfer?.getData('text/plain');
+    if (raw) {
+      try {
+        const p = JSON.parse(raw);
+        if (p.type === 'multiple' && Array.isArray(p.ids)) {
+          return p.ids.map((id: string) => ({
+            id,
+            type: folders.some(f => f.id === id) ? 'folder' : 'character',
+          }));
+        }
+        return [{ id: p.id, type: p.type === 'folder' ? 'folder' : 'character' }];
+      } catch { /* 忽略无法解析的负载 */ }
+    }
+    if (draggedItem) {
       if (draggedItem.id === 'multiple') {
-        const itemsToMove = selectedIds.filter(id => id !== targetId);
-        await Promise.all(itemsToMove.map(async id => {
-          const isFolder = folders.some(f => f.id === id);
-          if (isFolder) await moveFolder(id, targetId);
-          else await moveCharacter(id, targetId);
+        return selectedIds.map(id => ({
+          id,
+          type: folders.some(f => f.id === id) ? 'folder' : 'character',
         }));
-        setToast({ message: t('common.moved_items', { n: itemsToMove.length }) });
-      } else {
-        if (draggedItem.id === targetId) return;
-        if (draggedItem.type === 'character') await moveCharacter(draggedItem.id, targetId);
-        else await moveFolder(draggedItem.id, targetId);
-        setToast({ message: t('common.moved_item') });
       }
+      return [{ id: draggedItem.id, type: draggedItem.type }];
+    }
+    return [];
+  };
+
+  const handleDropOnFolder = async (targetId: string | null, e?: React.DragEvent) => {
+    const items = collectDropItems(e).filter(it => it.id !== targetId);
+    if (!items.length) return;
+    try {
+      await Promise.all(items.map(async it => {
+        if (it.type === 'folder') await moveFolder(it.id, targetId);
+        else await moveCharacter(it.id, targetId);
+      }));
+      if (items.length > 1) setToast({ message: t('common.moved_items', { n: items.length }) });
+      else setToast({ message: t('common.moved_item') });
       setSelectedIds([]);
       onRefresh();
     } catch (e) {
@@ -543,7 +563,7 @@ const VaultContent = ({
         onMouseUp={handleMouseUp}
         onDrop={async (e) => {
             e.preventDefault();
-            handleDropOnFolder(currentFolderId);
+            handleDropOnFolder(currentFolderId, e);
         }}
       >
         {selectionBox && (
@@ -595,7 +615,7 @@ const VaultContent = ({
                   onDragOver={e => e.preventDefault()}
                   onDrop={async (e) => {
                       e.stopPropagation();
-                      handleDropOnFolder(folder.id);
+                      handleDropOnFolder(folder.id, e);
                   }}
                 >
                   {/* Windows-style Selection Checkbox */}
