@@ -13,7 +13,7 @@ const SettingsCenter = lazy(() => import('./components/settings/SettingsCenter')
 // Eager Components
 import EditorTabBar from './components/editor/EditorTabBar';
 import EditorPanes from './components/editor/EditorPanes';
-import ChromeBar from './components/layout/ChromeBar';
+import PathBar from './components/layout/PathBar';
 import FloatingBall from './components/layout/FloatingBall';
 import ExplorerSidebar from './components/layout/ExplorerSidebar';
 import AppOverlays from './components/layout/AppOverlays';
@@ -100,7 +100,7 @@ function AppContent() {
           <ExplorerSidebar />
           {/* 右侧：当前标签页（ChromeBar 路径/工具条 + 视图内容） */}
           <div className="flex-1 overflow-hidden relative flex flex-col">
-        <ChromeBar />
+        <PathBar />
         <div className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
           {(view === 'editor' || view === 'new-tab') && <EditorPanes />}

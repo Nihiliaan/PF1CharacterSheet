@@ -15,6 +15,12 @@ interface UIContextType {
   /** 显示全局通知（底层由 sonner 渲染，支持堆叠） */
   setToast: (toast: { message: string; type?: 'success' | 'error' | 'info' } | null) => void;
 
+  // Forum Sync / Card Export modal triggers（触发点已迁移至标签右键菜单）
+  forumSyncOpen: boolean;
+  setForumSyncOpen: (open: boolean) => void;
+  cardExportOpen: boolean;
+  setCardExportOpen: (open: boolean) => void;
+
   // Confirm Modal
   confirmModal: { title: string, onConfirm: () => void, onSecondaryConfirm?: () => void, onCancel?: () => void } | null;
   setConfirmModal: (modal: { title: string, onConfirm: () => void, onSecondaryConfirm?: () => void, onCancel?: () => void } | null) => void;
@@ -49,6 +55,8 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     else sonnerToast.info(t.message);
   }, []);
   const [confirmModal, setConfirmModal] = useState<{ title: string, onConfirm: () => void, onSecondaryConfirm?: () => void, onCancel?: () => void } | null>(null);
+  const [forumSyncOpen, setForumSyncOpen] = useState(false);
+  const [cardExportOpen, setCardExportOpen] = useState(false);
 
   const [isHeaderPinned, setIsHeaderPinnedState] = useState(() => localStorage.getItem('header_pinned') !== 'false');
   const [isHeaderVisible, setIsHeaderVisible] = useState(false);
@@ -102,6 +110,8 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     view, setView,
     gmCompactMode, setGmCompactMode,
     setToast,
+    forumSyncOpen, setForumSyncOpen,
+    cardExportOpen, setCardExportOpen,
     confirmModal, setConfirmModal,
     isHeaderPinned, setIsHeaderPinned,
     isHeaderVisible, setIsHeaderVisible,

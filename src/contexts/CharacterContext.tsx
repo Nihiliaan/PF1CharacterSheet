@@ -36,7 +36,7 @@ export interface EditorTab {
   key: string;
   /** Firestore 文档 ID（未保存的新卡为 null） */
   docId: string | null;
-  kind: 'character' | 'template' | 'chooser';
+  kind: 'character' | 'template' | 'chooser' | 'preview';
   title: string;
   /** 切换走时暂存的未保存标记（活动选项卡的脏状态由 live 状态实时计算） */
   dirty: boolean;
@@ -169,7 +169,9 @@ export interface CharacterContextType {
   /** 新建一个"新建标签页"（chooser 伪标签，页面内呈现新建人物卡/模板/最近文件选项） */
   openChooserTab: () => void;
   /** 把当前 chooser 标签就地改造成空白的人物卡/模板标签（新建标签页上的选择动作） */
-  convertChooserTab: (kind: 'character' | 'template', targetKey?: string) => void;
+  convertChooserTab: (kind: 'character' | 'template' | 'preview', targetKey?: string) => void;
+  /** 打开预览标签页（newPane=true 时在新建分栏中打开）；预览实时渲染当前编辑中的模板内容 */
+  openPreviewTab: (newPane?: boolean) => void;
   /** 从"新建标签页"打开一个最近文档：关闭 chooser 标签并按常规流程打开该文档 */
   openDocFromChooser: (id: string, targetKey?: string) => void;
 
@@ -553,7 +555,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // chooser（新建标签页）没有文档状态：不暂存，否则会把上一个文档的残留 live 数据
     // 错误地挂到 chooser 的 key 下，之后切回时 applySnapshot 会弹出错误的编辑器
     const activeTab = tabsRef.current.find(t => t.key === key);
-    if (activeTab?.kind === 'chooser') return;
+    if (activeTab?.kind === 'chooser' || activeTab?.kind === 'preview') return;
     snapshotsRef.current.set(key, {
       data, lastSavedData, bbcodeTemplate, lastSavedTemplate, isReadOnly, activeDoc: activeDocRef.current
     });
@@ -585,8 +587,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setCurrentTemplateId(tab.docId);
       setCurrentCharacterId(null);
     }
-    // chooser 永远不应该走快照换入（防御：若有残留快照也只切视图，避免弹出错误编辑器）
-    setView(tab.kind === 'chooser' ? 'new-tab' : (tab.kind === 'character' ? 'editor' : 'bbcode-template'));
+    // chooser/preview 永远不应该走快照换入（防御：若有残留快照也只切视图，避免弹出错误编辑器）
+    setView(tab.kind === 'chooser' ? 'new-tab' : (tab.kind === 'preview' ? 'editor' : (tab.kind === 'character' ? 'editor' : 'bbcode-template')));
     const url = new URL(window.location.href);
     if (tab.docId) url.searchParams.set('id', tab.docId);
     window.history.replaceState({}, '', url.toString());
@@ -618,9 +620,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     // 3. chooser → 切视图即可（并清理可能被污染的残留快照）；
     //    有快照 → 整份换入；无快照（本会话首次激活）→ 走正常加载
-    if (tab.kind === 'chooser') {
+    if (tab.kind === 'chooser' || tab.kind === 'preview') {
       snapshotsRef.current.delete(key);
-      setView('new-tab');
+      setView(tab.kind === 'chooser' ? 'new-tab' : 'editor');
       return;
     }
     const snap = snapshotsRef.current.get(key);
@@ -850,7 +852,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   /** 把 chooser 标签就地改造成空白的人物卡/模板标签（新建标签页上的选择动作，浏览器同页跳转语义）。
    *  targetKey：未聚焦分栏的 chooser 需显式指定要改造的标签 key；缺省为当前活动标签。 */
-  const convertChooserTab = useCallback((kind: 'character' | 'template', targetKey?: string) => {
+  const convertChooserTab = useCallback((kind: 'character' | 'template' | 'preview', targetKey?: string) => {
     const chooserKey = targetKey ?? activeTabKeyRef.current;
     if (!chooserKey) return;
     const isFocused = chooserKey === activeTabKeyRef.current;
@@ -864,8 +866,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       setActiveTabKey(chooserKey);
     }
-    // 重置 live 为空白内容
-    if (kind === 'character') {
+    // 重置 live 为空白内容（preview 无文档状态，跳过）
+    if (kind === 'preview') {
+      // 预览标签不需要文档状态
+    } else if (kind === 'character') {
       const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
       setData(fresh);
       setLastSavedData(JSON.parse(JSON.stringify(fresh)));
@@ -879,7 +883,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     activeDocRef.current = null;
     // 就地改造标签记录
     setTabs(prev => prev.map(t => t.key === chooserKey
-      ? { ...t, kind, title: kind === 'character' ? '新人物卡' : '未命名模板', dirty: false }
+      ? { ...t, kind, title: kind === 'preview' ? '预览' : (kind === 'character' ? '新人物卡' : '未命名模板'), dirty: false }
       : t));
     setView(kind === 'character' ? 'editor' : 'bbcode-template');
     const url = new URL(window.location.href);
@@ -907,6 +911,25 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [selectCharacter, switchTab]);
 
   /** 在标签栏右侧新增一栏（以"新建标签页"开场），并聚焦它；上限 4 栏 */
+  /** 打开预览标签页：实时渲染当前编辑中的 BBCode 模板内容。
+   *  newPane=true 时在新分栏中打开（预览窗格与编辑器解绑的关键入口）。 */
+  const openPreviewTab = useCallback((newPane?: boolean) => {
+    stashAndMarkDirty();
+    const key = `preview-${Date.now()}`;
+    setTabs(prev => [...prev, { key, docId: null, kind: 'preview', title: '预览', dirty: false }]);
+    if (newPane) {
+      const paneId = `pane-${Date.now()}`;
+      setPanes(prev => [...prev, { id: paneId, tabKeys: [key], activeTabKey: key }]);
+      setFocusedPaneId(paneId);
+    } else {
+      assignTabToFocusedPane(key);
+    }
+    setView('editor');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    window.history.replaceState({}, '', url.toString());
+  }, [stashAndMarkDirty, assignTabToFocusedPane]);
+
   const addPane = useCallback(() => {
     if (panesRef.current.length >= 4) return;
     stashAndMarkDirty();
@@ -1073,7 +1096,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     handleSave, handleSaveAs, handleNew, handleShare, handleExport, handleExportBBCode, handleRevertChanges,
     selectCharacter: openDocumentAsTab,
     loadSharedCharacter: (id: string) => openDocumentAsTab(id, true, true),
-    tabs, activeTabKey, activeTabTitle, switchTab, closeTab, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser,
+    tabs, activeTabKey, activeTabTitle, switchTab, closeTab, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser, openPreviewTab,
     panes, focusedPaneId, addPane, moveTabToPane, focusPane, getTabSnapshot,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
@@ -1114,7 +1137,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     driveModal, setDriveModal, isSyncingDrive,
     handleBrowseDrive, handleBrowseDriveRoot, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore,
     getItemPath,
-    openDocumentAsTab, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser,
+    openDocumentAsTab, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser, openPreviewTab,
     tabs, activeTabKey, activeTabTitle, switchTab, closeTab,
     panes, focusedPaneId, addPane, moveTabToPane, focusPane, getTabSnapshot
   ]);

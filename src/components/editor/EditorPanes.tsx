@@ -59,13 +59,22 @@ function ShadowScope({ snapshot, children }: { snapshot: TabSnapshot; children: 
 
 /** 单栏内容：按活动标签类型与聚焦状态选择渲染方式 */
 function PaneContent({ pane, focused }: { pane: EditorPane; focused: boolean }) {
-  const { tabs, getTabSnapshot } = useCharacter();
+  const { tabs, getTabSnapshot, bbcodeTemplate } = useCharacter();
   const { user } = useAuth();
   const activeTab = tabs.find(t => t.key === pane.activeTabKey);
 
   if (!activeTab || activeTab.kind === 'chooser') {
     // 新建标签页：所有分栏都渲染完整页面；未聚焦栏的动作通过 chooserKey 作用于自身标签
     return <NewTabPage chooserKey={focused ? undefined : pane.activeTabKey ?? undefined} />;
+  }
+
+  // 预览窗格：实时渲染当前编辑中的模板内容（读 live 状态，无论聚焦与否）
+  if (activeTab.kind === 'preview') {
+    return (
+      <div className="flex-1 overflow-y-auto custom-scrollbar bg-stone-50 p-4">
+        <BBCodePreview bbcode={bbcodeTemplate} />
+      </div>
+    );
   }
 
   const snap = getTabSnapshot(pane.activeTabKey!);

@@ -1,6 +1,8 @@
 import React from 'react';
 import { AnimatePresence } from 'motion/react';
 import { Toaster } from 'sonner';
+import ForumSyncModal from '../editor/ForumSyncModal';
+import CardExportModal from '../export/CardExportModal';
 import { useTranslation } from 'react-i18next';
 import Dialog from '../common/Dialog';
 import AIExtractionModal from '../editor/AIExtractionModal';
@@ -14,6 +16,8 @@ export default function AppOverlays() {
   const {
     confirmModal,
     setConfirmModal,
+    forumSyncOpen, setForumSyncOpen,
+    cardExportOpen, setCardExportOpen,
   } = useUI();
 
   const {
@@ -42,6 +46,10 @@ export default function AppOverlays() {
     <>
       {/* 全局通知（sonner 渲染，UIContext.setToast 触发） */}
       <Toaster position="top-center" richColors />
+
+      {/* 论坛同步 / 角色卡图片导出（触发点：文档标签右键菜单） */}
+      <ForumSyncModal isOpen={forumSyncOpen} onClose={() => setForumSyncOpen(false)} />
+      <CardExportModal isOpen={cardExportOpen} onClose={() => setCardExportOpen(false)} />
 
       {/* 确认弹窗 */}
       <AnimatePresence>

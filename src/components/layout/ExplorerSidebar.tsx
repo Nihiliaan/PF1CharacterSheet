@@ -9,7 +9,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PanelLeftClose, PanelLeftOpen, RefreshCw, ChevronDown, ChevronRight,
-  FileText, Braces, Link2, Folder, FolderOpen, X, FolderPlus, Scissors, ClipboardPaste, Pencil, Trash2, ExternalLink
+  FileText, Braces, Link2, Folder, FolderOpen, X, FolderPlus, Scissors, ClipboardPaste, Pencil, Trash2, ExternalLink, CloudUpload, CloudDownload
 } from 'lucide-react';
 import { Tree, type NodeRendererProps } from 'react-arborist';
 import { useCharacter } from '../../contexts/CharacterContext';
@@ -54,10 +54,11 @@ export default function ExplorerSidebar() {
   const {
     myCharacters, folders, currentFolderId, setCurrentFolderId, refreshCharacterList,
     moveCharacter, moveFolder, renameItem, deleteCharacter, deleteFolder, createFolder,
-    cutItems, onCut, onPaste,
+    cutItems, onCut, onPaste, importFromClipboard,
   } = useVault();
   const { user } = useAuth();
   const { setToast } = useUI();
+  const { handleCloudBackup, handleCloudRestore } = useCharacter();
 
   // 当前活动标签对应的文档 id（用于树中高亮正在编辑的文档）
   const activeDocId = useMemo(() => {
@@ -337,11 +338,14 @@ export default function ExplorerSidebar() {
         { label: '删除', icon: Trash2, danger: true, onClick: () => deleteTarget('character', target.id!, target.name) },
       ];
     }
-    // 背景：新建文件夹 / 粘贴到根目录
+    // 背景：新建 / 粘贴 / 导入 / 云备份恢复（原档案库工具条操作迁入）
     return [
-      { label: '新建文件夹', icon: FolderPlus, onClick: () => createSubFolder(null) },
-      { label: '粘贴到根目录', icon: ClipboardPaste, onClick: () => Promise.resolve(onPaste(null)).catch(console.error) },
-      { label: '打开人物卡编辑器', icon: FileText, onClick: () => openCharacterTab() },
+      { label: '新建文件夹', icon: FolderPlus, onClick: () => createSubFolder(currentFolderId) },
+      { label: '新建人物卡', icon: FileText, onClick: () => openCharacterTab() },
+      { label: '导入剪贴板', icon: ClipboardPaste, onClick: () => Promise.resolve(importFromClipboard()).catch(console.error) },
+      { label: '云备份', icon: CloudUpload, onClick: () => Promise.resolve(handleCloudBackup()).catch(console.error) },
+      { label: '云恢复', icon: CloudDownload, onClick: () => Promise.resolve(handleCloudRestore()).catch(console.error) },
+      { label: '粘贴到此处', icon: ClipboardPaste, onClick: () => Promise.resolve(onPaste(currentFolderId)).catch(console.error) },
     ];
   };
 

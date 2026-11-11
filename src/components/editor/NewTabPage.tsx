@@ -5,7 +5,7 @@
  * 选择动作通过 CharacterContext 就地在当前 chooser 标签上落地（同页跳转语义）。
  */
 import { useMemo } from 'react';
-import { FileText, Braces, X } from 'lucide-react';
+import { FileText, Braces, X, Eye } from 'lucide-react';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useUI } from '../../contexts/UIContext';
 import { useVault } from '../../contexts/VaultContext';
@@ -42,7 +42,7 @@ export default function NewTabPage({ chooserKey }: { chooserKey?: string } = {})
         <h2 className="text-xl font-bold text-stone-800 mb-1">新建标签页</h2>
         <p className="text-sm text-stone-500 mb-6">选择要创建的内容，或从下方最近打开的文件继续</p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
           <button
             onClick={() => convertChooserTab('character', chooserKey)}
             className="group text-left bg-white border border-stone-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all"
@@ -55,7 +55,7 @@ export default function NewTabPage({ chooserKey }: { chooserKey?: string } = {})
           </button>
 
           <button
-            onClick={() => convertChooserTab('template', chooserKey)}
+            onClick={() => convertChooserTab('preview', chooserKey)}
             className="group text-left bg-white border border-stone-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all"
           >
             <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center mb-3 group-hover:bg-indigo-200 transition-colors">
@@ -63,6 +63,17 @@ export default function NewTabPage({ chooserKey }: { chooserKey?: string } = {})
             </div>
             <div className="text-sm font-bold text-stone-800 mb-1">新建模板</div>
             <div className="text-xs text-stone-500">基于默认 BBCode 模板编排论坛发布排版</div>
+          </button>
+
+          <button
+            onClick={() => convertChooserTab('preview', chooserKey)}
+            className="group text-left bg-white border border-stone-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all"
+          >
+            <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mb-3 group-hover:bg-amber-200 transition-colors">
+              <Eye size={20} className="text-amber-600" />
+            </div>
+            <div className="text-sm font-bold text-stone-800 mb-1">预览窗格</div>
+            <div className="text-xs text-stone-500">实时预览当前编辑中的 BBCode 模板渲染效果</div>
           </button>
         </div>
 
