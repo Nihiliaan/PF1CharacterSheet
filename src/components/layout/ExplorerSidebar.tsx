@@ -259,8 +259,13 @@ export default function ExplorerSidebar() {
           if (items.length) moveItemsToFolder(items, data.docId!);
         }}
         onClick={() => {
-          if (isFolder) node.toggle();
-          else selectCharacter(data.docId!, true, true);
+          if (isFolder) {
+            // 点击文件夹：展开 + 联动档案库网格显示该文件夹
+            node.toggle();
+            setCurrentFolderId(data.docId!);
+          } else {
+            selectCharacter(data.docId!, true, true);
+          }
         }}
         onContextMenu={e => {
           e.preventDefault();
@@ -348,7 +353,6 @@ export default function ExplorerSidebar() {
   const menuItemsFor = (target: SidebarContextMenu['target']) => {
     if (target.type === 'folder') {
       return [
-        { label: '在档案库中打开', icon: ExternalLink, onClick: () => { setCurrentFolderId(target.id); setView('vault'); } },
         { label: '新建子文件夹', icon: FolderPlus, onClick: () => createSubFolder(target.id) },
         { label: '剪切', icon: Scissors, onClick: () => onCut([target.id!]) },
         { label: '粘贴到此处', icon: ClipboardPaste, onClick: () => Promise.resolve(onPaste(target.id)).catch(console.error) },

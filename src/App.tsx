@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy } from 'react';
+import React, { useEffect, useMemo, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,7 @@ import AppOverlays from './components/layout/AppOverlays';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { UIProvider, useUI } from './contexts/UIContext';
 import { VaultProvider, useVault } from './contexts/VaultContext';
+import HeaderBreadcrumb from './components/layout/AppHeader/HeaderBreadcrumb';
 import { CharacterProvider, useCharacter } from './contexts/CharacterContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { listenForOpenRequests } from './utils/tabHandoff';
@@ -56,6 +57,26 @@ function AppContent() {
   } = useUI();
 
   const { handleNew, selectCharacter, handleSave } = useCharacter();
+  const { folders, currentFolderId, setCurrentFolderId } = useVault();
+
+  // 档案库视图的面包屑（从根到当前文件夹的链）与路径文本
+  const vaultBreadcrumbs = useMemo(() => {
+    const chain: any[] = [];
+    let curId = currentFolderId;
+    let guard = 0;
+    while (curId && guard++ < 10) {
+      const f: any = folders.find((folder: any) => folder.id === curId);
+      if (!f) break;
+      chain.unshift(f);
+      curId = f.parentId ?? null;
+    }
+    return chain;
+  }, [folders, currentFolderId]);
+
+  const vaultCurrentPath = useMemo(() => {
+    if (!vaultBreadcrumbs.length) return '我的档案库';
+    return vaultBreadcrumbs.map((f: any) => f.name || '未命名文件夹').join(' > ');
+  }, [vaultBreadcrumbs]);
 
   // 监听其他标签页转交来的打开请求：以新选项卡方式打开文档并聚焦本窗口
   useEffect(() => {
@@ -98,7 +119,20 @@ function AppContent() {
           {(view === 'editor' || view === 'new-tab') && <EditorPanes />}
 
           {view === 'vault' && (
-            <motion.div key="vault" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full overflow-hidden">
+            <motion.div key="vault" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full overflow-hidden flex flex-col">
+              {/* 档案库路径条：文件夹面包屑，点击上级文件夹即可后退 */}
+              <div className="shrink-0 bg-stone-50 border-b border-stone-200 px-4 py-1.5 flex items-center justify-between gap-4">
+                <div className="flex items-center min-w-0">
+                  <HeaderBreadcrumb
+                    view="vault"
+                    breadcrumbs={vaultBreadcrumbs}
+                    currentPath={vaultCurrentPath}
+                    displayPath={vaultCurrentPath}
+                    onSelectFolder={setCurrentFolderId}
+                  />
+                </div>
+              </div>
+              <div className="flex-1 min-h-0">
               {user ? (
                 <Suspense fallback={<ViewLoadingFallback />}>
                   <VaultContent user={user} onAdd={handleNew} />
@@ -110,6 +144,7 @@ function AppContent() {
                   <button onClick={() => handleLogin(googleProvider)} className="px-8 py-3 bg-stone-800 text-white rounded-lg font-bold shadow-xl flex items-center gap-3">{t('common.login')}</button>
                 </div>
               )}
+              </div>
             </motion.div>
           )}
 
