@@ -246,8 +246,12 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
 
         {/* 栏内操作：新建 / 分栏 / 预览 */}
         <div className="flex items-center gap-0.5 ml-auto pl-1 pr-0.5 shrink-0">
-          <button onClick={() => openChooserTab(pane.id)} title="新建标签页（本栏）" className={stripBtn}>
-            <Plus size={13} />
+          <button
+            onClick={() => openChooserTab(pane.id)}
+            title="新建标签页（本栏）"
+            className="shrink-0 px-2.5 py-1.5 text-xs text-stone-500 hover:bg-stone-300/50 hover:text-stone-700 transition-colors select-none self-stretch flex items-center"
+          >
+            <Plus size={12} />
           </button>
           <button
             onClick={addPane}

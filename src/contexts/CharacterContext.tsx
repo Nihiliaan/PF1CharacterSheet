@@ -223,6 +223,15 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [bbcodeTemplate, lastSavedTemplate]);
 
   // ===== 编辑器选项卡层（快照交换模型）=====
+  /** 标签标题净化：非字符串/空/对象残影统一回退到类型默认名 */
+  const sanitizeTabTitle = (title: unknown, kind: string): string => {
+    const s = typeof title === 'string' ? title.trim() : '';
+    if (!s || s === '{}' || s === '[object Object]') {
+      return kind === 'character' ? '人物卡' : kind === 'preview' ? '预览' : '未命名模板';
+    }
+    return s;
+  };
+
   const [tabs, setTabs] = useState<EditorTab[]>([]);
   const [activeTabKey, setActiveTabKey] = useState<string | null>(null);
   // 快照与 refs 不参与渲染，用 ref 持有
@@ -298,7 +307,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     const persisted = tabs
       .filter(t => t.docId)
-      .map(({ key, docId, kind, title }) => ({ key, docId, kind, title }));
+      .map(({ key, docId, kind, title }) => ({ key, docId, kind, title: typeof title === 'string' ? title : '' }));
     try {
       localStorage.setItem('pf1_open_tabs', JSON.stringify(persisted));
     } catch (e) {
@@ -339,7 +348,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     setTabs(prev => prev.some(t => t.docId === docId)
       ? prev
-      : [...prev, { key: docId, docId, kind, title: title || (kind === 'character' ? '人物卡' : '模板'), dirty: false }]);
+      : [...prev, { key: docId, docId, kind, title: sanitizeTabTitle(title, kind), dirty: false }]);
     setActiveTabKey(docId);
     // 挂入聚焦分栏
     const fpId = focusedPaneIdRef.current;
@@ -363,7 +372,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const handleRestoreTabs = useCallback((restored: { key: string; docId: string; kind: 'character' | 'template'; title?: string }[]) => {
     setTabs(prev => {
       if (prev.length) return prev;
-      return restored.map(t => ({ key: t.key, docId: t.docId, kind: t.kind, title: t.title || '', dirty: false }));
+      return restored.map(t => ({ key: t.key, docId: t.docId, kind: t.kind, title: sanitizeTabTitle(t.title, t.kind), dirty: false }));
     });
     setPanes(prev => {
       // StrictMode 双跑 / 已有结构时跳过

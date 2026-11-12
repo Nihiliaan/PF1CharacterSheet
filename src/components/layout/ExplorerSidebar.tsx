@@ -476,7 +476,8 @@ export default function ExplorerSidebar() {
                   const tab = tabs.find(t => t.key === key);
                   if (!tab) return null;
                   const active = view !== 'vault' && view !== 'svg-template' && tab.key === activeTabKey;
-                  const title = active ? activeTabTitle : (tab.title || (tab.kind === 'character' ? '人物卡' : '模板'));
+                  const fallbackTitle = tab.kind === 'character' ? '人物卡' : '未命名模板';
+              const title = active ? activeTabTitle : ((typeof tab.title === 'string' && tab.title.trim() && tab.title.trim() !== '{}' && tab.title.trim() !== '[object Object]') ? tab.title : fallbackTitle);
                   const dirty = active ? liveDirty : tab.dirty;
                   const Icon = tab.kind === 'character' ? FileText : Braces;
                   return (
