@@ -161,7 +161,9 @@ export interface CharacterContextType {
   /** 活动选项卡的实时标题（人物卡取 basic.name，模板取文档名） */
   activeTabTitle: string;
   switchTab: (key: string) => Promise<void>;
-  closeTab: (key: string) => void;
+  closeTab: (key: string, opts?: { skipConfirm?: boolean }) => void;
+  /** 删除文档后关闭其标签（跳过确认） */
+  closeTabsByDocIds: (docIds: string[]) => void;
   /** 打开人物卡编辑器（激活最近的人物卡标签或新建空白卡标签） */
   openCharacterTab: () => void;
   /** 打开 BBCode 模板编辑器（forceNew=true 时强制新开未命名模板标签） */
@@ -642,7 +644,18 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [stashActiveSnapshot, isDirty, isTemplateDirty, selectCharacter, applySnapshot]);
 
-  const closeTab = useCallback((key: string) => {
+  /** 激活某个标签到 live 状态（有快照换入、无快照走加载、chooser/preview 仅切视图） */
+  const restoreTabLive = useCallback((tab: EditorTab) => {
+    if (tab.kind === 'chooser') { setView('new-tab'); return; }
+    if (tab.kind === 'preview') { setView('editor'); return; }
+    const snap = snapshotsRef.current.get(tab.key);
+    if (snap) {
+      applySnapshot(snap, tab);
+    } else {
+      selectCharacter(tab.docId, true, true);
+    }
+  }, [applySnapshot, selectCharacter]);
+  const closeTab = useCallback((key: string, opts?: { skipConfirm?: boolean }) => {
     const tab = tabsRef.current.find(t => t.key === key);
     if (!tab) return;
     const isActive = key === activeTabKeyRef.current;
@@ -721,7 +734,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       }
     };
-    if (tabDirty) {
+    if (tabDirty && !opts?.skipConfirm) {
       setConfirmModal({
         title: "该标签页有未保存的修改，关闭后未保存的内容将丢失。",
         onConfirm: performClose,
@@ -734,6 +747,64 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       performClose();
     }
   }, [isDirty, isTemplateDirty, applySnapshot, selectCharacter, activeDocRef, handleSave]);
+
+  /** 删除文档后关闭对应标签（跳过未保存确认；若全部关完则重置为空白人物卡） */
+  const closeTabsByDocIds = useCallback((docIds: string[]) => {
+    const idSet = new Set(docIds);
+    if (!idSet.size) return;
+    const doomed = tabsRef.current.filter(t => t.docId && idSet.has(t.docId));
+    if (!doomed.length) return;
+    doomed.forEach(t => {
+      snapshotsRef.current.delete(t.key);
+      if (t.docId) {
+        localStorage.removeItem(`pf1_char_draft_${t.docId}`);
+        localStorage.removeItem(`pf1_tpl_draft_${t.docId}`);
+      }
+    });
+    const wasActive = doomed.some(t => t.key === activeTabKeyRef.current);
+    setTabs(prev => prev.filter(t => !(t.docId && idSet.has(t.docId))));
+    // 分栏簿记：移除标签并剪除空栏；活动标签被删时同栏顺延
+    let nextPanes = panesRef.current.map(p => ({
+      ...p,
+      tabKeys: p.tabKeys.filter(k => {
+        const t = tabsRef.current.find(tt => tt.key === k);
+        return !(t?.docId && idSet.has(t.docId));
+      }),
+    })).map(p => ({ ...p, activeTabKey: p.tabKeys.includes(p.activeTabKey ?? '') ? p.activeTabKey : (p.tabKeys[p.tabKeys.length - 1] ?? null) }));
+    const nonEmpty = nextPanes.filter(p => p.tabKeys.length > 0);
+    if (nonEmpty.length === 0) {
+      const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      setData(fresh);
+      setLastSavedData(JSON.parse(JSON.stringify(fresh)));
+      setCurrentCharacterId(null);
+      setCurrentTemplateId(null);
+      setIsReadOnly(false);
+      activeDocRef.current = null;
+      const url = new URL(window.location.href);
+      url.searchParams.delete('id');
+      window.history.replaceState({}, '', url.toString());
+      setView('editor');
+      setTabs([{ key: 'new-character', docId: null, kind: 'character', title: '新人物卡', dirty: false }]);
+      setPanes([{ id: 'pane-1', tabKeys: ['new-character'], activeTabKey: 'new-character' }]);
+      setFocusedPaneId('pane-1');
+      setActiveTabKey('new-character');
+      return;
+    }
+    if (!nonEmpty.some(p => p.id === focusedPaneIdRef.current)) {
+      setFocusedPaneId(nonEmpty[0].id);
+    }
+    setPanes(nonEmpty);
+    if (wasActive) {
+      const fp = nonEmpty.find(p => p.id === focusedPaneIdRef.current) || nonEmpty[0];
+      const nk = fp.activeTabKey ?? fp.tabKeys[fp.tabKeys.length - 1] ?? null;
+      const nt = nk ? tabsRef.current.find(tt => tt.key === nk) : null;
+      if (nt) {
+        setActiveTabKey(nk);
+        restoreTabLive(nt);
+      }
+    }
+  }, [restoreTabLive, setData, setLastSavedData, setCurrentCharacterId, setCurrentTemplateId, setIsReadOnly, setView, activeDocRef]);
+
 
   // 活动选项卡的实时标题（人物卡取 basic.name，模板取文档名并去掉 .bbc 后缀）
   const activeTabTitle = useMemo(() => {
@@ -1107,7 +1178,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     handleSave, handleSaveAs, handleNew, handleShare, handleExport, handleExportBBCode, handleRevertChanges,
     selectCharacter: openDocumentAsTab,
     loadSharedCharacter: (id: string) => openDocumentAsTab(id, true, true),
-    tabs, activeTabKey, activeTabTitle, switchTab, closeTab, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser, openPreviewTab,
+    tabs, activeTabKey, activeTabTitle, switchTab, closeTab, closeTabsByDocIds, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser, openPreviewTab,
     panes, focusedPaneId, addPane, moveTabToPane, focusPane, getTabSnapshot,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
@@ -1148,7 +1219,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     driveModal, setDriveModal, isSyncingDrive,
     handleBrowseDrive, handleBrowseDriveRoot, navigateDrive, navigateToPathIndex, importFromDrive, handleCloudBackup, handleCloudRestore,
     getItemPath,
-    openDocumentAsTab, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser, openPreviewTab,
+    openDocumentAsTab, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser, openPreviewTab, closeTabsByDocIds,
     tabs, activeTabKey, activeTabTitle, switchTab, closeTab,
     panes, focusedPaneId, addPane, moveTabToPane, focusPane, getTabSnapshot
   ]);

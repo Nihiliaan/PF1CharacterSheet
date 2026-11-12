@@ -49,7 +49,7 @@ interface SidebarContextMenu {
 }
 
 export default function ExplorerSidebar() {
-  const { tabs, activeTabKey, panes, focusedPaneId, switchTab, closeTab, activeTabTitle, isDirty, isTemplateDirty, selectCharacter, openCharacterTab } = useCharacter();
+  const { tabs, activeTabKey, panes, focusedPaneId, switchTab, closeTab, closeTabsByDocIds, activeTabTitle, isDirty, isTemplateDirty, selectCharacter, openCharacterTab } = useCharacter();
   const { view, setView, setConfirmModal } = useUI();
   const {
     myCharacters, folders, currentFolderId, setCurrentFolderId, refreshCharacterList,
@@ -306,8 +306,28 @@ export default function ExplorerSidebar() {
     setConfirmModal({
       title: `确定删除「${name}」吗？该操作不可撤销。`,
       onConfirm: () => {
+        // 删除文件夹时，其子树内所有打开的文档标签一并关闭
+        const affectedDocIds: string[] = [];
+        if (type === 'folder') {
+          const doomed = new Set<string>([id]);
+          let grew = true;
+          while (grew) {
+            grew = false;
+            for (const f of folders) {
+              if (doomed.has(f.parentId) && !doomed.has(f.id)) { doomed.add(f.id); grew = true; }
+            }
+          }
+          for (const c of myCharacters) {
+            if (c.folderId && doomed.has(c.folderId)) affectedDocIds.push(c.id);
+          }
+        } else {
+          affectedDocIds.push(id);
+        }
         Promise.resolve(type === 'folder' ? deleteFolder(id) : deleteCharacter(id))
-          .then(() => setToast({ message: '已删除', type: 'success' }))
+          .then(() => {
+            closeTabsByDocIds(affectedDocIds);
+            setToast({ message: '已删除', type: 'success' });
+          })
           .catch((e: any) => setToast({ message: '删除失败：' + (e?.message || ''), type: 'error' }));
       }
     });
