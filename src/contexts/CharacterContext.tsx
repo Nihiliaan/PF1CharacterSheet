@@ -261,6 +261,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   focusedPaneIdRef.current = focusedPaneId;
   /** openDocFromChooser 的"原位顶替"标记：新文档标签顶替 chooser 标签（保持其分栏与位置） */
   const pendingReplaceKeyRef = useRef<string | null>(null);
+  // openChooserTab 声明在 hook 调用之后，经由 ref 供 onBootWithoutId 间接调用
+  const openChooserTabRef = useRef<() => void>(() => {});
 
   // 分栏持久化
   useEffect(() => {
@@ -368,44 +370,6 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setTabs(prev => prev.map(t => (t.key === ak && t.kind === kind) ? { ...t, docId } : t));
   }, []);
 
-  /** 启动时恢复持久化的选项卡列表与分栏结构（仅登记，不加载内容；切换到时按需加载） */
-  const handleRestoreTabs = useCallback((restored: { key: string; docId: string; kind: 'character' | 'template'; title?: string }[]) => {
-    setTabs(prev => {
-      if (prev.length) return prev;
-      return restored.map(t => ({ key: t.key, docId: t.docId, kind: t.kind, title: sanitizeTabTitle(t.title, t.kind), dirty: false }));
-    });
-    setPanes(prev => {
-      // StrictMode 双跑 / 已有结构时跳过
-      if (prev.some(p => p.tabKeys.length > 0)) return prev;
-      const keys = new Set(restored.map(t => t.key));
-      let restoredPanes: EditorPane[] = [];
-      let restoredFocus = 'pane-1';
-      try {
-        const stored = JSON.parse(localStorage.getItem('pf1_panes') || '[]') as EditorPane[];
-        restoredPanes = stored
-          .map(p => ({ ...p, tabKeys: (p.tabKeys || []).filter(k => keys.has(k)) }))
-          .filter(p => p.tabKeys.length > 0);
-        const storedFocus = localStorage.getItem('pf1_focused_pane');
-        if (storedFocus && restoredPanes.some(p => p.id === storedFocus)) restoredFocus = storedFocus;
-      } catch { /* 忽略损坏数据 */ }
-      // 未被任何分栏收录的标签补进第一栏
-      const missing = restored.filter(t => !restoredPanes.some(p => p.tabKeys.includes(t.key))).map(t => t.key);
-      if (!restoredPanes.length) {
-        restoredPanes = [{ id: 'pane-1', tabKeys: restored.map(t => t.key), activeTabKey: restored[0]?.key ?? null }];
-      } else if (missing.length) {
-        restoredPanes = restoredPanes.map((p, i) => i === 0 ? { ...p, tabKeys: [...p.tabKeys, ...missing] } : p);
-      }
-      if (!restoredPanes.some(p => p.id === restoredFocus)) restoredFocus = restoredPanes[0].id;
-      return restoredPanes;
-    });
-    setFocusedPaneId(prev => {
-      try {
-        const stored = localStorage.getItem('pf1_focused_pane');
-        if (stored) return stored;
-      } catch { /* ignore */ }
-      return prev;
-    });
-  }, []);
 
   /** 把一份未保存内容写入本地草稿（人物卡沿用 pf1_char_draft_*，模板用 pf1_tpl_draft_*） */
   const writeDraftForDoc = useCallback((
@@ -549,7 +513,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     isDirty, setBbcodeTemplate, setLastSavedTemplate, computed,
     onOpenDocument: handleOpenDocument,
     onSaveDocument: handleSaveDocument,
-    onRestoreTabs: handleRestoreTabs
+    onBootWithoutId: () => openChooserTabRef.current()
   });
 
   const {
@@ -780,6 +744,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setFocusedPaneId('pane-1');
       setActiveTabKey(chooserKey);
       setView('new-tab');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('id');
+      window.history.replaceState({}, '', url.toString());
       return;
     }
     if (!nonEmpty.some(p => p.id === focusedPaneIdRef.current)) {
@@ -1000,6 +967,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     url.searchParams.delete('id');
     window.history.replaceState({}, '', url.toString());
   }, [stashAndMarkDirty, assignTabToFocusedPane]);
+  openChooserTabRef.current = openChooserTab;
 
   const addPane = useCallback(() => {
     if (panesRef.current.length >= 4) return;

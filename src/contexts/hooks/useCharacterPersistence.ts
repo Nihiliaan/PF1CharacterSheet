@@ -57,8 +57,8 @@ export interface UseCharacterPersistenceOptions {
   onOpenDocument?: (docId: string, kind: 'character' | 'template', title?: string) => void;
   /** 文档保存后 id 变化（另存为 / 模板迁移 / 首次保存）：就地更新活动选项卡的 docId */
   onSaveDocument?: (docId: string, kind: 'character' | 'template') => void;
-  /** 启动时恢复持久化的选项卡列表（此时仅登记，不加载内容，切换到时再按需加载） */
-  onRestoreTabs?: (tabs: { key: string; docId: string; kind: 'character' | 'template'; title?: string }[]) => void;
+  /** 启动时无 ?id= 参数：呈现新建标签页（由 CharacterContext 打开 chooser） */
+  onBootWithoutId?: () => void;
 }
 
 export const useCharacterPersistence = ({
@@ -79,7 +79,7 @@ export const useCharacterPersistence = ({
   computed,
   onOpenDocument,
   onSaveDocument,
-  onRestoreTabs
+  onBootWithoutId
 }: UseCharacterPersistenceOptions) => {
   const { t } = useTranslation();
   // 内部直接消费各 Context（CharacterProvider 的祖先节点已挂载对应 Provider）
@@ -490,41 +490,17 @@ export const useCharacterPersistence = ({
     await selectCharacter(id, true, true);
   };
 
-  // Initial Load: 组件挂载时恢复选项卡列表并只加载活动文档，其余选项卡在切换到时按需加载
+  // Initial Load: 有 ?id= 时打开对应文档；否则直接呈现"新建标签页"（不恢复上次的标签）
   useEffect(() => {
     const loadInitial = async () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const urlId = urlParams.get('id');
-        const lastCharId = localStorage.getItem(KEY_LAST_CHAR);
-        const lastTempId = localStorage.getItem(KEY_LAST_TEMP);
-
-        // 重建选项卡列表：优先用持久化的打开列表，否则回退到"上次角色 + 上次模板"
-        let restored: { key: string; docId: string; kind: 'character' | 'template'; title?: string }[] = [];
-        try {
-          restored = JSON.parse(localStorage.getItem('pf1_open_tabs') || '[]');
-        } catch { /* 忽略损坏的持久化数据 */ }
-        const tabs: { key: string; docId: string; kind: 'character' | 'template'; title?: string }[] = [];
-        for (const rt of restored) {
-          if (rt?.docId && !tabs.some(t => t.docId === rt.docId)) tabs.push(rt);
-        }
-        if (lastCharId && !tabs.some(t => t.docId === lastCharId)) {
-          tabs.push({ key: lastCharId, docId: lastCharId, kind: 'character' });
-        }
-        if (lastTempId && !tabs.some(t => t.docId === lastTempId)) {
-          tabs.push({ key: lastTempId, docId: lastTempId, kind: 'template' });
-        }
-        // URL 直达的文档可能不在列表里（分享链接等）：补登一个 tab（kind 先猜测为 character，
-        // 实际加载完成后由 onOpenDocument 依据真实类型修正）
-        if (urlId && !tabs.some(t => t.docId === urlId)) {
-          tabs.push({ key: urlId, docId: urlId, kind: 'character' });
-        }
-        onRestoreTabs?.(tabs);
-
-        // 只加载活动文档：URL 直达优先，其次上次角色，最后上次模板
-        const activeId = urlId || lastCharId || lastTempId;
-        if (activeId) {
-          await selectCharacter(activeId, true, true);
+        if (urlId) {
+          await selectCharacter(urlId, true, true);
+        } else {
+          // 无 id 访问：默认进入新建标签页（最近打开的文件在该页面的列表里）
+          onBootWithoutId?.();
         }
       } catch (error) {
         console.error("[useCharacterPersistence] Initial load failed:", error);
