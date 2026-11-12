@@ -68,7 +68,7 @@ export default function ExplorerSidebar() {
   // 返回聚焦文档对应的编辑视图（快速入口的"再点一次"行为）
   const backToFocusedView = () => {
     const activeTab = tabs.find(t => t.key === activeTabKey);
-    setView(activeTab?.kind === 'template' ? 'bbcode-template' : 'editor');
+    setView('editor');
   };
 
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(KEY_COLLAPSED) === '1');

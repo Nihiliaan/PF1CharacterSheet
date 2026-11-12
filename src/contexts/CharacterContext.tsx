@@ -588,7 +588,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setCurrentCharacterId(null);
     }
     // chooser/preview 永远不应该走快照换入（防御：若有残留快照也只切视图，避免弹出错误编辑器）
-    setView(tab.kind === 'chooser' ? 'new-tab' : (tab.kind === 'preview' ? 'editor' : (tab.kind === 'character' ? 'editor' : 'bbcode-template')));
+    setView(tab.kind === 'chooser' ? 'new-tab' : 'editor');
     const url = new URL(window.location.href);
     if (tab.docId) url.searchParams.set('id', tab.docId);
     window.history.replaceState({}, '', url.toString());
@@ -599,7 +599,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!tab) return;
     if (key === activeTabKeyRef.current) {
       // 已是该标签（可能正停留在档案库等其他视图）：仅切回对应视图
-      setView(tab.kind === 'chooser' ? 'new-tab' : (tab.kind === 'character' ? 'editor' : 'bbcode-template'));
+      setView(tab.kind === 'chooser' ? 'new-tab' : 'editor');
       return;
     }
     // 1. 暂存当前活动 tab 的 live 状态与脏标记（chooser 无文档状态，跳过）
@@ -792,7 +792,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setTabs(prev => [...prev, { key, docId: null, kind, title: kind === 'character' ? '新人物卡' : '未命名模板', dirty: false }]);
     setActiveTabKey(key);
     assignTabToFocusedPane(key);
-    setView(kind === 'character' ? 'editor' : 'bbcode-template');
+    setView('editor');
     const url = new URL(window.location.href);
     url.searchParams.delete('id');
     window.history.replaceState({}, '', url.toString());
@@ -804,7 +804,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!sameKind.length) return false;
     const target = sameKind[sameKind.length - 1];
     if (target.key === activeTabKeyRef.current) {
-      setView(kind === 'character' ? 'editor' : 'bbcode-template');
+      setView('editor');
     } else {
       switchTab(target.key);
     }
@@ -893,7 +893,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setTabs(prev => prev.map(t => t.key === chooserKey
       ? { ...t, kind, title: kind === 'preview' ? '预览' : (kind === 'character' ? '新人物卡' : '未命名模板'), dirty: false }
       : t));
-    setView(kind === 'character' ? 'editor' : 'bbcode-template');
+    setView('editor');
     const url = new URL(window.location.href);
     url.searchParams.delete('id');
     window.history.replaceState({}, '', url.toString());
@@ -1018,7 +1018,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   } = useCharacterAI(setData, setCurrentCharacterId);
 
   const handleShare = useCallback(() => {
-    const id = ui.view === 'bbcode-template' ? currentTemplateId : currentCharacterId;
+    // 以聚焦标签的类型判断（分栏模式下模板标签的视图是 'editor'）
+    const focusedTab = tabs.find(t => t.key === activeTabKey);
+    const id = focusedTab?.kind === 'template' ? currentTemplateId : currentCharacterId;
     if (!id) {
       setToast({ message: "请先打开一个人物卡或模板", type: 'error' });
       return;
@@ -1026,10 +1028,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const shareUrl = `${window.location.origin}${window.location.pathname}?id=${id}`;
     navigator.clipboard.writeText(shareUrl);
     setToast({ message: "分享链接已复制到剪贴板！" });
-  }, [ui.view, currentTemplateId, currentCharacterId, setToast]);
+  }, [tabs, activeTabKey, currentTemplateId, currentCharacterId, setToast]);
 
   const handleExport = useCallback(() => {
-    const isTemplate = ui.view === 'bbcode-template';
+    const focusedTab = tabs.find(t => t.key === activeTabKey);
+    const isTemplate = focusedTab?.kind === 'template';
     const ext = isTemplate ? '.bbc' : '.pf1';
     
     // Try to get filename from current document id
@@ -1044,7 +1047,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-  }, [ui.view, data, bbcodeTemplate]);
+  }, [tabs, activeTabKey, data, bbcodeTemplate]);
 
   const handleExportBBCode = useCallback(() => {
     const bbcode = getCharacterBBCode(data, computed, t);

@@ -286,7 +286,7 @@ export const useCharacterPersistence = ({
         }
         setBbcodeTemplate(content);
         setLastSavedTemplate(serverContent);
-        if (shouldSwitchView) setView('bbcode-template');
+        if (shouldSwitchView) setView('editor');
         setCurrentTemplateId(char.id);
         localStorage.setItem(KEY_LAST_TEMP, char.id);
       } else {

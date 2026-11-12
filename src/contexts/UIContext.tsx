@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast as sonnerToast } from 'sonner';
 
-export type ViewType = 'editor' | 'vault' | 'settings' | 'bbcode-template' | 'svg-template' | 'about' | 'new-tab';
+export type ViewType = 'editor' | 'vault' | 'settings' | 'svg-template' | 'about' | 'new-tab';
 
 interface UIContextType {
   // Navigation

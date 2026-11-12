@@ -279,7 +279,7 @@ const CardExportModal: React.FC<CardExportModalProps> = ({
                   if (activeType === 'svg') {
                     setView('svg-template');
                   } else {
-                    setView('bbcode-template');
+                    setView('editor');
                   }
                 }}
                 className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold rounded-xl border border-stone-200 transition-colors mt-2"

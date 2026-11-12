@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { googleProvider } from './lib/firebase';
 
 // Lazy-loaded Views (Code Splitting)
-const BBCodeTemplateEditor = lazy(() => import('./components/BBCodeTemplateEditor'));
 const SvgTemplateEditor = lazy(() => import('./components/SvgTemplateEditor'));
 const VaultContent = lazy(() => import('./components/vault/VaultContent'));
 const SettingsCenter = lazy(() => import('./components/settings/SettingsCenter'));
@@ -118,14 +117,6 @@ function AppContent() {
             <motion.div key="settings" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="h-full overflow-hidden">
               <Suspense fallback={<ViewLoadingFallback />}>
                 <SettingsCenter />
-              </Suspense>
-            </motion.div>
-          )}
-
-          {view === 'bbcode-template' && (
-            <motion.div key="bbcode-template" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="h-full overflow-hidden">
-              <Suspense fallback={<ViewLoadingFallback />}>
-                <BBCodeTemplateEditor />
               </Suspense>
             </motion.div>
           )}
