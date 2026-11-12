@@ -678,22 +678,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const nonEmpty = nextPanes.filter(p => p.tabKeys.length > 0);
       const remainingTabs = tabsRef.current.filter(t => t.key !== key);
       if (nonEmpty.length === 0) {
-        // 关闭最后一个选项卡：重置为全新空白人物卡，重建唯一分栏
-        const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
-        setData(fresh);
-        setLastSavedData(JSON.parse(JSON.stringify(fresh)));
-        setCurrentCharacterId(null);
-        setCurrentTemplateId(null);
-        setIsReadOnly(false);
-        activeDocRef.current = null;
-        const url = new URL(window.location.href);
-        url.searchParams.delete('id');
-        window.history.replaceState({}, '', url.toString());
-        setView('editor');
-        setTabs([{ key: 'new-character', docId: null, kind: 'character', title: '新人物卡', dirty: false }]);
-        setPanes([{ id: 'pane-1', tabKeys: ['new-character'], activeTabKey: 'new-character' }]);
+        // 全部关完：呈现新建标签页（不自动新建人物卡）
+        const chooserKey = `chooser-${Date.now()}`;
+        setTabs([{ key: chooserKey, docId: null, kind: 'chooser', title: '新建标签页', dirty: false }]);
+        setPanes([{ id: 'pane-1', tabKeys: [chooserKey], activeTabKey: chooserKey }]);
         setFocusedPaneId('pane-1');
-        setActiveTabKey('new-character');
+        setActiveTabKey(chooserKey);
+        setView('new-tab');
         return;
       }
       let focusedNext = focusedPaneIdRef.current;
@@ -773,21 +764,13 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     })).map(p => ({ ...p, activeTabKey: p.tabKeys.includes(p.activeTabKey ?? '') ? p.activeTabKey : (p.tabKeys[p.tabKeys.length - 1] ?? null) }));
     const nonEmpty = nextPanes.filter(p => p.tabKeys.length > 0);
     if (nonEmpty.length === 0) {
-      const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
-      setData(fresh);
-      setLastSavedData(JSON.parse(JSON.stringify(fresh)));
-      setCurrentCharacterId(null);
-      setCurrentTemplateId(null);
-      setIsReadOnly(false);
-      activeDocRef.current = null;
-      const url = new URL(window.location.href);
-      url.searchParams.delete('id');
-      window.history.replaceState({}, '', url.toString());
-      setView('editor');
-      setTabs([{ key: 'new-character', docId: null, kind: 'character', title: '新人物卡', dirty: false }]);
-      setPanes([{ id: 'pane-1', tabKeys: ['new-character'], activeTabKey: 'new-character' }]);
+      // 全部关完：呈现新建标签页（不自动新建人物卡）
+      const chooserKey = `chooser-${Date.now()}`;
+      setTabs([{ key: chooserKey, docId: null, kind: 'chooser', title: '新建标签页', dirty: false }]);
+      setPanes([{ id: 'pane-1', tabKeys: [chooserKey], activeTabKey: chooserKey }]);
       setFocusedPaneId('pane-1');
-      setActiveTabKey('new-character');
+      setActiveTabKey(chooserKey);
+      setView('new-tab');
       return;
     }
     if (!nonEmpty.some(p => p.id === focusedPaneIdRef.current)) {
