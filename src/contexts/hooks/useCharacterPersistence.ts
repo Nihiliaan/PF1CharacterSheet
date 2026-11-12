@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CharacterData, CharacterDocument } from '../../schema/types';
 import { DEFAULT_DATA } from '../../constants/index';
@@ -491,7 +491,11 @@ export const useCharacterPersistence = ({
   };
 
   // Initial Load: 有 ?id= 时打开对应文档；否则直接呈现"新建标签页"（不恢复上次的标签）
+  // bootGuardRef：StrictMode 开发模式会双挂载（effect 跑两次），无 id 时会创建出两个 chooser 标签——此守卫保证只执行一次
+  const bootGuardRef = useRef(false);
   useEffect(() => {
+    if (bootGuardRef.current) return;
+    bootGuardRef.current = true;
     const loadInitial = async () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);

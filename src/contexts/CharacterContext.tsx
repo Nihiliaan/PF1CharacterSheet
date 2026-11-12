@@ -871,7 +871,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
    *  targetPaneId：指定落入的分栏（缺省为当前聚焦分栏）。 */
   const openChooserTab = useCallback((targetPaneId?: string) => {
     stashAndMarkDirty();
-    const key = `chooser-${Date.now()}`;
+    const key = `chooser-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     setTabs(prev => [...prev, { key, docId: null, kind: 'chooser', title: '新建标签页', dirty: false }]);
     setActiveTabKey(key);
     const target = targetPaneId ?? focusedPaneIdRef.current;
