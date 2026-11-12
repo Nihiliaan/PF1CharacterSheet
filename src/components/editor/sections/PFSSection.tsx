@@ -39,9 +39,8 @@ const PFSSection: React.FC = () => {
     lastSavedData,
     update,
     tableActionMode,
+    reorderRows,
     toggleTableActionMode,
-    handleTableItemDragStart,
-    handleTableItemDragOver,
     handleTableItemDrop
   } = useCharacter();
   const { setToast } = useUI();
@@ -478,10 +477,8 @@ const PFSSection: React.FC = () => {
               originalData={lastSavedData.pfs?.boons}
               rowActionMode={tableActionMode}
               onRowActionModeToggle={toggleTableActionMode}
-              onRowDragStart={(idx, e) => handleTableItemDragStart('pfs.boons', idx, e)}
-              onRowDragOver={(idx, e) => handleTableItemDragOver('pfs.boons', idx, e)}
-              onRowDrop={(idx, e) => handleTableItemDrop('pfs.boons', idx, e)}
-              onChange={v => update('pfs.boons', v)}
+              onRowReorder={(from, to) => reorderRows('pfs.boons', from, to)}
+                                          onChange={v => update('pfs.boons', v)}
             />
 
             {/* 跑团编年史记录单 (Chronicles) 表格 */}
@@ -494,10 +491,8 @@ const PFSSection: React.FC = () => {
               onSync={handleStartSync}
               rowActionMode={tableActionMode}
               onRowActionModeToggle={toggleTableActionMode}
-              onRowDragStart={(idx, e) => handleTableItemDragStart('pfs.chronicles', idx, e)}
-              onRowDragOver={(idx, e) => handleTableItemDragOver('pfs.chronicles', idx, e)}
-              onRowDrop={(idx, e) => handleTableItemDrop('pfs.chronicles', idx, e)}
-              onChange={v => update('pfs.chronicles', v)}
+              onRowReorder={(from, to) => reorderRows('pfs.chronicles', from, to)}
+                                          onChange={v => update('pfs.chronicles', v)}
             />
           </>
         )}

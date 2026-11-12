@@ -12,9 +12,8 @@ const AttacksSection: React.FC = () => {
     lastSavedData,
     update,
     tableActionMode,
+    reorderRows,
     toggleTableActionMode,
-    handleTableItemDragStart,
-    handleTableItemDragOver,
     handleTableItemDrop
   } = useCharacter();
 
@@ -31,10 +30,8 @@ const AttacksSection: React.FC = () => {
             rowDraggable={true}
             rowActionMode={tableActionMode}
             onRowActionModeToggle={toggleTableActionMode}
-            onRowDragStart={(idx, e) => handleTableItemDragStart('attacks.melee', idx, e)}
-            onRowDragOver={(idx, e) => handleTableItemDragOver('attacks.melee', idx, e)}
-            onRowDrop={(idx, e) => handleTableItemDrop('attacks.melee', idx, e)}
-          />
+            onRowReorder={(from, to) => reorderRows('attacks.melee', from, to)}
+                                  />
         </div>
         <DynamicTable
           minWidth="0"
@@ -45,10 +42,8 @@ const AttacksSection: React.FC = () => {
           rowDraggable={true}
           rowActionMode={tableActionMode}
           onRowActionModeToggle={toggleTableActionMode}
-          onRowDragStart={(idx, e) => handleTableItemDragStart('attacks.ranged', idx, e)}
-          onRowDragOver={(idx, e) => handleTableItemDragOver('attacks.ranged', idx, e)}
-          onRowDrop={(idx, e) => handleTableItemDrop('attacks.ranged', idx, e)}
-        />
+          onRowReorder={(from, to) => reorderRows('attacks.ranged', from, to)}
+                            />
       </div>
       <MultilineInput
         className="mt-6"

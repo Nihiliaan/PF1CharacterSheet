@@ -11,9 +11,8 @@ const RacialTraitsSection: React.FC = () => {
     lastSavedData,
     update,
     tableActionMode,
+    reorderRows,
     toggleTableActionMode,
-    handleTableItemDragStart,
-    handleTableItemDragOver,
     handleTableItemDrop
   } = useCharacter();
 
@@ -28,10 +27,8 @@ const RacialTraitsSection: React.FC = () => {
         rowDraggable={true}
         rowActionMode={tableActionMode}
         onRowActionModeToggle={toggleTableActionMode}
-        onRowDragStart={(idx, e) => handleTableItemDragStart('racialTraits', idx, e)}
-        onRowDragOver={(idx, e) => handleTableItemDragOver('racialTraits', idx, e)}
-        onRowDrop={(idx, e) => handleTableItemDrop('racialTraits', idx, e)}
-      />
+        onRowReorder={(from, to) => reorderRows('racialTraits', from, to)}
+                      />
     </Section>
   );
 };

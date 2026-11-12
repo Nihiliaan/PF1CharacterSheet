@@ -9,9 +9,10 @@ interface PfsBoonsTableProps {
   originalData?: Record<string, any>;
   rowActionMode: 'drag' | 'delete';
   onRowActionModeToggle: () => void;
-  onRowDragStart: (index: number, e: any) => void;
-  onRowDragOver: (index: number, e: any) => void;
-  onRowDrop: (index: number, e: any) => void;
+  onRowDragStart?: (index: number, e: any) => void;
+  onRowReorder?: (from: number, to: number) => void;
+  onRowDragOver?: (index: number, e: any) => void;
+  onRowDrop?: (index: number, e: any) => void;
   onChange: (data: Record<string, any>) => void;
 }
 
@@ -20,6 +21,7 @@ const PfsBoonsTable: React.FC<PfsBoonsTableProps> = ({
   originalData,
   rowActionMode,
   onRowActionModeToggle,
+  onRowReorder,
   onRowDragStart,
   onRowDragOver,
   onRowDrop,
@@ -42,6 +44,7 @@ const PfsBoonsTable: React.FC<PfsBoonsTableProps> = ({
         rowActionMode={rowActionMode}
         onRowActionModeToggle={onRowActionModeToggle}
         onRowDragStart={onRowDragStart}
+            onRowReorder={onRowReorder}
         onRowDragOver={onRowDragOver}
         onRowDrop={onRowDrop}
       />

@@ -12,9 +12,8 @@ const BackgroundTraitsSection: React.FC = () => {
     lastSavedData,
     update,
     tableActionMode,
+    reorderRows,
     toggleTableActionMode,
-    handleTableItemDragStart,
-    handleTableItemDragOver,
     handleTableItemDrop
   } = useCharacter();
 
@@ -30,10 +29,8 @@ const BackgroundTraitsSection: React.FC = () => {
           rowDraggable={true}
           rowActionMode={tableActionMode}
           onRowActionModeToggle={toggleTableActionMode}
-          onRowDragStart={(idx, e) => handleTableItemDragStart('backgroundTraits', idx, e)}
-          onRowDragOver={(idx, e) => handleTableItemDragOver('backgroundTraits', idx, e)}
-          onRowDrop={(idx, e) => handleTableItemDrop('backgroundTraits', idx, e)}
-        />
+          onRowReorder={(from, to) => reorderRows('backgroundTraits', from, to)}
+                            />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InlineInput
             label={t('editor.lists.favored_class')}

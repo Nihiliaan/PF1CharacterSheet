@@ -11,9 +11,8 @@ const FeatsSection: React.FC = () => {
     lastSavedData,
     update,
     tableActionMode,
+    reorderRows,
     toggleTableActionMode,
-    handleTableItemDragStart,
-    handleTableItemDragOver,
     handleTableItemDrop
   } = useCharacter();
 
@@ -27,10 +26,8 @@ const FeatsSection: React.FC = () => {
         rowDraggable={true}
         rowActionMode={tableActionMode}
         onRowActionModeToggle={toggleTableActionMode}
-        onRowDragStart={(idx, e) => handleTableItemDragStart('feats', idx, e)}
-        onRowDragOver={(idx, e) => handleTableItemDragOver('feats', idx, e)}
-        onRowDrop={(idx, e) => handleTableItemDrop('feats', idx, e)}
-      />
+        onRowReorder={(from, to) => reorderRows('feats', from, to)}
+                      />
     </Section>
   );
 };

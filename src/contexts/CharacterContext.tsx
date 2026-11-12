@@ -135,9 +135,11 @@ export interface CharacterContextType {
   handleCloudRestore: () => Promise<void>;
 
   // Drag & Drop
+  /** 行排序提交（listKey + 物理索引 from→to）；供各 section 表格使用 */
+  reorderRows: (listKey: string, from: number, to: number) => void;
   handleTableItemDragStart: (listKey: string, itemIndex: number, e: React.DragEvent) => void;
-  handleTableItemDragOver: (listKey: string, targetItemIndex: number, e: React.DragEvent) => void;
-  handleTableItemDrop: (listKey: string, targetItemIndex: number, e: React.DragEvent) => void;
+  handleTableItemDragOver: (listKey: string, itemIndex: number, e: React.DragEvent) => void;
+  handleTableItemDrop: (listKey: string, itemIndex: number, e: React.DragEvent) => void;
   handleBagDragStart: (e: React.DragEvent, index: number) => void;
   handleBagDragOver: (e: React.DragEvent, targetIndex: number) => void;
   handleBagDrop: (e: React.DragEvent, dropIndex: number) => void;
@@ -1057,6 +1059,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const effectiveReadOnly = isReadOnly || isSyncingActive;
 
   const {
+    reorderRows,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
     handleItemDragStart, handleItemDragOver, handleItemDrop,
@@ -1163,12 +1166,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     update, addBag, removeBag,
     addMagicBlock, removeMagicBlock,
     addAdditionalBlock, removeAdditionalBlock,
+    reorderRows, handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleSave, handleSaveAs, handleNew, handleShare, handleExport, handleExportBBCode, handleRevertChanges,
     selectCharacter: openDocumentAsTab,
     loadSharedCharacter: (id: string) => openDocumentAsTab(id, true, true),
     tabs, activeTabKey, activeTabTitle, switchTab, closeTab, closeTabsByDocIds, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser, openPreviewTab,
     panes, focusedPaneId, setFocusedPaneId, addPane, moveTabToPane, focusPane, getTabSnapshot,
-    handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
     handleItemDragStart, handleItemDragOver, handleItemDrop,
     handleDragStart, handleDragOver, handleDrop,
@@ -1194,7 +1197,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     addMagicBlock, removeMagicBlock,
     addAdditionalBlock, removeAdditionalBlock,
     handleSave, handleSaveAs, handleNew, handleShare, handleExport, handleExportBBCode, handleRevertChanges, selectCharacter, loadSharedCharacter,
-    handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
+    reorderRows,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
     handleItemDragStart, handleItemDragOver, handleItemDrop,
     handleDragStart, handleDragOver, handleDrop,

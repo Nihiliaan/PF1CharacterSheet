@@ -35,6 +35,8 @@ export interface DynamicTableProps {
   rowDraggable?: boolean;
   rowActionMode?: 'drag' | 'delete';
   onRowActionModeToggle?: () => void;
+  /** dnd-kit 行排序：拖拽结束时按物理索引提交（from/to 均为原物理索引） */
+  onRowReorder?: (from: number, to: number) => void;
   onRowDragStart?: (index: number, e: any) => void;
   onRowDragOver?: (index: number, e: any) => void;
   onRowDrop?: (index: number, e: any) => void;

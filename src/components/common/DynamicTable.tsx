@@ -1,4 +1,8 @@
 import React, { memo, useState, useMemo, useCallback } from 'react';
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, GripVertical, Triangle } from 'lucide-react';
 import { DynamicTableProps } from '../../schema/types';
@@ -6,8 +10,9 @@ import { getHandlerByPath } from '../../schema/fieldRegistry';
 import DynamicInput from './DynamicInput';
 
 const DynamicTableRow = memo(({ 
-  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions
+  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, onRowReorder, sortableEnabled, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions
 }: any) => {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: `row-${i}`, data: { index: i }, disabled: !sortableEnabled });
   const getCellPath = (basePath: string, index: number, key: string) => {
     if (!basePath) return undefined;
     return `${basePath}.${key}[${index}]`;
@@ -30,11 +35,9 @@ const DynamicTableRow = memo(({
 
   return (
     <tr
-      className={`transition-colors group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'}`}
-      draggable={rowDraggable && rowActionMode === 'drag'}
-      onDragStart={(e) => onRowDragStart?.(i, e)}
-      onDragOver={(e) => onRowDragOver?.(i, e)}
-      onDrop={(e) => onRowDrop?.(i, e)}
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0.4 : undefined }}
+      className={`transition-colors group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''}`}
     >
       {columns.map((c: any) => {
         const cellPath = getCellPath(path || '', i, c.key);
@@ -79,9 +82,13 @@ const DynamicTableRow = memo(({
       )}
       {!fixedRows && (
         <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors pointer-events-auto">
-          <div className="flex items-center justify-center w-full h-[32px] opacity-0 group-hover:opacity-100 transition-opacity">
+          <div
+            ref={sortableEnabled ? setActivatorNodeRef : undefined}
+            {...(sortableEnabled ? { ...attributes, ...listeners } : {})}
+            className={`flex items-center justify-center w-full h-[32px] ${sortableEnabled ? 'cursor-grab touch-none' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
+          >
             {rowDraggable && rowActionMode === 'drag' ? (
-              <GripVertical size={16} className="text-stone-300 cursor-grab hover:text-stone-500" />
+              <GripVertical size={16} className={sortableEnabled ? 'text-stone-400' : 'text-stone-300 cursor-grab hover:text-stone-500'} />
             ) : (
               <button type="button" onClick={() => removeRow(i)} className="text-stone-300 hover:text-red-500 rounded p-1" title="删除行"><Trash2 size={16} /></button>
             )}
@@ -106,6 +113,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     rowDraggable,
     rowActionMode = 'drag',
     onRowActionModeToggle,
+    onRowReorder,
     onRowDragStart: propsDragStart,
     onRowDragOver,
     onRowDrop: propsDrop,
@@ -114,6 +122,12 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     enableSQShow = false
   } = props;
   const { t } = useTranslation();
+
+  // dnd-kit 传感器（行拖拽；distance 5 避免与单元格输入冲突）
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  // 本地视觉顺序：拖拽中仅视觉重排（数值=物理索引），结束后经 onRowReorder 一次性提交
+  const [localOrder, setLocalOrder] = useState<number[] | null>(null);
+  const [draggingRow, setDraggingRow] = useState<string | null>(null);
 
   // sortKey 和 sortOrder 现在仅作为 UI 状态（控制三角图标）
   const [sortKey, setSortKey] = useState<string | null>(null);

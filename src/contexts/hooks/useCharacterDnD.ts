@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { produce } from 'immer';
 import { dataUpdateService } from '../../logic/dataUpdateService';
 import { CharacterData } from '../../schema/types';
@@ -13,6 +13,11 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
   const draggedItem = useRef<{ bagId: string, itemIndex: number } | null>(null);
   const draggedBlockId = useRef<string | null>(null);
 
+  /** 行排序提交（dnd-kit 拖拽结束调用；物理索引 from→to） */
+  const reorderRows = useCallback((listKey: string, from: number, to: number) => {
+    if (isReadOnly || from === to) return;
+    setData(p => dataUpdateService.reorderList(p, listKey, from, to));
+  }, [isReadOnly, setData]);
   // --- 通用表格行拖拽 ---
   const handleTableItemDragStart = (listKey: string, itemIndex: number, e: React.DragEvent) => {
     if (isReadOnly) return;
@@ -142,6 +147,7 @@ export function useCharacterDnD(data: CharacterData, setData: React.Dispatch<Rea
   };
 
   return {
+    reorderRows,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
     handleItemDragStart, handleItemDragOver, handleItemDrop,

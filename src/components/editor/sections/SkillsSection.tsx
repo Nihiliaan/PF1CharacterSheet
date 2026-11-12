@@ -10,7 +10,8 @@ const SkillsSection: React.FC = () => {
   const { t } = useTranslation();
   const { 
     data, lastSavedData, update,
-    tableActionMode, toggleTableActionMode,
+    tableActionMode,
+    reorderRows, toggleTableActionMode,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop
   } = useCharacter();
   
@@ -65,10 +66,8 @@ const SkillsSection: React.FC = () => {
           rowDraggable={true}
           rowActionMode={tableActionMode}
           onRowActionModeToggle={toggleTableActionMode}
-          onRowDragStart={(idx, e) => handleTableItemDragStart('skills', idx, e)}
-          onRowDragOver={(idx, e) => handleTableItemDragOver('skills', idx, e)}
-          onRowDrop={(idx, e) => handleTableItemDrop('skills', idx, e)}
-          showAll={showAll}
+          onRowReorder={(from, to) => reorderRows('skills', from, to)}
+                              showAll={showAll}
         />
       </div>
 
