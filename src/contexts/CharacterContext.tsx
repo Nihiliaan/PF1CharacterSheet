@@ -183,7 +183,7 @@ export interface CharacterContextType {
   /** 在标签栏右侧新增一栏（以"新建标签页"开场，上限 4 栏） */
   addPane: () => void;
   /** 把标签移动到目标分栏（拖拽放置），源栏空了会自动剪除 */
-  moveTabToPane: (tabKey: string, paneId: string) => void;
+  moveTabToPane: (tabKey: string, paneId: string, index?: number) => void;
   /** 聚焦某个分栏（点击未聚焦分栏时，live 状态切换到其活动文档） */
   focusPane: (paneId: string) => void;
   /** 读取某标签被暂存时的 live 快照（供未聚焦分栏只读渲染） */
@@ -984,23 +984,50 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     window.history.replaceState({}, '', url.toString());
   }, [stashAndMarkDirty]);
 
-  /** 把标签移动到目标分栏（拖拽放置）；源栏空了自动剪除，目标栏激活该标签 */
-  const moveTabToPane = useCallback((tabKey: string, targetPaneId: string) => {
+  /** 把标签移动到目标分栏（拖拽放置）；index 缺省追加到末尾。
+   *  同栏调用 = 拖拽排序（自动修正移除点导致的索引偏移）。 */
+  const moveTabToPane = useCallback((tabKey: string, targetPaneId: string, index?: number) => {
     const source = panesRef.current.find(p => p.tabKeys.includes(tabKey));
     const target = panesRef.current.find(p => p.id === targetPaneId);
-    if (!source || !target || source.id === targetPaneId) return;
+    if (!source || !target) return;
+
+    if (source.id === targetPaneId) {
+      // 同栏排序
+      const from = source.tabKeys.indexOf(tabKey);
+      let insertIdx = index === undefined ? source.tabKeys.length : Math.max(0, Math.min(index, source.tabKeys.length));
+      if (from < insertIdx) insertIdx -= 1;
+      if (from === insertIdx) return;
+      const tabKeys = [...source.tabKeys.slice(0, insertIdx), tabKey, ...source.tabKeys.slice(insertIdx).filter(k => k !== tabKey)];
+      setPanes(prev => prev.map(p => p.id === target.id ? { ...p, tabKeys } : p));
+      if (activeTabKeyRef.current === tabKey) setActiveTabKey(tabKey);
+      return;
+    }
+
+    // 跨栏移动
+    const insertIdx = index === undefined ? target.tabKeys.length : Math.max(0, Math.min(index, target.tabKeys.length));
     let next = panesRef.current.map(p => {
       if (p.id === source.id) {
         const remaining = p.tabKeys.filter(k => k !== tabKey);
         return { ...p, tabKeys: remaining, activeTabKey: p.activeTabKey === tabKey ? (remaining[remaining.length - 1] ?? null) : p.activeTabKey };
       }
-      if (p.id === targetPaneId) {
-        return { ...p, tabKeys: [...p.tabKeys, tabKey], activeTabKey: tabKey };
-      }
       return p;
     });
+    // 目标栏插入
+    next = next.map(p => {
+      if (p.id !== targetPaneId) return p;
+      const tabKeys = [...p.tabKeys.slice(0, insertIdx), tabKey, ...p.tabKeys.slice(insertIdx)];
+      return { ...p, tabKeys, activeTabKey: tabKey };
+    });
+    // 源栏剪除空栏；若聚焦栏被剪除，聚焦转移到相邻栏
     const nonEmpty = next.filter(p => p.tabKeys.length > 0);
-    if (nonEmpty.length !== next.length) next = nonEmpty.length ? nonEmpty : next;
+    if (nonEmpty.length !== next.length) {
+      if (!nonEmpty.length) return;
+      next = nonEmpty;
+      if (focusedPaneIdRef.current === source.id) {
+        const neighbor = nonEmpty.find(p => p.tabKeys.includes(activeTabKeyRef.current ?? '')) || nonEmpty[0];
+        if (neighbor) setFocusedPaneId(neighbor.id);
+      }
+    }
     setPanes(next);
     // 移动的是全局活动标签：聚焦跟随到目标栏
     if (tabKey === activeTabKeyRef.current) setFocusedPaneId(targetPaneId);

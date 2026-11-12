@@ -88,6 +88,9 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
   const { gmCompactMode, setGmCompactMode, setForumSyncOpen, setBbcodeHelpOpen, setToast } = useUI();
   const { user } = useAuth();
   const [dragOver, setDragOver] = useState(false);
+  // 拖拽悬停的插入位置指示（paneId:tabKey）
+  const [dragOverChipKey, setDragOverChipKey] = useState<string | null>(null);
+  const [dragTabKey, setDragTabKey] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<TabContextMenu | null>(null);
   const liveDirty = isDirty || isTemplateDirty;
 
@@ -176,7 +179,10 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
 
   return (
     <div
-      onPointerDown={() => { if (!focused) focusPane(pane.id); }}
+      onPointerDown={e => {
+        // 聚焦分栏；但按下标签芯片时不打断后续的拖拽手势
+        if (!focused && !(e.target as HTMLElement).closest('[data-tab-chip]')) focusPane(pane.id);
+      }}
       onDragOver={e => {
         // 整栏都是拖拽落点（标签拖入本栏）
         if (e.dataTransfer.types.includes(TAB_MIME)) {
@@ -185,6 +191,7 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
         }
       }}
       onDragLeave={() => setDragOver(false)}
+      onDragEnd={() => { setDragTabKey(null); setDragOverChipKey(null); }}
       onDrop={e => {
         setDragOver(false);
         const raw = e.dataTransfer.getData(TAB_MIME);
@@ -208,13 +215,36 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
           const active = focused && pane.activeTabKey === key;
           const dirty = active ? liveDirty : tab.dirty;
           const Icon = tab.kind === 'preview' ? Eye : (tab.kind === 'chooser' ? FileText : (tab.kind === 'character' ? FileText : Braces));
+          const isChipDropTarget = dragOverChipKey === `${pane.id}:${key}` && dragTabKey !== tab.key;
           return (
             <div
               key={tab.key}
+              data-tab-chip
               draggable
               onDragStart={e => {
                 e.dataTransfer.setData(TAB_MIME, JSON.stringify({ tabKey: tab.key }));
                 e.dataTransfer.effectAllowed = 'move';
+                setDragTabKey(tab.key);
+              }}
+              onDragOver={e => {
+                // 芯片是精确插入位置落点：悬停高亮，放置=插入到该芯片之前
+                if (e.dataTransfer.types.includes(TAB_MIME)) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOverChipKey(`${pane.id}:${key}`);
+                }
+              }}
+              onDragLeave={() => setDragOverChipKey(prev => (prev === `${pane.id}:${key}` ? null : prev))}
+              onDrop={e => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverChipKey(null);
+                const raw = e.dataTransfer.getData(TAB_MIME);
+                if (!raw) return;
+                try {
+                  const { tabKey } = JSON.parse(raw);
+                  if (tabKey && tabKey !== tab.key) moveTabToPane(tabKey, pane.id, pane.tabKeys.indexOf(tab.key));
+                } catch { /* 忽略无效负载 */ }
               }}
               onClick={() => switchTab(tab.key)}
               onMouseDown={e => { if (e.button === 1) { e.preventDefault(); closeTab(tab.key); } }}
@@ -225,6 +255,8 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
               }}
               title={tab.title}
               className={`group flex items-center gap-1.5 px-2.5 py-1.5 cursor-pointer select-none text-xs whitespace-nowrap transition-colors border-r border-stone-200/70 ${
+                isChipDropTarget ? 'border-l-2 border-l-primary' : ''
+              } ${
                 active
                   ? 'bg-white text-stone-800 font-bold'
                   : 'bg-transparent text-stone-500 hover:bg-stone-300/50 hover:text-stone-700'
