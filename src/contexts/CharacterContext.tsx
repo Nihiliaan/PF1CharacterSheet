@@ -180,6 +180,7 @@ export interface CharacterContextType {
   // Editor Panes（分栏：VS Code 式向右拆分，标签可在栏间拖拽）
   panes: EditorPane[];
   focusedPaneId: string;
+  setFocusedPaneId: (id: string) => void;
   /** 在标签栏右侧新增一栏（以"新建标签页"开场，上限 4 栏） */
   addPane: () => void;
   /** 把标签移动到目标分栏（拖拽放置），源栏空了会自动剪除 */
@@ -1166,7 +1167,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     selectCharacter: openDocumentAsTab,
     loadSharedCharacter: (id: string) => openDocumentAsTab(id, true, true),
     tabs, activeTabKey, activeTabTitle, switchTab, closeTab, closeTabsByDocIds, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser, openPreviewTab,
-    panes, focusedPaneId, addPane, moveTabToPane, focusPane, getTabSnapshot,
+    panes, focusedPaneId, setFocusedPaneId, addPane, moveTabToPane, focusPane, getTabSnapshot,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleBagDragStart, handleBagDragOver, handleBagDrop,
     handleItemDragStart, handleItemDragOver, handleItemDrop,
