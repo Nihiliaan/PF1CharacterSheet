@@ -1,5 +1,5 @@
-import React, { memo, useState, useMemo, useCallback } from 'react';
-import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
+import React, { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, type DragStartEvent, type DragOverEvent } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -127,7 +127,9 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   // 本地视觉顺序：拖拽中仅视觉重排（数值=物理索引），结束后经 onRowReorder 一次性提交
   const [localOrder, setLocalOrder] = useState<number[] | null>(null);
-  const [draggingRow, setDraggingRow] = useState<string | null>(null);
+  const [draggingRow, setDraggingRow] = useState<number | null>(null);
+  const orderBeforeDragRef = useRef<number[] | null>(null);
+  const dndEnabled = Boolean(onRowReorder) && !readOnly;
 
   // sortKey 和 sortOrder 现在仅作为 UI 状态（控制三角图标）
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -146,8 +148,17 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     return Array.isArray(colData) ? colData.length : 0;
   }, [data, columns]);
 
-  // 渲染时总是使用原始物理索引
-  const currentIndices = useMemo(() => Array.from({ length: rowCount }, (_, i) => i), [rowCount]);
+  // 渲染顺序：拖拽中用本地视觉顺序，否则物理索引
+  const currentIndices = useMemo(() => {
+    const identity = Array.from({ length: rowCount }, (_, i) => i);
+    if (dndEnabled && localOrder && localOrder.length === rowCount) return localOrder;
+    return identity;
+  }, [dndEnabled, localOrder, rowCount]);
+
+  // 行数或数据变化（排序/增删行/外部变更）时重置本地视觉顺序
+  useEffect(() => {
+    if (draggingRow === null) setLocalOrder(null);
+  }, [rowCount, data, draggingRow]);
 
   const hasColumnActions = Boolean(onColumnsChange && !readOnly);
 
@@ -291,7 +302,58 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     return JSON.stringify(normData) !== JSON.stringify(normOrig);
   }, [data, originalData]);
 
+  // dnd-kit：拖拽开始记录起始顺序；悬停实时重排本地视觉顺序；结束一次性提交物理重排
+  const parseRowId = (id: string): number | null => {
+    if (!id.startsWith('row-')) return null;
+    const n = Number(id.slice(4));
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const handleDragStart = (e: DragStartEvent) => {
+    const orig = parseRowId(String(e.active.id));
+    setDraggingRow(orig);
+    orderBeforeDragRef.current = localOrder ?? Array.from({ length: rowCount }, (_, i) => i);
+    if (sortKey) setSortKey(null);
+  };
+
+  const handleDragOver = (e: DragOverEvent) => {
+    if (draggingRow === null || !e.over) return;
+    const overOrig = parseRowId(String(e.over.id));
+    if (overOrig === null || overOrig === draggingRow) return;
+    setLocalOrder(prev => {
+      const order = prev ?? Array.from({ length: rowCount }, (_, i) => i);
+      const from = order.indexOf(draggingRow);
+      const to = order.indexOf(overOrig);
+      if (from === -1 || to === -1 || from === to) return order;
+      const next = [...order];
+      next.splice(from, 1);
+      next.splice(to, 0, draggingRow);
+      return next;
+    });
+  };
+
+  const handleDragEnd = () => {
+    const dragged = draggingRow;
+    const startOrder = orderBeforeDragRef.current ?? [];
+    const curOrder = localOrder ?? Array.from({ length: rowCount }, (_, i) => i);
+    setDraggingRow(null);
+    setLocalOrder(null);
+    orderBeforeDragRef.current = null;
+    if (dragged === null || !onRowReorder) return;
+    const from = startOrder.indexOf(dragged);
+    const to = curOrder.indexOf(dragged);
+    if (from !== -1 && to !== -1 && from !== to) onRowReorder(from, to);
+  };
+
   return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => { setDraggingRow(null); setLocalOrder(null); orderBeforeDragRef.current = null; }}
+    >
     <div className={`w-full rounded border transition-all ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
       <table className="w-full border-collapse text-sm table-auto" style={{ minWidth }}>
         <thead>
@@ -368,10 +430,12 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-300">
+          <SortableContext items={currentIndices.map(idx => `row-${idx}`)} strategy={verticalListSortingStrategy}>
           {currentIndices.map((idx) => (
             <DynamicTableRow
-              key={idx}
+              key={`row-${idx}`}
               index={idx}
+              sortableEnabled={dndEnabled}
               columns={columns}
               data={data}
               originalData={originalData}
@@ -391,6 +455,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
               hasColumnActions={hasColumnActions}
             />
           ))}
+          </SortableContext>
           {!fixedRows && (
             <tr>
               <td
@@ -410,5 +475,6 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
         </tbody>
       </table>
     </div>
+    </DndContext>
   );
 }
