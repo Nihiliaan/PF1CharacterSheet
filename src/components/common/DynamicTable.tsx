@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, GripVertical, Triangle } from 'lucide-react';
 import { DynamicTableProps } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
+import { flushSync } from 'react-dom';
 import DynamicInput from './DynamicInput';
 
 const DynamicTableRow = memo(({ 
@@ -35,10 +36,11 @@ const DynamicTableRow = memo(({
   columns.forEach((c: any) => { if (row[c.key] === undefined) row[c.key] = data?.[c.key]?.[i]; });
 
   return (
+    // 动画逻辑暂时注释（用户要求：纯原生 dnd-kit 体验，无 transform/transition/opacity）；
+    // transition-colors 颜色渐变也暂时移除（同样属于我们加入的动画）
     <tr
       ref={setNodeRef}
-      style={{ transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0.4 : undefined }}
-      className={`transition-colors group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''}`}
+      className={`group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''}`}
     >
       {columns.map((c: any) => {
         const cellPath = getCellPath(path || '', i, c.key);
@@ -300,7 +302,8 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     const from = e.active.data.current?.index;
     const to = e.over.data.current?.index;
     if (typeof from !== 'number' || typeof to !== 'number' || from === to) return;
-    onRowReorder(from, to);
+    // flushSync：DOM 重排与松手同帧绘制，避免 dnd-kit 清理变换时出现“闪回再交换”帧
+    flushSync(() => onRowReorder(from, to));
   };
 
   return (
