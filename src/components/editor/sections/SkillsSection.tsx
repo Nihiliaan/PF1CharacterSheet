@@ -66,7 +66,6 @@ const SkillsSection: React.FC = () => {
           rowDraggable={true}
           rowActionMode={tableActionMode}
           onRowActionModeToggle={toggleTableActionMode}
-          onRowReorder={(from, to) => reorderRows('skills', from, to)}
                               showAll={showAll}
         />
       </div>
