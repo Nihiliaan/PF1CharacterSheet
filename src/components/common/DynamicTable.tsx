@@ -1,8 +1,9 @@
 import React, { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, type DragStartEvent, type DragOverEvent } from '@dnd-kit/core';
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, type DragStartEvent, type DragOverEvent, type DragEndEvent } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, GripVertical, Triangle } from 'lucide-react';
 import { DynamicTableProps } from '../../schema/types';
@@ -125,10 +126,6 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
 
   // dnd-kit 传感器（行拖拽；distance 5 避免与单元格输入冲突）
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  // 本地视觉顺序：拖拽中仅视觉重排（数值=物理索引），结束后经 onRowReorder 一次性提交
-  const [localOrder, setLocalOrder] = useState<number[] | null>(null);
-  const [draggingRow, setDraggingRow] = useState<number | null>(null);
-  const orderBeforeDragRef = useRef<number[] | null>(null);
   const dndEnabled = Boolean(onRowReorder) && !readOnly;
 
   // sortKey 和 sortOrder 现在仅作为 UI 状态（控制三角图标）
@@ -148,17 +145,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     return Array.isArray(colData) ? colData.length : 0;
   }, [data, columns]);
 
-  // 渲染顺序：拖拽中用本地视觉顺序，否则物理索引
-  const currentIndices = useMemo(() => {
-    const identity = Array.from({ length: rowCount }, (_, i) => i);
-    if (dndEnabled && localOrder && localOrder.length === rowCount) return localOrder;
-    return identity;
-  }, [dndEnabled, localOrder, rowCount]);
-
-  // 行数或数据变化（排序/增删行/外部变更）时重置本地视觉顺序
-  useEffect(() => {
-    if (draggingRow === null) setLocalOrder(null);
-  }, [rowCount, data, draggingRow]);
+  const currentIndices = useMemo(() => Array.from({ length: rowCount }, (_, i) => i), [rowCount]);
 
   const hasColumnActions = Boolean(onColumnsChange && !readOnly);
 
@@ -302,57 +289,27 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     return JSON.stringify(normData) !== JSON.stringify(normOrig);
   }, [data, originalData]);
 
-  // dnd-kit：拖拽开始记录起始顺序；悬停实时重排本地视觉顺序；结束一次性提交物理重排
-  const parseRowId = (id: string): number | null => {
-    if (!id.startsWith('row-')) return null;
-    const n = Number(id.slice(4));
-    return Number.isFinite(n) ? n : null;
-  };
-
   const handleDragStart = (e: DragStartEvent) => {
-    const orig = parseRowId(String(e.active.id));
-    setDraggingRow(orig);
-    orderBeforeDragRef.current = localOrder ?? Array.from({ length: rowCount }, (_, i) => i);
+    // 拖拽开始即清除排序 UI 状态
     if (sortKey) setSortKey(null);
   };
 
-  const handleDragOver = (e: DragOverEvent) => {
-    if (draggingRow === null || !e.over) return;
-    const overOrig = parseRowId(String(e.over.id));
-    if (overOrig === null || overOrig === draggingRow) return;
-    setLocalOrder(prev => {
-      const order = prev ?? Array.from({ length: rowCount }, (_, i) => i);
-      const from = order.indexOf(draggingRow);
-      const to = order.indexOf(overOrig);
-      if (from === -1 || to === -1 || from === to) return order;
-      const next = [...order];
-      next.splice(from, 1);
-      next.splice(to, 0, draggingRow);
-      return next;
-    });
-  };
-
-  const handleDragEnd = () => {
-    const dragged = draggingRow;
-    const startOrder = orderBeforeDragRef.current ?? [];
-    const curOrder = localOrder ?? Array.from({ length: rowCount }, (_, i) => i);
-    setDraggingRow(null);
-    setLocalOrder(null);
-    orderBeforeDragRef.current = null;
-    if (dragged === null || !onRowReorder) return;
-    const from = startOrder.indexOf(dragged);
-    const to = curOrder.indexOf(dragged);
-    if (from !== -1 && to !== -1 && from !== to) onRowReorder(from, to);
+  const handleDragEnd = (e: DragEndEvent) => {
+    if (!onRowReorder || !e.over) return;
+    // 活动行/目标行的物理索引（useSortable 的 data 里携带）
+    const from = e.active.data.current?.index;
+    const to = e.over.data.current?.index;
+    if (typeof from !== 'number' || typeof to !== 'number' || from === to) return;
+    onRowReorder(from, to);
   };
 
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => { setDraggingRow(null); setLocalOrder(null); orderBeforeDragRef.current = null; }}
     >
     <div className={`w-full rounded border transition-all ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
       <table className="w-full border-collapse text-sm table-auto" style={{ minWidth }}>
