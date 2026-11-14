@@ -38,8 +38,8 @@ const DynamicTableRow = memo(({
   return (
     <tr
       ref={setNodeRef}
-      // dnd-kit 原生样式：transform 让位预览 + transition（官方示例标准写法）
-      style={{ transform: CSS.Translate.toString(transform), transition }}
+      // dnd-kit 原生样式：transform 让位预览；transition 已移除（用户要求：无过渡动画，落位即最终位置）
+      style={{ transform: CSS.Translate.toString(transform) }}
       className={`group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''}`}
     >
       {columns.map((c: any) => {
