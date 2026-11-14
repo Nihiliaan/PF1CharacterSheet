@@ -36,10 +36,10 @@ const DynamicTableRow = memo(({
   columns.forEach((c: any) => { if (row[c.key] === undefined) row[c.key] = data?.[c.key]?.[i]; });
 
   return (
-    // 动画逻辑暂时注释（用户要求：纯原生 dnd-kit 体验，无 transform/transition/opacity）；
-    // transition-colors 颜色渐变也暂时移除（同样属于我们加入的动画）
     <tr
       ref={setNodeRef}
+      // dnd-kit 原生样式：transform 让位预览 + transition（官方示例标准写法）
+      style={{ transform: CSS.Translate.toString(transform), transition }}
       className={`group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''}`}
     >
       {columns.map((c: any) => {
