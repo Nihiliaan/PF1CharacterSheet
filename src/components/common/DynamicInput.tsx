@@ -93,12 +93,15 @@ export const DynamicInput = React.memo(({
   const handler = useMemo(() => (path ? getHandlerByPath(path) : null) || getHandlerByType(type || 'text'), [path, type]);
 
   const fontStack = "Inter, 'Noto Sans SC', system-ui, -apple-system, sans-serif";
+  // 行距单一声明源：text-[0.875rem]（纯字号，不捆绑行高）+ leading-[1.625]（唯一行距声明）。
+  // 此前 text-sm（TW4 捆绑 line-height 20px）与 leading-relaxed（22.75px）同元素打架，级联胜负随上下文摇摆，
+  // 导致表格描述单元格预览 20px/行、进入 CodeMirror 编辑（硬编码 1.625 = 22.75px）时行距忽然拉大。
   const sharedStyles = cn(
-    "h-full transition-colors leading-relaxed flex min-h-[32px] px-2",
+    "h-full transition-colors flex min-h-[32px] px-2",
     singleLine ? "items-center" : "items-start pt-1.5",
     align === 'right' ? 'justify-end text-right' : align === 'center' ? 'justify-center text-center' : 'justify-start text-left',
     singleLine ? "whitespace-nowrap w-full overflow-hidden" : "break-words whitespace-pre-wrap w-full",
-    "text-sm font-medium",
+    "text-[0.875rem] leading-[1.625] font-medium",
     className
   );
 
@@ -333,7 +336,7 @@ export const DynamicInput = React.memo(({
           })}
         </div>
       ) : (
-        <span className={cn("w-full text-stone-800", !singleLine && "break-words whitespace-normal leading-relaxed")}>
+        <span className={cn("w-full text-stone-800", !singleLine && "break-words whitespace-normal")}>
           {(handler?.formatDisplay ? handler.formatDisplay(value, context) : String(value)) || <span className="text-stone-300">—</span>}
         </span>
       );

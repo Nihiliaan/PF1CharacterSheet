@@ -86,7 +86,7 @@ const MultilineInput = ({
           minHeight="24px"
           hideIndicator={true}
           wrapperClassName="w-full h-full flex flex-col flex-1"
-          className="text-stone-700 leading-relaxed flex-1 w-full !p-0"
+          className="text-stone-700 flex-1 w-full !p-0"
         />
       </div>
     </div>

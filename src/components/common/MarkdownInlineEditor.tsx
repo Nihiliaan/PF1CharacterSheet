@@ -135,14 +135,18 @@ const MarkdownInlineEditor = ({
           EditorView.theme({
             "&": { height: "100%", backgroundColor: "transparent", fontSize: "inherit" },
             "&.cm-focused": { outline: "none" },
+            // 行距继承自 DynamicInput 的唯一声明源（leading-[1.625]），不再在此写死 1.625——
+            // 此前预览层与 cm 各写一处、级联胜负摇摆，导致进入编辑态时行距跳变。
+            // 注意 .cm-scroller 会被 CodeMirror 默认样式塞 1.4，须显式 inherit 打断，否则 .cm-content
+            // 继承到的是 scroller 的值而非外层声明
+            ".cm-scroller": { lineHeight: "inherit" },
             ".cm-content": {
               padding: "0",
               fontFamily: fontStack,
-              lineHeight: "1.625",
-              caretColor: "#854d0e !important",
-              minHeight: "1.625em"
+              lineHeight: "inherit",
+              caretColor: "#854d0e !important"
             },
-            ".cm-line": { display: "block", padding: "0", minHeight: "1.625em" },
+            ".cm-line": { display: "block", padding: "0" },
             ".cm-line:empty::before": { content: '"\\200b"', display: "inline-block", width: "0" },
             ".cm-cursor": { borderLeft: "2px solid #854d0e !important" },
             ".cm-placeholder": { color: "#a8a29e", fontStyle: "italic", fontFamily: fontStack },
