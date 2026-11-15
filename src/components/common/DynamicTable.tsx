@@ -42,7 +42,7 @@ const DynamicTableRow = memo(({
       style={{ transform: CSS.Translate.toString(transform) }}
       className={`relative group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''}`}
     >
-      {columns.map((c: any) => {
+      {columns.map((c: any, ci: number) => {
         const cellPath = getCellPath(path || '', i, c.key);
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
         // 渲染语义以列配置类型优先：c.type:'name'（名称式短文本）不换行且居中；
@@ -52,9 +52,9 @@ const DynamicTableRow = memo(({
         const isNameType = effUi === 'name';
         return (
           <td key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`p-0 align-top whitespace-nowrap overflow-visible ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
-            {/* 行间悬停插入区：挂在首列 td 内，以 tr（relative）为定位基准横跨整行；
+            {/* 行间悬停插入区：仅渲染在首列 td 内（ci === 0），以 tr（relative）为定位基准横跨整行；
                 pointer-events 跟随行悬停激活——否则透明条会常驻拦截单元格顶部的正常点击 */}
-            {onInsertAbove && (
+            {ci === 0 && onInsertAbove && (
               <div
                 onClick={onInsertAbove}
                 title="在此处添加行"
@@ -67,7 +67,7 @@ const DynamicTableRow = memo(({
                 </div>
               </div>
             )}
-            {onInsertBelow && (
+            {ci === 0 && onInsertBelow && (
               <div
                 onClick={onInsertBelow}
                 title="在此处添加行"
