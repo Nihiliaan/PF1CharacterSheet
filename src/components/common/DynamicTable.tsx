@@ -112,7 +112,7 @@ const DynamicTableRow = memo(({
             {rowDraggable && rowActionMode === 'drag' ? (
               <GripVertical size={16} className={sortableEnabled ? 'text-stone-400' : 'text-stone-300 cursor-grab hover:text-stone-500'} />
             ) : (
-              <button type="button" onClick={() => removeRow(i)} className="text-stone-300 hover:text-red-500 rounded p-1" title="删除行"><Trash2 size={16} /></button>
+              <button type="button" onClick={() => removeRow(i)} className="text-stone-300 hover:text-red-500 rounded p-0.5" title="删除行"><Trash2 size={16} /></button>
             )}
           </div>
         </td>
@@ -343,7 +343,10 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
       onDragEnd={handleDragEnd}
     >
     <div className="relative w-full">
-    <div className={`w-full transition-all ${bordered ? 'rounded border' : ''} ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
+    {/* fixedLayout 表格百分比列对剩余宽度解析、数学上精确适配容器——横向滚动是多余能力，
+        且 border-collapse 半像素边框会计入 scrollWidth（经典滚动条下 1px 溢出也拉出滚动条），
+        clip 让亚像素噪声永远无法成为滚动条；auto 布局表仍需 overflow-x-auto 承载 min-content 超宽 */}
+    <div className={`w-full transition-all ${bordered ? 'rounded border' : ''} ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} ${fixedLayout ? 'overflow-x-clip' : 'overflow-x-auto'}`}>
       {/* 表格最小宽 = 各列最小宽之和（表头/单元格文字宽 + c.minWidth 弹性列防收缩声明），
           列宽随显示文字撑定，经 min-content 向上传播决定分栏最小宽与缩放时机 */}
       {/* fixedLayout：列宽由配置百分比硬定（近战/远程两表需逐列一致时使用）；auto 布局列宽随内容 */}
