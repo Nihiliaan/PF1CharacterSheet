@@ -25,7 +25,8 @@ const ImageBlockPreview: React.FC<ImageBlockPreviewProps> = ({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* auto-fit 替代 md:grid-cols-2：URL 输入最小 280px，不足自动单列 */}
+      <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))]">
         <div>
           <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block mb-1">
             图片链接 (URL)

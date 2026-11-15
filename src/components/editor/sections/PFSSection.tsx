@@ -430,7 +430,7 @@ const PFSSection: React.FC = () => {
             {/* 势力任务卡与三阶福利面板 */}
             <div className="bg-stone-50/60 border border-stone-200 rounded-lg p-5 flex flex-col gap-6">
               {/* 头部信息 */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-stone-200 gap-3">
+              <div className="flex flex-wrap items-center justify-between pb-4 border-b border-stone-200 gap-3">
                 <div>
                   <div className="flex items-center gap-2">
                     <Award size={18} className="text-amber-700" />
@@ -446,7 +446,7 @@ const PFSSection: React.FC = () => {
                 </div>
 
                 {/* 达成统计勋章 */}
-                <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <div className="px-3 py-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold flex items-center gap-1.5 shadow-xs">
                     <Sparkles size={14} className="text-amber-600" />
                     <span>{t('editor.pfs.completed_goals_count')}：{t('editor.pfs.goal_progress', { count: completedGoalsCount })}</span>

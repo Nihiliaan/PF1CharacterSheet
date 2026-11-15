@@ -54,7 +54,8 @@ const EquipmentSection: React.FC = () => {
         </button>
 
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+        {/* auto-fit 替代 md:grid-cols-5：每列最小 120px（货币输入框最小宽），列数随栏宽自动增减，零断点 */}
+        <div className="grid gap-3 mt-4 grid-cols-[repeat(auto-fit,minmax(min(120px,100%),1fr))]">
           <InlineInput
             label={t('editor.items.pp')}
             path="equipment.currency.pp"
@@ -97,7 +98,8 @@ const EquipmentSection: React.FC = () => {
           />
         </div>
 
-        <div className="flex flex-col md:flex-row gap-3 mt-4 items-stretch">
+        {/* flex-wrap 替代 md:flex-row：负重条最小 240px，不足自动换行 */}
+        <div className="flex flex-wrap gap-3 mt-4 items-stretch">
           <div className="flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 w-24 shrink-0 justify-center">
             <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">
               {t('editor.items.total_assets')}

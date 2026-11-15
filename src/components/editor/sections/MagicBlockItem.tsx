@@ -96,7 +96,7 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
-      <div className="flex flex-col sm:flex-row sm:items-end gap-3 mb-2 mt-1 group/title relative">
+      <div className="flex flex-wrap items-end gap-3 mb-2 mt-1 group/title relative">
         <div
           onMouseEnter={() => onSetDragEnabled(true)}
           onMouseLeave={() => onSetDragEnabled(false)}

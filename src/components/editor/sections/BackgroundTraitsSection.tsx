@@ -31,7 +31,8 @@ const BackgroundTraitsSection: React.FC = () => {
           onRowActionModeToggle={toggleTableActionMode}
           onRowReorder={(from, to) => reorderRows('backgroundTraits', from, to)}
                             />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* auto-fit 替代 sm:grid-cols-2：字段最小 88 + 间距，不足自动单列 */}
+        <div className="grid gap-4 grid-cols-[repeat(auto-fit,minmax(min(88px,100%),1fr))]">
           <InlineInput
             label={t('editor.lists.favored_class')}
             path="favoredClass.fc"

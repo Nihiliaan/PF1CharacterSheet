@@ -21,8 +21,9 @@ const SkillsSection: React.FC = () => {
 
   return (
     <Section id="skills" title={t('editor.sections.skills')}>
-      <div className="flex flex-col md:flex-row gap-6 items-stretch mb-4">
-        <div className="w-full md:w-1/6">
+      {/* flex-wrap 替代 md:flex-row：并排阈值 = 2×88 字段最小宽 + 复选框，不足自动换行 */}
+      <div className="flex flex-wrap gap-4 items-stretch mb-4">
+        <div className="flex-[1_1_88px]">
           <InlineInput
             label={t('editor.skills.total_points')}
             path="skills.totalPoints"
@@ -32,7 +33,7 @@ const SkillsSection: React.FC = () => {
             placeholder="0"
           />
         </div>
-        <div className="w-full md:w-1/6">
+        <div className="flex-[1_1_88px]">
           <InlineInput
             label={t('editor.skills.acp')}
             path="skills.acp"
@@ -42,11 +43,11 @@ const SkillsSection: React.FC = () => {
             placeholder="0"
           />
         </div>
-        <div className="flex items-end pb-1 ml-auto">
+        <div className="flex items-end pb-1 ml-auto shrink-0">
           <label className="flex items-center gap-2 cursor-pointer select-none group">
-            <input 
-              type="checkbox" 
-              checked={showAll} 
+            <input
+              type="checkbox"
+              checked={showAll}
               onChange={e => setShowAll(e.target.checked)}
               className="w-4 h-4 rounded border-stone-300 text-blue-600 focus:ring-blue-500"
             />

@@ -12,10 +12,14 @@ const BasicInfoSection: React.FC = () => {
 
   return (
     <Section id="basic-info" title={t('editor.sections.basic')} className="max-w-[1200px] mx-auto">
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="flex-1 grid grid-cols-12 gap-y-4 gap-x-4">
+      {/* flex-wrap 替代 md:flex-row：并排阈值 = 头像列 256 + 表单并排需求 200（2×88 字段最小宽 + 间距）+ 间距 24 ≈ 480，
+          栏宽不足时头像自动换行到表单下方，零断点。
+          字段行同样 flex-wrap：成对字段 basis=50%-半间距、三连字段 basis=33.333%-半间距，
+          各字段自带 88px 最小宽（InlineInput），宽度不足时按行内最小宽自动换行 */}
+      <div className="flex flex-wrap items-stretch gap-x-6 gap-y-4">
+        <div className="flex-[1_1_200px] flex flex-wrap gap-x-3 gap-y-3 content-start">
           <InlineInput
-            className="col-span-12 sm:col-span-6 font-bold"
+            className="basis-[calc(50%-6px)] grow font-bold"
             label={t('editor.basic.name')}
             value={data.basic.name}
             path="basic.name"
@@ -23,7 +27,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.name', v)}
           />
           <InlineInput
-            className="col-span-12 sm:col-span-6 font-bold"
+            className="basis-[calc(50%-6px)] grow font-bold"
             label={t('editor.basic.classes')}
             value={data.basic.classes}
             path="basic.classes"
@@ -31,7 +35,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.classes', v)}
           />
           <InlineInput
-            className="col-span-12 sm:col-span-6"
+            className="basis-[calc(50%-6px)] grow"
             label={t('editor.basic.alignment')}
             value={data.basic.alignment}
             path="basic.alignment"
@@ -39,7 +43,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.alignment', v)}
           />
           <InlineInput
-            className="col-span-12 sm:col-span-6"
+            className="basis-[calc(50%-6px)] grow"
             label={t('editor.basic.deity')}
             value={data.basic.deity || ''}
             path="basic.deity"
@@ -47,7 +51,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.deity', v)}
           />
           <InlineInput
-            className="col-span-4"
+            className="basis-[calc(33.333%-8px)] grow"
             label={t('editor.basic.size')}
             value={data.basic.size}
             path="basic.size"
@@ -55,7 +59,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.size', v)}
           />
           <InlineInput
-            className="col-span-4"
+            className="basis-[calc(33.333%-8px)] grow"
             label={t('editor.basic.gender')}
             value={data.basic.gender}
             path="basic.gender"
@@ -63,7 +67,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.gender', v)}
           />
           <InlineInput
-            className="col-span-4"
+            className="basis-[calc(33.333%-8px)] grow"
             label={t('editor.basic.race')}
             value={data.basic.race}
             path="basic.race"
@@ -71,7 +75,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.race', v)}
           />
           <InlineInput
-            className="col-span-12 sm:col-span-4"
+            className="basis-[calc(33.333%-8px)] grow"
             label={t('editor.basic.type')}
             value={data.basic.type}
             path="basic.type"
@@ -79,7 +83,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.type', v)}
           />
           <InlineInput
-            className="col-span-12 sm:col-span-8"
+            className="basis-[calc(66.666%-4px)] grow"
             label={t('editor.basic.subtype')}
             value={data.basic.subtype || []}
             path="basic.subtype"
@@ -87,7 +91,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.subtype', v)}
           />
           <InlineInput
-            className="col-span-4"
+            className="basis-[calc(33.333%-8px)] grow"
             label={t('editor.basic.age')}
             value={data.basic.age}
             path="basic.age"
@@ -95,7 +99,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.age', v)}
           />
           <InlineInput
-            className="col-span-4"
+            className="basis-[calc(33.333%-8px)] grow"
             label={t('editor.basic.height')}
             value={data.basic.height}
             path="basic.height"
@@ -103,7 +107,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.height', v)}
           />
           <InlineInput
-            className="col-span-4"
+            className="basis-[calc(33.333%-8px)] grow"
             label={t('editor.basic.weight')}
             value={data.basic.weight}
             path="basic.weight"
@@ -111,7 +115,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.weight', v)}
           />
           <InlineInput
-            className="col-span-12 sm:col-span-6"
+            className="basis-[calc(50%-6px)] grow"
             label={t('editor.basic.speed')}
             value={data.basic.speed.land}
             path="basic.speed.land"
@@ -119,7 +123,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.speed.land', v)}
           />
           <InlineInput
-            className="col-span-12 sm:col-span-6"
+            className="basis-[calc(50%-6px)] grow"
             label={t('editor.basic.senses')}
             value={data.basic.senses}
             path="basic.senses"
@@ -127,7 +131,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.senses', v)}
           />
           <InlineInput
-            className="col-span-12 sm:col-span-6"
+            className="basis-[calc(50%-6px)] grow"
             label={t('editor.basic.initiative')}
             value={data.basic.initiative}
             path="basic.initiative"
@@ -135,7 +139,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.initiative', v)}
           />
           <InlineInput
-            className="col-span-12 sm:col-span-6"
+            className="basis-[calc(50%-6px)] grow"
             label={t('editor.basic.perception')}
             value={data.basic.perception}
             path="basic.perception"
@@ -143,7 +147,7 @@ const BasicInfoSection: React.FC = () => {
             onChange={v => update('basic.perception', v)}
           />
           <InlineInput
-            className="col-span-12"
+            className="basis-full grow"
             label={t('editor.basic.languages')}
             path="basic.languages"
             value={data.basic.languages}
@@ -153,7 +157,7 @@ const BasicInfoSection: React.FC = () => {
             singleLine={false}
           />
         </div>
-        <div className="w-full md:w-64">
+        <div className="w-64 max-w-full shrink-0">
           <AvatarGallery
             avatars={data.basic.avatars}
             onUpdate={(newAvatars) => update('basic.avatars', newAvatars)}

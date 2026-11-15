@@ -26,6 +26,26 @@
   }
 }
 
+/* 细滚动条（此前被 EditorPanes 标签条/PreviewPane/侧栏等约 14 处引用但从未定义，实际是 no-op） */
+@utility custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-stone-300) transparent;
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-stone-300);
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-stone-400);
+  }
+}
+
 body {
   background-color: var(--color-paper);
   color: var(--color-ink);

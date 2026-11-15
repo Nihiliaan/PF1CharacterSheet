@@ -47,7 +47,7 @@ const DynamicTableRow = memo(({
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
         const isDesc = isDescriptionCol(c.key, cellHandler);
         return (
-          <td key={c.key} style={{ width: c.width }} className={`p-0 relative border-stone-300 align-top whitespace-nowrap overflow-visible ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+          <td key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`p-0 relative border-stone-300 align-top whitespace-nowrap overflow-visible ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
             <DynamicInput
               value={row[c.key] ?? ''}
               originalValue={originalData?.[c.key]?.[i]}
@@ -121,7 +121,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     onRowDragOver,
     onRowDrop: propsDrop,
     readOnly = false,
-    minWidth = '600px',
+    minWidth,
     enableSQShow = false
   } = props;
   const { t } = useTranslation();
@@ -315,7 +315,9 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
       onDragEnd={handleDragEnd}
     >
     <div className={`w-full rounded border transition-all ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
-      <table className="w-full border-collapse text-sm table-auto" style={{ minWidth }}>
+      {/* 表格最小宽 = 各列最小宽之和（表头 min-w-[70px] 为叶子声明，c.minWidth 可按列覆盖），
+          不再整体写死 600px——列最小宽经 min-content 向上传播决定分栏最小宽与缩放时机 */}
+      <table className="w-full border-collapse text-sm table-auto" style={minWidth ? { minWidth } : undefined}>
         <thead>
           <tr className="bg-stone-200 text-stone-700">
             {columns.map((c: any, colIdx: number) => {
@@ -323,7 +325,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
               return (
                 <th
                   key={c.key}
-                  style={{ width: c.width }}
+                  style={{ width: c.width, minWidth: c.minWidth }}
                   className={`border-stone-300 px-2 py-1.5 text-center font-semibold relative whitespace-nowrap min-w-[70px] group/col ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`}
                   onClick={() => isSortable && handleSort(c.key)}
                 >

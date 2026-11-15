@@ -42,7 +42,8 @@ export default function NewTabPage({ chooserKey }: { chooserKey?: string } = {})
         <h2 className="text-xl font-bold text-stone-800 mb-1">新建标签页</h2>
         <p className="text-sm text-stone-500 mb-6">选择要创建的内容，或从下方最近打开的文件继续</p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+        {/* auto-fit：入口卡最小 220px，列数随栏宽自动增减（min-content 参与 min-content 传播） */}
+        <div className="grid gap-4 mb-10 grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))]">
           <button
             onClick={() => convertChooserTab('character', chooserKey)}
             className="group text-left bg-white border border-stone-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-primary/40 transition-all"
@@ -84,7 +85,7 @@ export default function NewTabPage({ chooserKey }: { chooserKey?: string } = {})
             暂无最近打开的文件
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))]">
             {recentItems.map(item => (
               <div key={item.id} className="relative group/item">
                 <button

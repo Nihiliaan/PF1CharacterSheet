@@ -35,8 +35,9 @@ const AttributesSection: React.FC = () => {
           readonlyColumns={['name']}
         />
       </div>
-      <div className="flex flex-col md:flex-row gap-6 mt-4 items-stretch">
-        <div className="w-full md:w-1/2 flex flex-col">
+      {/* flex-wrap 替代 md:flex-row：并排阈值 = 两半各自 basis 之和（战技表 4 列×70 + 备注框 200），不足自动堆叠 */}
+      <div className="flex flex-wrap gap-4 mt-4 items-stretch">
+        <div className="flex-[1_1_280px] flex flex-col">
           <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
             {t('editor.combat.stats')}
             <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
@@ -52,7 +53,7 @@ const AttributesSection: React.FC = () => {
           </div>
         </div>
         <MultilineInput
-          className="w-full md:w-1/2"
+          className="flex-[1_1_200px]"
           label={t('editor.combat.maneuver_notes')}
           path="combatManeuver.notes"
           value={data.combatManeuver.notes || ''}

@@ -12,9 +12,10 @@ const DefensesSection: React.FC = () => {
 
   return (
     <Section id="defenses" title={t('editor.sections.defenses')}>
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col md:flex-row gap-6 items-stretch">
-          <div className="w-full md:w-1/2 flex flex-col">
+      <div className="flex flex-col gap-4">
+        {/* flex-wrap 替代 md:flex-row：并排阈值 = 两半 basis 之和（AC 表 4 列×70 + 备注框 200），不足自动堆叠 */}
+        <div className="flex flex-wrap gap-4 items-stretch">
+          <div className="flex-[1_1_280px] flex flex-col">
             <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
               {t('editor.defenses.ac_details')}
               <span className="text-stone-400 font-normal">AC / {t('editor.defenses.touch')} / {t('editor.defenses.flat_footed')}</span>
@@ -30,7 +31,7 @@ const DefensesSection: React.FC = () => {
             </div>
           </div>
           <MultilineInput
-            className="w-full md:w-1/2"
+            className="flex-[1_1_200px]"
             label={t('editor.defenses.ac_notes')}
             path="defenses.armorClass.notes"
             value={data.defenses.armorClass.notes || ''}
@@ -41,8 +42,9 @@ const DefensesSection: React.FC = () => {
           />
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="w-full md:w-1/2">
+        {/* HP/HD 并排阈值 = 2×88 字段最小宽 + 间距 */}
+        <div className="flex flex-wrap gap-4">
+          <div className="flex-[1_1_88px]">
             <InlineInput
               label={t('editor.defenses.hp')}
               path="defenses.hp"
@@ -52,7 +54,7 @@ const DefensesSection: React.FC = () => {
               placeholder="例如：20"
             />
           </div>
-          <div className="w-full md:w-1/2">
+          <div className="flex-[1_1_88px]">
             <InlineInput
               label={t('editor.defenses.hd')}
               path="defenses.hd"
@@ -64,8 +66,8 @@ const DefensesSection: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6 items-stretch">
-          <div className="w-full md:w-1/2 flex flex-col">
+        <div className="flex flex-wrap gap-4 items-stretch">
+          <div className="flex-[1_1_280px] flex flex-col">
             <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
               {t('editor.defenses.saves')}
               <span className="text-stone-400 font-normal">{t('editor.defenses.fort')} / {t('editor.defenses.ref')} / {t('editor.defenses.will')}</span>
@@ -81,7 +83,7 @@ const DefensesSection: React.FC = () => {
             </div>
           </div>
           <MultilineInput
-            className="w-full md:w-1/2"
+            className="flex-[1_1_200px]"
             label={t('editor.defenses.saves_notes')}
             path="defenses.saves.notes"
             value={data.defenses.saves.notes || ''}

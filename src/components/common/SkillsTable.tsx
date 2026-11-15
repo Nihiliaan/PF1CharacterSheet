@@ -99,7 +99,7 @@ const SkillsTableRow = memo(({
 });
 
 export default function SkillsTable(props: DynamicTableProps & { minWidth?: string, showAll?: boolean }) {
-  const { path, columns: propsColumns, data, originalData, onChange, readonlyColumns, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart: propsDragStart, onRowDragOver, onRowDrop, readOnly = false, minWidth = '600px', showAll = false } = props;
+  const { path, columns: propsColumns, data, originalData, onChange, readonlyColumns, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart: propsDragStart, onRowDragOver, onRowDrop, readOnly = false, minWidth, showAll = false } = props;
   const { t } = useTranslation();
   
   const [collapsedCategories, setCollapsedCategories] = useState<Set<number>>(new Set([2, 3, 4, 5]));
@@ -227,7 +227,8 @@ export default function SkillsTable(props: DynamicTableProps & { minWidth?: stri
 
   return (
     <div className={`w-full rounded border transition-all ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
-      <table className="w-full border-collapse text-sm table-auto" style={{ minWidth }}>
+      {/* 表格最小宽 = 各列最小宽之和（表头 min-w-[60px] 为叶子声明），不再整体写死 600px */}
+      <table className="w-full border-collapse text-sm table-auto" style={minWidth ? { minWidth } : undefined}>
         <thead>
           <tr className="bg-stone-200 text-stone-700">
             {visibleColumns.map((c: any) => {

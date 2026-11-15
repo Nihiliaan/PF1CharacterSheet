@@ -36,7 +36,7 @@ const PfsBasicFields: React.FC<PfsBasicFieldsProps> = ({
 
   return (
     <div className="bg-stone-50/80 border border-stone-200 rounded-lg p-5">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 mb-4 border-b border-stone-200 gap-3">
+      <div className="flex flex-wrap items-center justify-between pb-4 mb-4 border-b border-stone-200 gap-3">
         <div className="flex items-center gap-2 text-stone-800 font-bold text-base">
           <Shield size={18} className="text-amber-700" />
           <span>{t('editor.pfs.title')}</span>
@@ -56,9 +56,10 @@ const PfsBasicFields: React.FC<PfsBasicFieldsProps> = ({
         </div>
       </div>
 
-          <div className="grid grid-cols-12 gap-4">
+          {/* flex-wrap 替代 12 列栅格：字段 basis 150px（约 3 列起步），不足自动减列 */}
+          <div className="flex flex-wrap gap-4">
             {/* 势力选择：有记录单时锁定，无记录单时允许选择初始势力 */}
-            <div className="col-span-12 sm:col-span-6 md:col-span-4 flex flex-col gap-1">
+            <div className="flex-[1_1_150px] flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-stone-600">{t('editor.pfs.faction')}</span>
                 {hasChronicles && (
@@ -83,7 +84,7 @@ const PfsBasicFields: React.FC<PfsBasicFieldsProps> = ({
             </div>
 
             {/* PFS 编号：拆分为 [ 玩家编号 ] — [ 角色编号 ]，均限制正整数 */}
-            <div className="col-span-12 sm:col-span-6 md:col-span-4 flex flex-col gap-1">
+            <div className="flex-[1_1_150px] flex flex-col gap-1">
               <span className="text-xs font-semibold text-stone-600">{t('editor.pfs.pfs_number', 'PFS 编号')}</span>
               <div className="flex items-center gap-1.5 h-[34px]">
                 <input
@@ -106,7 +107,7 @@ const PfsBasicFields: React.FC<PfsBasicFieldsProps> = ({
 
             {/* 当前经验 (XP)：允许手动输入与滚轮步进，支持半整数 */}
             <InlineInput
-              className="col-span-4 sm:col-span-4 md:col-span-4"
+              className="flex-[1_1_150px]"
               label={t('editor.pfs.xp')}
               value={pfs.xp ?? 0}
               path="pfs.xp"
@@ -116,7 +117,7 @@ const PfsBasicFields: React.FC<PfsBasicFieldsProps> = ({
             />
 
             {/* 累积声誉 (Fame)：由所有记录单获得的声望点自动汇总，禁止手动输入 */}
-            <div className="col-span-4 sm:col-span-4 md:col-span-4 flex flex-col gap-1">
+            <div className="flex-[1_1_150px] flex flex-col gap-1">
               <span className="text-xs font-semibold text-stone-600">{t('editor.pfs.fame')}</span>
               <div className="w-full h-[34px] px-3 bg-stone-100/80 border border-stone-200 rounded flex items-center justify-between" title="由所有记录单获得的声望点（Prestige）自动汇总，无需手动输入">
                 <span className="font-mono font-bold text-stone-900 text-sm">{computedFame}</span>
@@ -126,7 +127,7 @@ const PfsBasicFields: React.FC<PfsBasicFieldsProps> = ({
 
             {/* 可用声望 (Prestige) */}
             <InlineInput
-              className="col-span-4 sm:col-span-4 md:col-span-4"
+              className="flex-[1_1_150px]"
               label={t('editor.pfs.prestige')}
               value={pfs.prestige ?? 0}
               path="pfs.prestige"

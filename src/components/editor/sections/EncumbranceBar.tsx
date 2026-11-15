@@ -19,14 +19,14 @@ const EncumbranceBar: React.FC<EncumbranceBarProps> = ({ data }) => {
 
   return (
     <div className="flex-1 flex flex-col border border-stone-200 bg-stone-50 rounded px-3 py-2 min-h-[50px] justify-center overflow-visible">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+      <div className="flex flex-wrap items-center gap-3 w-full">
         <div className="flex flex-col sm:items-center shrink-0 w-20">
           <span className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">{t('editor.items.total_weight')}</span>
           <span className="text-lg font-bold font-serif text-ink leading-tight">
             {curWeight.toLocaleString('en-US', { maximumFractionDigits: 2 })} <span className="text-xs font-normal text-stone-500">lbs</span>
           </span>
         </div>
-        <div className="flex-1 relative flex flex-col justify-center min-h-[20px] w-full mx-2">
+        <div className="flex-1 relative flex flex-col justify-center min-h-[20px] min-w-[220px] mx-2">
           <div className="absolute -top-3.5 left-0 right-0 h-3 text-[9px] font-bold text-stone-500">
             <span className="absolute -translate-x-1/2" style={{ left: `${lPct}%` }}>{enc.light}</span>
             <span className="absolute -translate-x-1/2" style={{ left: `${mPct}%` }}>{enc.medium}</span>

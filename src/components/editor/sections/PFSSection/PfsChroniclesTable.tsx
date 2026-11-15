@@ -40,7 +40,7 @@ const PfsChroniclesTable: React.FC<PfsChroniclesTableProps> = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="font-bold text-stone-800 text-sm flex items-center gap-1.5">
           <Scroll size={16} className="text-amber-700" />
           <span>{t('editor.pfs.chronicles_title')}</span>

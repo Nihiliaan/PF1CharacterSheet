@@ -11,7 +11,7 @@ const PfsEnablePanel: React.FC<PfsEnablePanelProps> = ({ onEnable }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="p-6 bg-stone-50 border border-stone-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div className="p-6 bg-stone-50 border border-stone-200 rounded-lg flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 shadow-inner">
           <Shield size={24} />

@@ -17,6 +17,8 @@ interface MultilineInputProps {
   height?: string;
   isAutoHeight?: boolean;
   type?: InputType;
+  /** 叶子层最小宽声明：向上参与 min-content 传播，决定分栏最小宽与整体缩放时机 */
+  minWidth?: string;
 }
 
 const MultilineInput = ({
@@ -30,7 +32,8 @@ const MultilineInput = ({
   readOnly = false,
   height = '120px',
   isAutoHeight = false,
-  type = 'text'
+  type = 'text',
+  minWidth = '88px'
 }: MultilineInputProps) => {
   const { t } = useTranslation();
   // 从 Schema 获取逻辑
@@ -52,7 +55,7 @@ const MultilineInput = ({
   };
 
   return (
-    <div className={`flex flex-col gap-1.5 p-3 rounded-xl transition-all border group
+    <div style={{ minWidth }} className={`flex flex-col gap-1.5 p-3 rounded-xl transition-all border group
       ${isChanged
         ? 'bg-amber-50/50 border-amber-200 shadow-sm'
         : 'bg-stone-50/30 border-stone-200 hover:border-stone-300 focus-within:border-primary/50 focus-within:bg-white focus-within:shadow-md'

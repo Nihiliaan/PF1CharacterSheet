@@ -37,12 +37,15 @@ interface RulerMetrics {
   sections: SectionMetric[];
   scrollHeight: number;
   clientHeight: number;
+  clientWidth: number;
   trackHeight: number;
 }
 
 const MIN_THUMB_H = 24; // 滑块最小像素高（内容超长时不至于捏没）
 const MIN_TICK_H = 3; // 区块色块最小像素高
 const LABEL_H = 20; // 标签行高（leading-5），标签碰撞规避用
+/** 标尺（悬停展开 192px 遮挡）只在实测容器宽 ≥ 此值时显示；更窄分栏回退原生滚动条 */
+const RULER_MIN_WIDTH = 560;
 
 export default function TableOfContents({ scrollRef }: { scrollRef?: React.RefObject<HTMLElement | null> }) {
   const { t } = useTranslation();
@@ -78,9 +81,12 @@ export default function TableOfContents({ scrollRef }: { scrollRef?: React.RefOb
       sections,
       scrollHeight: container.scrollHeight,
       clientHeight: container.clientHeight,
+      clientWidth: container.clientWidth,
       trackHeight: trackRef.current?.clientHeight || container.clientHeight
     });
     setScrollTop(container.scrollTop);
+    // 标尺即滚动条：标尺可见时隐藏原生滚动条，反之恢复（两者随实测宽度联动切换）
+    container.classList.toggle('scrollbar-hidden', container.clientWidth >= RULER_MIN_WIDTH);
   }, [scrollRef]);
 
   useEffect(() => {
@@ -122,6 +128,7 @@ export default function TableOfContents({ scrollRef }: { scrollRef?: React.RefOb
   }, [measure, scrollRef]);
 
   const overflow = !!metrics && metrics.scrollHeight > metrics.clientHeight + 1;
+  const showRuler = !!metrics && metrics.clientWidth >= RULER_MIN_WIDTH;
   const pxPer = metrics && metrics.scrollHeight > 0 ? metrics.trackHeight / metrics.scrollHeight : 0;
 
   const thumbH = metrics ? Math.max(metrics.clientHeight * pxPer, MIN_THUMB_H) : 0;
@@ -234,7 +241,9 @@ export default function TableOfContents({ scrollRef }: { scrollRef?: React.RefOb
       aria-valuenow={Math.round(scrollTop)}
       aria-valuemax={Math.round(metrics.scrollHeight - metrics.clientHeight)}
       aria-label={t('editor.toc.ruler')}
-      className={`absolute inset-y-0 right-0 z-30 hidden md:block group select-none touch-none overflow-hidden transition-all duration-300 ${
+      className={`absolute inset-y-0 right-0 z-30 group select-none touch-none overflow-hidden transition-all duration-300 ${
+        showRuler ? 'block' : 'hidden'
+      } ${
         dragging ? 'w-48 cursor-grabbing' : 'w-3 hover:w-48 cursor-default'
       }`}
       onPointerDown={onTrackPointerDown}
