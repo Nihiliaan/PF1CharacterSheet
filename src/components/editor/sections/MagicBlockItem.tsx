@@ -97,13 +97,6 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
       onDrop={onDrop}
     >
       <div className="flex flex-wrap items-end gap-3 mb-2 mt-1 group/title relative">
-        <div
-          onMouseEnter={() => onSetDragEnabled(true)}
-          onMouseLeave={() => onSetDragEnabled(false)}
-          className="cursor-move text-stone-300 hover:text-stone-500 transition-colors opacity-0 group-hover/magic:opacity-100 absolute -left-6 top-1"
-        >
-          <GripVertical size={16} />
-        </div>
         <div className="flex items-center gap-2 flex-1 min-w-[120px]">
           <input
             className={`text-sm font-bold uppercase tracking-wider bg-transparent border-b outline-none transition-colors w-full ${block.title !== originalBlock?.title ? 'text-amber-600 border-amber-300' : 'text-stone-700 border-transparent focus:border-stone-400'}`}
@@ -118,7 +111,6 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
             <Trash2 size={12} />
           </button>
         </div>
-
         {
           <div className="flex items-center gap-3">
             <div className="w-24">
@@ -150,6 +142,15 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
             </div>
           </div>
         }
+
+        {/* 拖拽把手统一右上角（与行排序"奔右"逻辑一致，2026-11-16 用户裁决） */}
+        <div
+          onMouseEnter={() => onSetDragEnabled(true)}
+          onMouseLeave={() => onSetDragEnabled(false)}
+          className="cursor-move text-stone-300 hover:text-stone-500 transition-colors opacity-0 group-hover/magic:opacity-100 self-center shrink-0"
+        >
+          <GripVertical size={16} />
+        </div>
       </div>
       {
         <SpellTable

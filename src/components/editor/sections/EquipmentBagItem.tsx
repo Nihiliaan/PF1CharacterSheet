@@ -86,13 +86,6 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
     >
       <div className="flex items-center justify-between gap-4 mb-3">
         <div className="flex items-center gap-4 flex-1">
-          <div
-            className="cursor-grab text-stone-300 hover:text-stone-600 active:cursor-grabbing p-1"
-            draggable
-            onDragStart={(e) => onBagDragStart(e, bagIndex)}
-          >
-            <GripVertical size={18} />
-          </div>
           <input
             className="text-lg font-bold font-serif bg-transparent border-b border-transparent focus:border-primary outline-none px-1 py-0.5 max-w-sm w-full"
             value={bag.name}
@@ -133,6 +126,14 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
           >
             <Trash2 size={13} /> {t('common.delete_container')}
           </button>
+          {/* 拖拽把手统一右上角（与行排序"奔右"逻辑一致，2026-11-16 用户裁决） */}
+          <div
+            className="cursor-grab text-stone-300 hover:text-stone-600 active:cursor-grabbing p-1"
+            draggable
+            onDragStart={(e) => onBagDragStart(e, bagIndex)}
+          >
+            <GripVertical size={18} />
+          </div>
         </div>
       </div>
       <DynamicTable

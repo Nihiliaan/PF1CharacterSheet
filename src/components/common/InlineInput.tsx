@@ -61,14 +61,16 @@ const InlineInput = ({
   }, [className]);
 
   return (
+    // 左右排版（用户裁决 2026-11-16）：标签左、值右——原两行模式（标签上/值下）在水平空间
+    // 充裕的位置浪费一半高度；全局生效，multiline 值仍在右侧换行
     <div
       style={{ minWidth }}
-      className={`flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 transition-all group/input ${isChanged ? 'bg-amber-50/50 border-amber-300 shadow-sm' : 'hover:border-stone-400 focus-within:border-stone-600 focus-within:bg-white focus-within:shadow-sm'} ${className}`}
+      className={`flex items-center gap-2 border border-stone-200 bg-stone-50 rounded p-1.5 transition-all group/input ${isChanged ? 'bg-amber-50/50 border-amber-300 shadow-sm' : 'hover:border-stone-400 focus-within:border-stone-600 focus-within:bg-white focus-within:shadow-sm'} ${className}`}
     >
-      <label className={`text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none mb-1 transition-colors ${isChanged ? 'text-amber-700' : 'group-focus-within/input:text-stone-900'}`}>
+      <label className={`text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none whitespace-nowrap shrink-0 transition-colors ${isChanged ? 'text-amber-700' : 'group-focus-within/input:text-stone-900'}`}>
         {label}
       </label>
-      <div className="min-h-[24px] h-auto relative flex items-center w-full">
+      <div className="min-h-[24px] h-auto relative flex items-center flex-1 min-w-0">
         <DynamicInput
           value={value ?? ''}
           onChange={onChange}
@@ -87,7 +89,7 @@ const InlineInput = ({
           className={`w-full h-auto !p-0 ${textClasses}`}
         />
         {isChanged && (
-          <div className="absolute -right-0.5 -top-3 w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.6)] animate-pulse pointer-events-none" />
+          <div className="absolute -right-1 -top-1 w-1.5 h-1.5 bg-amber-500 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.6)] animate-pulse pointer-events-none" />
         )}
       </div>
     </div>

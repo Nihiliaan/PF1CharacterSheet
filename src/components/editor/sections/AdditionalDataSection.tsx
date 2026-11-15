@@ -142,15 +142,6 @@ const AdditionalDataSection: React.FC = () => {
               onDrop={(e) => handleDrop(e, block.id, 'additionalData')}
             >
               <div className="flex items-center gap-3 mb-3">
-                <div
-                  onMouseEnter={() => setDragEnabledFor(block.id)}
-                  onMouseLeave={() => setDragEnabledFor(null)}
-                  className="cursor-move text-stone-400 hover:text-stone-600 px-0.5 transition-colors"
-                  title="按住拖拽排序"
-                >
-                  <GripVertical size={18} />
-                </div>
-
                 <button
                   type="button"
                   onClick={() => toggleCollapse(block.id)}
@@ -202,6 +193,16 @@ const AdditionalDataSection: React.FC = () => {
                   <Trash2 size={14} />
                   <span className="hidden sm:inline">{t('common.delete_container')}</span>
                 </button>
+
+                {/* 拖拽把手统一右上角（与行排序"奔右"逻辑一致，2026-11-16 用户裁决） */}
+                <div
+                  onMouseEnter={() => setDragEnabledFor(block.id)}
+                  onMouseLeave={() => setDragEnabledFor(null)}
+                  className="cursor-move text-stone-400 hover:text-stone-600 px-0.5 transition-colors shrink-0"
+                  title="按住拖拽排序"
+                >
+                  <GripVertical size={18} />
+                </div>
               </div>
 
               {!isCollapsed && (

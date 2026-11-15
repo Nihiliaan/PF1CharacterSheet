@@ -416,8 +416,8 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
             {!fixedRows && (
               <th className="w-5 p-0 align-middle border-stone-300">
                 {rowDraggable && onRowActionModeToggle && (
-                  <button type="button" onClick={onRowActionModeToggle} className="p-1.5 w-full flex justify-center text-stone-400 hover:text-stone-900 transition-colors pointer-events-auto">
-                    {rowActionMode === 'drag' ? <GripVertical size={16} /> : <Trash2 size={16} className="text-red-400 hover:text-red-500" />}
+                  <button type="button" onClick={onRowActionModeToggle} className="p-0.5 w-full flex justify-center text-stone-400 hover:text-stone-900 transition-colors pointer-events-auto">
+                    {rowActionMode === 'drag' ? <GripVertical size={16} className="shrink-0" /> : <Trash2 size={16} className="shrink-0 text-red-400 hover:text-red-500" />}
                   </button>
                 )}
               </th>

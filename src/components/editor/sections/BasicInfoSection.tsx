@@ -12,12 +12,14 @@ const BasicInfoSection: React.FC = () => {
 
   return (
     <Section id="basic-info" title={t('editor.sections.basic')} className="max-w-[1200px] mx-auto">
-      {/* flex-wrap 替代 md:flex-row：并排阈值 = 头像列 256 + 表单并排需求 200（2×88 字段最小宽 + 间距）+ 间距 24 ≈ 480，
+      {/* flex-wrap 替代 md:flex-row：并排阈值 = 头像列 + 表单并排需求 + 间距，
           栏宽不足时头像自动换行到表单下方，零断点。
           字段行同样 flex-wrap：成对字段 basis=50%-半间距、三连字段 basis=33.333%-半间距，
-          各字段自带 88px 最小宽（InlineInput），宽度不足时按行内最小宽自动换行 */}
-      <div className="flex flex-wrap items-stretch gap-x-6 gap-y-4">
-        <div className="flex-[1_1_200px] flex flex-wrap gap-x-3 gap-y-3 content-start">
+          各字段自带 88px 最小宽（InlineInput），宽度不足时按行内最小宽自动换行。
+          紧凑化（2026-11-16 用户裁决）：InlineInput 改左右排版后字段高度减半，间距同步收紧，
+          头像列 256→224px */}
+      <div className="flex flex-wrap items-stretch gap-x-4 gap-y-2.5">
+        <div className="flex-[1_1_200px] flex flex-wrap gap-x-2.5 gap-y-2 content-start">
           <InlineInput
             className="basis-[calc(50%-6px)] grow font-bold"
             label={t('editor.basic.name')}
@@ -157,7 +159,7 @@ const BasicInfoSection: React.FC = () => {
             singleLine={false}
           />
         </div>
-        <div className="w-64 max-w-full shrink-0">
+        <div className="w-56 max-w-full shrink-0">
           <AvatarGallery
             avatars={data.basic.avatars}
             onUpdate={(newAvatars) => update('basic.avatars', newAvatars)}
