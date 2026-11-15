@@ -140,6 +140,18 @@ export class BaseFloat extends BaseInt {
  * 业务 Handler 实例
  */
 const TextHandler = new BaseText();
+
+/**
+ * 名称式短文本（变体文本类型，type: 'name'）：不换行、居中显示。
+ * 数据/编辑行为与 TextHandler 完全一致（含 Markdown 链接），仅渲染语义不同——
+ * DynamicInput 与表格行按 ui === 'name' 识别：列宽由显示文字撑定（表格 auto 布局下不换行），
+ * 文本居中；内容更长时列自动放宽（"以显示的文字为准"）。
+ */
+export class NameTextHandlerClass extends BaseText {
+  _ui = 'name';
+}
+const NameTextHandler = new NameTextHandlerClass();
+
 const IntegerHandler = new BaseInt();
 const PosIntHandler = new BaseInt({ ui: 'posInt', min: 1 });
 const NonNegativeIntHandler = new BaseInt({ ui: 'int', min: 0 });
@@ -355,7 +367,7 @@ const LinkHandler = new BaseText({
 });
 
 export {
-  TextHandler, IntegerHandler, PosIntHandler, NonNegativeIntHandler, QuantityHandler,
+  TextHandler, NameTextHandler, IntegerHandler, PosIntHandler, NonNegativeIntHandler, QuantityHandler,
   LevelHandler, DistanceHandler, BonusHandler, FloatHandler, CostHandler, ACPHandler,
   SkillTotalPointsHandler, WeightHandler, BoolHandler, ClassSkillHandler,
   AgeHandler, HeightHandler, DailyUsesHandler, DateHandler, LinkHandler

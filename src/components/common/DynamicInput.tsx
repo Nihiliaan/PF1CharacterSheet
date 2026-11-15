@@ -164,7 +164,8 @@ export const DynamicInput = React.memo(({
   }, [type, handler]);
 
   const renderContent = () => {
-    const ui = handler?.ui;
+    // ui 缺省回落到 type：type 'name'（名称式短文本变体）在此获得渲染语义（不换行、居中）
+    const ui = handler?.ui || type;
 
     if (ui === 'link' || type === 'link') {
       const url = String(value || '').trim();
@@ -412,7 +413,7 @@ export const DynamicInput = React.memo(({
     // 对于 Text/Markdown 字段，才需要特殊的 Mousedown 拦截来精准定位
     return (
       <div className={cn(sharedStyles, "group-focus-within:bg-white/50")} style={{ fontFamily: fontStack }} onMouseDown={handleManualFocus}>
-        {ui === 'text' || type === 'markdown' ? (
+        {ui === 'text' || ui === 'name' || type === 'markdown' ? (
           <MarkdownInlineEditor
             value={String(value ?? '')} onChange={handleChange} isFocused={isFocused} onFocus={() => setIsFocused(true)}
             placeholder={placeholder} singleLine={singleLine} height={height} minHeight={minHeight}

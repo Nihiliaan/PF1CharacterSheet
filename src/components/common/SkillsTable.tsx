@@ -58,6 +58,7 @@ const SkillsTableRow = memo(({
         const isActuallyReadOnly = readOnly || readonlyColumns?.includes(c.key) || (isFixedCategory && isNameColumn) || (isGhost && c.key === 'total');
 
         const isDesc = isDescriptionCol(c.key, cellHandler);
+        const isNameType = c.type === 'name' || cellHandler?.ui === 'name';
 
         return (
           <td key={c.key} className={`p-0 relative align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0 border-stone-300'}`}>
@@ -70,8 +71,8 @@ const SkillsTableRow = memo(({
               columnKey={c.key}
               optionIndices={(isNameColumn && cellHandler?.getOptionIndices) ? cellHandler.getOptionIndices(catId) : (c.optionIndices || cellHandler?.optionIndices)}
               displayFormatter={c.displayFormatter}
-              align={c.align || (isDesc ? 'left' : 'center')}
-              singleLine={!isDesc}
+              align={c.align || (isNameType || !isDesc ? 'center' : 'left')}
+              singleLine={c.singleLine ?? (isNameType || !isDesc)}
               row={row}
               className={`${isActuallyReadOnly ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}
             />
@@ -234,7 +235,7 @@ export default function SkillsTable(props: DynamicTableProps & { minWidth?: stri
             {visibleColumns.map((c: any) => {
               const isSortable = !showAll && sortableColumns.includes(c.key);
               return (
-                <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`} onClick={() => isSortable && handleSort(c.key)}>
+                <th key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`} onClick={() => isSortable && handleSort(c.key)}>
                   <div className="flex items-center justify-center gap-1">{t(c.label)}{sortKey === c.key && <Triangle size={8} className={`fill-current transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />}</div>
                 </th>
               );

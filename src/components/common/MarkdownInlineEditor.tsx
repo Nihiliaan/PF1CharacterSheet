@@ -131,7 +131,8 @@ const MarkdownInlineEditor = ({
           markdownConcealPlugin,
           drawSelection(),
           dropCursor(),
-          EditorView.lineWrapping,
+          // 名称式短文本（singleLine）不软换行：编辑时列宽跟随文字撑定，与预览态一致
+          ...(singleLine ? [] : [EditorView.lineWrapping]),
           EditorView.theme({
             "&": { height: "100%", backgroundColor: "transparent", fontSize: "inherit" },
             "&.cm-focused": { outline: "none" },
@@ -226,13 +227,15 @@ const MarkdownInlineEditor = ({
   }[align];
 
   return (
-    <div 
-      className={cn("w-full h-full min-h-[1.625em] flex items-start cursor-text", textAlignClass, className)}
+    <div
+      className={cn("w-full h-full min-h-[1.625em] flex cursor-text", singleLine ? "items-center" : "items-start", textAlignClass, className)}
       style={{ height: isFocused ? height : 'auto', minHeight, fontFamily: fontStack }}
     >
       <div ref={containerRef} className={cn("w-full", !isFocused && "hidden")} />
       {!isFocused && (
-        <div className="w-full break-words whitespace-pre-wrap">
+        // 名称式短文本（singleLine）不换行溢出隐藏——表格 auto 布局据其内容宽撑定列宽；
+        // 多行文本（描述/备注等弹性列）换行吸收剩余空间
+        <div className={cn("w-full", singleLine ? "whitespace-nowrap overflow-hidden" : "break-words whitespace-pre-wrap")}>
           <MarkdownPreviewer text={value} placeholder={placeholder} />
         </div>
       )}

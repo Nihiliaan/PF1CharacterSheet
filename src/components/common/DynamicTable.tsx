@@ -46,6 +46,8 @@ const DynamicTableRow = memo(({
         const cellPath = getCellPath(path || '', i, c.key);
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
         const isDesc = isDescriptionCol(c.key, cellHandler);
+        // 名称式短文本变体（type:'name' / ui:'name'）：不换行 + 居中，列宽由显示文字撑定
+        const isNameType = c.type === 'name' || cellHandler?.ui === 'name';
         return (
           <td key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`p-0 relative border-stone-300 align-top whitespace-nowrap overflow-visible ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
             <DynamicInput
@@ -58,8 +60,9 @@ const DynamicTableRow = memo(({
               type={cellHandler?.ui || c.type}
               optionIndices={cellHandler?.optionIndices || c.optionIndices}
               displayFormatter={c.displayFormatter}
-              align={c.align || (isDesc ? 'left' : 'center')}
-              singleLine={!isDesc}
+              align={c.align || (isNameType || !isDesc ? 'center' : 'left')}
+              // 列配置可显式声明 singleLine；缺省：名称式变体或非描述列不换行（列宽由文字撑定），描述列多行换行作弹性列
+              singleLine={c.singleLine ?? (isNameType || !isDesc)}
               row={row}
               className={`${(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}
             />

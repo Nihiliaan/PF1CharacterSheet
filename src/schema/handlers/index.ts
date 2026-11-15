@@ -5,7 +5,7 @@
  */
 import {
   REGEX_PATTERNS, BaseHandler, BaseText, BaseInt, BaseFloat,
-  TextHandler, IntegerHandler, PosIntHandler, NonNegativeIntHandler, QuantityHandler,
+  TextHandler, NameTextHandler, NameTextHandlerClass, IntegerHandler, PosIntHandler, NonNegativeIntHandler, QuantityHandler,
   LevelHandler, DistanceHandler, BonusHandler, FloatHandler, CostHandler, ACPHandler,
   SkillTotalPointsHandler, WeightHandler, BoolHandler, ClassSkillHandler,
   AgeHandler, HeightHandler, DailyUsesHandler,
@@ -39,11 +39,11 @@ export {
   SkillNameHandlerClass, BaseTable, CompositeHandler,
   CheckGroupHandlerClass, CheckGroupHandler,
   HalfIntHandlerClass, HalfIntHandler,
-  DateHandlerClass
+  DateHandlerClass, NameTextHandler, NameTextHandlerClass
 };
 
 const handlers: any = {
-  TextHandler, SkillNameHandler,
+  TextHandler, NameTextHandler, SkillNameHandler,
   IntegerHandler, PosIntHandler, NonNegativeIntHandler, QuantityHandler, LevelHandler,
   DistanceHandler, SkillAttributeHandler, CostHandler, WeightHandler, ACPHandler,
   ManeuverabilityHandler, AlignmentHandler, SizeHandler, GenderHandler,
@@ -59,6 +59,7 @@ const handlers: any = {
   AgeHandler, HeightHandler, CritRangeHandler, CritMultiplierHandler, BonusHandler, SkillTotalPointsHandler,
   getHandlerByType: (type: string): BaseHandler => {
     switch (type) {
+      case 'name': return NameTextHandler;
       case 'number': case 'int': return IntegerHandler;
       case 'posInt': case 'quantity': return PosIntHandler;
       case 'level': return LevelHandler;
