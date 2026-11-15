@@ -183,7 +183,9 @@ const SpellTableHandler = new BaseTable({ view: 'SpellTable' });
 const MagicBlocksHandler = new BaseTable({ view: 'MagicBlocks' });
 const EquipmentItemsHandler = new BaseTable({
   columns: [
-    { key: 'item', label: 'editor.items.headers.item', width: '1%', minWidth: '110px', hideRightBorder: true },
+    // 物品名 = 名称式单行文本 + 左对齐（2026-11-16 用户裁决）：不配 type 会回落 ui='text'
+    // 被判为描述列（可换行多行）；'name' 使渲染走单行语义，align 覆盖名称类型的默认居中
+    { key: 'item', label: 'editor.items.headers.item', width: '1%', minWidth: '110px', type: 'name', align: 'left', hideRightBorder: true },
     { key: 'quantity', label: '', width: '1%', type: 'quantity' },
     { key: 'cost', label: 'editor.items.headers.cost', width: '1%', type: 'cost' },
     { key: 'weight', label: 'editor.items.headers.weight', width: '1%', type: 'weight' },
