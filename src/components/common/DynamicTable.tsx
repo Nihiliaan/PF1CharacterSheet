@@ -45,9 +45,11 @@ const DynamicTableRow = memo(({
       {columns.map((c: any) => {
         const cellPath = getCellPath(path || '', i, c.key);
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
-        const isDesc = isDescriptionCol(c.key, cellHandler);
-        // 名称式短文本变体（type:'name' / ui:'name'）：不换行 + 居中，列宽由显示文字撑定
-        const isNameType = c.type === 'name' || cellHandler?.ui === 'name';
+        // 渲染语义以列配置类型优先：c.type:'name'（名称式短文本）不换行且居中；
+        // 描述列（text/markdown/描述类 key）多行换行，作为表的弹性列
+        const effUi = c.type || cellHandler?.ui || '';
+        const isDesc = effUi !== 'name' && isDescriptionCol(c.key, { ui: effUi });
+        const isNameType = effUi === 'name';
         return (
           <td key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`p-0 relative border-stone-300 align-top whitespace-nowrap overflow-visible ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
             <DynamicInput
@@ -61,7 +63,6 @@ const DynamicTableRow = memo(({
               optionIndices={cellHandler?.optionIndices || c.optionIndices}
               displayFormatter={c.displayFormatter}
               align={c.align || (isNameType || !isDesc ? 'center' : 'left')}
-              // 列配置可显式声明 singleLine；缺省：名称式变体或非描述列不换行（列宽由文字撑定），描述列多行换行作弹性列
               singleLine={c.singleLine ?? (isNameType || !isDesc)}
               row={row}
               className={`${(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}

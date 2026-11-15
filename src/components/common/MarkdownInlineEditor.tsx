@@ -233,9 +233,9 @@ const MarkdownInlineEditor = ({
     >
       <div ref={containerRef} className={cn("w-full", !isFocused && "hidden")} />
       {!isFocused && (
-        // 名称式短文本（singleLine）不换行溢出隐藏——表格 auto 布局据其内容宽撑定列宽；
-        // 多行文本（描述/备注等弹性列）换行吸收剩余空间
-        <div className={cn("w-full", singleLine ? "whitespace-nowrap overflow-hidden" : "break-words whitespace-pre-wrap")}>
+        // 名称式短文本（singleLine）：pre——禁止自动软换行但保留显式换行符，列宽 = 最长行宽；
+        // 多行文本（描述/备注等弹性列）pre-wrap 换行吸收剩余空间
+        <div className={cn("w-full", singleLine ? "whitespace-pre overflow-hidden" : "break-words whitespace-pre-wrap")}>
           <MarkdownPreviewer text={value} placeholder={placeholder} />
         </div>
       )}

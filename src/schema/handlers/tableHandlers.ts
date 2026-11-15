@@ -40,7 +40,7 @@ const MeleeAttackTableHandler = new BaseTable({
   columns: [
     { key: 'weapon', label: 'editor.attacks.melee', width: '1%', type: 'name' },
     { key: 'hit', label: 'editor.attacks.hit', width: '1%', type: 'bonus' },
-    { key: 'damage', label: 'editor.attacks.damage', width: '1%' },
+    { key: 'damage', label: 'editor.attacks.damage', width: '1%', type: 'name' },
     { key: 'critRange', label: 'editor.attacks.crit_range', width: '1%', type: 'critRange' },
     { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '1%', type: 'critMultiplier' },
     { key: 'touch', label: 'editor.attacks.reach', width: '1%', type: 'distance' },
@@ -53,7 +53,7 @@ const RangedAttackTableHandler = new BaseTable({
   columns: [
     { key: 'weapon', label: 'editor.attacks.ranged', width: '1%', type: 'name' },
     { key: 'hit', label: 'editor.attacks.hit', width: '1%', type: 'bonus' },
-    { key: 'damage', label: 'editor.attacks.damage', width: '1%' },
+    { key: 'damage', label: 'editor.attacks.damage', width: '1%', type: 'name' },
     { key: 'critRange', label: 'editor.attacks.crit_range', width: '1%', type: 'critRange' },
     { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '1%', type: 'critMultiplier' },
     { key: 'range', label: 'editor.attacks.range', width: '1%', type: 'distance' },
@@ -89,7 +89,7 @@ const SkillsTableHandler = new BaseTable({
     { key: 'rank', label: 'editor.skills.headers.rank', width: '1%', type: 'level' },
     { key: 'cs', label: 'editor.skills.headers.cs', width: '1%', type: 'classSkill' },
     { key: 'ability', label: 'editor.skills.headers.ability', width: '1%', type: 'attributeIndex' },
-    { key: 'others', label: 'editor.skills.headers.others', width: '1%', type: 'name', align: 'left' },
+    { key: 'others', label: 'editor.skills.headers.others', width: '1%', type: 'name' },
     { key: 'special', label: 'editor.skills.headers.special', minWidth: '200px' }
   ],
   sortableColumns: ['name', 'total', 'rank', 'cs', 'ability']
@@ -105,7 +105,7 @@ const SimpleListHandler = new BaseTable({
 const BackgroundTraitsTableHandler = new BaseTable({
   columns: [
     { key: 'name', label: 'editor.lists.name', width: '1%', type: 'name' },
-    { key: 'type', label: 'editor.lists.type', width: '1%', type: 'name', align: 'left' },
+    { key: 'type', label: 'editor.lists.type', width: '1%', type: 'name' },
     { key: 'desc', label: 'editor.lists.description', minWidth: '200px' }
   ]
 });
@@ -171,9 +171,9 @@ const PfsChroniclesTableHandler = new BaseTable({
 const FeatsTableHandler = new BaseTable({
   columns: [
     { key: 'level', label: 'editor.lists.level', width: '1%', type: 'level' },
-    { key: 'source', label: 'editor.lists.source', width: '1%', type: 'name', align: 'left' },
+    { key: 'source', label: 'editor.lists.source', width: '1%', type: 'name' },
     { key: 'name', label: 'editor.lists.name', width: '1%', type: 'name' },
-    { key: 'type', label: 'editor.lists.type', width: '1%', type: 'name', align: 'left' },
+    { key: 'type', label: 'editor.lists.type', width: '1%', type: 'name' },
     { key: 'desc', label: 'editor.lists.description', minWidth: '200px' }
   ]
 });

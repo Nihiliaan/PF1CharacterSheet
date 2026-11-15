@@ -102,7 +102,7 @@ export const DynamicInput = React.memo(({
     "h-full transition-colors flex min-h-[32px] px-2",
     singleLine ? "items-center" : "items-start pt-1.5",
     align === 'right' ? 'justify-end text-right' : align === 'center' ? 'justify-center text-center' : 'justify-start text-left',
-    singleLine ? "whitespace-nowrap w-full overflow-hidden min-w-min" : "break-words whitespace-pre-wrap w-full",
+    singleLine ? "whitespace-pre w-full overflow-hidden min-w-min" : "break-words whitespace-pre-wrap w-full",
     "text-[0.875rem] leading-[1.625] font-medium",
     className
   );

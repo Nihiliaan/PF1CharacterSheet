@@ -57,8 +57,10 @@ const SkillsTableRow = memo(({
         const isFixedCategory = catId <= 2;
         const isActuallyReadOnly = readOnly || readonlyColumns?.includes(c.key) || (isFixedCategory && isNameColumn) || (isGhost && c.key === 'total');
 
-        const isDesc = isDescriptionCol(c.key, cellHandler);
-        const isNameType = c.type === 'name' || cellHandler?.ui === 'name';
+        // 渲染语义以列配置类型优先（同 DynamicTable 行级判定）
+        const effUi = c.type || cellHandler?.ui || '';
+        const isDesc = effUi !== 'name' && isDescriptionCol(c.key, { ui: effUi });
+        const isNameType = effUi === 'name';
 
         return (
           <td key={c.key} className={`p-0 relative align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0 border-stone-300'}`}>

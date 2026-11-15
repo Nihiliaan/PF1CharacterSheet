@@ -29,10 +29,10 @@ export default function SpellTable({
   const columns = React.useMemo(() => {
     const cols: Column[] = [];
     if (spellType !== 5) {
-      cols.push({ key: 'level', label: 'editor.spells.level', width: '10%' });
+      cols.push({ key: 'level', label: 'editor.spells.level', width: '1%' });
     }
     if (spellType !== 0 && spellType !== 1 && spellType !== 4) {
-      cols.push({ key: 'uses', label: 'editor.spells.uses', width: '20%' });
+      cols.push({ key: 'uses', label: 'editor.spells.uses', width: '1%' });
     }
     cols.push({ key: 'spells', label: 'editor.spells.spell_name', width: 'auto' });
     return cols;
