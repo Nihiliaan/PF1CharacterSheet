@@ -45,7 +45,7 @@ const MeleeAttackTableHandler = new BaseTable({
     { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '1%', type: 'critMultiplier' },
     { key: 'touch', label: 'editor.attacks.reach', width: '1%', type: 'distance' },
     { key: 'damageType', label: 'editor.attacks.damage_type', width: '1%' },
-    { key: 'special', label: 'editor.attacks.special', type: 'name' }
+    { key: 'special', label: 'editor.attacks.special', width: '25%', type: 'name' }
   ]
 });
 
@@ -58,7 +58,7 @@ const RangedAttackTableHandler = new BaseTable({
     { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '1%', type: 'critMultiplier' },
     { key: 'range', label: 'editor.attacks.range', width: '1%', type: 'distance' },
     { key: 'damageType', label: 'editor.attacks.damage_type', width: '1%' },
-    { key: 'special', label: 'editor.attacks.special', type: 'name' }
+    { key: 'special', label: 'editor.attacks.special', width: '25%', type: 'name' }
   ]
 });
 
@@ -182,7 +182,7 @@ const SpellTableHandler = new BaseTable({ view: 'SpellTable' });
 const MagicBlocksHandler = new BaseTable({ view: 'MagicBlocks' });
 const EquipmentItemsHandler = new BaseTable({
   columns: [
-    { key: 'item', label: 'editor.items.headers.item', width: '1%', type: 'name', hideRightBorder: true },
+    { key: 'item', label: 'editor.items.headers.item', width: '1%', hideRightBorder: true },
     { key: 'quantity', label: '', width: '1%', type: 'quantity' },
     { key: 'cost', label: 'editor.items.headers.cost', width: '1%', type: 'cost' },
     { key: 'weight', label: 'editor.items.headers.weight', width: '1%', type: 'weight' },

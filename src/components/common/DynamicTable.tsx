@@ -11,8 +11,8 @@ import { getHandlerByPath } from '../../schema/fieldRegistry';
 import { flushSync } from 'react-dom';
 import DynamicInput from './DynamicInput';
 
-const DynamicTableRow = memo(({ 
-  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, onRowReorder, sortableEnabled, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions
+const DynamicTableRow = memo(({
+  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, onRowReorder, sortableEnabled, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions, onInsertAbove, onInsertBelow
 }: any) => {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: `row-${i}`, data: { index: i }, disabled: !sortableEnabled });
   const getCellPath = (basePath: string, index: number, key: string) => {
@@ -40,8 +40,35 @@ const DynamicTableRow = memo(({
       ref={setNodeRef}
       // dnd-kit 原生样式：transform 让位预览；transition 已移除（用户要求：无过渡动画，落位即最终位置）
       style={{ transform: CSS.Translate.toString(transform) }}
-      className={`group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''}`}
+      className={`relative group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''}`}
     >
+      {/* 行间悬停插入区：悬停行间横线时出现，点击在该位置插入新行 */}
+      {onInsertAbove && (
+        <div
+          onClick={onInsertAbove}
+          title="在此处添加行"
+          className="absolute inset-x-0 -top-[7px] h-[14px] z-20 cursor-pointer opacity-0 group-hover:opacity-100 flex items-center justify-center"
+        >
+          <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
+            <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
+              <Plus size={9} /> 添加行
+            </span>
+          </div>
+        </div>
+      )}
+      {onInsertBelow && (
+        <div
+          onClick={onInsertBelow}
+          title="在此处添加行"
+          className="absolute inset-x-0 -bottom-[7px] h-[14px] z-20 cursor-pointer opacity-0 group-hover:opacity-100 flex items-center justify-center"
+        >
+          <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
+            <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
+              <Plus size={9} /> 添加行
+            </span>
+          </div>
+        </div>
+      )}
       {columns.map((c: any) => {
         const cellPath = getCellPath(path || '', i, c.key);
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
@@ -106,7 +133,7 @@ const DynamicTableRow = memo(({
   );
 });
 
-export default function DynamicTable(props: DynamicTableProps & { minWidth?: string }) {
+export default function DynamicTable(props: DynamicTableProps & { minWidth?: string; sizerRows?: string[][] }) {
   const {
     path,
     columns: propsColumns,
@@ -126,6 +153,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     onRowDrop: propsDrop,
     readOnly = false,
     minWidth,
+    sizerRows,
     enableSQShow = false
   } = props;
   const { t } = useTranslation();
@@ -241,31 +269,37 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     onChange(newData);
   }, [data, path, rowCount, readOnly, onChange]);
 
-  const addRow = () => {
+  /** 在指定位置插入一行（at 缺省追加到末尾）；行间悬停间隙与外部分析共用 */
+  const addRowAtIndex = (at?: number) => {
     if (readOnly || fixedRows) return;
+    const insertAt = Math.max(0, Math.min(at ?? rowCount, rowCount));
     const safeData = (data && typeof data === 'object' && !Array.isArray(data)) ? { ...data } : {};
     const newData = { ...safeData };
+    const additions: Record<string, any> = {};
     if (newItemGenerator) {
       const newItem = newItemGenerator();
       Object.keys(newItem).forEach(key => {
+        additions[key] = newItem[key];
         if (!newData[key] || !Array.isArray(newData[key])) newData[key] = new Array(rowCount).fill('');
-        newData[key] = [...newData[key], newItem[key]];
       });
     } else {
       columns.forEach((c: any) => {
         const cellPath = `${path || ''}.${c.key}[0]`;
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
-        const defaultValue = cellHandler?.getDefaultValue ? cellHandler.getDefaultValue() : '';
-        if (!newData[c.key] || !Array.isArray(newData[c.key])) newData[c.key] = new Array(rowCount).fill(defaultValue);
-        newData[c.key] = [...newData[c.key], defaultValue];
+        additions[c.key] = cellHandler?.getDefaultValue ? cellHandler.getDefaultValue() : '';
+        if (!newData[c.key] || !Array.isArray(newData[c.key])) newData[c.key] = new Array(rowCount).fill('');
       });
     }
+    Object.keys(additions).forEach(key => {
+      const arr = [...newData[key]];
+      arr.splice(insertAt, 0, additions[key]);
+      newData[key] = arr;
+    });
     if (enableSQShow) {
-      const existingSQ = Array.isArray(newData.SQshow) ? [...newData.SQshow] : [];
-      while (existingSQ.length < rowCount) {
-        existingSQ.push(true);
-      }
-      newData.SQshow = [...existingSQ, true];
+      const sq = Array.isArray(newData.SQshow) ? [...newData.SQshow] : new Array(rowCount).fill(true);
+      while (sq.length < rowCount) sq.push(true);
+      sq.splice(insertAt, 0, true);
+      newData.SQshow = sq;
     }
     onChange(newData);
     setSortKey(null); // 添加行后清除排序标记
@@ -319,8 +353,8 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
       onDragEnd={handleDragEnd}
     >
     <div className={`w-full rounded border transition-all ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
-      {/* 表格最小宽 = 各列最小宽之和（表头 min-w-[70px] 为叶子声明，c.minWidth 可按列覆盖），
-          不再整体写死 600px——列最小宽经 min-content 向上传播决定分栏最小宽与缩放时机 */}
+      {/* 表格最小宽 = 各列最小宽之和（表头/单元格文字宽 + c.minWidth 弹性列防收缩声明），
+          列宽随显示文字撑定，经 min-content 向上传播决定分栏最小宽与缩放时机 */}
       <table className="w-full border-collapse text-sm table-auto" style={minWidth ? { minWidth } : undefined}>
         <thead>
           <tr className="bg-stone-200 text-stone-700">
@@ -330,7 +364,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
                 <th
                   key={c.key}
                   style={{ width: c.width, minWidth: c.minWidth }}
-                  className={`border-stone-300 px-2 py-1.5 text-center font-semibold relative whitespace-nowrap min-w-[70px] group/col ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`}
+                  className={`border-stone-300 px-2 py-1.5 text-center font-semibold relative whitespace-nowrap group/col ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`}
                   onClick={() => isSortable && handleSort(c.key)}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -395,6 +429,24 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
             )}
           </tr>
         </thead>
+        {/* 联合定宽行：多张同构表格（如近战/远程攻击）传入相同 sizerRows 时，
+            各列按两组内容的并集取宽，实现跨表列对齐；高度 0 隐藏不占位 */}
+        {sizerRows?.map((row, r) => {
+          // sizer 行列数必须与真实行一致（数据列 + 操作/拖拽等固定列），否则 auto 布局列错位
+          const extraCols = (hasColumnActions ? 1 : 0) + (enableSQShow ? 1 : 0) + (!fixedRows ? 1 : 0);
+          return (
+            <tr key={`sizer-${r}`} aria-hidden="true" style={{ height: 0 }}>
+              {row.map((txt, ci) => (
+                <td key={ci} style={{ height: 0, padding: 0, border: 'none' }}>
+                  <div style={{ height: 0, overflow: 'hidden', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{txt}</div>
+                </td>
+              ))}
+              {Array.from({ length: extraCols }).map((_, k) => (
+                <td key={`x-${k}`} style={{ height: 0, padding: 0, border: 'none' }} />
+              ))}
+            </tr>
+          );
+        })}
         <tbody className="divide-y divide-stone-300">
           <SortableContext items={currentIndices.map(idx => `row-${idx}`)} strategy={verticalListSortingStrategy}>
           {currentIndices.map((idx) => (
@@ -419,25 +471,11 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
               isDescriptionCol={isDescriptionCol}
               enableSQShow={enableSQShow}
               hasColumnActions={hasColumnActions}
+              onInsertAbove={readOnly || fixedRows ? undefined : () => addRowAtIndex(idx)}
+              onInsertBelow={readOnly || fixedRows || idx !== rowCount - 1 ? undefined : () => addRowAtIndex(rowCount)}
             />
           ))}
           </SortableContext>
-          {!fixedRows && (
-            <tr>
-              <td
-                colSpan={columns.length + 1 + (enableSQShow ? 1 : 0) + (hasColumnActions ? 1 : 0)}
-                className="p-0 bg-stone-50 hover:bg-stone-100 transition-colors cursor-pointer"
-              >
-                <button
-                  type="button"
-                  onClick={addRow}
-                  className="flex items-center gap-1 text-xs text-stone-600 hover:text-stone-900 px-3 py-2 w-full justify-center font-medium uppercase tracking-wider"
-                >
-                  <Plus size={14} /> {t('common.add_row')}
-                </button>
-              </td>
-            </tr>
-          )}
         </tbody>
       </table>
     </div>

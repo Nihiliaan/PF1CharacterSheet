@@ -230,14 +230,14 @@ export default function SkillsTable(props: DynamicTableProps & { minWidth?: stri
 
   return (
     <div className={`w-full rounded border transition-all ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
-      {/* 表格最小宽 = 各列最小宽之和（表头 min-w-[60px] 为叶子声明），不再整体写死 600px */}
+      {/* 表格最小宽 = 各列最小宽之和（表头 为叶子声明），不再整体写死 600px */}
       <table className="w-full border-collapse text-sm table-auto" style={minWidth ? { minWidth } : undefined}>
         <thead>
           <tr className="bg-stone-200 text-stone-700">
             {visibleColumns.map((c: any) => {
               const isSortable = !showAll && sortableColumns.includes(c.key);
               return (
-                <th key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`} onClick={() => isSortable && handleSort(c.key)}>
+                <th key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap ${c.hideRightBorder ? '' : 'border-r last:border-r-0'} ${isSortable ? 'cursor-pointer hover:bg-stone-300 select-none' : ''}`} onClick={() => isSortable && handleSort(c.key)}>
                   <div className="flex items-center justify-center gap-1">{t(c.label)}{sortKey === c.key && <Triangle size={8} className={`fill-current transition-transform ${sortOrder === 'desc' ? 'rotate-180' : ''}`} />}</div>
                 </th>
               );

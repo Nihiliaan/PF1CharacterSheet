@@ -77,9 +77,11 @@ export default function SpellTable({
     return false;
   }, [rowCount, spellType]);
 
-  const addRowTop = () => {
+  /** 在指定位置插入一行（at 缺省追加到末尾）；行间悬停间隙调用 */
+  const addRowAtIndex = (at?: number) => {
     if (readOnly) return;
     if (!canAdd) return;
+    const insertAt = Math.max(0, Math.min(at ?? rowCount, rowCount));
 
     const newData = { ...data };
     columns.forEach(c => {
@@ -89,7 +91,9 @@ export default function SpellTable({
       const defaultValue = getHandlerByPath(cellPath)?.getDefaultValue?.() ?? '';
 
       if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill(defaultValue);
-      newData[c.key] = [defaultValue, ...newData[c.key]];
+      const arr = [...newData[c.key]];
+      arr.splice(Math.min(insertAt, arr.length), 0, defaultValue);
+      newData[c.key] = arr;
     });
     onChange(newData);
   };
@@ -132,22 +136,11 @@ export default function SpellTable({
         <thead>
           <tr className="bg-stone-200 text-stone-700">
             {columns.map((c) => (
-              <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap min-w-[60px] ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+              <th key={c.key} style={{ width: c.width }} className={`border-stone-300 px-2 py-1.5 text-center font-semibold whitespace-nowrap ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
                 {t(c.label)}
               </th>
             ))}
-            <th className="w-8 p-0 align-middle border-stone-300">
-              {canAdd && (
-                <button
-                  type="button"
-                  onClick={addRowTop}
-                  className="p-1.5 w-full h-full min-h-[36px] flex items-center justify-center text-stone-400 hover:text-stone-900 transition-colors cursor-pointer bg-stone-100 border-l border-stone-300 hover:bg-stone-50"
-                  title={t('common.add_row')}
-                >
-                  <Plus size={16} />
-                </button>
-              )}
-            </th>
+            <th className="w-8 p-0 align-middle border-stone-300" />
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-300">
@@ -159,8 +152,21 @@ export default function SpellTable({
             return (
               <tr
                 key={i}
-                className={`transition-colors group ${isRowDirty(i) ? 'bg-amber-100/30' : 'hover:bg-stone-50'}`}
+                className={`relative transition-colors group ${isRowDirty(i) ? 'bg-amber-100/30' : 'hover:bg-stone-50'}`}
               >
+                {readOnly ? null : (
+                  <div
+                    onClick={() => addRowAtIndex(i)}
+                    title={t('common.add_row')}
+                    className="absolute inset-x-0 -top-[7px] h-[14px] z-20 cursor-pointer opacity-0 group-hover:opacity-100 flex items-center justify-center"
+                  >
+                    <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
+                      <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
+                        <Plus size={9} /> 添加行
+                      </span>
+                    </div>
+                  </div>
+                )}
                 {columns.map((c) => {
                   const cellPath = getCellPath(path || '', i, c.key);
                   const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
