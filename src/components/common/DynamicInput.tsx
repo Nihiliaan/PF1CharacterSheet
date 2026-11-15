@@ -96,11 +96,13 @@ export const DynamicInput = React.memo(({
   // 行距单一声明源：text-[0.875rem]（纯字号，不捆绑行高）+ leading-[1.625]（唯一行距声明）。
   // 此前 text-sm（TW4 捆绑 line-height 20px）与 leading-relaxed（22.75px）同元素打架，级联胜负随上下文摇摆，
   // 导致表格描述单元格预览 20px/行、进入 CodeMirror 编辑（硬编码 1.625 = 22.75px）时行距忽然拉大。
+  // min-w-min：本元素是外层 grid 的子项且带 overflow-hidden——grid/flex 子项 overflow≠visible 时
+  // 自动最小宽度为 0，会掐断单元格 min-content（列宽无法随内容撑开、内容被裁）；显式声明恢复传播。
   const sharedStyles = cn(
     "h-full transition-colors flex min-h-[32px] px-2",
     singleLine ? "items-center" : "items-start pt-1.5",
     align === 'right' ? 'justify-end text-right' : align === 'center' ? 'justify-center text-center' : 'justify-start text-left',
-    singleLine ? "whitespace-nowrap w-full overflow-hidden" : "break-words whitespace-pre-wrap w-full",
+    singleLine ? "whitespace-nowrap w-full overflow-hidden min-w-min" : "break-words whitespace-pre-wrap w-full",
     "text-[0.875rem] leading-[1.625] font-medium",
     className
   );
