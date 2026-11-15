@@ -57,7 +57,6 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 }
 
 export const EXT_CHAR = '.pf1';
-export const EXT_TEMPLATE = '.bbc';
 export const EXT_LINK = '.lnk';
 
 export interface Character {
@@ -107,24 +106,91 @@ function ensureExtension(name: string, ext: string) {
   return name + ext;
 }
 
-export async function saveCharacter(characterData: any, id?: string | null, folderId?: string | null, isTemplate: boolean = false) {
+/** 防御 EncodedSelect 嵌套数组：编码列中的空数组 `[]` 会被强转为 `0` */
+function sanitizeCharacterData(characterData: any) {
+  const sanitizedData = { ...characterData };
+  if (sanitizedData.feats && Array.isArray(sanitizedData.feats.type)) {
+    sanitizedData.feats = {
+      ...sanitizedData.feats,
+      type: sanitizedData.feats.type.map((t: any) => Array.isArray(t) ? 0 : t)
+    };
+  }
+  if (sanitizedData.attacks) {
+    const sanitizedAttacks = { ...sanitizedData.attacks };
+    let attacksChanged = false;
+    if (sanitizedAttacks.melee && Array.isArray(sanitizedAttacks.melee.damageType)) {
+      sanitizedAttacks.melee = {
+        ...sanitizedAttacks.melee,
+        damageType: sanitizedAttacks.melee.damageType.map((t: any) => Array.isArray(t) ? 0 : t)
+      };
+      attacksChanged = true;
+    }
+    if (sanitizedAttacks.ranged && Array.isArray(sanitizedAttacks.ranged.damageType)) {
+      sanitizedAttacks.ranged = {
+        ...sanitizedAttacks.ranged,
+        damageType: sanitizedAttacks.ranged.damageType.map((t: any) => Array.isArray(t) ? 0 : t)
+      };
+      attacksChanged = true;
+    }
+    if (attacksChanged) {
+      sanitizedData.attacks = sanitizedAttacks;
+    }
+  }
+  return sanitizedData;
+}
+
+/** 统一提取文件名（含扩展名），saveCharacter 与 createCharacterDoc 共用 */
+function getCharacterFilename(characterData: any): string {
+  const filename = characterData.basic?.name || characterData.filename || characterData.name || '新角色';
+  return ensureExtension(filename, EXT_CHAR);
+}
+
+/** 构造 characters 集合的写入 payload（saveCharacter 与 createCharacterDoc 共用） */
+function buildCharacterPayload(characterData: any, filename: string, finalFolderId: string | null, finalOwnerId: string) {
+  // Clean business data tree: eliminate metadata stirring
+  const cleanData: any = { ...sanitizeCharacterData(characterData) };
+  cleanData.schemaVersion = cleanData.schemaVersion || 1;
+  delete cleanData.id;
+  delete cleanData.ownerId;
+  delete cleanData.folderId;
+  delete cleanData.targetId;
+  delete cleanData.isLink;
+  delete cleanData.isTemplate;
+
+  return {
+    name: filename,
+    data: cleanData,
+    isPublic: true,
+    updatedAt: serverTimestamp(),
+    isTemplate: false,
+    ownerId: finalOwnerId,
+    folderId: finalFolderId,
+    targetId: characterData.targetId || ''
+  };
+}
+
+/**
+ * 保存人物卡（新建 + 更新统一入口）。
+ * 文件名与角色名解耦：
+ *  - 更新已有文档（id 提供）：保留服务器上的现有文件名，不随编辑器里的角色名变化；
+ *  - 新建文档：文件名默认取角色名（filenameOverride 优先，供复制等需沿用源文件名的流程使用），
+ *    同目录自动追加 " (n)" 计数保证唯一。
+ */
+export async function saveCharacter(characterData: any, id?: string | null, folderId?: string | null, filenameOverride?: string) {
   if (!auth.currentUser) throw new Error("Must be logged in to save characters");
 
   const path = 'characters';
   try {
-    const ext = isTemplate ? EXT_TEMPLATE : EXT_CHAR;
-    
-    // Improved filename extraction
-    let filename = '';
-    if (isTemplate) {
-      filename = characterData.name || characterData.filename || "新模板";
+    const ext = EXT_CHAR;
+    let filename: string;
+    if (id) {
+      // 更新路径：沿用现有文件名（文档不存在时兜底为角色名推导）
+      const existing = await getDoc(doc(db, path, id));
+      filename = existing.exists()
+        ? (existing.data().name as string)
+        : getCharacterFilename(characterData);
     } else {
-      filename = characterData.basic?.name || characterData.filename || characterData.name || '新角色';
-    }
-    filename = ensureExtension(filename, ext);
-
-    // If new or renaming, ensure unique
-    if (!id) {
+      filename = ensureExtension(filenameOverride || getCharacterFilename(characterData), ext);
       let baseName = filename.substring(0, filename.length - ext.length);
       let counter = 1;
       while (!(await checkUniqueName(filename, folderId || null, auth.currentUser.uid))) {
@@ -134,60 +200,9 @@ export async function saveCharacter(characterData: any, id?: string | null, fold
 
     const currentUid = auth.currentUser.uid;
     const finalOwnerId = id ? (characterData.ownerId || currentUid) : currentUid;
-
-    // Defense against nested arrays from EncodedSelect fields:
-    // Any empty arrays `[]` in encoded columns will be coerced to `0`
-    const sanitizedData = { ...characterData };
-    if (sanitizedData.feats && Array.isArray(sanitizedData.feats.type)) {
-      sanitizedData.feats = {
-        ...sanitizedData.feats,
-        type: sanitizedData.feats.type.map((t: any) => Array.isArray(t) ? 0 : t)
-      };
-    }
-    if (sanitizedData.attacks) {
-      const sanitizedAttacks = { ...sanitizedData.attacks };
-      let attacksChanged = false;
-      if (sanitizedAttacks.melee && Array.isArray(sanitizedAttacks.melee.damageType)) {
-        sanitizedAttacks.melee = {
-          ...sanitizedAttacks.melee,
-          damageType: sanitizedAttacks.melee.damageType.map((t: any) => Array.isArray(t) ? 0 : t)
-        };
-        attacksChanged = true;
-      }
-      if (sanitizedAttacks.ranged && Array.isArray(sanitizedAttacks.ranged.damageType)) {
-        sanitizedAttacks.ranged = {
-          ...sanitizedAttacks.ranged,
-          damageType: sanitizedAttacks.ranged.damageType.map((t: any) => Array.isArray(t) ? 0 : t)
-        };
-        attacksChanged = true;
-      }
-      if (attacksChanged) {
-        sanitizedData.attacks = sanitizedAttacks;
-      }
-    }
-
-    // Clean business data tree: eliminate metadata stirring
-    const cleanData: any = { ...sanitizedData };
-    cleanData.schemaVersion = cleanData.schemaVersion || 1;
-    delete cleanData.id;
-    delete cleanData.ownerId;
-    delete cleanData.folderId;
-    delete cleanData.targetId;
-    delete cleanData.isLink;
-    delete cleanData.isTemplate;
-
     const finalFolderId = folderId !== undefined ? folderId : (characterData.folderId || null);
 
-    const payload: any = {
-      name: filename,
-      data: cleanData,
-      isPublic: true,
-      updatedAt: serverTimestamp(),
-      isTemplate: isTemplate,
-      ownerId: finalOwnerId,
-      folderId: finalFolderId,
-      targetId: characterData.targetId || ''
-    };
+    const payload: any = buildCharacterPayload(characterData, filename, finalFolderId, finalOwnerId);
 
     const docRef = id ? doc(db, path, id) : doc(collection(db, path));
     const finalId = docRef.id;
@@ -203,6 +218,29 @@ export async function saveCharacter(characterData: any, id?: string | null, fold
     return finalId;
   } catch (error) {
     handleFirestoreError(error, id ? OperationType.UPDATE : OperationType.CREATE, path);
+  }
+}
+
+/**
+ * 以指定 id 创建 characters 文档（setDoc 全量写入）。
+ * 本地优先队列的 flush 入口：新建/复制文档的 id 由本地生成，保证本地引用与服务器一致。
+ * filenameOverride：本地队列已做过唯一化处理的最终文件名（缺省时从 characterData 提取）。
+ */
+export async function createCharacterDoc(
+  characterData: any,
+  id: string,
+  folderId: string | null,
+  filenameOverride?: string
+) {
+  if (!auth.currentUser) throw new Error("Must be logged in to save characters");
+  const path = 'characters';
+  try {
+    const filename = filenameOverride || getCharacterFilename(characterData);
+    const payload: any = buildCharacterPayload(characterData, filename, folderId, auth.currentUser.uid);
+    await setDoc(doc(db, path, id), { ...payload, createdAt: serverTimestamp() });
+    return id;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
   }
 }
 
@@ -259,6 +297,7 @@ export async function saveLink(targetChar: any, folderId: string | null) {
 
 export async function moveCharacter(id: string, folderId: string | null) {
   const path = `characters/${id}`;
+  folderId = folderId ?? null;
   try {
     const char = await getCharacterById(id);
     if (char && !(await checkUniqueName(char.name!, folderId, auth.currentUser!.uid, id))) {
@@ -272,6 +311,7 @@ export async function moveCharacter(id: string, folderId: string | null) {
 
 export async function moveFolder(id: string, parentId: string | null) {
   const path = `folders/${id}`;
+  parentId = parentId ?? null;
   try {
     const folders = await getFolders();
     const folder = folders?.find(f => f.id === id);
@@ -287,13 +327,22 @@ export async function moveFolder(id: string, parentId: string | null) {
   }
 }
 
-export async function copyCharacter(id: string) {
+/**
+ * 复制人物卡：副本文件名沿用源文件名（与角色名解耦），同目录唯一性由保存流程处理。
+ * nameOverride：本地优先队列已做过唯一化处理的最终副本名（缺省时直接沿用源文件名）。
+ */
+export async function copyCharacter(id: string, newId?: string, nameOverride?: string) {
   try {
     const char = await getCharacterById(id);
     if (!char) return;
     const { id: _, ...rest } = char as any;
+    const filename = nameOverride || rest.name;
+    if (newId) {
+      // 本地优先队列：副本 id 由本地生成，setDoc 全量写入
+      return await createCharacterDoc(rest.data, newId, rest.folderId ?? null, filename);
+    }
     // saveCharacter will handle unique name
-    return await saveCharacter(rest.data, undefined, rest.folderId);
+    return await saveCharacter(rest.data, undefined, rest.folderId, filename);
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, 'characters');
   }
@@ -337,6 +386,26 @@ export async function createFolder(name: string, parentId: string | null = null,
   }
 }
 
+/**
+ * 以指定 id 创建文件夹（setDoc 全量写入）。
+ * 本地优先队列的 flush 入口：id 由本地生成，保证本地引用与服务器一致。
+ */
+export async function createFolderWithId(name: string, parentId: string | null, id: string, uid?: string) {
+  const userId = uid || auth.currentUser?.uid;
+  if (!userId) throw new Error("Must be logged in");
+  try {
+    await setDoc(doc(db, 'folders', id), {
+      name,
+      ownerId: userId,
+      parentId: parentId ?? null,
+      createdAt: serverTimestamp(),
+    });
+    return id;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, 'folders');
+  }
+}
+
 export async function renameItem(id: string, type: 'character' | 'folder', newName: string) {
   const path = `${type === 'folder' ? 'folders' : 'characters'}/${id}`;
   try {
@@ -345,11 +414,10 @@ export async function renameItem(id: string, type: 'character' | 'folder', newNa
     if (type === 'character') {
       const char = await getCharacterById(id);
       if (char) {
-        const ext = char.isTemplate ? EXT_TEMPLATE : EXT_CHAR;
         if (char.isLink) {
            if (!finalName.endsWith(EXT_LINK)) finalName += EXT_LINK;
         } else {
-           finalName = ensureExtension(finalName, ext);
+           finalName = ensureExtension(finalName, EXT_CHAR);
         }
       }
     }
@@ -414,7 +482,6 @@ const LIST_PROJECTION_FIELDS = [
   'folderId',
   'ownerId',
   'targetId',
-  'isTemplate',
   'updatedAt',
   'createdAt',
   // data 内嵌字段（列表项缩略图与副标题、最近打开列表）
@@ -522,7 +589,6 @@ export async function getCharacterList(uid: string, folderId?: string | null) {
         ...d,
         id,
         isLink: !!d.targetId,
-        isTemplate: !!d.isTemplate,
         data: {
           ...d.data,
           id,
@@ -530,7 +596,7 @@ export async function getCharacterList(uid: string, folderId?: string | null) {
           folderId: d.folderId,
           targetId: d.targetId || '',
           isLink: !!d.targetId,
-          isTemplate: !!d.isTemplate
+          isTemplate: false
         }
       };
     }) as Character[];
@@ -560,7 +626,6 @@ function formatCharacterDoc(docSnap: any): Character | null {
     ...d,
     id: docSnap.id,
     isLink: !!d.targetId,
-    isTemplate: !!d.isTemplate,
     data: {
       ...d.data,
       id: docSnap.id,
@@ -568,7 +633,7 @@ function formatCharacterDoc(docSnap: any): Character | null {
       folderId: d.folderId,
       targetId: d.targetId || '',
       isLink: !!d.targetId,
-      isTemplate: !!d.isTemplate
+      isTemplate: false
     }
   } as Character;
 }

@@ -3,28 +3,36 @@
  * 两个可折叠区块：
  *  1. 打开的编辑器 —— 当前文档标签列表（点击激活、X 关闭、未保存圆点）
  *  2. 档案库 —— react-arborist 虚拟化文件树（点击文档即以标签页打开；
- *     右键菜单支持打开/重命名/剪切/粘贴/删除；支持与档案库视图之间的原生 HTML5 双向拖拽）
+ *     右键菜单/拖拽/删除等业务与档案库网格共享 useVaultExplorer 业务层）
  * 外壳支持拖拽调宽、折叠成细条（宽度与折叠状态持久化到 localStorage）。
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PanelLeftClose, PanelLeftOpen, RefreshCw, ChevronDown, ChevronRight,
-  FileText, Braces, Link2, Folder, FolderOpen, X, FolderPlus, Scissors, ClipboardPaste, Pencil, Trash2, ExternalLink, CloudUpload, CloudDownload, Grid3x3, Sparkles
+  FileText, Braces, Link2, Folder, FolderOpen, X, CloudUpload, Grid3x3, Sparkles
 } from 'lucide-react';
 import { Tree, type NodeRendererProps } from 'react-arborist';
+import { createDragDropManager } from 'dnd-core';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useTranslation } from 'react-i18next';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useUI } from '../../contexts/UIContext';
 import { useVault } from '../../contexts/VaultContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useVaultExplorer, type VaultDragItem, type VaultMenuTarget } from '../../contexts/hooks/useVaultExplorer';
 import ContextMenu from '../common/ContextMenu';
+import Dialog from '../common/Dialog';
+import { buildTabMenuItems } from '../editor/tabMenuItems';
 
 const KEY_WIDTH = 'pf1_sidebar_width';
 const KEY_COLLAPSED = 'pf1_sidebar_collapsed';
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 480;
 const ROW_HEIGHT = 26;
-/** 与 VaultContent 拖拽共用的原生 dataTransfer 协议 */
-const DND_MIME = 'text/plain';
+
+// arborist 内部自带 react-dnd Provider；用模块级单例 manager 共享同一个 HTML5 backend，
+// 避免 StrictMode 双挂载 / Fast Refresh 重挂载触发 "Cannot have two HTML5 backends"
+const treeDndManager = createDragDropManager(HTML5Backend, undefined, {}, false);
 
 interface ArborNode {
   id: string;
@@ -32,33 +40,52 @@ interface ArborNode {
   isFolder: boolean;
   /** 文档的真实 Firestore id（文件夹为 'folder-' 前缀的合成 id） */
   docId?: string;
+  /** 节点所在父文件夹的 id（根级为 null）；供"拖到展开区域"判定落点 */
+  parentFolderId?: string | null;
   isTemplate?: boolean;
   isLink?: boolean;
   children?: ArborNode[];
 }
 
-interface DragPayload {
-  id: string;
-  type: 'character' | 'folder';
-}
-
 interface SidebarContextMenu {
   x: number;
   y: number;
-  target: { type: 'folder' | 'doc' | 'background'; id: string | null; name: string };
+  target: VaultMenuTarget;
 }
 
 export default function ExplorerSidebar() {
-  const { tabs, activeTabKey, panes, focusedPaneId, switchTab, closeTab, closeTabsByDocIds, activeTabTitle, isDirty, isTemplateDirty, selectCharacter, openCharacterTab } = useCharacter();
-  const { view, setView, setConfirmModal } = useUI();
+  const { tabs, activeTabKey, panes, focusedPaneId, switchTab, closeTab, activeTabTitle, isDirty, isTemplateDirty } = useCharacter();
+  // 完整上下文：供「打开的编辑器」右键菜单构建器使用（与标签条同一份菜单）
+  const characterCtx = useCharacter();
+  const { view, setView, setForumSyncOpen, gmCompactMode, setGmCompactMode, setBbcodeHelpOpen, setToast } = useUI();
+  const { t } = useTranslation();
   const {
     myCharacters, folders, currentFolderId, setCurrentFolderId, refreshCharacterList,
-    moveCharacter, moveFolder, renameItem, deleteCharacter, deleteFolder, createFolder,
-    cutItems, onCut, onPaste, importFromClipboard,
+    isVaultSyncing, pendingSyncCount, retryVaultSync,
   } = useVault();
   const { user } = useAuth();
-  const { setToast } = useUI();
-  const { handleCloudBackup, handleCloudRestore } = useCharacter();
+
+  // 档案库共享业务层（拖拽协议/移动/打开/删除/菜单/统一弹窗）
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const lastSelectedIdRef = useRef<string | null>(null);
+  const explorer = useVaultExplorer({
+    surface: 'tree',
+    onOpenFolder: (id) => setCurrentFolderId(id),
+    onFolderCreated: (parentId) => {
+      // 新建子文件夹后自动展开其父文件夹
+      if (parentId) setExpandedFolders(prev => new Set(prev).add(parentId));
+    },
+    // 多选语义：右键项在选区内时删除/剪切整组
+    getDeleteIds: (id) => selectedIds.includes(id) ? selectedIds : [id],
+    getCutIds: (id) => selectedIds.includes(id) ? selectedIds : [id],
+    // Alt+点击 / 右键「打开到侧边」（对齐 VS Code）
+    onOpenToSide: (id) => characterCtx.openDocToSide(id),
+  });
+  const {
+    DND_MIME, encodeDragPayload, parseDropPayload, isDragPayload,
+    moveItemsToFolder, openDoc, buildMenu, dialog, closeDialog,
+    requestRename, deleteItems, onCut, onPaste,
+  } = explorer;
 
   // 当前活动标签对应的文档 id（用于树中高亮正在编辑的文档）
   const activeDocId = useMemo(() => {
@@ -85,6 +112,8 @@ export default function ExplorerSidebar() {
   // 拖拽悬停高亮的文件夹
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<SidebarContextMenu | null>(null);
+  // 「打开的编辑器」行的右键菜单（对齐 VS Code：切换/打开到侧边/复制路径/关闭组）
+  const [openEditorMenu, setOpenEditorMenu] = useState<{ x: number; y: number; key: string } | null>(null);
 
   useEffect(() => {
     localStorage.setItem(KEY_COLLAPSED, collapsed ? '1' : '0');
@@ -137,12 +166,63 @@ export default function ExplorerSidebar() {
     return () => clearTimeout(timer);
   }, [currentFolderId, expandedFolders]);
 
+  // ===== 单一高亮：文件夹与文档共用一个高亮位（同一时刻只有一个高亮项）=====
+  const [highlight, setHighlight] = useState<{ kind: 'folder' | 'doc'; id: string } | null>(null);
+  // 树行点击文件夹时设置，使 currentFolderId 联动 effect 不覆盖显式点击的高亮
+  const folderNavRef = useRef<string | null>(null);
+
+  // 切换编辑标签 / 打开文档 → 高亮该文档，并同步树选区（对齐 VS Code explorer.autoReveal
+  // 默认行为："Files will be revealed and selected"——展开祖先、滚动定位由下方既有 effect 完成）
+  useEffect(() => {
+    if (activeDocId) {
+      setHighlight({ kind: 'doc', id: activeDocId });
+      setSelectedIds([activeDocId]);
+    }
+  }, [activeDocId]);
+
+  // 当前目录变化（网格导航 / 打开文档联动）→ 高亮对应文件夹；
+  // 若是打开文档带来的联动（文档就在该目录内），保持文档高亮。
+  // 仅在 currentFolderId 真正变化时执行：切换标签（activeDocId 变化）不在此列，
+  // 否则旧浏览目录的高亮会覆盖刚点选/激活的文档行
+  const lastSyncedFolderIdRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (currentFolderId === lastSyncedFolderIdRef.current) return;
+    lastSyncedFolderIdRef.current = currentFolderId;
+    if (!currentFolderId) return;
+    if (folderNavRef.current === currentFolderId) {
+      folderNavRef.current = null;
+      setHighlight({ kind: 'folder', id: currentFolderId });
+      return;
+    }
+    const activeChar = myCharacters.find(c => c.id === activeDocId);
+    if (activeChar && (activeChar.folderId ?? null) === currentFolderId) {
+      setHighlight({ kind: 'doc', id: activeChar.id });
+    } else {
+      setHighlight({ kind: 'folder', id: currentFolderId });
+    }
+  }, [currentFolderId, myCharacters, activeDocId]);
+
+  // 高亮文档时自动展开其祖先链，保证高亮行可见
+  useEffect(() => {
+    if (highlight?.kind !== 'doc') return;
+    const char = myCharacters.find(c => c.id === highlight.id);
+    let cur = char?.folderId ?? null;
+    let guard = 0;
+    while (cur && guard++ < 10) {
+      try { treeRef.current?.open?.(`folder-${cur}`); } catch { /* 树未挂载时忽略 */ }
+      cur = folders.find(f => f.id === cur)?.parentId ?? null;
+    }
+  }, [highlight, myCharacters, folders]);
+
   // 树视口尺寸（arborist 虚拟化需要显式宽高）
   const treeWrapRef = useRef<HTMLDivElement>(null);
   const [treeSize, setTreeSize] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const el = treeWrapRef.current;
     if (!el || !vaultExpanded || collapsed) return;
+    // 挂载/重开时同步测量一次：RO 回调依赖渲染步，Chrome 对后台标签页会冻结渲染管线，
+    // 若只在 observe 后等回调，后台挂载的页面树会一直空白
+    setTreeSize({ w: el.clientWidth, h: el.clientHeight });
     const ro = new ResizeObserver(entries => {
       const r = entries[0].contentRect;
       setTreeSize({ w: r.width, h: r.height });
@@ -153,10 +233,11 @@ export default function ExplorerSidebar() {
 
   // ===== arborist 树数据 =====
   const treeData = useMemo<ArborNode[]>(() => {
+    // 文件树显示文件名（与档案库网格一致）；文件名与角色名已解耦，不回退到角色名
     const docName = (doc: any) =>
       doc.isTemplate
         ? (doc.name || '未命名模板').replace(/\.bbc$/i, '')
-        : (doc.data?.basic?.name || doc.name || '未命名人物');
+        : (doc.name || '未命名文件').replace(/\.(pf1|lnk)$/i, '');
     const docNodes = (parentId: string | null): ArborNode[] =>
       myCharacters
         .filter(c => (c.folderId ?? null) === parentId)
@@ -165,6 +246,7 @@ export default function ExplorerSidebar() {
           name: docName(doc),
           isFolder: false,
           docId: doc.id,
+          parentFolderId: parentId,
           isTemplate: !!doc.isTemplate,
           isLink: !!doc.targetId,
         }));
@@ -176,6 +258,8 @@ export default function ExplorerSidebar() {
           id: `folder-${folder.id}`,
           name: folder.name || '未命名文件夹',
           isFolder: true,
+          docId: folder.id,
+          parentFolderId: parentId,
           children: [
             ...folderNodes(folder.id),
             ...docNodes(folder.id),
@@ -184,48 +268,37 @@ export default function ExplorerSidebar() {
     return [...folderNodes(null), ...docNodes(null)];
   }, [folders, myCharacters]);
 
-  // ===== 拖拽（原生 HTML5 协议，与档案库视图互通）=====
-  const parseDropPayload = (e: React.DragEvent): DragPayload[] => {
-    const raw = e.dataTransfer?.getData(DND_MIME);
-    if (raw) {
-      try {
-        const p = JSON.parse(raw);
-        if (p.type === 'multiple' && Array.isArray(p.ids)) {
-          // 多选拖拽：根据 folders 成员关系判断各项类型
-          return p.ids.map((id: string) => ({
-            id,
-            type: folders.some((f: any) => f.id === id) ? 'folder' : 'character',
-          }));
-        }
-        return [{ id: p.id, type: p.type === 'folder' ? 'folder' : 'character' }];
-      } catch { /* 忽略无法解析的负载 */ }
-    }
-    return [];
-  };
+  // 树数据的扁平序（shift 范围选择用）
+  const flatOrder = useMemo(() => {
+    const out: string[] = [];
+    const walk = (nodes: ArborNode[]) => {
+      for (const n of nodes) {
+        out.push(n.docId!);
+        if (n.children) walk(n.children);
+      }
+    };
+    walk(treeData);
+    return out;
+  }, [treeData]);
+  const folderIdSet = useMemo(() => new Set(folders.map((f: any) => f.id)), [folders]);
 
-  const moveItemsToFolder = async (items: DragPayload[], targetFolderId: string | null) => {
-    const targets = items.filter(it => it.id !== targetFolderId);
-    if (!targets.length) return;
-    try {
-      await Promise.all(targets.map(async it => {
-        if (it.type === 'folder') await moveFolder(it.id, targetFolderId);
-        else await moveCharacter(it.id, targetFolderId);
-      }));
-      setToast({ message: `已移动 ${targets.length} 项`, type: 'success' });
-    } catch (e: any) {
-      setToast({ message: '移动失败：' + (e?.message || '未知错误'), type: 'error' });
-    }
-  };
+  // 选区自愈：条目被删除/移动后从选区移除
+  useEffect(() => {
+    setSelectedIds(prev => {
+      const next = prev.filter(id => myCharacters.some(c => c.id === id) || folders.some((f: any) => f.id === id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [myCharacters, folders]);
 
-  const hasPayload = (e: React.DragEvent) => e.dataTransfer?.types?.includes(DND_MIME);
-
-  // 树行渲染（arborist 虚拟化；拖拽走原生协议，禁用其内部 DnD）
+  // 树行渲染（arborist 虚拟化；拖拽走共享业务层的原生协议，禁用其内部 DnD）
   const renderRow = ({ node, style }: NodeRendererProps<ArborNode>) => {
     const data = node.data;
     const isFolder = data.isFolder;
-    const active = isFolder
-      ? currentFolderId === data.docId
-      : view !== 'vault' && view !== 'svg-template' && data.docId === activeDocId;
+    // 单一高亮：文件夹与文档共用一个高亮位
+    const active = highlight?.kind === (isFolder ? 'folder' : 'doc') && highlight.id === data.docId;
+    const isSelected = selectedIds.includes(data.docId!);
+    // 落点：文件夹行 = 自身；文档行 = 其父文件夹（即"拖到展开区域即可放入"）
+    const dropTargetFolderId = isFolder ? data.docId! : (data.parentFolderId ?? null);
     const isDragOver = isFolder && dragOverFolderId === data.docId;
     const Icon = isFolder
       ? (node.isOpen ? FolderOpen : Folder)
@@ -236,35 +309,74 @@ export default function ExplorerSidebar() {
         data-tree-row
         draggable
         onDragStart={e => {
-          // 拖出：向档案库视图提供与 VaultContent 一致的协议
-          e.dataTransfer.setData(DND_MIME, JSON.stringify(
-            isFolder ? { id: data.docId, type: 'folder' } : { id: data.docId, type: 'character' }
-          ));
+          // 拖出：行在多选区内时整组拖出（与网格多选拖拽语义一致）
+          const payload: VaultDragItem[] = isSelected && selectedIds.length > 1
+            ? selectedIds.map(sid => ({ id: sid, type: folderIdSet.has(sid) ? 'folder' : 'character' }))
+            : [{ id: data.docId!, type: isFolder ? 'folder' : 'character' }];
+          e.dataTransfer.setData(DND_MIME, encodeDragPayload(payload));
           e.dataTransfer.effectAllowed = 'move';
         }}
         onDragOver={e => {
-          if (isFolder && hasPayload(e)) {
+          if (isFolder && isDragPayload(e)) {
             e.preventDefault();
             e.stopPropagation();
             setDragOverFolderId(data.docId!);
+            return;
+          }
+          // 拖到展开文件夹内的子行（文档行）：高亮其父文件夹，落点 = 父文件夹
+          if (data.parentFolderId && isDragPayload(e)) {
+            e.preventDefault();
+            e.stopPropagation();
+            setDragOverFolderId(data.parentFolderId);
           }
         }}
-        onDragLeave={() => { if (isFolder) setDragOverFolderId(prev => (prev === data.docId ? null : prev)); }}
+        onDragLeave={() => {
+          if (isFolder) setDragOverFolderId(prev => (prev === data.docId ? null : prev));
+          else setDragOverFolderId(prev => (prev && prev === data.parentFolderId ? null : prev));
+        }}
         onDrop={e => {
-          if (!isFolder) return;
+          if (!dropTargetFolderId) return; // 根级文档行：冒泡到树的空白处理（落回根目录）
           e.preventDefault();
           e.stopPropagation();
           setDragOverFolderId(null);
           const items = parseDropPayload(e);
-          if (items.length) moveItemsToFolder(items, data.docId!);
+          if (items.length) moveItemsToFolder(items, dropTargetFolderId);
         }}
-        onClick={() => {
+        onClick={e => {
+          const id = data.docId!;
+          // Ctrl/Cmd 点击：切换选中（不触发打开）
+          if (e.ctrlKey || e.metaKey) {
+            setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+            lastSelectedIdRef.current = id;
+            return;
+          }
+          // Shift 点击：与上次点击项之间的范围选择
+          if (e.shiftKey && lastSelectedIdRef.current) {
+            const a = flatOrder.indexOf(lastSelectedIdRef.current);
+            const b = flatOrder.indexOf(id);
+            if (a >= 0 && b >= 0) {
+              const [s, t] = a < b ? [a, b] : [b, a];
+              setSelectedIds(flatOrder.slice(s, t + 1));
+              return;
+            }
+          }
+          // 普通点击：单选 + 原有打开行为
+          setSelectedIds([id]);
+          lastSelectedIdRef.current = id;
           if (isFolder) {
             // 点击文件夹：展开 + 联动档案库网格显示该文件夹
+            folderNavRef.current = id;
+            setHighlight({ kind: 'folder', id });
             node.toggle();
-            setCurrentFolderId(data.docId!);
+            setCurrentFolderId(id);
           } else {
-            selectCharacter(data.docId!, true, true);
+            setHighlight({ kind: 'doc', id });
+            // Alt+点击 = 打开到侧边新分栏（对齐 VS Code Side by side editing）
+            if (e.altKey) {
+              characterCtx.openDocToSide(id);
+              return;
+            }
+            openDoc(id);
           }
         }}
         onContextMenu={e => {
@@ -272,14 +384,20 @@ export default function ExplorerSidebar() {
           e.stopPropagation();
           setContextMenu({
             x: e.clientX, y: e.clientY,
-            target: { type: isFolder ? 'folder' : 'doc', id: data.docId!, name: data.name },
+            target: { kind: isFolder ? 'folder' : 'doc', id: data.docId!, name: data.name },
           });
         }}
         title={isFolder ? data.name : (data.isTemplate ? '模板' : (data.isLink ? '链接（只读）' : '人物卡'))}
         className={`group flex items-center gap-1.5 px-2 cursor-pointer text-xs select-none transition-colors h-full ${
           isDragOver
             ? 'bg-primary/20 ring-1 ring-inset ring-primary/50'
-            : (active ? 'bg-primary/10 text-primary font-bold' : 'text-stone-600 hover:bg-stone-200/60')
+            : active
+              ? // 焦点行（锚点/活动文档）：选中底色 + 外框（对齐 VS Code activeSelection + focusOutline）
+                'bg-stone-200 text-stone-800 ring-1 ring-inset ring-primary/50'
+              : isSelected
+                ? // 非焦点选中行：纯底色（对齐 VS Code inactiveSelection）
+                  'bg-stone-200 text-stone-800'
+                : 'text-stone-600 hover:bg-stone-200/60'
         }`}
       >
         {isFolder ? (
@@ -297,86 +415,19 @@ export default function ExplorerSidebar() {
     );
   };
 
-  // ===== 右键菜单动作 =====
-  const renameTarget = (type: 'folder' | 'character', id: string, currentName: string) => {
-    const name = window.prompt('重命名', currentName);
-    if (name && name.trim() && name.trim() !== currentName) {
-      Promise.resolve(renameItem(id, type, name.trim()))
-        .then(() => setToast({ message: '已重命名', type: 'success' }))
-        .catch((e: any) => setToast({ message: '重命名失败：' + (e?.message || ''), type: 'error' }));
-    }
-  };
+  // ===== 右键菜单：统一走共享业务层 =====
+  const menuItemsFor = (target: SidebarContextMenu['target']) => buildMenu(target);
 
-  const deleteTarget = (type: 'folder' | 'character', id: string, name: string) => {
-    setConfirmModal({
-      title: `确定删除「${name}」吗？该操作不可撤销。`,
-      onConfirm: () => {
-        // 删除文件夹时，其子树内所有打开的文档标签一并关闭
-        const affectedDocIds: string[] = [];
-        if (type === 'folder') {
-          const doomed = new Set<string>([id]);
-          let grew = true;
-          while (grew) {
-            grew = false;
-            for (const f of folders) {
-              if (doomed.has(f.parentId) && !doomed.has(f.id)) { doomed.add(f.id); grew = true; }
-            }
-          }
-          for (const c of myCharacters) {
-            if (c.folderId && doomed.has(c.folderId)) affectedDocIds.push(c.id);
-          }
-        } else {
-          affectedDocIds.push(id);
-        }
-        Promise.resolve(type === 'folder' ? deleteFolder(id) : deleteCharacter(id))
-          .then(() => {
-            closeTabsByDocIds(affectedDocIds);
-            setToast({ message: '已删除', type: 'success' });
-          })
-          .catch((e: any) => setToast({ message: '删除失败：' + (e?.message || ''), type: 'error' }));
-      }
+  // 「打开的编辑器」行右键菜单：与标签条同一份统一构建器（与聚焦/激活无关）
+  const openEditorMenuItems = (tabKey: string) => {
+    const tab = tabs.find(t => t.key === tabKey);
+    if (!tab) return [];
+    return buildTabMenuItems({
+      tab,
+      ctx: characterCtx,
+      ui: { setForumSyncOpen, gmCompactMode, setGmCompactMode, setBbcodeHelpOpen, setToast, t },
+      liveDirty,
     });
-  };
-
-  const createSubFolder = (parentId: string | null) => {
-    const name = window.prompt('新建文件夹', '新建文件夹');
-    if (name && name.trim()) {
-      Promise.resolve(createFolder(name.trim(), parentId))
-        .then(() => {
-          if (parentId) setExpandedFolders(prev => new Set(prev).add(parentId));
-          setToast({ message: '文件夹已创建', type: 'success' });
-        })
-        .catch((e: any) => setToast({ message: '创建失败：' + (e?.message || ''), type: 'error' }));
-    }
-  };
-
-  const menuItemsFor = (target: SidebarContextMenu['target']) => {
-    if (target.type === 'folder') {
-      return [
-        { label: '新建子文件夹', icon: FolderPlus, onClick: () => createSubFolder(target.id) },
-        { label: '剪切', icon: Scissors, onClick: () => onCut([target.id!]) },
-        { label: '粘贴到此处', icon: ClipboardPaste, onClick: () => Promise.resolve(onPaste(target.id)).catch(console.error) },
-        { label: '重命名', icon: Pencil, onClick: () => renameTarget('folder', target.id!, target.name) },
-        { label: '删除', icon: Trash2, danger: true, onClick: () => deleteTarget('folder', target.id!, target.name) },
-      ];
-    }
-    if (target.type === 'doc') {
-      return [
-        { label: '打开', icon: ExternalLink, onClick: () => selectCharacter(target.id!, true, true) },
-        { label: '剪切', icon: Scissors, onClick: () => onCut([target.id!]) },
-        { label: '重命名', icon: Pencil, onClick: () => renameTarget('character', target.id!, target.name) },
-        { label: '删除', icon: Trash2, danger: true, onClick: () => deleteTarget('character', target.id!, target.name) },
-      ];
-    }
-    // 背景：新建 / 粘贴 / 导入 / 云备份恢复（原档案库工具条操作迁入）
-    return [
-      { label: '新建文件夹', icon: FolderPlus, onClick: () => createSubFolder(currentFolderId) },
-      { label: '新建人物卡', icon: FileText, onClick: () => openCharacterTab() },
-      { label: '导入剪贴板', icon: ClipboardPaste, onClick: () => Promise.resolve(importFromClipboard()).catch(console.error) },
-      { label: '云备份', icon: CloudUpload, onClick: () => Promise.resolve(handleCloudBackup()).catch(console.error) },
-      { label: '云恢复', icon: CloudDownload, onClick: () => Promise.resolve(handleCloudRestore()).catch(console.error) },
-      { label: '粘贴到此处', icon: ClipboardPaste, onClick: () => Promise.resolve(onPaste(currentFolderId)).catch(console.error) },
-    ];
   };
 
   // ===== 折叠态：细条 =====
@@ -404,6 +455,86 @@ export default function ExplorerSidebar() {
 
   const liveDirty = isDirty || isTemplateDirty;
 
+  // ===== 键盘导航（对齐 VS Code：↑↓ 移动选区、→← 展开/折叠、Enter 打开、Ctrl+Enter 打开到侧边、
+  //       F2 重命名、Delete 删除、Ctrl+X 剪切、Ctrl+V 粘贴；无回收站，Delete 直接走确认弹窗）=====
+  const onTreeKeyDown = (e: React.KeyboardEvent) => {
+    const tree = treeRef.current;
+    const visible = tree?.visibleNodes ?? [];
+    if (!visible.length) return;
+    const anchorId = selectedIds[selectedIds.length - 1] ?? lastSelectedIdRef.current ?? activeDocId ?? visible[0].data.docId!;
+    const at = Math.max(0, visible.findIndex(n => n.data.docId === anchorId));
+    const cur = visible[at];
+    const pick = (n: typeof cur) => {
+      setSelectedIds([n.data.docId!]);
+      lastSelectedIdRef.current = n.data.docId!;
+      setHighlight(n.data.isFolder ? { kind: 'folder', id: n.data.docId! } : { kind: 'doc', id: n.data.docId! });
+      void tree?.scrollTo(n.id);
+    };
+    switch (e.key) {
+      case 'ArrowDown': {
+        const next = visible[Math.min(visible.length - 1, at + 1)];
+        if (next && next !== cur) pick(next);
+        e.preventDefault();
+        return;
+      }
+      case 'ArrowUp': {
+        const prev = visible[Math.max(0, at - 1)];
+        if (prev && prev !== cur) pick(prev);
+        e.preventDefault();
+        return;
+      }
+      case 'ArrowRight': {
+        if (cur.data.isFolder && !cur.isOpen) tree?.open(cur.id);
+        else {
+          const next = visible[Math.min(visible.length - 1, at + 1)];
+          if (next && next !== cur) pick(next);
+        }
+        e.preventDefault();
+        return;
+      }
+      case 'ArrowLeft': {
+        if (cur.data.isFolder && cur.isOpen) tree?.close(cur.id);
+        else if (cur.parent && cur.parent.level >= 0) pick(cur.parent);
+        else {
+          const prev = visible[Math.max(0, at - 1)];
+          if (prev && prev !== cur) pick(prev);
+        }
+        e.preventDefault();
+        return;
+      }
+      case 'Enter': {
+        const id = cur.data.docId!;
+        if (cur.data.isFolder) tree?.toggle(cur.id);
+        else if (e.ctrlKey || e.metaKey) characterCtx.openDocToSide(id);
+        else openDoc(id);
+        e.preventDefault();
+        return;
+      }
+      case 'F2': {
+        requestRename(cur.data.docId!, cur.data.isFolder ? 'folder' : 'character', cur.data.name);
+        e.preventDefault();
+        return;
+      }
+      case 'Delete': {
+        const scope = selectedIds.includes(cur.data.docId!) ? selectedIds : [cur.data.docId!];
+        void deleteItems(scope);
+        e.preventDefault();
+        return;
+      }
+      default: {
+        const k = e.key.toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && k === 'x') {
+          onCut(selectedIds.includes(cur.data.docId!) ? selectedIds : [cur.data.docId!]);
+          e.preventDefault();
+        } else if ((e.ctrlKey || e.metaKey) && k === 'v') {
+          const target = cur.data.isFolder ? cur.data.docId! : (myCharacters.find(c => c.id === cur.data.docId)?.folderId ?? null);
+          void onPaste(target).catch(console.error);
+          e.preventDefault();
+        }
+      }
+    }
+  };
+
   return (
     <div
       className="relative shrink-0 h-full bg-stone-50 border-r border-stone-200 flex flex-col select-none"
@@ -415,11 +546,27 @@ export default function ExplorerSidebar() {
         <div className="flex items-center gap-0.5">
           <button
             onClick={() => Promise.resolve(refreshCharacterList()).catch(console.error)}
-            title="刷新档案库"
-            className="p-1 rounded text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition-colors"
+            title={pendingSyncCount > 0 ? `刷新档案库（${pendingSyncCount} 项更改待同步）` : '刷新档案库'}
+            className="relative p-1 rounded text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition-colors"
           >
-            <RefreshCw size={13} />
+            <RefreshCw size={13} className={isVaultSyncing ? 'animate-spin' : ''} />
+            {pendingSyncCount > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-amber-500 text-white text-[9px] font-bold leading-[14px] text-center"
+              >
+                {pendingSyncCount > 99 ? '99+' : pendingSyncCount}
+              </span>
+            )}
           </button>
+          {pendingSyncCount > 0 && (
+            <button
+              onClick={() => Promise.resolve(retryVaultSync()).catch(console.error)}
+              title="立即重试同步待处理的更改"
+              className="p-1 rounded text-amber-600 hover:bg-amber-100 transition-colors"
+            >
+              <CloudUpload size={13} />
+            </button>
+          )}
           <button
             onClick={() => setCollapsed(true)}
             title="折叠侧栏"
@@ -469,9 +616,12 @@ export default function ExplorerSidebar() {
             {/* 按分栏分组显示（对标 VS Code 的打开的编辑器分组） */}
             {panes.map((pane, paneIdx) => (
               <div key={pane.id}>
-                <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-bold text-stone-400">
-                  第{paneIdx + 1}栏
-                </div>
+                {/* 单栏时无需栏号区分，仅多栏显示 */}
+                {panes.length > 1 && (
+                  <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-bold text-stone-400">
+                    第{paneIdx + 1}栏
+                  </div>
+                )}
                 {pane.tabKeys.map(key => {
                   const tab = tabs.find(t => t.key === key);
                   if (!tab) return null;
@@ -484,6 +634,11 @@ export default function ExplorerSidebar() {
                     <div
                       key={tab.key}
                       onClick={() => switchTab(tab.key)}
+                      onContextMenu={e => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setOpenEditorMenu({ x: e.clientX, y: e.clientY, key: tab.key });
+                      }}
                       className={`group flex items-center gap-1.5 px-2 py-1 cursor-pointer text-xs transition-colors ${
                         active
                           ? 'bg-primary/10 text-primary font-bold'
@@ -518,21 +673,33 @@ export default function ExplorerSidebar() {
         </button>
         <div
           ref={treeWrapRef}
-          className="flex-1 min-h-0"
-          onDragOver={e => { if (hasPayload(e)) e.preventDefault(); }}
+          tabIndex={0}
+          onKeyDown={onTreeKeyDown}
+          className="flex-1 min-h-0 outline-none"
+          onDragOver={e => {
+            if (!isDragPayload(e)) return;
+            e.preventDefault();
+            // 空白区域 = 根目录落点，清除行高亮
+            setDragOverFolderId(null);
+          }}
           onDrop={e => {
             // 拖到树的空白处 = 移动到根目录
-            if (!hasPayload(e)) return;
+            if (!isDragPayload(e)) return;
             e.preventDefault();
             const items = parseDropPayload(e);
             if (items.length) moveItemsToFolder(items, null);
+          }}
+          onClick={e => {
+            // 点击空白处：清空多选
+            const target = e.target as HTMLElement;
+            if (!target.closest('[data-tree-row]')) setSelectedIds([]);
           }}
           onContextMenu={e => {
             // 空白处右键：背景菜单
             const target = e.target as HTMLElement;
             if (target.closest('[data-tree-row]')) return;
             e.preventDefault();
-            setContextMenu({ x: e.clientX, y: e.clientY, target: { type: 'background', id: null, name: '根目录' } });
+            setContextMenu({ x: e.clientX, y: e.clientY, target: { kind: 'background' } });
           }}
         >
           {user && vaultExpanded && treeSize.h > 0 && treeSize.w > 0 && (
@@ -544,6 +711,7 @@ export default function ExplorerSidebar() {
               indent={12}
               width={treeSize.w}
               height={treeSize.h}
+              dndManager={treeDndManager}
               disableMultiSelection
               disableDrag
               className="h-full"
@@ -574,6 +742,29 @@ export default function ExplorerSidebar() {
           y={contextMenu.y}
           items={menuItemsFor(contextMenu.target)}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* 打开的编辑器：行右键菜单 */}
+      {openEditorMenu && (
+        <ContextMenu
+          x={openEditorMenu.x}
+          y={openEditorMenu.y}
+          items={openEditorMenuItems(openEditorMenu.key)}
+          onClose={() => setOpenEditorMenu(null)}
+        />
+      )}
+
+      {/* 统一业务弹窗（重命名/新建文件夹/删除确认） */}
+      {dialog && (
+        <Dialog
+          type={dialog.type}
+          title={dialog.title}
+          defaultValue={dialog.defaultValue}
+          confirmLabel={dialog.confirmLabel}
+          confirmClassName={dialog.confirmClassName}
+          onConfirm={(val) => { dialog.onConfirm(val); closeDialog(); }}
+          onCancel={closeDialog}
         />
       )}
     </div>

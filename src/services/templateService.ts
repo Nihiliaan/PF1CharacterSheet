@@ -10,20 +10,14 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { getCharacterById, deleteCharacter as deleteCharacterService } from './characterService';
 
 /**
  * BBCode 模板专用服务
  *
- * 模板不再作为特殊"人物卡"塞进 characters 集合（data.content 包裹），
- * 而是存入独立的 templates 集合，文档即模板本身（扁平结构、无 schema 合并、无 dataMigration）：
+ * 模板存入独立的 templates 集合，文档即模板本身
+ * （扁平结构、无 schema 合并、无 dataMigration）：
  *   { name, content, folderId, ownerId, isTemplate: true, createdAt, updatedAt }
- *
- * 兼容策略（迁移即搬）：
- * characters 集合里遗留的 isTemplate 文档继续通过现有 characters 列表读取显示；
- * 当用户编辑并保存一个旧模板时，saveTemplateMigrating 会写入新集合，
- * 成功后 best-effort 删除旧的 characters 文档（删除失败只告警不阻塞）。
- * 新建的模板一律只进新集合。
+ * characters 集合只存人物卡，两者互不混放（遗留文档已由一次性迁移脚本搬空）。
  */
 
 export const TEMPLATE_COLLECTION = 'templates';
@@ -47,8 +41,7 @@ function ensureExtension(name: string, ext: string) {
   return name + ext;
 }
 
-// 同目录下模板名唯一性检查（仅针对新 templates 集合；旧 characters 里的
-// 遗留模板会在首次保存时搬走，不再参与查重）
+// 同目录下模板名唯一性检查（仅针对 templates 集合；人物卡查重走 characterService）
 async function isTemplateNameTaken(name: string, folderId: string | null, userId: string, excludeId?: string) {
   const q = query(
     collection(db, TEMPLATE_COLLECTION),
@@ -134,50 +127,6 @@ export async function saveTemplate(
   return docRef.id;
 }
 
-/**
- * 带旧模板迁移的保存入口：
- * - id 不存在或属于新 templates 集合 → 直接保存
- * - id 属于 characters 集合的遗留模板 → 写入新集合，成功后 best-effort 删除旧文档
- */
-export async function saveTemplateMigrating(
-  payload: { content: string, name?: string },
-  id?: string | null,
-  folderId?: string | null
-): Promise<string> {
-  if (!id) return saveTemplate(payload, null, folderId);
-
-  const existing = await getTemplateById(id);
-  if (existing) {
-    return saveTemplate(payload, id, folderId);
-  }
-
-  // 旧模板迁移路径：从 characters 集合读取旧元数据（名称/目录）
-  let legacy: any = null;
-  try {
-    legacy = await getCharacterById(id);
-  } catch (e) {
-    console.warn('[templateService] 读取旧模板元数据失败，按新建处理:', e);
-  }
-
-  const legacyName = legacy?.isTemplate ? legacy.name : undefined;
-  const legacyFolderId = legacy?.folderId ?? null;
-
-  const newId = await saveTemplate(
-    { ...payload, name: payload.name || legacyName },
-    null,
-    folderId !== undefined ? folderId : legacyFolderId
-  );
-
-  // best-effort 清理旧文档：失败只告警，不阻塞保存
-  try {
-    await deleteCharacterService(id);
-  } catch (e) {
-    console.warn('[templateService] 旧模板（characters 集合）清理失败，已忽略:', e);
-  }
-
-  return newId;
-}
-
 export async function listTemplates(uid: string, folderId?: string | null): Promise<TemplateDocument[]> {
   if (!uid) return [];
   const filters: any[] = [where('ownerId', '==', uid)];
@@ -195,8 +144,33 @@ export async function listTemplates(uid: string, folderId?: string | null): Prom
   });
 }
 
-export async function getTemplateById(id: string): Promise<TemplateDocument | null> {
-  try {
+/**
+ * 以指定 id 创建模板（setDoc 全量写入，含 createdAt/updatedAt）。
+ * 本地优先队列的 flush 入口：saveTemplate 带 id 走的是"更新"分支（不写 createdAt），
+ * 在目标文档不存在时会被 rules 的 create 校验拒绝（isValidTemplate 要求 createdAt）。
+ */
+export async function createTemplateWithId(
+  payload: { content: string, name?: string },
+  id: string,
+  folderId: string | null,
+  uid?: string
+): Promise<string> {
+  const ownerId = uid || auth.currentUser?.uid;
+  if (!ownerId) throw new Error('Must be logged in to save templates');
+  const name = ensureExtension(payload.name?.trim() || '新模板', EXT_TEMPLATE);
+  await setDoc(doc(db, TEMPLATE_COLLECTION, id), {
+    name,
+    content: payload.content,
+    folderId: folderId ?? null,
+    ownerId,
+    isTemplate: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+  return id;
+}
+
+export async function getTemplateById(id: string): Promise<TemplateDocument | null> {  try {
     const docSnap = await getDoc(doc(db, TEMPLATE_COLLECTION, id));
     if (!docSnap.exists()) return null;
     return { id: docSnap.id, ...docSnap.data() } as TemplateDocument;
@@ -242,8 +216,8 @@ export async function moveTemplate(id: string, folderId: string | null): Promise
   await setDoc(doc(db, TEMPLATE_COLLECTION, id), { folderId, updatedAt: serverTimestamp() }, { merge: true });
 }
 
-/** 复制模板（同目录自动生成不重复的副本名） */
-export async function copyTemplate(id: string): Promise<string | undefined> {
+/** 复制模板（同目录自动生成不重复的副本名；newId 提供时以本地生成的副本 id 全量写入） */
+export async function copyTemplate(id: string, newId?: string): Promise<string | undefined> {
   const tpl = await getTemplateById(id);
   if (!tpl) return undefined;
   const uid = auth.currentUser?.uid;
@@ -256,6 +230,18 @@ export async function copyTemplate(id: string): Promise<string | undefined> {
   let counter = 1;
   while (await isTemplateNameTaken(name, tpl.folderId ?? null, uid)) {
     name = `${baseName} (${counter++})${EXT_TEMPLATE}`;
+  }
+  if (newId) {
+    await setDoc(doc(db, TEMPLATE_COLLECTION, newId), {
+      name,
+      content: tpl.content,
+      folderId: tpl.folderId ?? null,
+      ownerId: uid,
+      isTemplate: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return newId;
   }
   return saveTemplate({ content: tpl.content, name }, null, tpl.folderId ?? null);
 }

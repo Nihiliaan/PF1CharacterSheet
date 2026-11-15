@@ -1,12 +1,12 @@
 /**
  * 悬浮球（FloatingBall）：屏幕右侧的全局控制入口。
  * - 可拖动：按住球体自由拖动，松开后水平方向吸附至屏幕右缘，垂直位置记忆（localStorage）
- * - 点击（未拖动）展开面板：语言切换 / 设置 / 关于 / 退出登录（未登录为登录按钮）
+ * - 点击（未拖动）展开面板：语言切换 / 设置 / 关于 / 数据迁移（开发者）/ 退出登录（未登录为登录按钮）
  * - 面板锚定球体，球位于屏幕下半部时向上展开
  */
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Info, Languages, Settings, LogOut } from 'lucide-react';
+import { User, Info, Languages, Settings, LogOut, Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { googleProvider } from '../../lib/firebase';
 import { logout } from '../../services/authService';
@@ -189,6 +189,19 @@ export default function FloatingBall() {
             <button onClick={withClose(() => setView('about'))} className={itemClass(view === 'about')}>
               <Info size={16} className={iconClass(view === 'about')} />
               <span>{t('common.about')}</span>
+            </button>
+
+            {/* 开发者工具：一次性数据迁移（集合迁移 / 人物卡数据结构迁移） */}
+            <button
+              onClick={withClose(() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('dev-migrate', '1');
+                window.location.href = url.toString();
+              })}
+              className={itemClass(false)}
+            >
+              <Database size={16} className="text-stone-400" />
+              <span>数据迁移</span>
             </button>
 
             <div className="h-px bg-stone-100 my-1" />

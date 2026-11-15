@@ -23,6 +23,7 @@ import HeaderBreadcrumb from './components/layout/AppHeader/HeaderBreadcrumb';
 import { CharacterProvider, useCharacter } from './contexts/CharacterContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { listenForOpenRequests } from './utils/tabHandoff';
+import DevMigrationPage from './dev/DevMigrationPage';
 
 const ViewLoadingFallback = () => (
   <div className="h-full w-full flex items-center justify-center bg-stone-50/50">
@@ -31,6 +32,15 @@ const ViewLoadingFallback = () => (
 );
 
 export default function App() {
+  // ⚠️ 一次性迁移工具入口（?dev-migrate=1）：根部短路渲染，不挂载 Vault/Character
+  // Provider（不触碰本地优先同步队列与档案库缓存）。跑完迁移后删除 DevMigrationPage。
+  if (new URLSearchParams(window.location.search).get('dev-migrate') === '1') {
+    return (
+      <AuthProvider>
+        <DevMigrationPage />
+      </AuthProvider>
+    );
+  }
   return (
     <SettingsProvider>
       <AuthProvider>

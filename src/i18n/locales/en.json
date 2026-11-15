@@ -64,6 +64,7 @@
     "new_folder": "New Folder",
     "rename": "Rename",
     "open": "Open",
+    "open_to_side": "Open to the Side",
     "cut": "Cut",
     "paste": "Paste",
     "paste_here": "Paste Here",
@@ -82,6 +83,8 @@
     "rename_file": "Rename File",
     "rename_success": "Rename successful",
     "rename_failed": "Rename failed",
+    "deleted": "Deleted",
+    "import_clipboard": "Import clipboard",
     "empty_vault": "It's empty here...",
     "view_template": "View Template",
     "open_character": "Open Character",
@@ -115,6 +118,9 @@
       "cs_localized": "Class Skill",
       "cs_short": "CS",
       "pfs": "Pathfinder Society"
+    },
+    "toc": {
+      "ruler": "Section navigator & scrollbar"
     },
     "save_as_prompt": "Please enter a name for the new character",
     "save_as_default_name": "Character Copy",

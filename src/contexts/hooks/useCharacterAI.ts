@@ -92,6 +92,8 @@ export const useCharacterAI = (setData: (data: CharacterData) => void, setCurren
 
       setAiStatusMsg('正在同步至跑团卡系统...');
       const transformed = transformAIData(extracted);
+      // AI 产出的是缺字段的全新数据：这里用默认值补全属于数据生成逻辑，非版本迁移
+      // （存量数据的结构迁移已由开发者工具一次性完成，见 src/dev/DevMigrationPage.tsx）
       const mergedData = dataMigration.mergeWithDefault(transformed);
 
       setData(mergedData);

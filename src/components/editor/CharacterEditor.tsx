@@ -1,5 +1,4 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useRef } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { User as FirebaseUser } from 'firebase/auth';
@@ -54,31 +53,31 @@ export default function CharacterEditor({
     );
   }
 
+  // 滚动容器引用：目录滑条按此容器定位与查找区块（多分栏各自独立，避免全局 id 冲突）
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   return (
-    <motion.div
-      key="editor"
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      className="h-full overflow-y-auto"
-    >
-      <TableOfContents />
-      <main className={`max-w-5xl mx-auto py-12 px-4 sm:px-8 pb-32 transition-all duration-300 ${isReadOnly ? 'pointer-events-none opacity-90 grayscale-[0.2]' : ''}`}>
-        <BasicInfoSection />
-        <StorySection />
-        <AttributesSection />
-        <AttacksSection />
-        <DefensesSection />
-        <RacialTraitsSection />
-        <BackgroundTraitsSection />
-        <ClassFeaturesSection />
-        <FeatsSection />
-        <SpellsSection />
-        <SkillsSection />
-        <EquipmentSection />
-        <AdditionalDataSection />
-        <PFSSection />
-      </main>
-    </motion.div>
+    <div className="relative h-full">
+      <TableOfContents scrollRef={scrollRef} />
+      {/* md+ 隐藏原生滚动条：概览标尺（TableOfContents）即滚动条；小屏无标尺，保留原生 */}
+      <div ref={scrollRef} className="h-full overflow-y-auto md:scrollbar-hidden">
+        <main className={`max-w-5xl mx-auto py-12 px-4 sm:px-8 pb-32 transition-all duration-300 ${isReadOnly ? 'pointer-events-none opacity-90 grayscale-[0.2]' : ''}`}>
+          <BasicInfoSection />
+          <StorySection />
+          <AttributesSection />
+          <AttacksSection />
+          <DefensesSection />
+          <RacialTraitsSection />
+          <BackgroundTraitsSection />
+          <ClassFeaturesSection />
+          <FeatsSection />
+          <SpellsSection />
+          <SkillsSection />
+          <EquipmentSection />
+          <AdditionalDataSection />
+          <PFSSection />
+        </main>
+      </div>
+    </div>
   );
 }

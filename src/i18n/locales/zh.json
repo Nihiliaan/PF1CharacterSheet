@@ -64,6 +64,7 @@
     "new_folder": "新建文件夹",
     "rename": "重命名",
     "open": "打开",
+    "open_to_side": "打开到侧边",
     "cut": "剪切",
     "paste": "粘贴",
     "paste_here": "粘贴在此",
@@ -82,6 +83,8 @@
     "rename_file": "重命名文件",
     "rename_success": "重命名成功",
     "rename_failed": "重命名失败",
+    "deleted": "已删除",
+    "import_clipboard": "导入剪贴板",
     "empty_vault": "这里空空如也...",
     "view_template": "查看模板",
     "open_character": "打开人物卡",
@@ -115,6 +118,9 @@
       "cs_localized": "本职技能",
       "cs_short": "本职",
       "pfs": "探索者协会"
+    },
+    "toc": {
+      "ruler": "章节导航与滚动条"
     },
     "save_as_prompt": "请输入新人物卡的名称",
     "save_as_default_name": "人物卡副本",

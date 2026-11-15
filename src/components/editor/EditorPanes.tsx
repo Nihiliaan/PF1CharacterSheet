@@ -5,7 +5,8 @@
  *  - 路径行：本栏活动文档的路径（含脏标记 / 只读标记）
  *  - 内容区：聚焦栏渲染 live 状态（可编辑）；未聚焦栏经影子作用域渲染只读视图，
  *    点击分栏任意位置即聚焦（live 状态切换到该栏文档）
- * chooser 标签渲染"新建标签页"大页面；preview 标签实时渲染当前编辑中的模板。
+ * chooser 标签渲染"新建标签页"大页面；preview 标签经 PreviewPane 渲染（人物卡 + 模板
+ * 两个来源下拉，仅列打开的标签与最近文件；点击预览窗格时自动同步刚失去焦点的文档）。
  */
 import React, { useMemo, useRef, useState } from 'react';
 import {
@@ -16,7 +17,6 @@ import { SortableContext, useSortable, horizontalListSortingStrategy } from '@dn
 import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, Columns2, Eye, FileText, Braces, X, ChevronRight, ChevronDown,
-  Save, SaveAll, Share2, FileDown, ClipboardCopy, Swords, Sparkle, Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -31,9 +31,9 @@ import {
 import CharacterEditor from './CharacterEditor';
 import BBCodeTemplateEditor from '../BBCodeTemplateEditor';
 import NewTabPage from './NewTabPage';
-import { DEFAULT_BBCODE_TEMPLATE } from '../../constants';
-import BBCodePreview from '../common/BBCodePreview';
+import PreviewPane from './PreviewPane';
 import ContextMenu from '../common/ContextMenu';
+import { buildTabMenuItems } from './tabMenuItems';
 
 interface TabContextMenu {
   x: number;
@@ -92,6 +92,7 @@ function SortableTabChip({ tabKey, paneId, focused, active, title, dirty, onClos
   return (
     <div
       ref={setNodeRef}
+      data-tab-chip={tabKey}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       {...attributes}
       {...listeners}
@@ -132,11 +133,11 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
   const { t } = useTranslation();
   const {
     tabs, activeTabKey, activeTabTitle, switchTab, closeTab, moveTabToPane, isDirty, isTemplateDirty, isReadOnly,
-    data, getItemPath, bbcodeTemplate, setBbcodeTemplate, currentTemplateId,
-    handleSave, handleSaveAs, handleShare, handleExport, handleExportBBCode,
-    updateExistingTemplate, saveAsTemplate, setShowAIModal,
-    openChooserTab, addPane, openPreviewTab, focusPane, getTabSnapshot,
+    data, getItemPath,
+    openChooserTab, addPane, openPreviewTab, focusPane, getTabSnapshot, panes,
   } = useCharacter();
+  // 完整上下文：供标签右键菜单构建器使用（菜单操作以"先激活再执行"作用于被右键标签）
+  const characterCtx = useCharacter();
   const { gmCompactMode, setGmCompactMode, setForumSyncOpen, setBbcodeHelpOpen, setToast } = useUI();
   const { user } = useAuth();
   const [ctxMenu, setCtxMenu] = useState<TabContextMenu | null>(null);
@@ -157,70 +158,16 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
     return p + (dirty ? '*' : '') + (ro ? ` (${t('common.read_only')})` : '');
   }, [activeTab, focused, isReadOnly, liveDirty, getItemPath, data.basic?.name, t, getTabSnapshot]);
 
-  // ===== 标签右键菜单（文件操作迁自原工具条；仅聚焦栏的活动标签提供保存类操作）=====
+  // ===== 标签右键菜单（统一构建器：菜单只由标签本身决定，与聚焦/激活无关）=====
   const menuItemsFor = (tabKey: string) => {
     const tab = tabs.find(tt => tt.key === tabKey);
     if (!tab) return [];
-    const items: { label: string; icon: any; onClick: () => void; danger?: boolean }[] = [];
-    const isFocusedLive = tabKey === activeTabKey;
-    const isDoc = tab.kind === 'character' || tab.kind === 'template';
-
-    if (isFocusedLive && isDoc && !isReadOnly) {
-      if (tab.kind === 'character') {
-        items.push({ label: '保存', icon: Save, onClick: () => { void handleSave(); } });
-        items.push({ label: '另存为', icon: SaveAll, onClick: () => { void handleSaveAs(); } });
-      } else {
-        items.push({
-          label: '保存', icon: Save,
-          onClick: () => {
-            if (currentTemplateId) void updateExistingTemplate(currentTemplateId, bbcodeTemplate);
-            else {
-              const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
-              if (name) void saveAsTemplate(name, bbcodeTemplate);
-            }
-          },
-        });
-        items.push({
-          label: '另存为', icon: SaveAll,
-          onClick: () => {
-            const name = window.prompt(t('editor.bbcode.prompt_name'), t('editor.bbcode.default_name'));
-            if (name) void saveAsTemplate(name, bbcodeTemplate);
-          },
-        });
-        items.push({ label: '变量参考', icon: ClipboardCopy, onClick: () => setBbcodeHelpOpen(true) });
-        items.push({
-          label: '导入默认模板', icon: FileDown,
-          onClick: () => {
-            if (window.confirm(t('editor.bbcode.confirm_reset'))) {
-              setBbcodeTemplate(DEFAULT_BBCODE_TEMPLATE);
-              setToast({ message: t('editor.bbcode.reset_success'), type: 'success' });
-            }
-          },
-        });
-      }
-      items.push({ label: '分享链接', icon: Share2, onClick: () => { void handleShare(); } });
-      items.push({ label: '导出文件', icon: FileDown, onClick: () => { void handleExport(); } });
-      if (tab.kind === 'character') {
-        items.push({ label: '复制 BBCode', icon: ClipboardCopy, onClick: () => { void handleExportBBCode(); } });
-      } else {
-        // 模板标签：复制原始模板文本（非渲染结果）
-        items.push({
-          label: '复制模板文本', icon: ClipboardCopy,
-          onClick: () => { void navigator.clipboard.writeText(bbcodeTemplate); },
-        });
-      }
-      if (tab.kind === 'character') {
-        items.push({ label: '同步到论坛', icon: Share2, onClick: () => setForumSyncOpen(true) });
-        items.push({
-          label: gmCompactMode ? '退出 GM 紧凑卡' : 'GM 紧凑数据卡', icon: Swords,
-          onClick: () => setGmCompactMode(!gmCompactMode),
-        });
-        items.push({ label: 'AI 识别导入', icon: Sparkle, onClick: () => setShowAIModal(true) });
-      }
-    }
-
-    items.push({ label: '关闭', icon: Trash2, danger: true, onClick: () => closeTab(tabKey) });
-    return items;
+    return buildTabMenuItems({
+      tab,
+      ctx: characterCtx,
+      ui: { setForumSyncOpen, gmCompactMode, setGmCompactMode, setBbcodeHelpOpen, setToast, t },
+      liveDirty,
+    });
   };
 
   const stripBtn = 'p-1 rounded text-stone-400 hover:bg-stone-200 hover:text-stone-800 transition-colors';
@@ -236,43 +183,46 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
         focused ? 'bg-white' : 'bg-stone-100/70'
       } ${paneIndex < paneCount - 1 ? 'border-r border-stone-300' : ''}`}
     >
-      {/* 栏顶小标签条 */}
+      {/* 栏顶小标签条：标签区横向滚动，动作按钮钉在右侧边缘（对齐 VS Code editor actions） */}
       <div
         ref={setStripDropRef}
-        className={`shrink-0 flex items-center gap-0.5 px-1 overflow-x-auto custom-scrollbar ${
+        onContextMenu={e => { e.preventDefault(); }}
+        className={`shrink-0 flex items-stretch gap-0.5 px-1 ${
           focused ? 'bg-stone-50 border-b border-stone-200' : 'bg-stone-200/60 border-b border-stone-300'
         } ${isStripOver ? 'bg-primary/10' : ''}`}
       >
-        <SortableContext items={pane.tabKeys} strategy={horizontalListSortingStrategy}>
-          {pane.tabKeys.map(key => {
-            const tab = tabs.find(tt => tt.key === key);
-            if (!tab) return null;
-            const active = focused && pane.activeTabKey === key;
-            const dirty = active ? liveDirty : tab.dirty;
-            const fallbackTitle = tab.kind === 'character' ? '人物卡' : tab.kind === 'preview' ? '预览' : '未命名模板';
-            const title = active ? activeTabTitle : ((typeof tab.title === 'string' && tab.title.trim() && tab.title.trim() !== '{}' && tab.title.trim() !== '[object Object]') ? tab.title : fallbackTitle);
-            return (
-              <SortableTabChip
-                key={tab.key}
-                tabKey={tab.key}
-                paneId={pane.id}
-                focused={focused}
-                active={active}
-                title={title}
-                dirty={dirty}
-                onClose={() => closeTab(tab.key)}
-                onSwitch={() => switchTab(tab.key)}
-                onMenu={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setCtxMenu({ x: e.clientX, y: e.clientY, tabKey: tab.key });
-                }}
-              />
-            );
-          })}
-        </SortableContext>
+        <div className="flex-1 min-w-0 flex items-center gap-0.5 overflow-x-auto custom-scrollbar">
+          <SortableContext items={pane.tabKeys} strategy={horizontalListSortingStrategy}>
+            {pane.tabKeys.map(key => {
+              const tab = tabs.find(tt => tt.key === key);
+              if (!tab) return null;
+              const active = focused && pane.activeTabKey === key;
+              const dirty = active ? liveDirty : tab.dirty;
+              const fallbackTitle = tab.kind === 'character' ? '人物卡' : tab.kind === 'preview' ? '预览' : '未命名模板';
+              const title = active ? activeTabTitle : ((typeof tab.title === 'string' && tab.title.trim() && tab.title.trim() !== '{}' && tab.title.trim() !== '[object Object]') ? tab.title : fallbackTitle);
+              return (
+                <SortableTabChip
+                  key={tab.key}
+                  tabKey={tab.key}
+                  paneId={pane.id}
+                  focused={focused}
+                  active={active}
+                  title={title}
+                  dirty={dirty}
+                  onClose={() => closeTab(tab.key)}
+                  onSwitch={() => switchTab(tab.key)}
+                  onMenu={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setCtxMenu({ x: e.clientX, y: e.clientY, tabKey: tab.key });
+                  }}
+                />
+              );
+            })}
+          </SortableContext>
+        </div>
 
-        {/* 栏内操作：新建（本栏）；分栏/预览仅在聚焦栏显示一次 */}
+        {/* 栏内操作（钉右侧）：新建（本栏）；分栏/预览仅在聚焦栏显示一次 */}
         <div className="flex items-center gap-0.5 pl-1 pr-0.5 shrink-0 self-stretch">
           <button
             onClick={() => openChooserTab(pane.id)}
@@ -317,21 +267,26 @@ function EditorPaneView({ pane, paneIndex, paneCount, focused }: {
         {!activeTab || activeTab.kind === 'chooser' ? (
           <NewTabPage chooserKey={pane.activeTabKey ?? undefined} />
         ) : activeTab.kind === 'preview' ? (
-          // 预览窗格：实时渲染当前编辑中的模板内容（读 live 状态，无论聚焦与否）
-          <div className="h-full overflow-y-auto custom-scrollbar bg-stone-50 p-4">
-            <BBCodePreview bbcode={bbcodeTemplate} />
-          </div>
+          // 预览窗格：可选择预览来源（人物卡 + 模板两个下拉）；focused 用于"点击同步来源"
+          <PreviewPane tabKey={pane.activeTabKey!} focused={focused} />
         ) : activeTab.kind === 'template' ? (
           focused ? <BBCodeTemplateEditor /> : (
-            <div className="h-full overflow-y-auto custom-scrollbar bg-stone-50 p-4">
-              {(() => {
-                const snap = getTabSnapshot(pane.activeTabKey ?? null);
-                return snap ? <BBCodePreview bbcode={snap.bbcodeTemplate} /> : (
-                  <div className="text-xs text-stone-400 italic">点击聚焦此栏以加载内容</div>
+            (() => {
+              const snap = getTabSnapshot(pane.activeTabKey ?? null);
+              if (!snap) {
+                return (
+                  <div className="h-full flex items-center justify-center text-xs text-stone-400 italic">
+                    点击聚焦此栏以加载内容
+                  </div>
                 );
-              })()}
-              <div className="mt-2 text-[10px] text-stone-400 text-center">只读预览 · 点击分栏任意位置聚焦后可编辑</div>
-            </div>
+              }
+              // 未聚焦栏保持编辑器形态（只读文本域），不切换为渲染预览
+              return (
+                <ShadowScope snapshot={snap}>
+                  <BBCodeTemplateEditor />
+                </ShadowScope>
+              );
+            })()
           )
         ) : focused ? (
           <CharacterEditor user={user} />

@@ -1,12 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Plus, Trash2, ChevronRight, User, Search, Download, HardDrive, Folder, Check, 
-  CloudUpload, RotateCcw, FolderPlus, Grid, List as ListIcon, FilePlus, Sparkles, 
-  Copy, Move, Settings, Cloud, Link, FileText
+import {
+  User, Folder, Check, RotateCcw, Link, FileText
 } from 'lucide-react';
-import { getCharacterById } from '../../services/characterService';
-import { getTemplateById, templateToCharacterDoc } from '../../services/templateService';
 import { FirebaseUser, FolderMetadata } from '../../schema/types';
 import Dialog from '../common/Dialog';
 import ContextMenu from '../common/ContextMenu';
@@ -17,6 +13,8 @@ import { useTranslation } from 'react-i18next';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useUI } from '../../contexts/UIContext';
 import { useVault } from '../../contexts/VaultContext';
+import { useVaultExplorer, type VaultDragItem, type VaultMenuTarget } from '../../contexts/hooks/useVaultExplorer';
+import { saveTemplate } from '../../services/templateService';
 
 const VaultContent = ({
   user,
@@ -27,10 +25,7 @@ const VaultContent = ({
 }) => {
   const { t } = useTranslation();
   const {
-    selectCharacter: onSelect,
     saveCharacter,
-    setData,
-    setCurrentCharacterId,
     // 从 context 中统一获取 Drive 相关状态和动作
     driveModal,
     setDriveModal,
@@ -38,8 +33,6 @@ const VaultContent = ({
     handleBrowseDriveRoot,
     navigateDrive,
     importFromDrive,
-    handleCloudBackup,
-    handleCloudRestore,
     isSyncingDrive,
     navigateToPathIndex,
     // 从 context 中获取 AI 相关动作
@@ -56,23 +49,26 @@ const VaultContent = ({
     currentFolderId,
     setCurrentFolderId,
     refreshCharacterList: onRefresh,
-    moveCharacter,
-    moveFolder,
-    createFolder,
-    deleteFolder,
-    deleteCharacter,
-    renameItem,
-    copyCharacter,
     ensureLocalFolder,
     search,
     viewMode,
-    cutItems,
-    onCut,
-    onPaste,
-    clearClipboard
+    cutItems
   } = useVault();
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: any; isFolder: boolean } | null>(null);
-  const [draggedItem, setDraggedItem] = useState<{ id: string; type: 'character' | 'folder' } | null>(null);
+
+  // 档案库共享业务层（与侧栏文件树共用：拖拽协议/移动/打开/删除/菜单/统一弹窗）
+  const explorer = useVaultExplorer({
+    surface: 'grid',
+    onOpenFolder: setCurrentFolderId,
+    // 网格多选语义：右键项在选区内时删除/剪切整组
+    getDeleteIds: (id) => selectedIds.includes(id) ? selectedIds : [id],
+    getCutIds: (id) => selectedIds.includes(id) ? selectedIds : [id],
+  });
+  const {
+    DND_MIME, encodeDragPayload, parseDropPayload,
+    moveItemsToFolder, openDoc, buildMenu, dialog, closeDialog,
+  } = explorer;
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; target: VaultMenuTarget } | null>(null);
 
   const filteredFolders = folders.filter(f => (f.parentId || null) === currentFolderId && (search ? (f.name || '').toLowerCase().includes(search.toLowerCase()) : true));
   const filteredChars = characters.filter(c => (c.folderId || null) === currentFolderId && (search ? (c.name || '').toLowerCase().includes(search.toLowerCase()) : true));
@@ -102,83 +98,15 @@ const VaultContent = ({
 
   const allItems = [...filteredFolders.map(f => ({ ...f, type: 'folder' })), ...filteredChars.map(c => ({ ...c, type: 'character' }))];
 
-  // 列表数据是投影（仅含名称/头像等元数据，不含完整 data），
-  // 打开角色前必须按 id 拉取完整文档，否则编辑器会拿到残缺数据
-  const openCharacter = async (item: any) => {
-    try {
-      if (item.isTemplate) {
-        // 模板优先从独立的 templates 集合加载；
-        // 未命中则回落到 characters（兼容尚未迁移的旧模板）
-        const tpl = await getTemplateById(item.id).catch(() => null);
-        if (tpl) {
-          onSelect(templateToCharacterDoc(tpl));
-          return;
-        }
-      }
-      const full = await getCharacterById(item.id);
-      if (full) {
-        onSelect(full);
-        return;
-      }
-    } catch (e) {
-      console.error('打开角色失败', e);
-    }
-    setToast({ message: '打开失败：无法加载角色数据', type: 'error' });
-  };
-
-  const handleDragStart = (e: React.DragEvent, id: string, type: 'folder' | 'character') => {
-    if (selectedIds.includes(id)) {
-      setDraggedItem({ id: 'multiple', type: 'character' }); // Special case for multiple
-      e.dataTransfer.setData('text/plain', JSON.stringify({ ids: selectedIds, type: 'multiple' }));
-    } else {
-      setDraggedItem({ id, type });
-      e.dataTransfer.setData('text/plain', JSON.stringify({ id, type }));
-    }
-  };
-
-  // 从拖拽事件或内部状态解析被拖拽项（支持档案库视图与侧栏文件树之间的双向拖拽）
-  const collectDropItems = (e?: React.DragEvent): { id: string; type: 'character' | 'folder' }[] => {
-    const raw = e?.dataTransfer?.getData('text/plain');
-    if (raw) {
-      try {
-        const p = JSON.parse(raw);
-        if (p.type === 'multiple' && Array.isArray(p.ids)) {
-          return p.ids.map((id: string) => ({
-            id,
-            type: folders.some(f => f.id === id) ? 'folder' : 'character',
-          }));
-        }
-        return [{ id: p.id, type: p.type === 'folder' ? 'folder' : 'character' }];
-      } catch { /* 忽略无法解析的负载 */ }
-    }
-    if (draggedItem) {
-      if (draggedItem.id === 'multiple') {
-        return selectedIds.map(id => ({
-          id,
-          type: folders.some(f => f.id === id) ? 'folder' : 'character',
-        }));
-      }
-      return [{ id: draggedItem.id, type: draggedItem.type }];
-    }
-    return [];
-  };
-
-  const handleDropOnFolder = async (targetId: string | null, e?: React.DragEvent) => {
-    const items = collectDropItems(e).filter(it => it.id !== targetId);
-    if (!items.length) return;
-    try {
-      await Promise.all(items.map(async it => {
-        if (it.type === 'folder') await moveFolder(it.id, targetId);
-        else await moveCharacter(it.id, targetId);
+  // 拖出负载：多选时整组拖出（与侧栏共享协议编码）
+  const dragPayloadFor = (id: string, type: 'folder' | 'character'): VaultDragItem[] => {
+    if (selectedIds.includes(id) && selectedIds.length > 1) {
+      return selectedIds.map(sid => ({
+        id: sid,
+        type: folders.some(f => f.id === sid) ? 'folder' : 'character',
       }));
-      if (items.length > 1) setToast({ message: t('common.moved_items', { n: items.length }) });
-      else setToast({ message: t('common.moved_item') });
-      setSelectedIds([]);
-      onRefresh();
-    } catch (e) {
-      setToast({ message: t('common.move_failed'), type: 'error' });
     }
-    setDraggedItem(null);
+    return [{ id, type }];
   };
 
   const handleItemClick = (e: React.MouseEvent, id: string, index: number) => {
@@ -266,15 +194,6 @@ const VaultContent = ({
     return p;
   })();
 
-  const [modal, setModal] = useState<{ 
-    type: 'prompt' | 'confirm', 
-    title: string, 
-    defaultValue?: string,
-    onConfirm: (val: string) => void,
-    confirmLabel?: string,
-    confirmClassName?: string
-  } | null>(null);
-
   const handleImportLocal = async (files: FileList | null) => {
     if (!files || !user) return;
     let importCount = 0;
@@ -328,7 +247,8 @@ const VaultContent = ({
         if (isBbc) {
           const templateContent = content.content || (typeof content === 'string' ? content : text);
           const templateName = content.name || file.name.replace('.bbc', '');
-          await (saveCharacter as any)({ content: templateContent, name: templateName }, undefined, folderId, true);
+          // 模板写入独立的 templates 集合
+          await saveTemplate({ content: templateContent, name: templateName }, undefined, folderId);
         } else {
           // pf1 -彻底剥离可能存在的元数据
           const { id, ownerId, targetId, folderId: oldFolderId, ...cleanData } = content;
@@ -344,7 +264,7 @@ const VaultContent = ({
             ...finalData.basic,
             name: finalData.basic?.name || file.name.replace('.pf1', '')
           };
-          await (saveCharacter as any)(finalData, undefined, folderId, false);
+          await (saveCharacter as any)(finalData, undefined, folderId);
         }
         importCount++;
       } catch (e: any) {
@@ -371,10 +291,11 @@ const VaultContent = ({
       const isTemplate = !!content.content && !content.basic;
 
       if (isTemplate) {
-        await (saveCharacter as any)({ 
-          content: content.content, 
-          name: content.name || t('common.clipboard_content') 
-        }, undefined, currentFolderId, true);
+        // 模板写入独立的 templates 集合
+        await saveTemplate({
+          content: content.content,
+          name: content.name || t('common.clipboard_content')
+        }, undefined, currentFolderId);
       } else {
         if (!content.basic || !content.attributes) throw new Error("无效的人物卡格式");
         const finalData = { ...content };
@@ -388,7 +309,7 @@ const VaultContent = ({
           ...finalData.basic,
           name: finalData.basic?.name || t('common.clipboard_content')
         };
-        await (saveCharacter as any)(finalData, undefined, currentFolderId, false);
+        await (saveCharacter as any)(finalData, undefined, currentFolderId);
       }
       
       onRefresh();
@@ -398,128 +319,16 @@ const VaultContent = ({
     }
   };
 
-  const handleCreateFolder = async () => {
-    setModal({
-      type: 'prompt',
-      title: t('common.new_folder'),
-      defaultValue: t('common.new_folder'),
-      onConfirm: async (name) => {
-        if (name && name.trim()) {
-          const trimmedName = name.trim();
-          try {
-            await createFolder(trimmedName, currentFolderId);
-            onRefresh();
-            setToast({ message: t('common.new_folder') + " " + t('common.save') });
-          } catch (e: any) {
-            setToast({ message: e.message || t('common.failed_to_create_folder'), type: 'error' });
-          }
-        }
-      }
-    });
-  };
-
-  const handleAction = async (action: string, item: any, isFolder: boolean) => {
-    try {
-      if (action === 'delete') {
-        const idsToDelete = (item.id === 'multiple' || selectedIds.includes(item.id)) ? selectedIds : [item.id];
-        setModal({
-          type: 'confirm',
-          title: t('common.delete_confirm', { n: idsToDelete.length }),
-          confirmLabel: t('common.delete_selected'),
-          confirmClassName: 'text-rose-600',
-          onConfirm: async () => {
-            await Promise.all(idsToDelete.map(async id => {
-              const isF = folders.some(f => f.id === id);
-              if (isF) await deleteFolder(id);
-              else await deleteCharacter(id);
-            }));
-            setToast({ message: t('common.delete') + " " + t('common.save') });
-            setSelectedIds([]);
-            onRefresh();
-          }
-        });
-        return; 
-      } else if (action === 'cut') {
-        const idsToCut = selectedIds.includes(item.id) ? selectedIds : [item.id];
-        onCut(idsToCut);
-        return;
-      } else if (action === 'paste') {
-        await onPaste(isFolder ? item.id : currentFolderId);
-        return;
-      } else if (action === 'rename') {
-          // Strip extension for editing if it's a file
-          let editName = item.name || '';
-          if (!isFolder) {
-            const lastDot = editName.lastIndexOf('.');
-            if (lastDot > 0) {
-              if (editName.endsWith('.pf1') || editName.endsWith('.bbc')) {
-                editName = editName.substring(0, lastDot);
-              } else if (editName.endsWith('.lnk')) {
-                const mainName = editName.substring(0, lastDot);
-                const secondDot = mainName.lastIndexOf('.');
-                if (secondDot > 0 && (mainName.endsWith('.pf1') || mainName.endsWith('.bbc'))) {
-                  editName = mainName.substring(0, secondDot);
-                } else {
-                  editName = mainName;
-                }
-              }
-            }
-          }
-
-          setModal({
-            type: 'prompt',
-            title: isFolder ? t('common.rename_folder') : t('common.rename_file'),
-            defaultValue: editName,
-            onConfirm: async (newName) => {
-              const trimmed = newName.trim();
-              if (!trimmed || trimmed === editName) return;
-              try {
-                await renameItem(item.id, isFolder ? 'folder' : 'character', trimmed);
-                setToast({ message: t('common.rename_success') });
-                onRefresh();
-              } catch (e: any) {
-                setToast({ message: e.message || t('common.rename_failed'), type: 'error' });
-              }
-            }
-          });
-          return;
-      } else if (action === 'create_from_link') {
-        if (!item.targetId) return;
-        const targetChar = await getCharacterById(item.targetId);
-        if (targetChar) {
-          await (saveCharacter as any)(targetChar.data, null, currentFolderId, targetChar.isTemplate);
-          setToast({ message: t('common.create_editable_copy') });
-        } else {
-          setToast({ message: t('common.original_not_found'), type: 'error' });
-        }
-      } else if (action === 'copy') {
-        if (selectedIds.includes(item.id)) {
-          await Promise.all(selectedIds.map(id => folders.some(f => f.id === id) ? null : copyCharacter(id)));
-        } else {
-          await copyCharacter(item.id);
-        }
-        setToast({ message: t('common.copy') });
-      } else if (action === 'share') {
-        const shareUrl = `${window.location.origin}${window.location.pathname}?id=${item.id}`;
-        navigator.clipboard.writeText(shareUrl);
-        setToast({ message: t('common.share') });
-      }
-      onRefresh();
-    } catch (e) {
-      setToast({ message: t('common.move_failed'), type: 'error' });
-    }
-  };
-
   return (
     <div 
       className="flex-1 flex flex-col h-full bg-stone-50 overflow-hidden" 
       onContextMenu={e => {
         e.preventDefault();
         const target = e.target as HTMLElement;
-        // Show background context menu if clicking anywhere that isn't an item 
+        // Show background context menu if clicking anywhere that isn't an item
         // OR is explicitly marked as background
         if (!target.closest('.selectable-item')) {
-          setContextMenu({ x: e.clientX, y: e.clientY, item: null, isFolder: false });
+          setContextMenu({ x: e.clientX, y: e.clientY, target: { kind: 'background' } });
         }
       }}
     >
@@ -541,15 +350,16 @@ const VaultContent = ({
         className="hidden"
         onChange={(e) => handleImportLocal(e.target.files)}
       />
-      {modal && (
-        <Dialog 
-          type={modal.type} 
-          title={modal.title} 
-          defaultValue={modal.defaultValue}
-          confirmLabel={modal.confirmLabel}
-          confirmClassName={modal.confirmClassName}
-          onConfirm={(val) => { modal.onConfirm(val); setModal(null); }} 
-          onCancel={() => setModal(null)} 
+      {/* 统一业务弹窗（重命名/新建文件夹/删除确认，与侧栏共享） */}
+      {dialog && (
+        <Dialog
+          type={dialog.type}
+          title={dialog.title}
+          defaultValue={dialog.defaultValue}
+          confirmLabel={dialog.confirmLabel}
+          confirmClassName={dialog.confirmClassName}
+          onConfirm={(val) => { dialog.onConfirm(val); closeDialog(); }}
+          onCancel={closeDialog}
         />
       )}
       {/* Explorer Content */}
@@ -561,9 +371,12 @@ const VaultContent = ({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onDrop={async (e) => {
+        onDrop={e => {
+            // 拖到网格空白处 = 移动到当前目录（与侧栏空白落根目录语义一致）
             e.preventDefault();
-            handleDropOnFolder(currentFolderId, e);
+            const items = parseDropPayload(e);
+            if (items.length) moveItemsToFolder(items, currentFolderId);
+            setSelectedIds([]);
         }}
       >
         {selectionBox && (
@@ -608,14 +421,20 @@ const VaultContent = ({
                   onDoubleClick={() => setCurrentFolderId(folder.id)}
                   onContextMenu={e => {
                     e.preventDefault();
-                    setContextMenu({ x: e.clientX, y: e.clientY, item: folder, isFolder: true });
+                    setContextMenu({ x: e.clientX, y: e.clientY, target: { kind: 'folder', id: folder.id, name: folder.name } });
                   }}
                   draggable
-                  onDragStart={(e) => handleDragStart(e, folder.id, 'folder')}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(DND_MIME, encodeDragPayload(dragPayloadFor(folder.id, 'folder')));
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
                   onDragOver={e => e.preventDefault()}
-                  onDrop={async (e) => {
+                  onDrop={e => {
                       e.stopPropagation();
-                      handleDropOnFolder(folder.id, e);
+                      e.preventDefault();
+                      const items = parseDropPayload(e);
+                      if (items.length) moveItemsToFolder(items, folder.id);
+                      setSelectedIds([]);
                   }}
                 >
                   {/* Windows-style Selection Checkbox */}
@@ -684,14 +503,17 @@ const VaultContent = ({
                   }
                   onClick={(e) => handleItemClick(e, char.id, idx)}
                   onDoubleClick={() => {
-                    openCharacter(char);
+                    openDoc(char.id);
                   }}
                   onContextMenu={e => {
                     e.preventDefault();
-                    setContextMenu({ x: e.clientX, y: e.clientY, item: char, isFolder: false });
+                    setContextMenu({ x: e.clientX, y: e.clientY, target: { kind: 'doc', id: char.id, name: char.name } });
                   }}
                   draggable
-                  onDragStart={(e) => handleDragStart(e, char.id, 'character')}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(DND_MIME, encodeDragPayload(dragPayloadFor(char.id, 'character')));
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
                 >
                   {/* Windows-style Selection Checkbox */}
                   <div 
@@ -749,40 +571,11 @@ const VaultContent = ({
       </div>
 
       {contextMenu && (
-        <ContextMenu 
-          x={contextMenu.x} 
-          y={contextMenu.y} 
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
           onClose={() => setContextMenu(null)}
-          items={
-            contextMenu.item 
-            ? [
-                { 
-                  label: contextMenu.isFolder ? t('common.open') : (contextMenu.item.isTemplate ? t('common.view_template') : t('common.open_character')), 
-                  icon: contextMenu.isFolder ? Folder : (contextMenu.item.isTemplate ? FileText : User), 
-                  onClick: () => {
-                    if (contextMenu.isFolder) {
-                      setCurrentFolderId(contextMenu.item.id);
-                    } else {
-                      openCharacter(contextMenu.item);
-                    }
-                  }
-                },
-                { label: t('common.rename'), icon: Settings, onClick: () => handleAction('rename', contextMenu.item, contextMenu.isFolder) },
-                ...(contextMenu.item.data?.targetId && !contextMenu.isFolder ? [
-                   { label: t('common.create_editable_copy'), icon: Copy, onClick: () => handleAction('create_from_link', contextMenu.item, false) }
-                ] : [
-                   { label: t('common.copy'), icon: Copy, onClick: () => handleAction('copy', contextMenu.item, contextMenu.isFolder) }
-                ]),
-                { label: t('common.cut'), icon: Move, onClick: () => handleAction('cut', contextMenu.item, contextMenu.isFolder) },
-                ...(cutItems.length > 0 ? [{ label: t('common.paste'), icon: Check, onClick: () => handleAction('paste', contextMenu.item, contextMenu.isFolder) }] : []),
-                { label: t('common.delete'), icon: Trash2, onClick: () => handleAction('delete', contextMenu.item, contextMenu.isFolder), danger: true },
-              ]
-            : [
-                { label: t('common.new_character'), icon: FilePlus, onClick: onAdd },
-                { label: t('common.new_folder'), icon: FolderPlus, onClick: handleCreateFolder },
-                ...(cutItems.length > 0 ? [{ label: t('common.paste_here'), icon: Check, onClick: () => handleAction('paste', null, false) }] : []),
-              ]
-          } 
+          items={buildMenu(contextMenu.target)}
         />
       )}
 

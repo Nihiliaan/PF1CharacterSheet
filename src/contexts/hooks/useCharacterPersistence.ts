@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CharacterData, CharacterDocument } from '../../schema/types';
 import { DEFAULT_DATA } from '../../constants/index';
-import { dataMigration } from '../../utils/dataMigration';
 import {
   saveCharacter as saveCharacterService,
   getCharacterById,
@@ -14,14 +13,12 @@ import {
 import { auth } from '../../lib/firebase';
 import { getStoredSettings } from '../SettingsContext';
 import { triggerForumSync } from '../../utils/forumSyncHelper';
-import { saveTemplateMigrating, getTemplateById, templateToCharacterDoc } from '../../services/templateService';
+import { saveTemplate, getTemplateById, templateToCharacterDoc } from '../../services/templateService';
 import { useAuth } from '../AuthContext';
 import { useUI } from '../UIContext';
 import { useVault } from '../VaultContext';
 
 const KEY_LAST_CHAR = 'last_active_character_id';
-// 导出供 CharacterContext 复用（模板保存后同步"当前激活模板"指针）
-export const KEY_LAST_TEMP = 'last_active_template_id';
 
 /**
  * 持久化 hook 的选项对象
@@ -55,7 +52,7 @@ export interface UseCharacterPersistenceOptions {
   // ===== 选项卡系统集成点（由 CharacterContext 提供）=====
   /** 文档被渲染进 live 状态（即"打开了一个文档"）：创建或激活对应选项卡 */
   onOpenDocument?: (docId: string, kind: 'character' | 'template', title?: string) => void;
-  /** 文档保存后 id 变化（另存为 / 模板迁移 / 首次保存）：就地更新活动选项卡的 docId */
+  /** 文档保存后 id 变化（另存为 / 首次保存）：就地更新活动选项卡的 docId */
   onSaveDocument?: (docId: string, kind: 'character' | 'template') => void;
   /** 启动时无 ?id= 参数：呈现新建标签页（由 CharacterContext 打开 chooser） */
   onBootWithoutId?: () => void;
@@ -100,11 +97,11 @@ export const useCharacterPersistence = ({
     folderId?: string | null,
     isTemplate: boolean = false
   ): Promise<string | undefined> => {
-    // 模板走独立的 templates 集合（旧模板在保存时自动迁移搬运）
+    // 模板走独立的 templates 集合
     if (isTemplate) {
-      return await saveTemplateMigrating(saveData as { content: string, name?: string }, id, folderId);
+      return await saveTemplate(saveData as { content: string, name?: string }, id, folderId);
     }
-    const newId = await saveCharacterService(saveData, id || undefined, folderId, isTemplate);
+    const newId = await saveCharacterService(saveData, id || undefined, folderId);
     return newId || undefined;
   };
 
@@ -119,11 +116,10 @@ export const useCharacterPersistence = ({
     id?: string | null,
     isTemplate: boolean = false
   ) => {
-    // 保存导致活动文档的 id 变化（另存为 / 模板迁移 / 未保存新卡首次保存）：就地更新活动选项卡
+    // 保存导致活动文档的 id 变化（另存为 / 未保存新卡首次保存）：就地更新活动选项卡
     onSaveDocument?.(newId, isTemplate ? 'template' : 'character');
     if (isTemplate) {
       setCurrentTemplateId(newId);
-      localStorage.setItem(KEY_LAST_TEMP, newId);
       if ('content' in saveData) {
         setLastSavedTemplate(saveData.content);
       }
@@ -288,11 +284,10 @@ export const useCharacterPersistence = ({
         setLastSavedTemplate(serverContent);
         if (shouldSwitchView) setView('editor');
         setCurrentTemplateId(char.id);
-        localStorage.setItem(KEY_LAST_TEMP, char.id);
       } else {
-        const merged = dataMigration.mergeWithDefault(char.data);
-        setData(merged);
-        setLastSavedData(JSON.parse(JSON.stringify(merged)));
+        // 数据结构迁移已由开发者工具一次性完成并回写，加载期不再做迁移/默认值合并
+        setData(char.data);
+        setLastSavedData(JSON.parse(JSON.stringify(char.data)));
         setCurrentCharacterId(char.id);
         localStorage.setItem(KEY_LAST_CHAR, char.id);
 
@@ -312,7 +307,7 @@ export const useCharacterPersistence = ({
                 setConfirmModal({
                   title: "检测到版本冲突：该角色在云端已有更新版本。是否仍要载入此设备上的本地未保存草稿？",
                   onConfirm: () => {
-                    setData(dataMigration.mergeWithDefault(draftData));
+                    setData(draftData);
                     setToast({ message: "已载入本地未保存草稿", type: 'info' });
                   },
                   onCancel: () => {
@@ -321,7 +316,7 @@ export const useCharacterPersistence = ({
                   }
                 });
               } else {
-                setData(dataMigration.mergeWithDefault(draftData));
+                setData(draftData);
                 setToast({ message: "已自动载入本地保留的未保存修改", type: 'info' });
               }
             } catch (err) {
@@ -339,7 +334,7 @@ export const useCharacterPersistence = ({
       window.history.replaceState({}, '', url.toString());
       // 选项卡系统：文档渲染进 live 状态即视为"打开"，登记/激活对应选项卡
       const openTitle = char.isTemplate
-        ? (char.name || '')
+        ? (char.name || '').replace(/\.bbc$/i, '')
         : (char.data?.basic?.name || char.name || '');
       onOpenDocument?.(char.id, char.isTemplate ? 'template' : 'character', openTitle);
     };
@@ -440,7 +435,7 @@ export const useCharacterPersistence = ({
             setTimeout(() => setSyncStatus('idle'), 3000);
             setIsReadOnly(checkIsReadOnly(cachedDoc, auth.currentUser || user));
           } else {
-            // 兜底：可能是存放在独立 templates 集合的新一代模板
+            // 集合路由：characters 未命中 → 该 id 可能是模板（templates 集合）
             const tpl = await getTemplateById(id).catch(() => null);
             if (tpl) {
               renderCharacterDocument(templateToCharacterDoc(tpl), shouldSwitchView);
@@ -540,7 +535,7 @@ export const useCharacterPersistence = ({
           doc = await getCharacterById(targetId);
         }
         if (!doc && targetId === currentTemplateId) {
-          // 兜底：模板可能已迁移到独立的 templates 集合
+          // 集合路由：当前文档是模板 → 直接查 templates 集合
           const tpl = await getTemplateById(targetId).catch(() => null);
           if (tpl) doc = templateToCharacterDoc(tpl);
         }
