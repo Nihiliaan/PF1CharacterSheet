@@ -82,7 +82,7 @@ const SkillsTableRow = memo(({
         );
       })}
       
-      <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors pointer-events-auto">
+      <td className="p-0 text-center align-middle w-5 border-stone-300 relative group-hover:bg-stone-100 transition-colors pointer-events-auto">
         <div className="flex items-center justify-center w-full h-[32px] opacity-0 group-hover:opacity-100 transition-opacity">
           {isGhost ? (
              <button onClick={() => onActivate?.()} className="text-green-600 hover:text-green-700 p-1" title={t('common.add')}><Plus size={16} /></button>
@@ -242,7 +242,7 @@ export default function SkillsTable(props: DynamicTableProps & { minWidth?: stri
                 </th>
               );
             })}
-            <th className="w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors pointer-events-auto">{!showAll && rowDraggable && onRowActionModeToggle && (<button type="button" onClick={onRowActionModeToggle} className="p-1.5 w-full flex justify-center text-stone-400 hover:text-stone-900 transition-colors">{rowActionMode === 'drag' ? <GripVertical size={16} /> : <Trash2 size={16} className="text-red-400 hover:text-red-500" />}</button>)}</th>
+            <th className="w-5 border-stone-300 relative group-hover:bg-stone-100 transition-colors pointer-events-auto">{!showAll && rowDraggable && onRowActionModeToggle && (<button type="button" onClick={onRowActionModeToggle} className="p-1.5 w-full flex justify-center text-stone-400 hover:text-stone-900 transition-colors">{rowActionMode === 'drag' ? <GripVertical size={16} /> : <Trash2 size={16} className="text-red-400 hover:text-red-500" />}</button>)}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-300">

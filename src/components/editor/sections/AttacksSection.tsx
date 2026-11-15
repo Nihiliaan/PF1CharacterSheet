@@ -4,7 +4,6 @@ import Section from '../../common/Section';
 import DynamicTable from '../../common/DynamicTable';
 import MultilineInput from '../../common/MultilineInput';
 import { useCharacter } from '../../../contexts/CharacterContext';
-import { getHandlerByPath } from '../../../schema/fieldRegistry';
 
 const AttacksSection: React.FC = () => {
   const { t } = useTranslation();
@@ -18,34 +17,14 @@ const AttacksSection: React.FC = () => {
     handleTableItemDrop
   } = useCharacter();
 
-  // 近战/远程视为同一张表对齐：按列取两组内容"显示文本"的并集最长值作为联合定宽行，
-  // 传入两张表的 sizerRows（隐藏行）使它们的 auto 布局解析出相同的列宽。
-  // 注意必须用 formatDisplay 后的文本（如 damageType 291 → "穿刺/挥砍/钝击"），原始值宽度不等于显示宽度
-  const sizerRows = React.useMemo(() => {
-    const meleeKeys = ['weapon', 'hit', 'damage', 'critRange', 'critMultiplier', 'touch', 'damageType', 'special'];
-    const rangedKeys = ['weapon', 'hit', 'damage', 'critRange', 'critMultiplier', 'range', 'damageType', 'special'];
-    const displayed = (arr: any, k: string) => ((arr || {})[k] || []).map((v: any) => {
-      const h = getHandlerByPath(`attacks.melee.${k}[0]`) || getHandlerByPath(`attacks.ranged.${k}[0]`);
-      try {
-        return h?.formatDisplay ? String(h.formatDisplay(v, { t, data })) : String(v ?? '');
-      } catch {
-        return String(v ?? '');
-      }
-    });
-    const row = meleeKeys.map((_, idx) => {
-      const k = meleeKeys[idx] === 'touch' ? 'range' : meleeKeys[idx];
-      const pooled = [...displayed(data.attacks?.melee, meleeKeys[idx]), ...displayed(data.attacks?.ranged, k)];
-      return pooled.sort((a, b) => b.length - a.length)[0] || '';
-    });
-    return [row];
-  }, [data.attacks?.melee, data.attacks?.ranged, t]);
-
   return (
     <Section id="attacks" title={t('editor.sections.attacks')}>
       <div className="flex flex-col gap-0 border border-stone-300 rounded overflow-hidden shadow-sm">
         <div className="border-b border-stone-200">
           <DynamicTable
             minWidth="0"
+            bordered={false}
+          fixedLayout={true}
             path="attacks.melee"
             data={data.attacks.melee}
             originalData={lastSavedData.attacks?.melee}
@@ -54,11 +33,13 @@ const AttacksSection: React.FC = () => {
             rowActionMode={tableActionMode}
             onRowActionModeToggle={toggleTableActionMode}
             onRowReorder={(from, to) => reorderRows('attacks.melee', from, to)}
-            sizerRows={sizerRows}
           />
         </div>
         <DynamicTable
           minWidth="0"
+          bordered={false}
+          fixedLayout={true}
+          noFirstRowInsert={true}
           path="attacks.ranged"
           data={data.attacks.ranged}
           originalData={lastSavedData.attacks?.ranged}
@@ -67,7 +48,6 @@ const AttacksSection: React.FC = () => {
           rowActionMode={tableActionMode}
           onRowActionModeToggle={toggleTableActionMode}
           onRowReorder={(from, to) => reorderRows('attacks.ranged', from, to)}
-          sizerRows={sizerRows}
         />
       </div>
       <MultilineInput

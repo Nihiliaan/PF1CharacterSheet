@@ -37,28 +37,29 @@ const AttributesTableHandler = new BaseTable({
 });
 
 const MeleeAttackTableHandler = new BaseTable({
+  // 近战/远程共用同一套百分比列宽 + fixedLayout：两表逐列像素级一致（用户要求视为同一表对齐）
   columns: [
-    { key: 'weapon', label: 'editor.attacks.melee', width: '1%', type: 'name' },
-    { key: 'hit', label: 'editor.attacks.hit', width: '1%', type: 'bonus' },
-    { key: 'damage', label: 'editor.attacks.damage', width: '1%', type: 'name' },
-    { key: 'critRange', label: 'editor.attacks.crit_range', width: '1%', type: 'critRange' },
-    { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '1%', type: 'critMultiplier' },
-    { key: 'touch', label: 'editor.attacks.reach', width: '1%', type: 'distance' },
-    { key: 'damageType', label: 'editor.attacks.damage_type', width: '1%' },
-    { key: 'special', label: 'editor.attacks.special', width: '25%', type: 'name' }
+    { key: 'weapon', label: 'editor.attacks.melee', width: '15%', type: 'name' },
+    { key: 'hit', label: 'editor.attacks.hit', width: '9%', type: 'bonus' },
+    { key: 'damage', label: 'editor.attacks.damage', width: '9%', type: 'name' },
+    { key: 'critRange', label: 'editor.attacks.crit_range', width: '10%', type: 'critRange' },
+    { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '10%', type: 'critMultiplier' },
+    { key: 'touch', label: 'editor.attacks.reach', width: '9%', type: 'distance' },
+    { key: 'damageType', label: 'editor.attacks.damage_type', width: '12%' },
+    { key: 'special', label: 'editor.attacks.special', width: '26%', align: 'center' }
   ]
 });
 
 const RangedAttackTableHandler = new BaseTable({
   columns: [
-    { key: 'weapon', label: 'editor.attacks.ranged', width: '1%', type: 'name' },
-    { key: 'hit', label: 'editor.attacks.hit', width: '1%', type: 'bonus' },
-    { key: 'damage', label: 'editor.attacks.damage', width: '1%', type: 'name' },
-    { key: 'critRange', label: 'editor.attacks.crit_range', width: '1%', type: 'critRange' },
-    { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '1%', type: 'critMultiplier' },
-    { key: 'range', label: 'editor.attacks.range', width: '1%', type: 'distance' },
-    { key: 'damageType', label: 'editor.attacks.damage_type', width: '1%' },
-    { key: 'special', label: 'editor.attacks.special', width: '25%', type: 'name' }
+    { key: 'weapon', label: 'editor.attacks.ranged', width: '15%', type: 'name' },
+    { key: 'hit', label: 'editor.attacks.hit', width: '9%', type: 'bonus' },
+    { key: 'damage', label: 'editor.attacks.damage', width: '9%', type: 'name' },
+    { key: 'critRange', label: 'editor.attacks.crit_range', width: '10%', type: 'critRange' },
+    { key: 'critMultiplier', label: 'editor.attacks.crit_multiplier', width: '10%', type: 'critMultiplier' },
+    { key: 'range', label: 'editor.attacks.range', width: '9%', type: 'distance' },
+    { key: 'damageType', label: 'editor.attacks.damage_type', width: '12%' },
+    { key: 'special', label: 'editor.attacks.special', width: '26%', align: 'center' }
   ]
 });
 

@@ -140,7 +140,7 @@ export default function SpellTable({
                 {t(c.label)}
               </th>
             ))}
-            <th className="w-8 p-0 align-middle border-stone-300" />
+            <th className="w-5 p-0 align-middle border-stone-300" />
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-300">
@@ -195,7 +195,7 @@ export default function SpellTable({
                     </td>
                   );
                 })}
-                <td className="p-0 text-center align-middle w-8 border-stone-300 relative group-hover:bg-stone-100 transition-colors">
+                <td className="p-0 text-center align-middle w-5 border-stone-300 relative group-hover:bg-stone-100 transition-colors">
                   <div className="flex items-center justify-center w-full h-[32px] opacity-0 group-hover:opacity-100 transition-opacity">
                     {(spellType === 5 || i === 0) && (
                       <button
