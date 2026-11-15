@@ -89,7 +89,7 @@ const SkillsTableHandler = new BaseTable({
     { key: 'rank', label: 'editor.skills.headers.rank', width: '1%', type: 'level' },
     { key: 'cs', label: 'editor.skills.headers.cs', width: '1%', type: 'classSkill' },
     { key: 'ability', label: 'editor.skills.headers.ability', width: '1%', type: 'attributeIndex' },
-    { key: 'others', label: 'editor.skills.headers.others', width: '1%' },
+    { key: 'others', label: 'editor.skills.headers.others', width: '1%', type: 'name', align: 'left' },
     { key: 'special', label: 'editor.skills.headers.special', minWidth: '200px' }
   ],
   sortableColumns: ['name', 'total', 'rank', 'cs', 'ability']
@@ -105,7 +105,7 @@ const SimpleListHandler = new BaseTable({
 const BackgroundTraitsTableHandler = new BaseTable({
   columns: [
     { key: 'name', label: 'editor.lists.name', width: '1%', type: 'name' },
-    { key: 'type', label: 'editor.lists.type', width: '1%' },
+    { key: 'type', label: 'editor.lists.type', width: '1%', type: 'name', align: 'left' },
     { key: 'desc', label: 'editor.lists.description', minWidth: '200px' }
   ]
 });
@@ -159,8 +159,8 @@ const PfsChroniclesTableHandler = new BaseTable({
   columns: [
     { key: 'date', label: 'editor.pfs.chronicle_date', width: '1%', type: 'date' },
     { key: 'scenario', label: 'editor.pfs.chronicle_scenario', minWidth: '140px', type: 'text' },
-    { key: 'gm', label: 'editor.pfs.chronicle_gm', width: '1%', type: 'text' },
-    { key: 'event', label: 'editor.pfs.chronicle_event', width: '1%', type: 'text' },
+    { key: 'gm', label: 'editor.pfs.chronicle_gm', width: '1%', type: 'name' },
+    { key: 'event', label: 'editor.pfs.chronicle_event', width: '1%', type: 'name' },
     { key: 'faction', label: 'editor.pfs.chronicle_faction', width: '1%', type: 'pfsFaction' },
     { key: 'prestige', label: 'editor.pfs.chronicle_pp', width: '1%', type: 'halfInt' },
     { key: 'notes', label: 'editor.pfs.chronicle_notes', width: '1%', type: 'text' },
@@ -171,9 +171,9 @@ const PfsChroniclesTableHandler = new BaseTable({
 const FeatsTableHandler = new BaseTable({
   columns: [
     { key: 'level', label: 'editor.lists.level', width: '1%', type: 'level' },
-    { key: 'source', label: 'editor.lists.source', width: '1%' },
+    { key: 'source', label: 'editor.lists.source', width: '1%', type: 'name', align: 'left' },
     { key: 'name', label: 'editor.lists.name', width: '1%', type: 'name' },
-    { key: 'type', label: 'editor.lists.type', width: '1%' },
+    { key: 'type', label: 'editor.lists.type', width: '1%', type: 'name', align: 'left' },
     { key: 'desc', label: 'editor.lists.description', minWidth: '200px' }
   ]
 });
