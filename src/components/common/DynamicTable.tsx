@@ -12,7 +12,7 @@ import { flushSync } from 'react-dom';
 import DynamicInput from './DynamicInput';
 
 const DynamicTableRow = memo(({
-  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, onRowReorder, sortableEnabled, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions, onInsertAbove, onInsertBelow, noFirstRowInsert
+  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, onRowReorder, sortableEnabled, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions, onInsertAbove, noFirstRowInsert
 }: any) => {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: `row-${i}`, data: { index: i }, disabled: !sortableEnabled });
   const getCellPath = (basePath: string, index: number, key: string) => {
@@ -58,24 +58,10 @@ const DynamicTableRow = memo(({
               <div
                 onClick={onInsertAbove}
                 title="在此处添加行"
-                className="absolute inset-x-0 top-0 h-[8px] z-20 cursor-pointer opacity-0 hover:opacity-100"
+                className="absolute inset-x-0 top-0 h-[4px] z-20 cursor-pointer opacity-0 hover:opacity-100"
               >
                 <div className="absolute top-0 inset-x-2 border-t border-dashed border-primary/70 flex justify-center">
                   <span className="absolute -top-[9px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
-                    <Plus size={9} /> 添加行
-                  </span>
-                </div>
-              </div>
-            )}
-            {ci === 0 && onInsertBelow && (
-              <div
-                onClick={onInsertBelow}
-                title="在此处添加行"
-                className="absolute inset-x-0 bottom-0 h-[8px] z-20 cursor-pointer opacity-0 hover:opacity-100"
-              >
-                <div className="absolute bottom-0 inset-x-2 border-b border-dashed border-primary/70 flex justify-center">
-                  {/* 胶囊整颗收在横线上方（表格内侧）：若跨线悬挂会在 overflow 容器下缘撑出竖向滚动条 */}
-                  <span className="absolute bottom-0 bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
                     <Plus size={9} /> 添加行
                   </span>
                 </div>
@@ -356,6 +342,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
+    <div className="relative w-full">
     <div className={`w-full transition-all ${bordered ? 'rounded border' : ''} ${isTableDirty ? 'bg-amber-100/50 border-amber-500 shadow-sm' : 'border-stone-300 bg-white'} overflow-x-auto`}>
       {/* 表格最小宽 = 各列最小宽之和（表头/单元格文字宽 + c.minWidth 弹性列防收缩声明），
           列宽随显示文字撑定，经 min-content 向上传播决定分栏最小宽与缩放时机 */}
@@ -477,12 +464,27 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
               hasColumnActions={hasColumnActions}
               noFirstRowInsert={noFirstRowInsert}
               onInsertAbove={readOnly || fixedRows ? undefined : () => addRowAtIndex(idx)}
-              onInsertBelow={readOnly || fixedRows || idx !== rowCount - 1 ? undefined : () => addRowAtIndex(rowCount)}
             />
           ))}
           </SortableContext>
         </tbody>
       </table>
+    </div>
+      {/* 末行下缘插入区：挂在滚动容器外的定位层——气泡可悬浮于横线中央（跨线一半在外），
+          不被 overflow 裁剪、不给滚动容器撑出竖向滚动条；需横向滚动的宽表行为一致 */}
+      {!readOnly && !fixedRows && rowCount > 0 && (
+        <div
+          onClick={() => addRowAtIndex(rowCount)}
+          title="在此处添加行"
+          className="absolute inset-x-0 bottom-0 h-[4px] z-20 cursor-pointer opacity-0 hover:opacity-100"
+        >
+          <div className="absolute bottom-0 inset-x-2 border-b border-dashed border-primary/70 flex justify-center">
+            <span className="absolute -top-[9px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
+              <Plus size={9} /> 添加行
+            </span>
+          </div>
+        </div>
+      )}
     </div>
     </DndContext>
   );

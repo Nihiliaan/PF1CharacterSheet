@@ -103,8 +103,10 @@ export const DynamicInput = React.memo(({
     singleLine ? "items-center" : "items-start pt-1.5",
     align === 'right' ? 'justify-end text-right' : align === 'center' ? 'justify-center text-center' : 'justify-start text-left',
     // singleLine 分支不用 w-full（百分比宽度子元素的 min-content 贡献为 0）：
-    // grid item 默认 stretch 已填满，且 min-width:min-content 让列宽随文字撑定
-    singleLine ? "whitespace-pre overflow-hidden min-w-min" : "break-words whitespace-pre-wrap w-full",
+    // grid item 默认 stretch 已填满，且 min-width:min-content 让列宽随文字撑定。
+    // ⚠️ 封顶不能放这里：min-width 与 max-width 同元素冲突时 min-width 恒胜（CSS 尺寸解析序），
+    // 封顶实际写在下方根容器（.grid）上——根容器无 min-width 声明，max-width 才能钳制其对表格列的贡献
+    singleLine ? "whitespace-pre overflow-hidden min-w-min" : "[overflow-wrap:anywhere] whitespace-pre-wrap w-full",
     "text-[0.875rem] leading-[1.625] font-medium",
     className
   );
@@ -349,7 +351,7 @@ export const DynamicInput = React.memo(({
       return (
         <Combobox
           options={options} value={interactiveValue} multiSelect={isMulti} onSelect={handleChange} onOpenChange={setIsComboboxOpen}
-          className={cn(sharedStyles, "font-inherit bg-transparent hover:bg-stone-50 transition-colors", !singleLine && "h-auto")}
+          className={cn(sharedStyles, "font-inherit bg-transparent hover:bg-stone-50 transition-colors", !singleLine && "h-auto", singleLine && "w-auto")}
           placeholder={displayContent} singleLine={singleLine} disablePadding={true}
         />
       );
@@ -416,7 +418,13 @@ export const DynamicInput = React.memo(({
 
     // 对于 Text/Markdown 字段，才需要特殊的 Mousedown 拦截来精准定位
     return (
-      <div className={cn(sharedStyles, "group-focus-within:bg-white/50")} style={{ fontFamily: fontStack }} onMouseDown={handleManualFocus}>
+      <div
+        className={cn(sharedStyles, "group-focus-within:bg-white/50")}
+        style={{ fontFamily: fontStack }}
+        onMouseDown={handleManualFocus}
+        // 单行格有 max-w 封顶：超长内容在格内被裁剪，悬停给出全文提示
+        title={singleLine ? String(value ?? '') : undefined}
+      >
         {ui === 'text' || ui === 'name' || type === 'markdown' ? (
           <MarkdownInlineEditor
             value={String(value ?? '')} onChange={handleChange} isFocused={isFocused} onFocus={() => setIsFocused(true)}
@@ -451,6 +459,9 @@ export const DynamicInput = React.memo(({
         // 不用 w-full：百分比宽度子元素在表格单元格的内在宽度计算中贡献为 0，
         // 会掐断 min-content 向列宽的传播（列宽只剩表头宽）；块级 auto 同样填满且保留传播
         "grid h-full relative group transition-colors",
+        // 单行格封顶：超长单行文本（如 conceal 展开的长链接原文）min-content 贡献钳制在 24em，
+        // 列宽照常随内容撑定但不再挤压同行其它列；多行格不封顶（描述列靠 anywhere 塌缩 min-content）
+        singleLine && 'max-w-[24em]',
         (height || minHeight || wrapperClassName.includes('h-') || wrapperClassName.includes('min-h-')) ? '' : 'min-h-[32px]',
         isChanged && !hideIndicator ? 'bg-amber-100/40' : '',
         "focus-within:shadow-sm focus-within:ring-1 focus-within:ring-primary/20 focus-within:rounded-md",

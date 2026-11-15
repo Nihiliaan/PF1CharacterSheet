@@ -158,9 +158,10 @@ const NonNegativeIntHandler = new BaseInt({ ui: 'int', min: 0 });
 const QuantityHandler = new BaseInt({
   ui: 'quantity',
   min: 1,
+  // ×1 也要显示：空白格在窄列里没有可点击目标，用户无从得知可编辑（交互反馈 2026-11-16）
   formatDisplay: (v: any) => {
     const n = parseInt(v, 10);
-    return (isNaN(n) || n <= 1) ? '' : `×${n}`;
+    return isNaN(n) ? '' : `×${n}`;
   }
 });
 

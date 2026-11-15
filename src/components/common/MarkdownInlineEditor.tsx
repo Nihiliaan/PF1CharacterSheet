@@ -145,7 +145,10 @@ const MarkdownInlineEditor = ({
               padding: "0",
               fontFamily: fontStack,
               lineHeight: "inherit",
-              caretColor: "#854d0e !important"
+              caretColor: "#854d0e !important",
+              // 光标进入链接时 conceal 撤销、markdown 原文（含超长 URL）展开：
+              // anywhere 让长 token 的 min-content 塌缩，编辑态不会把列/表撑爆
+              overflowWrap: "anywhere"
             },
             ".cm-line": { display: "block", padding: "0" },
             ".cm-line:empty::before": { content: '"\\200b"', display: "inline-block", width: "0" },
@@ -237,7 +240,7 @@ const MarkdownInlineEditor = ({
       {!isFocused && (
         // 名称式短文本（singleLine）：pre——禁止自动软换行但保留显式换行符，列宽 = 最长行宽；
         // 多行文本（描述/备注等弹性列）pre-wrap 换行吸收剩余空间
-        <div className={cn(singleLine ? "whitespace-pre overflow-hidden" : "w-full break-words whitespace-pre-wrap")}>
+        <div className={cn(singleLine ? "whitespace-pre overflow-hidden" : "w-full [overflow-wrap:anywhere] whitespace-pre-wrap")}>
           <MarkdownPreviewer text={value} placeholder={placeholder} />
         </div>
       )}
