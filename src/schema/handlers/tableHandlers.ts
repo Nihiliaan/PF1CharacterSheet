@@ -182,7 +182,7 @@ const SpellTableHandler = new BaseTable({ view: 'SpellTable' });
 const MagicBlocksHandler = new BaseTable({ view: 'MagicBlocks' });
 const EquipmentItemsHandler = new BaseTable({
   columns: [
-    { key: 'item', label: 'editor.items.headers.item', width: '1%', hideRightBorder: true },
+    { key: 'item', label: 'editor.items.headers.item', width: '1%', minWidth: '110px', hideRightBorder: true },
     { key: 'quantity', label: '', width: '1%', type: 'quantity' },
     { key: 'cost', label: 'editor.items.headers.cost', width: '1%', type: 'cost' },
     { key: 'weight', label: 'editor.items.headers.weight', width: '1%', type: 'weight' },

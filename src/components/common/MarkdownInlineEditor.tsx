@@ -228,14 +228,16 @@ const MarkdownInlineEditor = ({
 
   return (
     <div
-      className={cn("w-full h-full min-h-[1.625em] flex cursor-text", singleLine ? "items-center" : "items-start", textAlignClass, className)}
+      className={cn("h-full min-h-[1.625em] flex cursor-text", singleLine ? "items-center" : "items-start w-full", textAlignClass, className)}
       style={{ height: isFocused ? height : 'auto', minHeight, fontFamily: fontStack }}
     >
-      <div ref={containerRef} className={cn("w-full", !isFocused && "hidden")} />
+      {/* singleLine：不用 w-full——百分比宽度子元素的 min-content 贡献为 0，
+          会让列宽塌回表头宽；内容自适应宽度使列宽随文字撑定 */}
+      <div ref={containerRef} className={cn(!singleLine && "w-full", !isFocused && "hidden")} />
       {!isFocused && (
         // 名称式短文本（singleLine）：pre——禁止自动软换行但保留显式换行符，列宽 = 最长行宽；
         // 多行文本（描述/备注等弹性列）pre-wrap 换行吸收剩余空间
-        <div className={cn("w-full", singleLine ? "whitespace-pre overflow-hidden" : "break-words whitespace-pre-wrap")}>
+        <div className={cn(singleLine ? "whitespace-pre overflow-hidden" : "w-full break-words whitespace-pre-wrap")}>
           <MarkdownPreviewer text={value} placeholder={placeholder} />
         </div>
       )}

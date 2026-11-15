@@ -42,33 +42,6 @@ const DynamicTableRow = memo(({
       style={{ transform: CSS.Translate.toString(transform) }}
       className={`relative group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''}`}
     >
-      {/* 行间悬停插入区：悬停行间横线时出现，点击在该位置插入新行 */}
-      {onInsertAbove && (
-        <div
-          onClick={onInsertAbove}
-          title="在此处添加行"
-          className="absolute inset-x-0 -top-[7px] h-[14px] z-20 cursor-pointer opacity-0 group-hover:opacity-100 flex items-center justify-center"
-        >
-          <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
-            <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
-              <Plus size={9} /> 添加行
-            </span>
-          </div>
-        </div>
-      )}
-      {onInsertBelow && (
-        <div
-          onClick={onInsertBelow}
-          title="在此处添加行"
-          className="absolute inset-x-0 -bottom-[7px] h-[14px] z-20 cursor-pointer opacity-0 group-hover:opacity-100 flex items-center justify-center"
-        >
-          <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
-            <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
-              <Plus size={9} /> 添加行
-            </span>
-          </div>
-        </div>
-      )}
       {columns.map((c: any) => {
         const cellPath = getCellPath(path || '', i, c.key);
         const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
@@ -78,7 +51,35 @@ const DynamicTableRow = memo(({
         const isDesc = effUi !== 'name' && isDescriptionCol(c.key, { ui: effUi });
         const isNameType = effUi === 'name';
         return (
-          <td key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`p-0 relative border-stone-300 align-top whitespace-nowrap overflow-visible ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+          <td key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`p-0 align-top whitespace-nowrap overflow-visible ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+            {/* 行间悬停插入区：挂在首列 td 内，以 tr（relative）为定位基准横跨整行；
+                pointer-events 跟随行悬停激活——否则透明条会常驻拦截单元格顶部的正常点击 */}
+            {onInsertAbove && (
+              <div
+                onClick={onInsertAbove}
+                title="在此处添加行"
+                className="absolute inset-x-0 -top-[5px] h-[10px] z-20 cursor-pointer opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto flex items-center justify-center"
+              >
+                <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
+                  <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
+                    <Plus size={9} /> 添加行
+                  </span>
+                </div>
+              </div>
+            )}
+            {onInsertBelow && (
+              <div
+                onClick={onInsertBelow}
+                title="在此处添加行"
+                className="absolute inset-x-0 -bottom-[5px] h-[10px] z-20 cursor-pointer opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto flex items-center justify-center"
+              >
+                <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
+                  <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
+                    <Plus size={9} /> 添加行
+                  </span>
+                </div>
+              </div>
+            )}
             <DynamicInput
               value={row[c.key] ?? ''}
               originalValue={originalData?.[c.key]?.[i]}
@@ -430,24 +431,55 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
           </tr>
         </thead>
         {/* 联合定宽行：多张同构表格（如近战/远程攻击）传入相同 sizerRows 时，
-            各列按两组内容的并集取宽，实现跨表列对齐；高度 0 隐藏不占位 */}
-        {sizerRows?.map((row, r) => {
-          // sizer 行列数必须与真实行一致（数据列 + 操作/拖拽等固定列），否则 auto 布局列错位
-          const extraCols = (hasColumnActions ? 1 : 0) + (enableSQShow ? 1 : 0) + (!fixedRows ? 1 : 0);
-          return (
-            <tr key={`sizer-${r}`} aria-hidden="true" style={{ height: 0 }}>
-              {row.map((txt, ci) => (
-                <td key={ci} style={{ height: 0, padding: 0, border: 'none' }}>
-                  <div style={{ height: 0, overflow: 'hidden', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{txt}</div>
-                </td>
-              ))}
-              {Array.from({ length: extraCols }).map((_, k) => (
-                <td key={`x-${k}`} style={{ height: 0, padding: 0, border: 'none' }} />
-              ))}
-            </tr>
-          );
-        })}
+            各列按两组内容的并集取宽，实现跨表列对齐；高度 0 隐藏不占位。
+            独立 tbody 承载（tr 不能直接挂在 table 下）。
+            每列 white-space 跟随列语义：不换行列（name/数值）用 nowrap 使 min-content = 整行文字宽，
+            多行弹性列（desc/notes）用 pre-wrap（min-content 极小，由 max-content 参与剩余分配）。
+            内层 div 的 minWidth:min-content 是传播关键（T3 实验：显式 min-width 才会被表格布局采纳） */}
+        {sizerRows?.length ? (
+          <tbody aria-hidden="true">
+            {sizerRows.map((row, r) => {
+              // sizer 行列数必须与真实行一致（数据列 + 操作/拖拽等固定列），否则 auto 布局列错位
+              const extraCols = (hasColumnActions ? 1 : 0) + (enableSQShow ? 1 : 0) + (!fixedRows ? 1 : 0);
+              return (
+                <tr key={`sizer-${r}`} style={{ height: 0 }}>
+                  {row.map((txt, ci) => {
+                    const col = columns[ci] as any;
+                    const cellHandler = path ? getHandlerByPath(`${path}.${col?.key}[0]`) : null;
+                    const effUi = col?.type || cellHandler?.ui || '';
+                    const isDescCol = effUi !== 'name' && isDescriptionCol(col?.key || '', { ui: effUi });
+                    return (
+                      <td key={ci} style={{ height: 0, padding: '0 8px', border: 'none' }}>
+                        <div style={{ height: 0, overflow: 'hidden', whiteSpace: isDescCol ? 'pre-wrap' : 'nowrap', minWidth: 'min-content' }}>{txt}</div>
+                      </td>
+                    );
+                  })}
+                  {Array.from({ length: extraCols }).map((_, k) => (
+                    <td key={`x-${k}`} style={{ height: 0, padding: 0, border: 'none' }} />
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        ) : null}
         <tbody className="divide-y divide-stone-300">
+          {/* 空表格：无行则无行间间隙，保留一条精简的添加入口 */}
+          {rowCount === 0 && !readOnly && (
+            <tr>
+              <td
+                colSpan={columns.length + 1 + (enableSQShow ? 1 : 0) + (hasColumnActions ? 1 : 0)}
+                className="p-0 bg-stone-50/60 hover:bg-stone-100 transition-colors cursor-pointer"
+              >
+                <button
+                  type="button"
+                  onClick={() => addRowAtIndex(0)}
+                  className="flex items-center gap-1 text-xs text-stone-500 hover:text-stone-900 px-3 py-1.5 w-full justify-center"
+                >
+                  <Plus size={12} /> 添加行
+                </button>
+              </td>
+            </tr>
+          )}
           <SortableContext items={currentIndices.map(idx => `row-${idx}`)} strategy={verticalListSortingStrategy}>
           {currentIndices.map((idx) => (
             <DynamicTableRow

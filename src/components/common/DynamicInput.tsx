@@ -102,7 +102,9 @@ export const DynamicInput = React.memo(({
     "h-full transition-colors flex min-h-[32px] px-2",
     singleLine ? "items-center" : "items-start pt-1.5",
     align === 'right' ? 'justify-end text-right' : align === 'center' ? 'justify-center text-center' : 'justify-start text-left',
-    singleLine ? "whitespace-pre w-full overflow-hidden min-w-min" : "break-words whitespace-pre-wrap w-full",
+    // singleLine 分支不用 w-full（百分比宽度子元素的 min-content 贡献为 0）：
+    // grid item 默认 stretch 已填满，且 min-width:min-content 让列宽随文字撑定
+    singleLine ? "whitespace-pre overflow-hidden min-w-min" : "break-words whitespace-pre-wrap w-full",
     "text-[0.875rem] leading-[1.625] font-medium",
     className
   );
@@ -446,7 +448,9 @@ export const DynamicInput = React.memo(({
       ref={containerRef}
       onBlur={handleAutoBlur}
       className={cn(
-        "grid h-full w-full relative group transition-colors",
+        // 不用 w-full：百分比宽度子元素在表格单元格的内在宽度计算中贡献为 0，
+        // 会掐断 min-content 向列宽的传播（列宽只剩表头宽）；块级 auto 同样填满且保留传播
+        "grid h-full relative group transition-colors",
         (height || minHeight || wrapperClassName.includes('h-') || wrapperClassName.includes('min-h-')) ? '' : 'min-h-[32px]',
         isChanged && !hideIndicator ? 'bg-amber-100/40' : '',
         "focus-within:shadow-sm focus-within:ring-1 focus-within:ring-primary/20 focus-within:rounded-md",

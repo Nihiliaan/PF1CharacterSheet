@@ -154,25 +154,25 @@ export default function SpellTable({
                 key={i}
                 className={`relative transition-colors group ${isRowDirty(i) ? 'bg-amber-100/30' : 'hover:bg-stone-50'}`}
               >
-                {readOnly ? null : (
-                  <div
-                    onClick={() => addRowAtIndex(i)}
-                    title={t('common.add_row')}
-                    className="absolute inset-x-0 -top-[7px] h-[14px] z-20 cursor-pointer opacity-0 group-hover:opacity-100 flex items-center justify-center"
-                  >
-                    <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
-                      <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
-                        <Plus size={9} /> 添加行
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {columns.map((c) => {
+                {columns.map((c, ci) => {
                   const cellPath = getCellPath(path || '', i, c.key);
                   const cellHandler = cellPath ? getHandlerByPath(cellPath) : null;
 
                   return (
-                    <td key={c.key} className={`p-0 relative border-stone-300 align-top ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+                    <td key={c.key} className={`p-0 align-top border-stone-300 ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+                      {ci === 0 && !readOnly && (
+                        <div
+                          onClick={() => addRowAtIndex(i)}
+                          title={t('common.add_row')}
+                          className="absolute inset-x-0 -top-[5px] h-[10px] z-20 cursor-pointer opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto flex items-center justify-center"
+                        >
+                          <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
+                            <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
+                              <Plus size={9} /> 添加行
+                            </span>
+                          </div>
+                        </div>
+                      )}
                       {c.key === 'level' ? (
                         <div className="w-full h-full flex items-center justify-center font-bold px-2 text-stone-700 bg-stone-100/50 min-h-[32px]">
                           {t('editor.spells.computed_level', { n: computedLevelNumber })}
