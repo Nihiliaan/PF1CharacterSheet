@@ -417,8 +417,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false;
     
     // 基础类型/结构快速判断
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
+    // 忽略显式 undefined 键：保存快照经 JSON 深拷贝会丢掉这些键，
+    // 若不忽略，data 与 lastSavedData 将永远判不等 → 保存后红点不消失
+    const keysA = Object.keys(a).filter(k => a[k] !== undefined);
+    const keysB = Object.keys(b).filter(k => b[k] !== undefined);
     if (keysA.length !== keysB.length) return false;
 
     for (const key of keysA) {
@@ -503,6 +505,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   }, [setConfirmModal, currentCharacterId, lastSavedData, setToast]);
 
+  // 活动标签类型：保存分流（人物卡/模板）与无文档标签（chooser/preview）判断的依据
+  const activeTabKind = tabs.find(t => t.key === activeTabKey)?.kind ?? null;
+
   const {
     isSaving,
     syncStatus,
@@ -519,10 +524,17 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     currentTemplateId, setCurrentTemplateId,
     isReadOnly, setIsReadOnly, setIsSyncing,
     isDirty, setBbcodeTemplate, setLastSavedTemplate, computed,
+    bbcodeTemplate,
+    activeTabKind,
     onOpenDocument: handleOpenDocument,
     onSaveDocument: handleSaveDocument,
     onBootWithoutId: () => openChooserTabRef.current()
   });
+
+  // 保存函数的实时引用：非活动标签的"保存并关闭"要先换入目标标签再保存，
+  // 此时必须取到最新渲染的闭包（切换后的文档内容/类型），不能沿用弹窗创建时的旧闭包
+  const handleSaveRef = useRef<() => Promise<string | undefined>>(async () => undefined);
+  handleSaveRef.current = handleSave;
 
   const {
     driveModal, setDriveModal, isSyncingDrive,
@@ -678,6 +690,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       let focusedNext = focusedPaneIdRef.current;
       let nextActiveTab: string | null = activeTabKeyRef.current;
+      // 运行时重取活动状态："保存并关闭"流程会先换入目标标签，闭包捕获的 isActive 已过期
+      const isActiveNow = key === activeTabKeyRef.current;
       if (ownerPane && ownerPane.tabKeys.length - 1 <= 0) {
         // 该栏被剪除
         nextPanes = nonEmpty;
@@ -686,7 +700,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           focusedNext = neighbor.id;
           nextActiveTab = neighbor.activeTabKey ?? neighbor.tabKeys[neighbor.tabKeys.length - 1] ?? null;
         }
-      } else if (isActive && ownerPane) {
+      } else if (isActiveNow && ownerPane) {
         // 关闭的是聚焦栏的活动标签：该栏活动标签已顺延为 remaining 最后一个
         const p = nextPanes.find(pp => pp.id === ownerPane.id);
         nextActiveTab = p?.activeTabKey ?? nextActiveTab;
@@ -694,7 +708,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setPanes(nextPanes);
       setFocusedPaneId(focusedNext);
       setTabs(remainingTabs);
-      if (isActive) {
+      if (isActiveNow) {
         if (nextActiveTab && nextActiveTab !== key) {
           setActiveTabKey(nextActiveTab);
           const nt = remainingTabs.find(t => t.key === nextActiveTab);
@@ -719,14 +733,22 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         title: "该标签页有未保存的修改，关闭后未保存的内容将丢失。",
         onConfirm: performClose,
         onSecondaryConfirm: async () => {
-          await handleSave();
+          // 非活动标签的"保存并关闭"：先把该标签换入 live 状态再保存，避免把内容存进当前活动文档
+          if (key !== activeTabKeyRef.current) {
+            await switchTab(key);
+            // 等一拍让 React 完成换入后的重渲染，handleSaveRef 才能取到新文档的闭包
+            await new Promise(r => setTimeout(r, 0));
+            // 换入失败（文档已被删除等，标签被 switchTab 移除）：无内容可存，直接走关闭
+            if (!tabsRef.current.some(t => t.key === key)) return;
+          }
+          await handleSaveRef.current();
           performClose();
         }
       });
     } else {
       performClose();
     }
-  }, [isDirty, isTemplateDirty, applySnapshot, selectCharacter, activeDocRef, handleSave]);
+  }, [isDirty, isTemplateDirty, applySnapshot, selectCharacter, switchTab, activeDocRef, handleSaveRef]);
 
   /** 批量关闭一组标签（关闭其他 / 关闭右侧 / 全部关闭的底层实现）。
    *  单次簿记完成分栏剪除与焦点转移（复用单标签关闭的语义）；含脏标签时弹一次统一确认。 */

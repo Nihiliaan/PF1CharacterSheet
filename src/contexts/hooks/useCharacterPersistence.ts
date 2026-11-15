@@ -47,9 +47,13 @@ export interface UseCharacterPersistenceOptions {
   // ===== 模板 =====
   setBbcodeTemplate: (t: string) => void;
   setLastSavedTemplate: (t: string) => void;
+  /** 当前模板编辑器内容（模板标签的保存分流用） */
+  bbcodeTemplate: string;
   // ===== 计算层（供论坛同步导出 BBCode 使用）=====
   computed?: any;
   // ===== 选项卡系统集成点（由 CharacterContext 提供）=====
+  /** 活动标签的类型：handleSave 据此分流人物卡/模板保存；chooser/preview 无可保存文档 */
+  activeTabKind?: 'character' | 'template' | 'chooser' | 'preview' | null;
   /** 文档被渲染进 live 状态（即"打开了一个文档"）：创建或激活对应选项卡 */
   onOpenDocument?: (docId: string, kind: 'character' | 'template', title?: string) => void;
   /** 文档保存后 id 变化（另存为 / 首次保存）：就地更新活动选项卡的 docId */
@@ -73,7 +77,9 @@ export const useCharacterPersistence = ({
   isDirty,
   setBbcodeTemplate,
   setLastSavedTemplate,
+  bbcodeTemplate,
   computed,
+  activeTabKind,
   onOpenDocument,
   onSaveDocument,
   onBootWithoutId
@@ -114,7 +120,8 @@ export const useCharacterPersistence = ({
     newId: string,
     saveData: CharacterData | { content: string, name?: string },
     id?: string | null,
-    isTemplate: boolean = false
+    isTemplate: boolean = false,
+    folderId?: string | null
   ) => {
     // 保存导致活动文档的 id 变化（另存为 / 未保存新卡首次保存）：就地更新活动选项卡
     onSaveDocument?.(newId, isTemplate ? 'template' : 'character');
@@ -135,7 +142,22 @@ export const useCharacterPersistence = ({
     // New files are never links, so they are editable
     setIsReadOnly(false);
 
-    const name = isTemplate ? (('name' in saveData ? saveData.name : null) || '未命名模板') : ((saveData as CharacterData)?.basic?.name || '未命名人物');
+    // 回写活动文档元数据：首次保存/另存为会改变 id 与目录，后续保存需以文档自身目录为准
+    //（否则档案库浏览位置变动后再次保存会把文档移到别处）
+    const prevDoc = activeDocRef.current;
+    activeDocRef.current = {
+      ...(prevDoc || {}),
+      id: newId,
+      folderId: folderId !== undefined ? folderId : (prevDoc?.folderId ?? null),
+      ...(isTemplate ? { isTemplate: true } : {}),
+      ...(!isTemplate && (saveData as any)?.ownerId ? { ownerId: (saveData as any).ownerId } : {})
+    };
+
+    const name = isTemplate
+      ? (('name' in saveData ? saveData.name : null)
+        || (typeof prevDoc?.name === 'string' ? prevDoc.name.replace(/\.bbc$/i, '') : '')
+        || '未命名模板')
+      : ((saveData as CharacterData)?.basic?.name || '未命名人物');
     addToRecent({ id: newId, name, data: saveData, isTemplate });
     // 保存成功后清除本地草稿缓存（人物卡与模板两种 key 都清理）
     const draftId = newId || id || 'default';
@@ -167,7 +189,7 @@ export const useCharacterPersistence = ({
     try {
       const newId = await persist(saveData, id, folderId, isTemplate);
       if (newId) {
-        afterSave(newId, saveData, id, isTemplate);
+        afterSave(newId, saveData, id, isTemplate, folderId);
         return newId;
       }
     } catch (e: any) {
@@ -177,7 +199,43 @@ export const useCharacterPersistence = ({
     }
   };
 
-  const handleSave = async () => handleSaveInternal(data, currentCharacterId, currentFolderId);
+  /**
+   * 保存当前活动标签的文档（Ctrl+S 与各确认弹窗的统一入口）。
+   * 按活动标签类型分流：
+   *  - 模板标签 → 写入 templates 集合；未落库的新模板落入「模板」文件夹（与右键菜单"保存"一致）。
+   *    此前模板标签一律走人物卡保存，是"保存模板却生成人物卡/模板红点不消失"的根源。
+   *  - 人物卡标签 → 更新已有文档时沿用文档自身目录（activeDocRef.folderId），
+   *    仅新建文档跟随档案库当前浏览目录；否则浏览位置变动后一保存就会把卡片移走。
+   *  - 新建标签页/预览标签 → 无可保存文档，直接忽略。
+   */
+  const handleSave = async () => {
+    if (activeTabKind !== 'character' && activeTabKind !== 'template') return undefined;
+    if (activeTabKind === 'template') {
+      if (currentTemplateId) {
+        // 更新已有模板：folderId 传 undefined，saveTemplate 沿用模板原目录
+        const saveData: { content: string, name?: string } = { content: bbcodeTemplate };
+        const docName = activeDocRef.current?.name;
+        if (typeof docName === 'string' && docName) saveData.name = docName;
+        return handleSaveInternal(saveData, currentTemplateId, undefined, true);
+      }
+      // 未落库的新模板：存入「模板」文件夹
+      if (!user) {
+        setToast({ message: "请先登录后再保存", type: 'error' });
+        return undefined;
+      }
+      const templateFolderId = await ensureLocalFolderService('模板', null, user.uid);
+      return handleSaveInternal(
+        { content: bbcodeTemplate, name: t('editor.bbcode.default_name') },
+        null,
+        templateFolderId,
+        true
+      );
+    }
+    // 人物卡：更新已有文档沿用其自身目录；新建文档（id 为空）跟随当前浏览目录
+    const docFolderId = activeDocRef.current?.folderId;
+    const folderId = currentCharacterId && docFolderId !== undefined ? docFolderId : currentFolderId;
+    return handleSaveInternal(data, currentCharacterId, folderId);
+  };
 
   const handleSaveAs = async () => {
     if (!user) {
@@ -284,11 +342,15 @@ export const useCharacterPersistence = ({
         setLastSavedTemplate(serverContent);
         if (shouldSwitchView) setView('editor');
         setCurrentTemplateId(char.id);
+        // live 状态同时只承载一个文档：清掉对侧 id，避免保存/草稿误写到残留的旧文档
+        setCurrentCharacterId(null);
       } else {
         // 数据结构迁移已由开发者工具一次性完成并回写，加载期不再做迁移/默认值合并
         setData(char.data);
         setLastSavedData(JSON.parse(JSON.stringify(char.data)));
         setCurrentCharacterId(char.id);
+        // live 状态同时只承载一个文档：清掉对侧 id，避免保存/草稿误写到残留的旧文档
+        setCurrentTemplateId(null);
         localStorage.setItem(KEY_LAST_CHAR, char.id);
 
         const settings = getStoredSettings();

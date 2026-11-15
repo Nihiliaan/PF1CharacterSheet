@@ -141,10 +141,12 @@ export const CheckGroupHandler = new CheckGroupHandlerClass();
 
 const PfsBoonsTableHandler = new BaseTable({
   columns: [
-    { key: 'uses', label: 'editor.pfs.boon_uses_tracking', width: '22%', type: 'checkGroup' },
-    { key: 'name', label: 'editor.pfs.boon_name', width: '24%', type: 'text' },
-    { key: 'desc', label: 'editor.pfs.boon_desc', width: '42%', type: 'text' },
-    { key: 'sheetNo', label: 'editor.pfs.boon_sheet_no', width: '12%', type: 'posInt' }
+    // 比例按内容语义分配：uses 只放勾选按钮（窄），desc 是长文本主体（宽）；
+    // minWidth 为各列语义最小宽（叶子层声明，参与 min-content 传播）
+    { key: 'uses', label: 'editor.pfs.boon_uses_tracking', width: '11%', minWidth: '72px', type: 'checkGroup' },
+    { key: 'name', label: 'editor.pfs.boon_name', width: '25%', minWidth: '120px', type: 'text' },
+    { key: 'desc', label: 'editor.pfs.boon_desc', width: '52%', minWidth: '220px', type: 'text' },
+    { key: 'sheetNo', label: 'editor.pfs.boon_sheet_no', width: '12%', minWidth: '72px', type: 'posInt' }
   ]
 });
 
