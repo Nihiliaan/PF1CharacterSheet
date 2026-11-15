@@ -158,10 +158,11 @@ const NonNegativeIntHandler = new BaseInt({ ui: 'int', min: 0 });
 const QuantityHandler = new BaseInt({
   ui: 'quantity',
   min: 1,
-  // ×1 也要显示：空白格在窄列里没有可点击目标，用户无从得知可编辑（交互反馈 2026-11-16）
+  // 1 件不显示 ×1 是用户设计（多数物品为 1，常显是噪音）；列宽按 ×1 计由 DynamicInput 的
+  // 隐藏占位承担——空白格列宽会塌到表头宽，交互时宽度忽大忽小（2026-11-16 用户裁决）
   formatDisplay: (v: any) => {
     const n = parseInt(v, 10);
-    return isNaN(n) ? '' : `×${n}`;
+    return (isNaN(n) || n <= 1) ? '' : `×${n}`;
   }
 });
 

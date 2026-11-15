@@ -131,8 +131,13 @@ const MarkdownInlineEditor = ({
           markdownConcealPlugin,
           drawSelection(),
           dropCursor(),
-          // 名称式短文本（singleLine）不软换行：编辑时列宽跟随文字撑定，与预览态一致
-          ...(singleLine ? [] : [EditorView.lineWrapping]),
+          // 名称式短文本（singleLine）不软换行：编辑时列宽跟随文字撑定，与预览态一致；
+          // 横向滚动条隐藏——收缩适配布局下滚动视口与内容宽度零余量，光标绘制/亚像素取整的
+          // 1~2px 附加物即可触发假滚动条（仅在光标位于末尾时出现，用户截图实证）。
+          // 真实超长内容仍可滚：CM 光标移动自动 scrollIntoView，滚轮/方向键照常
+          ...(singleLine
+            ? [EditorView.theme({ ".cm-scroller": { overflowX: "hidden" } })]
+            : [EditorView.lineWrapping]),
           EditorView.theme({
             "&": { height: "100%", backgroundColor: "transparent", fontSize: "inherit" },
             "&.cm-focused": { outline: "none" },

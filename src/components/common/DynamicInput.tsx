@@ -444,6 +444,12 @@ export const DynamicInput = React.memo(({
           ) : (
             <div className={cn(singleLine && "whitespace-nowrap")}>
               {getDisplayValue(value, type || 'text', t, { isFocused, path, context }) || <span className="text-stone-300 italic">{placeholder}</span>}
+              {/* 数量栏 1 件不显示 ×1（用户设计），但列宽按 ×1 计：隐藏占位保持 min-content，
+                  否则空白格列宽塌到表头宽、编辑时宽度忽大忽小 */}
+              {(() => {
+                const dv = getDisplayValue(value, type || 'text', t, { isFocused: false, path, context });
+                return (!dv && (ui === 'quantity' || ui === 'posInt') && String(value ?? '') !== '') ? <span className="invisible">×1</span> : null;
+              })()}
             </div>
           )
         )}
@@ -459,9 +465,10 @@ export const DynamicInput = React.memo(({
         // 不用 w-full：百分比宽度子元素在表格单元格的内在宽度计算中贡献为 0，
         // 会掐断 min-content 向列宽的传播（列宽只剩表头宽）；块级 auto 同样填满且保留传播
         "grid h-full relative group transition-colors",
-        // 单行格封顶：超长单行文本（如 conceal 展开的长链接原文）min-content 贡献钳制在 24em，
-        // 列宽照常随内容撑定但不再挤压同行其它列；多行格不封顶（描述列靠 anywhere 塌缩 min-content）
-        singleLine && 'max-w-[24em]',
+        // 单行格封顶+裁剪：max-w 钳制对表格列的 min-content 贡献（超长单行文本不再挤压邻格），
+        // overflow-hidden 裁剪绘制——内层 min-w-min 仍按全文撑宽，不裁会横穿邻格（用户截图实证）。
+        // ⚠️ 封顶不能放内层（与 min-w-min 同元素时 CSS 解析序 min-width 恒胜 max-width）
+        singleLine && 'max-w-[24em] overflow-hidden',
         (height || minHeight || wrapperClassName.includes('h-') || wrapperClassName.includes('min-h-')) ? '' : 'min-h-[32px]',
         isChanged && !hideIndicator ? 'bg-amber-100/40' : '',
         "focus-within:shadow-sm focus-within:ring-1 focus-within:ring-primary/20 focus-within:rounded-md",
