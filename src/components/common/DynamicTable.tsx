@@ -51,7 +51,7 @@ const DynamicTableRow = memo(({
         const isDesc = effUi !== 'name' && isDescriptionCol(c.key, { ui: effUi });
         const isNameType = effUi === 'name';
         return (
-          <td key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`p-0 align-top whitespace-nowrap overflow-visible ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+          <td key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`p-0 align-top whitespace-nowrap overflow-visible border-stone-300 ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
             {/* 行间悬停插入区：仅渲染在首列 td 内（ci === 0），以 tr（relative）为定位基准横跨整行；
                 pointer-events 跟随行悬停激活——否则透明条会常驻拦截单元格顶部的正常点击 */}
             {ci === 0 && !noFirstRowInsert && onInsertAbove && (
@@ -60,7 +60,7 @@ const DynamicTableRow = memo(({
                 title="在此处添加行"
                 className="absolute inset-x-0 top-0 h-[8px] z-20 cursor-pointer opacity-0 hover:opacity-100"
               >
-                <div className="absolute top-0 inset-x-2 border-t border-dashed border-primary/70 relative flex justify-center">
+                <div className="absolute top-0 inset-x-2 border-t border-dashed border-primary/70 flex justify-center">
                   <span className="absolute -top-[9px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
                     <Plus size={9} /> 添加行
                   </span>
@@ -73,8 +73,9 @@ const DynamicTableRow = memo(({
                 title="在此处添加行"
                 className="absolute inset-x-0 bottom-0 h-[8px] z-20 cursor-pointer opacity-0 hover:opacity-100"
               >
-                <div className="absolute bottom-0 inset-x-2 border-b border-dashed border-primary/70 relative flex justify-center">
-                  <span className="absolute -top-[9px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
+                <div className="absolute bottom-0 inset-x-2 border-b border-dashed border-primary/70 flex justify-center">
+                  {/* 胶囊整颗收在横线上方（表格内侧）：若跨线悬挂会在 overflow 容器下缘撑出竖向滚动条 */}
+                  <span className="absolute bottom-0 bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
                     <Plus size={9} /> 添加行
                   </span>
                 </div>

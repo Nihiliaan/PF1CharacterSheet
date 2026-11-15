@@ -71,7 +71,7 @@ export default function CharacterEditor({
       {/* scrollbar-hidden 由 TableOfContents 依实测宽度增删：标尺可见时隐藏原生滚动条 */}
       <div ref={scrollRef} className="h-full overflow-y-auto">
         {/* 紧凑化：py-12/pb-32 → py-6/pb-16，px 统一 4 */}
-        <main className={`max-w-5xl mx-auto py-6 px-4 pb-16 transition-all duration-300 ${isReadOnly ? 'pointer-events-none opacity-90 grayscale-[0.2]' : ''}`}>
+        <main className={`max-w-7xl mx-auto py-6 px-4 pb-16 transition-all duration-300 ${isReadOnly ? 'pointer-events-none opacity-90 grayscale-[0.2]' : ''}`}>
           <BasicInfoSection />
           <StorySection />
           <AttributesSection />
