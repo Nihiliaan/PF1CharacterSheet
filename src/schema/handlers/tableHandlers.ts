@@ -141,12 +141,12 @@ export const CheckGroupHandler = new CheckGroupHandlerClass();
 
 const PfsBoonsTableHandler = new BaseTable({
   columns: [
-    // 比例按内容语义分配：uses 只放勾选按钮（窄），desc 是长文本主体（宽）；
-    // minWidth 为各列语义最小宽（叶子层声明，参与 min-content 传播）
-    { key: 'uses', label: 'editor.pfs.boon_uses_tracking', width: '11%', minWidth: '72px', type: 'checkGroup' },
-    { key: 'name', label: 'editor.pfs.boon_name', width: '25%', minWidth: '120px', type: 'text' },
-    { key: 'desc', label: 'editor.pfs.boon_desc', width: '52%', minWidth: '220px', type: 'text' },
-    { key: 'sheetNo', label: 'editor.pfs.boon_sheet_no', width: '12%', minWidth: '72px', type: 'posInt' }
+    // 三条窄列不设百分比宽——width:'1%' + minWidth 让其收缩到内容宽（内容更长则自动放宽），
+    // desc 不设宽 → 吸收全部剩余空间；minWidth 为语义最小宽（叶子层声明，参与 min-content 传播）
+    { key: 'uses', label: 'editor.pfs.boon_uses_tracking', width: '1%', minWidth: '72px', type: 'checkGroup' },
+    { key: 'name', label: 'editor.pfs.boon_name', width: '1%', minWidth: '120px', type: 'text' },
+    { key: 'desc', label: 'editor.pfs.boon_desc', minWidth: '220px', type: 'text' },
+    { key: 'sheetNo', label: 'editor.pfs.boon_sheet_no', width: '1%', minWidth: '72px', type: 'posInt' }
   ]
 });
 
