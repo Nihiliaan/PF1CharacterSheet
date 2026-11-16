@@ -189,11 +189,10 @@ export function injectPfsViewObject(data: any, view: any, t: any): void {
   });
 
   // 特殊福利 (Boons)
-  const rawBoons = rawPfs?.boons || { uses: [], maxUses: [], name: [], desc: [], sheetNo: [] };
+  const rawBoons = rawPfs?.boons || { uses: [], name: [], desc: [], sheetNo: [] };
   const boonNames = rawBoons.name || [];
   const boonDescs = rawBoons.desc || [];
   const boonUses = rawBoons.uses || [];
-  const boonMaxUses = rawBoons.maxUses || [];
   const boonSheetNos = rawBoons.sheetNo || [];
 
   const formattedBoons: any[] = [];
@@ -201,7 +200,6 @@ export function injectPfsViewObject(data: any, view: any, t: any): void {
     boonNames.length,
     boonDescs.length,
     boonUses.length,
-    boonMaxUses.length,
     boonSheetNos.length
   );
 
@@ -209,20 +207,20 @@ export function injectPfsViewObject(data: any, view: any, t: any): void {
     const name = (boonNames[i] || '').trim();
     const desc = (boonDescs[i] || '').trim();
     const sheetNo = boonSheetNos[i] || '';
-    const uses = parseInt(boonUses[i], 10) || 0;
-    const maxUses = parseInt(boonMaxUses[i], 10) || 0;
+
+    // uses 为 CheckGroup 打包整数（(max << 8) | checks）：低字节 = 已勾选数，高字节 = 总格数
+    const packed = parseInt(boonUses[i], 10) || 0;
+    const uses = packed & 0xff;
+    const maxUses = (packed >> 8) & 0xff;
 
     // 过滤全空或无实质内容的行 (name 与 desc 至少填一个)
     if (!name && !desc) continue;
 
+    // Boon 越用越少：已勾选 = 已耗尽一格（☒），剩余 = ☐
     let boxes = '—';
     if (maxUses > 0) {
       const u = Math.min(uses, maxUses);
-      if (isZh) {
-        boxes = '☑'.repeat(u) + '☐'.repeat(maxUses - u);
-      } else {
-        boxes = '☒'.repeat(u) + '☐'.repeat(maxUses - u);
-      }
+      boxes = '☒'.repeat(u) + '☐'.repeat(maxUses - u);
     }
 
     formattedBoons.push({

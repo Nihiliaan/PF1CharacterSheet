@@ -13,7 +13,7 @@ import { DEFAULT_DATA, DEFAULT_BBCODE_TEMPLATE } from '../constants/index';
 import { getCharacterBBCode } from '../utils/bbcodeExporter';
 import { getAttributeModifiers, calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from '../utils/calculations';
 import { saveCharacter as saveCharacterService } from '../services/characterService';
-import { useSettings } from './SettingsContext';
+import { useSettings, getStoredSettings } from './SettingsContext';
 import { ensureLocalFolder as ensureLocalFolderService } from '../services/characterService';
 import { saveTemplate } from '../services/templateService';
 
@@ -100,7 +100,7 @@ export interface CharacterContextType {
   handleExportBBCode: () => void;
   handleRevertChanges: () => void;
   /** 打开文档：idOrChar 可为文档 id 或完整文档对象；shouldSwitchView 控制是否切换到对应视图 */
-  selectCharacter: (idOrChar: string | any, skipDirtyCheck?: boolean, shouldSwitchView?: boolean) => Promise<void>;
+  selectCharacter: (idOrChar: string | any, shouldSwitchView?: boolean) => Promise<void>;
   loadSharedCharacter: (id: string) => Promise<void>;
 
   // AI
@@ -139,12 +139,8 @@ export interface CharacterContextType {
   handleTableItemDragStart: (listKey: string, itemIndex: number, e: React.DragEvent) => void;
   handleTableItemDragOver: (listKey: string, itemIndex: number, e: React.DragEvent) => void;
   handleTableItemDrop: (listKey: string, itemIndex: number, e: React.DragEvent) => void;
-  handleBagDragStart: (e: React.DragEvent, index: number) => void;
-  handleBagDragOver: (e: React.DragEvent, targetIndex: number) => void;
-  handleBagDrop: (e: React.DragEvent, dropIndex: number) => void;
-  handleItemDragStart: (bagId: string, itemIndex: number, e: React.DragEvent) => void;
-  handleItemDragOver: (targetBagId: string, targetItemIndex: number, e: React.DragEvent) => void;
-  handleItemDrop: (targetBagId: string, targetItemIndex: number, e: React.DragEvent) => void;
+  /** 跨背包移动物品（dnd-kit 多容器拖拽提交；背包内排序走 reorderRows） */
+  moveItemBetweenBags: (sourceBagId: string, sourceIndex: number, targetBagId: string, targetIndex: number) => void;
   handleDragStart: (e: React.DragEvent, id: string) => void;
   handleDragOver: (e: React.DragEvent, targetId: string, listName: 'additionalData' | 'magicBlocks') => void;
   handleDrop: (e: React.DragEvent, targetId: string, listName: 'additionalData' | 'magicBlocks') => void;
@@ -162,11 +158,11 @@ export interface CharacterContextType {
   /** 活动选项卡的实时标题（人物卡取 basic.name，模板取文档名） */
   activeTabTitle: string;
   switchTab: (key: string) => Promise<void>;
-  closeTab: (key: string, opts?: { skipConfirm?: boolean }) => void;
-  /** 删除文档后关闭其标签（跳过确认） */
+  closeTab: (key: string) => void;
+  /** 删除文档后关闭其标签（顺带清除该文档的本地草稿） */
   closeTabsByDocIds: (docIds: string[]) => void;
-  /** 批量关闭一组标签（关闭其他/关闭右侧/全部关闭的底层实现；含脏标签时弹一次统一确认） */
-  closeTabKeys: (keys: string[], opts?: { skipConfirm?: boolean }) => void;
+  /** 批量关闭一组标签（关闭其他/关闭右侧/全部关闭的底层实现） */
+  closeTabKeys: (keys: string[]) => void;
   /** 打开人物卡编辑器（激活最近的人物卡标签或新建空白卡标签） */
   openCharacterTab: () => void;
   /** 打开 BBCode 模板编辑器（forceNew=true 时强制新开未命名模板标签） */
@@ -212,7 +208,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { user } = useAuth();
   const ui = useUI();
   const { setView, setToast, setConfirmModal, addToRecent } = ui;
-  const { refreshCharacterList, currentFolderId, setCurrentFolderId, tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor, getItemPath } = useVault();
+  const { currentFolderId, setCurrentFolderId, tableActionMode, toggleTableActionMode, dragEnabledFor, setDragEnabledFor, getItemPath } = useVault();
   const { settings } = useSettings();
 
   const [data, setData] = useState<CharacterData>(DEFAULT_DATA);
@@ -446,9 +442,8 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => clearTimeout(timer);
   }, [data, lastSavedData]);
 
-  // 开启本地缓存时：有修改自动防抖写入本地草稿（记录 baseUpdatedAt 以便冲突比对）
+  // 有修改自动防抖写入本地草稿（记录 baseUpdatedAt 以便冲突比对）
   useEffect(() => {
-    if (!settings.storage.enableLocalAutoCache) return;
     if (isDirty) {
       const timer = setTimeout(() => {
         try {
@@ -466,17 +461,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [data, isDirty, currentCharacterId, settings.storage.enableLocalAutoCache]);
+  }, [data, isDirty, currentCharacterId]);
 
-  // 监听浏览器刷新与关闭：未开启本地缓存时提醒保存；开启后不打扰，且同步落盘活动文档的最新草稿
+  // 监听浏览器刷新与关闭：不打扰用户，同步落盘活动文档的最新草稿（重开自动恢复）
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!isDirty && !isTemplateDirty) return;
-      if (!settings.storage.enableLocalAutoCache) {
-        e.preventDefault();
-        e.returnValue = '';
-        return;
-      }
       // 防抖写入可能还没跑，关闭前同步落盘一次（localStorage 同步写，beforeunload 里可靠）
       const active = tabsRef.current.find(t => t.key === activeTabKeyRef.current);
       if (active?.kind === 'template') {
@@ -489,21 +479,28 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty, isTemplateDirty, settings.storage.enableLocalAutoCache, currentCharacterId, currentTemplateId, bbcodeTemplate, data, writeDraftForDoc]);
+  }, [isDirty, isTemplateDirty, currentCharacterId, currentTemplateId, bbcodeTemplate, data, writeDraftForDoc]);
 
-  // 放弃修改重新载入
+  // 放弃修改重新载入（作用于当前 live 文档；模板/人物卡分流）
   const handleRevertChanges = useCallback(() => {
     setConfirmModal({
       title: "确定要放弃当前所有未保存修改并重新载入吗？本地缓存的修改将丢失。",
       onConfirm: () => {
-        const draftKey = `pf1_char_draft_${currentCharacterId || 'new_character'}`;
-        localStorage.removeItem(draftKey);
-        setData(JSON.parse(JSON.stringify(lastSavedData)));
-        setIsDirty(false);
-        setToast({ message: "已放弃修改，重置为上次保存的状态", type: 'info' });
+        if (currentTemplateId) {
+          // 模板：清草稿 + 重置为上次保存（服务器/新建时默认）内容
+          localStorage.removeItem(`pf1_tpl_draft_${currentTemplateId}`);
+          setBbcodeTemplate(lastSavedTemplate);
+          setToast({ message: "已放弃修改，重置为上次保存的状态", type: 'info' });
+        } else {
+          const draftKey = `pf1_char_draft_${currentCharacterId || 'new_character'}`;
+          localStorage.removeItem(draftKey);
+          setData(JSON.parse(JSON.stringify(lastSavedData)));
+          setIsDirty(false);
+          setToast({ message: "已放弃修改，重置为上次保存的状态", type: 'info' });
+        }
       }
     });
-  }, [setConfirmModal, currentCharacterId, lastSavedData, setToast]);
+  }, [setConfirmModal, currentCharacterId, currentTemplateId, lastSavedData, lastSavedTemplate, setBbcodeTemplate, setIsDirty, setToast]);
 
   // 活动标签类型：保存分流（人物卡/模板）与无文档标签（chooser/preview）判断的依据
   const activeTabKind = tabs.find(t => t.key === activeTabKey)?.kind ?? null;
@@ -557,12 +554,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // 快照同时落盘：意外关闭浏览器后重开应用，切换到该标签页时可自动恢复未保存内容
     const tab = activeTab;
     const liveDirty = isDirty || isTemplateDirty;
-    if (tab?.docId && liveDirty && settings.storage.enableLocalAutoCache) {
+    if (tab?.docId && liveDirty) {
       writeDraftForDoc(tab.docId, tab.kind === 'character'
         ? { kind: 'character', data, activeDoc: activeDocRef.current }
         : { kind: 'template', content: bbcodeTemplate });
     }
-  }, [data, lastSavedData, bbcodeTemplate, lastSavedTemplate, isReadOnly, isDirty, isTemplateDirty, activeDocRef, settings.storage.enableLocalAutoCache, writeDraftForDoc]);
+  }, [data, lastSavedData, bbcodeTemplate, lastSavedTemplate, isReadOnly, isDirty, isTemplateDirty, activeDocRef, writeDraftForDoc]);
 
   /** 把快照整份换入 live 状态，并同步文档标识 / 视图 / URL */
   const applySnapshot = useCallback((snap: {
@@ -632,7 +629,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (snap) {
       applySnapshot(snap, tab);
     } else {
-      await selectCharacter(tab.docId, true, true);
+      await selectCharacter(tab.docId, true);
       // 加载失败（文档已删除等）：live 状态未变，撤销激活并移除失效 tab
       if (currentCharacterIdRef.current !== tab.docId && currentTemplateIdRef.current !== tab.docId) {
         snapshotsRef.current.delete(key);
@@ -653,21 +650,16 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (snap) {
       applySnapshot(snap, tab);
     } else {
-      selectCharacter(tab.docId, true, true);
+      selectCharacter(tab.docId, true);
     }
   }, [applySnapshot, selectCharacter]);
-  const closeTab = useCallback((key: string, opts?: { skipConfirm?: boolean }) => {
+  const closeTab = useCallback((key: string) => {
     const tab = tabsRef.current.find(t => t.key === key);
     if (!tab) return;
-    const isActive = key === activeTabKeyRef.current;
-    const tabDirty = isActive ? (isDirty || isTemplateDirty) : tab.dirty;
     const performClose = () => {
       snapshotsRef.current.delete(key);
-      // 丢弃即删草稿（保存后关闭的情形已由 afterSave 清过，重复删除无害）
-      if (tab.docId) {
-        localStorage.removeItem(`pf1_char_draft_${tab.docId}`);
-        localStorage.removeItem(`pf1_tpl_draft_${tab.docId}`);
-      }
+      // 关闭保留本地草稿：重开该文档时自动恢复未保存修改；显式"放弃更改"才删草稿
+      // （保存后关闭的情形草稿已由 afterSave 清过，重复删除无害）
       const paneIdx = panesRef.current.findIndex(p => p.tabKeys.includes(key));
       const ownerPane = panesRef.current[paneIdx];
       // 分栏簿记：从所属栏移除；栏空则剪除；聚焦栏被剪除时聚焦转移到相邻栏
@@ -721,48 +713,26 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 applySnapshot(snap, nt);
               } else {
                 // 该标签从未在本会话加载过：走正常加载
-                selectCharacter(nextActiveTab, true, true);
+                selectCharacter(nextActiveTab, true);
               }
             }
           }
         }
       }
     };
-    if (tabDirty && !opts?.skipConfirm) {
-      setConfirmModal({
-        title: "该标签页有未保存的修改，关闭后未保存的内容将丢失。",
-        onConfirm: performClose,
-        onSecondaryConfirm: async () => {
-          // 非活动标签的"保存并关闭"：先把该标签换入 live 状态再保存，避免把内容存进当前活动文档
-          if (key !== activeTabKeyRef.current) {
-            await switchTab(key);
-            // 等一拍让 React 完成换入后的重渲染，handleSaveRef 才能取到新文档的闭包
-            await new Promise(r => setTimeout(r, 0));
-            // 换入失败（文档已被删除等，标签被 switchTab 移除）：无内容可存，直接走关闭
-            if (!tabsRef.current.some(t => t.key === key)) return;
-          }
-          await handleSaveRef.current();
-          performClose();
-        }
-      });
-    } else {
-      performClose();
-    }
-  }, [isDirty, isTemplateDirty, applySnapshot, selectCharacter, switchTab, activeDocRef, handleSaveRef]);
+    performClose();
+  }, [applySnapshot, selectCharacter]);
 
   /** 批量关闭一组标签（关闭其他 / 关闭右侧 / 全部关闭的底层实现）。
-   *  单次簿记完成分栏剪除与焦点转移（复用单标签关闭的语义）；含脏标签时弹一次统一确认。 */
-  const closeTabKeys = useCallback((keys: string[], opts?: { skipConfirm?: boolean }) => {
+   *  单次簿记完成分栏剪除与焦点转移（复用单标签关闭的语义）；草稿语义同单标签关闭。 */
+  const closeTabKeys = useCallback((keys: string[]) => {
     const keySet = new Set(keys);
     const doomed = tabsRef.current.filter(t => keySet.has(t.key));
     if (!doomed.length) return;
     const performBatchClose = () => {
       doomed.forEach(t => {
         snapshotsRef.current.delete(t.key);
-        if (t.docId) {
-          localStorage.removeItem(`pf1_char_draft_${t.docId}`);
-          localStorage.removeItem(`pf1_tpl_draft_${t.docId}`);
-        }
+        // 关闭保留本地草稿（语义同单标签关闭）
       });
       let nextPanes = panesRef.current.map(p => {
         if (!p.tabKeys.some(k => keySet.has(k))) return p;
@@ -805,25 +775,16 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             if (snap) {
               applySnapshot(snap, nt);
             } else {
-              selectCharacter(nextActiveTab, true, true);
+              selectCharacter(nextActiveTab, true);
             }
           }
         }
       }
     };
-    // 组内存在脏标签：弹一次统一确认（保存并关闭仅作用于当前 live 文档）
-    const hasDirty = doomed.some(t => (t.key === activeTabKeyRef.current ? (isDirty || isTemplateDirty) : t.dirty));
-    if (hasDirty && !opts?.skipConfirm) {
-      setConfirmModal({
-        title: `选中的 ${doomed.length} 个标签页中存在未保存的修改，关闭后未保存的内容将丢失。`,
-        onConfirm: performBatchClose,
-      });
-    } else {
-      performBatchClose();
-    }
-  }, [isDirty, isTemplateDirty, applySnapshot, selectCharacter]);
+    performBatchClose();
+  }, [applySnapshot, selectCharacter]);
 
-  /** 删除文档后关闭对应标签（跳过未保存确认；若全部关完则重置为空白人物卡） */
+  /** 删除文档后关闭对应标签（顺带清除该文档的本地草稿；若全部关完则重置为空白人物卡） */
   const closeTabsByDocIds = useCallback((docIds: string[]) => {
     const idSet = new Set(docIds);
     if (!idSet.size) return;
@@ -887,7 +848,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [tabs, activeTabKey, data]);
 
   /** 以"新选项卡"方式打开文档：先把当前活动 tab 的 live 状态暂存，再走正常加载 */
-  const openDocumentAsTab = useCallback((idOrChar: string | any, skipDirtyCheck = false, shouldSwitchView = true) => {
+  const openDocumentAsTab = useCallback((idOrChar: string | any, shouldSwitchView = true) => {
     // 已打开且有快照的文档（可能含未保存修改）：直接切回去，避免重新加载覆盖修改
     const docId = typeof idOrChar === 'string' ? idOrChar : idOrChar?.id;
     if (docId) {
@@ -902,7 +863,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const liveDirty = isDirty || isTemplateDirty;
       setTabs(prev => prev.map(t => t.key === ak ? { ...t, dirty: liveDirty } : t));
     }
-    return selectCharacter(idOrChar, skipDirtyCheck, shouldSwitchView);
+    return selectCharacter(idOrChar, shouldSwitchView);
   }, [selectCharacter, stashActiveSnapshot, isDirty, isTemplateDirty, switchTab]);
 
   /** 暂存当前活动标签的 live 状态并更新其脏标记（打开其他标签前的公共步骤） */
@@ -919,6 +880,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const createUntitledTab = useCallback((kind: 'character' | 'template') => {
     if (kind === 'character') {
       const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      // 注入系统设置指定的默认导出模板（未设置则不写，导出时走内置默认回退）
+      const defaultTplId = getStoredSettings().export.defaultTemplateId;
+      if (defaultTplId) fresh.exportTemplateId = defaultTplId;
       setData(fresh);
       setLastSavedData(JSON.parse(JSON.stringify(fresh)));
     } else {
@@ -1020,6 +984,9 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // 预览标签不需要文档状态
     } else if (kind === 'character') {
       const fresh = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      // 注入系统设置指定的默认导出模板（未设置则不写，导出时走内置默认回退）
+      const defaultTplId = getStoredSettings().export.defaultTemplateId;
+      if (defaultTplId) fresh.exportTemplateId = defaultTplId;
       setData(fresh);
       setLastSavedData(JSON.parse(JSON.stringify(fresh)));
     } else {
@@ -1056,7 +1023,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       switchTab(existing.key);
       return;
     }
-    selectCharacter(id, true, true);
+    selectCharacter(id, true);
   }, [selectCharacter, switchTab]);
 
   /** Alt+点击 / 「打开到侧边」：新建分栏并以 chooser 开场，随后原位顶替为文档标签。
@@ -1075,7 +1042,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setActiveTabKey(key);
     pendingReplaceKeyRef.current = key;
     setView('editor');
-    void selectCharacter(id, true, true);
+    void selectCharacter(id, true);
   }, [stashAndMarkDirty, openDocumentAsTab, selectCharacter]);
 
   /** 在标签栏右侧新增一栏（以"新建标签页"开场），并聚焦它；上限 4 栏 */
@@ -1190,12 +1157,10 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const effectiveReadOnly = isReadOnly || isSyncingActive;
 
   const {
-    reorderRows,
+    reorderRows, moveItemBetweenBags,
     handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
-    handleBagDragStart, handleBagDragOver, handleBagDrop,
-    handleItemDragStart, handleItemDragOver, handleItemDrop,
     handleDragStart, handleDragOver, handleDrop
-  } = useCharacterDnD(data, setData, effectiveReadOnly);
+  } = useCharacterDnD(setData, effectiveReadOnly);
 
   const {
     update, addBag, removeBag,
@@ -1260,12 +1225,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         // 活动选项卡就地绑定新模板 id（key 不变）
         handleSaveDocument(newId, 'template');
         setToast({ message: "模板已保存", type: 'success' });
-        Promise.resolve(refreshCharacterList()).catch(console.error);
+        // 档案库列表由 onSnapshot 实时订阅自动推送，无需手动刷新
       }
     } catch (e) {
       setToast({ message: "保存模板失败", type: 'error' });
     }
-  }, [user, setToast, setCurrentTemplateId, refreshCharacterList, handleSaveDocument]);
+  }, [user, setToast, setCurrentTemplateId, handleSaveDocument]);
 
   const updateExistingTemplate = useCallback(async (id: string, content: string) => {
     if (!user) return;
@@ -1274,11 +1239,11 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setLastSavedTemplate(content);
       handleSaveDocument(id, 'template');
       setToast({ message: "模板已更新", type: 'success' });
-      Promise.resolve(refreshCharacterList()).catch(console.error);
+      // 档案库列表由 onSnapshot 实时订阅自动推送，无需手动刷新
     } catch (e) {
       setToast({ message: "更新模板失败", type: 'error' });
     }
-  }, [user, setToast, setCurrentTemplateId, refreshCharacterList, handleSaveDocument]);
+  }, [user, setToast, setCurrentTemplateId, handleSaveDocument]);
 
   const value: CharacterContextType = useMemo(() => ({
     data, setData, computed, lastSavedData, isReadOnly: effectiveReadOnly, setIsReadOnly, 
@@ -1290,14 +1255,12 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     update, addBag, removeBag,
     addMagicBlock, removeMagicBlock,
     addAdditionalBlock, removeAdditionalBlock,
-    reorderRows, handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
+    reorderRows, moveItemBetweenBags, handleTableItemDragStart, handleTableItemDragOver, handleTableItemDrop,
     handleSave, handleSaveAs, handleNew, handleShare, handleExport, handleExportBBCode, handleRevertChanges,
     selectCharacter: openDocumentAsTab,
-    loadSharedCharacter: (id: string) => openDocumentAsTab(id, true, true),
+    loadSharedCharacter: (id: string) => openDocumentAsTab(id, true),
     tabs, activeTabKey, activeTabTitle, switchTab, closeTab, closeTabsByDocIds, closeTabKeys, openCharacterTab, openTemplateTab, openChooserTab, convertChooserTab, openDocFromChooser, openDocToSide, openPreviewTab,
     panes, focusedPaneId, setFocusedPaneId, addPane, moveTabToPane, focusPane, getTabSnapshot, lastDocFocusKey,
-    handleBagDragStart, handleBagDragOver, handleBagDrop,
-    handleItemDragStart, handleItemDragOver, handleItemDrop,
     handleDragStart, handleDragOver, handleDrop,
     bbcodeTemplate, setBbcodeTemplate, saveAsTemplate, updateExistingTemplate,
     saveCharacter: handleSaveInternal,
@@ -1321,9 +1284,7 @@ export const CharacterProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     addMagicBlock, removeMagicBlock,
     addAdditionalBlock, removeAdditionalBlock,
     handleSave, handleSaveAs, handleNew, handleShare, handleExport, handleExportBBCode, handleRevertChanges, selectCharacter, loadSharedCharacter,
-    reorderRows,
-    handleBagDragStart, handleBagDragOver, handleBagDrop,
-    handleItemDragStart, handleItemDragOver, handleItemDrop,
+    reorderRows, moveItemBetweenBags,
     handleDragStart, handleDragOver, handleDrop,
     bbcodeTemplate, setBbcodeTemplate, saveAsTemplate, updateExistingTemplate,
     handleSaveInternal,

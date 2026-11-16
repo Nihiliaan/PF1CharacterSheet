@@ -25,7 +25,7 @@ const KEY_LAST_CHAR = 'last_active_character_id';
  *
  * 仅包含 CharacterProvider 自身的 state（Context 不能消费自身，必须由 Provider 透传）；
  * 其余依赖（user / setToast / setConfirmModal / setView / addToRecent /
- * refreshCharacterList / currentFolderId / setCurrentFolderId）
+ * getFullDoc / currentFolderId / setCurrentFolderId）
  * 已改为 hook 内部直接消费对应 Context，不再作为参数传入。
  */
 export interface UseCharacterPersistenceOptions {
@@ -88,11 +88,14 @@ export const useCharacterPersistence = ({
   // 内部直接消费各 Context（CharacterProvider 的祖先节点已挂载对应 Provider）
   const { user } = useAuth();
   const { setToast, setConfirmModal, setView, addToRecent } = useUI();
-  const { refreshCharacterList, currentFolderId, setCurrentFolderId } = useVault();
+  const { getFullDoc, currentFolderId, setCurrentFolderId } = useVault();
 
   const [isSaving, setIsSaving] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'offline'>('idle');
   const activeDocRef = React.useRef<CharacterDocument | any>(null);
+  // isDirty 实时引用：云端对账应用新版本前检查，防止覆盖用户已开始的编辑
+  const isDirtyRef = React.useRef(isDirty);
+  isDirtyRef.current = isDirty;
 
   /**
    * persist：纯保存层 —— 只负责把数据写入 Firestore，返回新文档 ID（失败/无返回时为 undefined）
@@ -176,8 +179,7 @@ export const useCharacterPersistence = ({
     }
 
     setToast({ message: toastMsg, type: 'success' });
-    // 后台静默刷新档案库列表，不阻塞保存状态与用户交互
-    Promise.resolve(refreshCharacterList()).catch(console.error);
+    // 档案库列表由 onSnapshot 实时订阅自动推送本次保存，无需手动刷新
   };
 
   const handleSaveInternal = async (saveData: CharacterData | { content: string, name?: string }, id?: string | null, folderId?: string | null, isTemplate: boolean = false) => {
@@ -271,8 +273,7 @@ export const useCharacterPersistence = ({
       try {
         const newId = await saveCharacterService(newData, undefined, currentFolderId);
         if (newId) {
-          Promise.resolve(refreshCharacterList()).catch(console.error);
-          await selectCharacter(newId, true);
+          await selectCharacter(newId);
         }
       } catch (e: any) {
         setToast({ message: "创建新角色失败", type: 'error' });
@@ -291,19 +292,7 @@ export const useCharacterPersistence = ({
   };
 
   const handleNew = async () => {
-    const settings = getStoredSettings();
-    if (isDirty && !settings.storage.enableLocalAutoCache) {
-      setConfirmModal({
-        title: "确定要新建角色吗？是否保存当前修改？",
-        onConfirm: () => performCreateNew(),
-        onSecondaryConfirm: async () => {
-          await handleSave();
-          await performCreateNew();
-        }
-      });
-    } else {
-      await performCreateNew();
-    }
+    await performCreateNew();
   };
 
   const checkIsReadOnly = (charDoc: any, currentUser?: any) => {
@@ -316,7 +305,7 @@ export const useCharacterPersistence = ({
     return false;
   };
 
-  const selectCharacter = async (idOrChar: string | any, skipDirtyCheck: boolean = false, shouldSwitchView: boolean = true) => {
+  const selectCharacter = async (idOrChar: string | any, shouldSwitchView: boolean = true) => {
     const renderCharacterDocument = (char: CharacterDocument, shouldSwitchView: boolean = true) => {
       activeDocRef.current = char;
       if (char.isTemplate) {
@@ -324,19 +313,17 @@ export const useCharacterPersistence = ({
         let content = serverContent;
         // 模板本地草稿恢复：上次会话有未保存修改时自动载入（lastSaved 仍用服务器内容，
         // 保证脏标记正确反映"有未保存修改"）
-        if (getStoredSettings().storage.enableLocalAutoCache) {
-          try {
-            const tplDraftRaw = localStorage.getItem(`pf1_tpl_draft_${char.id}`);
-            if (tplDraftRaw) {
-              const tplDraft = JSON.parse(tplDraftRaw);
-              if (typeof tplDraft?.content === 'string' && tplDraft.content !== serverContent) {
-                content = tplDraft.content;
-                setToast({ message: "已自动恢复该模板未保存的修改", type: 'info' });
-              }
+        try {
+          const tplDraftRaw = localStorage.getItem(`pf1_tpl_draft_${char.id}`);
+          if (tplDraftRaw) {
+            const tplDraft = JSON.parse(tplDraftRaw);
+            if (typeof tplDraft?.content === 'string' && tplDraft.content !== serverContent) {
+              content = tplDraft.content;
+              setToast({ message: "已自动恢复该模板未保存的修改", type: 'info' });
             }
-          } catch (err) {
-            console.error("Failed to parse template draft", err);
           }
+        } catch (err) {
+          console.error("Failed to parse template draft", err);
         }
         setBbcodeTemplate(content);
         setLastSavedTemplate(serverContent);
@@ -353,8 +340,7 @@ export const useCharacterPersistence = ({
         setCurrentTemplateId(null);
         localStorage.setItem(KEY_LAST_CHAR, char.id);
 
-        const settings = getStoredSettings();
-        if (settings.storage.enableLocalAutoCache) {
+        {
           const draftKey = `pf1_char_draft_${char.id}`;
           const localDraft = localStorage.getItem(draftKey);
           if (localDraft) {
@@ -419,7 +405,7 @@ export const useCharacterPersistence = ({
             const linkId = await saveLink(char, sharedFolderId);
             if (linkId) {
               setCurrentFolderId(sharedFolderId);
-              await selectCharacter(linkId, true, shouldSwitchView);
+              await selectCharacter(linkId, shouldSwitchView);
               return;
             }
           }
@@ -433,11 +419,23 @@ export const useCharacterPersistence = ({
         const id = idOrChar as string;
         if (!id) return;
 
+        // 1. 内存全量快照秒开：实时订阅条目含完整 data（零网络），按所有权即时解锁编辑。
+        //    快照条目均为本人文档（订阅按 ownerId 过滤），分享链接/瘦身条目自然走不到此分支。
+        const memDoc = getFullDoc(id) as CharacterDocument | null;
+        if (memDoc && memDoc.data) {
+          renderCharacterDocument(memDoc, shouldSwitchView);
+          setIsReadOnly(checkIsReadOnly(memDoc, auth.currentUser || user));
+          setSyncStatus('synced');
+          setTimeout(() => setSyncStatus('idle'), 2000);
+          setIsSyncing(false);
+          return;
+        }
+
         setIsSyncing(true);
         setSyncStatus('syncing');
-        setIsReadOnly(true); // 无论是否有缓存，在后台同步对齐期间均严格保持只读保护
+        setIsReadOnly(true); // 无任何本地数据可呈现时，在后台同步对齐期间严格保持只读保护
 
-        // 1. 优先尝试从本地 IndexedDB 缓存秒开
+        // 2. SDK 持久缓存秒开（跨会话遗留；快照订阅会持续预热该缓存）
         let cachedDoc = await getCharacterFromCache(id) as CharacterDocument | null;
         let hasCached = false;
 
@@ -449,12 +447,13 @@ export const useCharacterPersistence = ({
               cachedDoc = { ...cachedTarget, id: cachedDoc.id, folderId: cachedDoc.folderId };
             }
           }
-          // 立即呈现本地缓存内容，并置为只读浏览保护
+          // 立即呈现本地缓存内容：只读状态按文档所有权本地判定，不再锁到云端确认
           renderCharacterDocument(cachedDoc, shouldSwitchView);
-          setIsReadOnly(true);
+          setIsReadOnly(checkIsReadOnly(cachedDoc, auth.currentUser || user));
+          setIsSyncing(false);
         }
 
-        // 2. 后台与云端对齐最新版本
+        // 3. 后台与云端对齐最新版本（内存命中路径无需此步：实时订阅即服务器权威状态）
         try {
           let serverDoc = await getCharacterFromServer(id) as CharacterDocument | null;
           if (serverDoc && serverDoc.data) {
@@ -471,7 +470,7 @@ export const useCharacterPersistence = ({
               const linkId = await saveLink(serverDoc, sharedFolderId);
               if (linkId) {
                 setCurrentFolderId(sharedFolderId);
-                await selectCharacter(linkId, true, shouldSwitchView);
+                await selectCharacter(linkId, shouldSwitchView);
                 return;
               }
             }
@@ -483,6 +482,11 @@ export const useCharacterPersistence = ({
               if (serverTime > cachedTime) {
                 shouldApply = true;
               }
+            }
+
+            // 缓存呈现后用户已开始编辑：保持本地内容，避免云端对账覆盖未保存输入
+            if (hasCached && isDirtyRef.current) {
+              shouldApply = false;
             }
 
             if (shouldApply) {
@@ -528,23 +532,11 @@ export const useCharacterPersistence = ({
       }
     };
 
-    const settings = getStoredSettings();
-    if (isDirty && !skipDirtyCheck && !settings.storage.enableLocalAutoCache) {
-      setConfirmModal({
-        title: "是否保存当前修改后再打开新项目？",
-        onConfirm: () => performSelect(),
-        onSecondaryConfirm: async () => {
-          await handleSave();
-          await performSelect();
-        }
-      });
-    } else {
-      await performSelect();
-    }
+    await performSelect();
   };
 
   const loadSharedCharacter = async (id: string) => {
-    await selectCharacter(id, true, true);
+    await selectCharacter(id, true);
   };
 
   // Initial Load: 有 ?id= 时打开对应文档；否则直接呈现"新建标签页"（不恢复上次的标签）
@@ -558,7 +550,7 @@ export const useCharacterPersistence = ({
         const urlParams = new URLSearchParams(window.location.search);
         const urlId = urlParams.get('id');
         if (urlId) {
-          await selectCharacter(urlId, true, true);
+          await selectCharacter(urlId, true);
         } else {
           // 无 id 访问：默认进入新建标签页（最近打开的文件在该页面的列表里）
           onBootWithoutId?.();

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUI } from '../../contexts/UIContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useVault } from '../../contexts/VaultContext';
 import { googleProvider, githubProvider, discordProvider } from '../../lib/firebase';
 
 type SettingsTab = 'editor' | 'export' | 'storage' | 'account';
@@ -16,6 +17,13 @@ export default function SettingsCenter() {
   const { user, handleLogin, handleLinkAccount, handleUnlinkProvider } = useAuth();
   const { setView, setToast, isHeaderPinned, setIsHeaderPinned } = useUI();
   const { settings, updateSetting } = useSettings();
+  const { myCharacters } = useVault();
+
+  // 档案库全部 BBCode 模板（按名称排序，展示名去掉 .bbc 扩展名）
+  const bbcodeTemplates = (myCharacters || [])
+    .filter((c: any) => c.isTemplate)
+    .map((c: any) => ({ id: c.id, name: (c.name || '').replace(/\.bbc$/i, '') }))
+    .sort((a: any, b: any) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('editor');
 
@@ -166,6 +174,35 @@ export default function SettingsCenter() {
                   </div>
                 </div>
               </div>
+
+              <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-xs">
+                <h3 className="text-base font-bold text-stone-800 mb-4 pb-2 border-b border-stone-100 flex items-center gap-2">
+                  <FileText size={18} className="text-primary" />
+                  默认导出模板
+                </h3>
+
+                {/* 新建人物卡默认导出模板 */}
+                <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-stone-100 hover:border-stone-200 hover:bg-stone-50/50 transition-colors">
+                  <div className="flex-1">
+                    <div className="font-bold text-stone-800 text-sm">新建人物卡默认导出模板</div>
+                    <p className="text-xs text-stone-500 mt-1 leading-relaxed">
+                      新建人物卡时将自动绑定此处指定的档案库模板作为其导出模板。导出优先级：人物卡绑定的模板 → 此处指定的模板 → 网站内置默认模板；绑定的模板被删除时自动逐级回退。
+                    </p>
+                  </div>
+                  <div className="shrink-0 mt-0.5 w-56">
+                    <select
+                      value={settings.export.defaultTemplateId}
+                      onChange={(e) => updateSetting('export', 'defaultTemplateId', e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 cursor-pointer"
+                    >
+                      <option value="">网站内置默认模板</option>
+                      {bbcodeTemplates.map(tpl => (
+                        <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -179,26 +216,8 @@ export default function SettingsCenter() {
                 </h3>
 
                 <div className="space-y-4">
-                  {/* 开启本地缓存，离开页面也可在本地保留修改 */}
-                  <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-stone-100 hover:border-stone-200 hover:bg-stone-50/50 transition-colors">
-                    <div className="flex-1">
-                      <div className="font-bold text-stone-800 text-sm">
-                        开启本地缓存，离开页面也可在本地保留修改
-                      </div>
-                      <p className="text-xs text-stone-500 mt-1 leading-relaxed">
-                        开启后，所有编辑修改将实时自动保存在本地安全缓存中。用户关闭标签页、刷新、切换视图或新建角色时，将不再弹出未保存拦截提示；同时在编辑器顶部工具栏呈现“放弃修改”按钮，支持随时放弃未保存草稿并重置为上次保存的状态。
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={settings.storage.enableLocalAutoCache}
-                        onChange={(e) => updateSetting('storage', 'enableLocalAutoCache', e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-stone-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
+                  {/* 本地草稿自动缓存为无条件内置行为（编辑修改实时落盘、重开自动恢复、关闭不弹拦截提示），
+                      显式放弃未保存修改走标签/编辑器菜单的"放弃更改"，不再提供开关 */}
 
                   {/* 保存人物卡时自动尝试同步到纯美苹果园 */}
                   <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-stone-100 hover:border-stone-200 hover:bg-stone-50/50 transition-colors">

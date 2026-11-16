@@ -1,7 +1,7 @@
 import React, { memo, useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, GripVertical, Minus, ChevronDown, ChevronRight, Triangle } from 'lucide-react';
-import { DynamicTableProps } from '../../schema/types';
+import { DynamicTableProps, Html5RowDragProps } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
 import DynamicInput from './DynamicInput';
 import handlers from '../../schema/handlers';
@@ -101,7 +101,7 @@ const SkillsTableRow = memo(({
   );
 });
 
-export default function SkillsTable(props: DynamicTableProps & { minWidth?: string, showAll?: boolean }) {
+export default function SkillsTable(props: DynamicTableProps & Html5RowDragProps & { minWidth?: string, showAll?: boolean }) {
   const { path, columns: propsColumns, data, originalData, onChange, readonlyColumns, rowDraggable, rowActionMode = 'drag', onRowActionModeToggle, onRowDragStart: propsDragStart, onRowDragOver, onRowDrop, readOnly = false, minWidth, showAll = false } = props;
   const { t } = useTranslation();
   

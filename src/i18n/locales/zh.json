@@ -1,6 +1,8 @@
 {
   "common": {
     "app_title": "PF1人物卡编辑器",
+    "collapse": "折叠",
+    "expand": "展开",
     "save": "保存",
     "saving": "正在保存...",
     "syncing": "同步中...",

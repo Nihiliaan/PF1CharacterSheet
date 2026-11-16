@@ -91,7 +91,7 @@ function AppContent() {
   // 监听其他标签页转交来的打开请求：以新选项卡方式打开文档并聚焦本窗口
   useEffect(() => {
     const cleanup = listenForOpenRequests(docId => {
-      Promise.resolve(selectCharacter(docId, true, true)).catch(console.error);
+      Promise.resolve(selectCharacter(docId, true)).catch(console.error);
       window.focus();
     });
     return cleanup;

@@ -4,9 +4,10 @@ export interface UserSettings {
   editor: Record<string, any>;
   export: {
     showTotalForMultipleItems: boolean;
+    /** 新建人物卡时注入的默认导出模板 id（档案库 templates 集合）；空串 = 未指定 */
+    defaultTemplateId: string;
   };
   storage: {
-    enableLocalAutoCache: boolean;
     autoSyncToForumOnSave: boolean;
   };
 }
@@ -15,10 +16,9 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   editor: {},
   export: {
     showTotalForMultipleItems: false,
+    defaultTemplateId: '',
   },
   storage: {
-    // 默认开启：未保存内容自动写入本地草稿，意外关闭浏览器后重开应用可自动恢复（带冲突检测）
-    enableLocalAutoCache: true,
     autoSyncToForumOnSave: false,
   },
 };

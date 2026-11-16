@@ -1,6 +1,8 @@
 {
   "common": {
     "app_title": "PF1 Character Sheet Editor",
+    "collapse": "Collapse",
+    "expand": "Expand",
     "save": "Save",
     "saving": "Saving...",
     "syncing": "Syncing...",

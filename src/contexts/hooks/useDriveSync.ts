@@ -8,7 +8,7 @@ import * as driveService from '../../services/googleDriveService';
 export const useDriveSync = () => {
   const { setToast } = useUI();
   const { user } = useAuth();
-  const { refreshCharacterList, currentFolderId } = useVault();
+  const { currentFolderId } = useVault();
 
   const [driveModal, setDriveModal] = useState<{ isOpen: boolean, currentPath: { id: string, name: string }[], items: any[] } | null>(null);
   const [isSyncingDrive, setIsSyncingDrive] = useState(false);
@@ -74,7 +74,7 @@ export const useDriveSync = () => {
                }
                successCount++;
             }
-            await refreshCharacterList();
+            // 导入写入经 onSnapshot 实时订阅自动推送至档案库列表
             setToast({ message: `导入成功！共导入 ${successCount} 个项目` });
           } catch (error: any) {
             setToast({ message: "导入过程出错: " + error.message, type: 'error' });
@@ -113,7 +113,7 @@ export const useDriveSync = () => {
     setToast({ message: `正在从云端读取: ${item.name}...` });
     try {
       const count = await driveSyncService.importItems(item, user, currentFolderId);
-      await refreshCharacterList();
+      // 导入写入经 onSnapshot 实时订阅自动推送至档案库列表
       setToast({ message: `导入成功！共导入 ${count} 个人物卡` });
       setDriveModal(null);
     } catch (e: any) {
@@ -141,7 +141,7 @@ export const useDriveSync = () => {
     setToast({ message: "正在从云端备份还原数据..." });
     try {
       const count = await driveSyncService.restoreFromCloud(user, currentFolderId);
-      await refreshCharacterList();
+      // 还原写入经 onSnapshot 实时订阅自动推送至档案库列表
       setToast({ message: `还原成功！共恢复 ${count} 个人物卡` });
     } catch (e: any) {
       setToast({ message: "还原失败: " + e.message, type: 'error' });

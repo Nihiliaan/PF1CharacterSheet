@@ -1,5 +1,5 @@
 import React, { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { DndContext, PointerSensor, useSensor, useSensors, closestCenter, type DragStartEvent, type DragOverEvent, type DragEndEvent } from '@dnd-kit/core';
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, closestCenter, useDndContext, useDroppable, type DragStartEvent, type DragOverEvent, type DragEndEvent } from '@dnd-kit/core';
 import { useSortable } from '@dnd-kit/sortable';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -11,10 +11,39 @@ import { getHandlerByPath } from '../../schema/fieldRegistry';
 import { flushSync } from 'react-dom';
 import DynamicInput from './DynamicInput';
 
+/** 外部共享 DndContext 模式的配置（多容器场景：如装备区跨背包拖物品） */
+export interface SharedDndConfig {
+  /** 行 sortable id 前缀——多容器下所有行的 id 必须全局唯一 */
+  idPrefix?: string;
+  /** 合入每行 useSortable data 的业务字段（如 bagId），供共享 DndContext 的 onDragEnd 判定 */
+  rowData?: Record<string, any>;
+  /** 容器级 droppable id（空背包/行间隙的投放目标） */
+  containerId?: string;
+  /** 容器级 droppable data */
+  containerData?: Record<string, any>;
+}
+
+/** 容器级投放区（空背包或整表范围） */
+function DroppableArea({ id, data, className, children }: { id: string; data?: Record<string, any>; className?: string; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id, data });
+  return <div ref={setNodeRef} className={className}>{children}</div>;
+}
+
+/** 跨背包拖拽的插入指示线（纯视觉，不参与 SortableContext） */
+function InsertIndicatorRow({ colSpan }: { colSpan: number }) {
+  return (
+    <tr className="pointer-events-none select-none">
+      <td colSpan={colSpan} className="p-0">
+        <div className="h-[3px] my-[1px] rounded-full bg-primary/80 shadow-[0_0_0_1px_rgba(255,255,255,0.7)]" />
+      </td>
+    </tr>
+  );
+}
+
 const DynamicTableRow = memo(({
-  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, onRowDragStart, onRowDragOver, onRowDrop, onRowReorder, sortableEnabled, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions, onInsertAbove, noFirstRowInsert
+  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, sortableEnabled, rowSortableId, rowDndData, disableDisplacement, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions, onInsertAbove, noFirstRowInsert
 }: any) => {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: `row-${i}`, data: { index: i }, disabled: !sortableEnabled });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: rowSortableId ?? `row-${i}`, data: { index: i, ...(rowDndData || {}) }, disabled: !sortableEnabled });
   const getCellPath = (basePath: string, index: number, key: string) => {
     if (!basePath) return undefined;
     return `${basePath}.${key}[${index}]`;
@@ -38,9 +67,15 @@ const DynamicTableRow = memo(({
   return (
     <tr
       ref={setNodeRef}
-      // dnd-kit 原生样式：transform 让位预览；transition 已移除（用户要求：无过渡动画，落位即最终位置）
-      style={{ transform: CSS.Translate.toString(transform) }}
-      className={`relative group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''}`}
+      // 指针真值命中测试所需的行元数据（共享 DndContext 模式下宿主 dragend 使用；dataset 键转全小写）
+      data-dnd-index={rowDndData ? i : undefined}
+      data-dnd-bag-id={rowDndData?.bagId}
+      data-dnd-bag-index={rowDndData?.bagIndex}
+      // dnd-kit 原生样式：transform 让位预览；共享 DndContext（多容器）模式下不用原生位移——
+      // 位移会让"视觉位置"偏离"布局位置"造成落点错行，多容器预览由宿主的插入指示线承担。
+      // transition 已移除（用户要求：无过渡动画，落位即最终位置）
+      style={{ transform: disableDisplacement ? undefined : CSS.Translate.toString(transform) }}
+      className={`relative group ${isRowDirty() ? 'bg-amber-100/30' : 'hover:bg-stone-50'} ${sortableEnabled ? 'cursor-grab' : ''} ${isDragging ? 'opacity-40' : ''}`}
     >
       {columns.map((c: any, ci: number) => {
         const cellPath = getCellPath(path || '', i, c.key);
@@ -107,6 +142,7 @@ const DynamicTableRow = memo(({
           <div
             ref={sortableEnabled ? setActivatorNodeRef : undefined}
             {...(sortableEnabled ? { ...attributes, ...listeners } : {})}
+            data-dnd-activator={sortableEnabled ? '' : undefined}
             className={`flex items-center justify-center w-full h-[32px] ${sortableEnabled ? 'cursor-grab touch-none' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}
           >
             {rowDraggable && rowActionMode === 'drag' ? (
@@ -121,7 +157,7 @@ const DynamicTableRow = memo(({
   );
 });
 
-export default function DynamicTable(props: DynamicTableProps & { minWidth?: string; fixedLayout?: boolean; bordered?: boolean; noFirstRowInsert?: boolean }) {
+export default function DynamicTable(props: DynamicTableProps & { minWidth?: string; fixedLayout?: boolean; bordered?: boolean; noFirstRowInsert?: boolean; sharedDnd?: SharedDndConfig; insertPreviewIndex?: number | null }) {
   const {
     path,
     columns: propsColumns,
@@ -136,21 +172,29 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     rowActionMode = 'drag',
     onRowActionModeToggle,
     onRowReorder,
-    onRowDragStart: propsDragStart,
-    onRowDragOver,
-    onRowDrop: propsDrop,
     readOnly = false,
     bordered = true,
     fixedLayout = false,
     noFirstRowInsert = false,
     minWidth,
-    enableSQShow = false
+    enableSQShow = false,
+    sharedDnd,
+    insertPreviewIndex = null
   } = props;
   const { t } = useTranslation();
+  // 共享 DndContext 模式下监听本表行的拖拽，渲染浮动克隆（行不再 transform 跟随指针，滚动区不会被撑爆）
+  const dndContext = useDndContext();
+  const overlayRow = sharedDnd && dndContext.active
+    ? (dndContext.active.data.current as { bagId?: string; index?: number } | undefined)
+    : undefined;
+  const overlayIndex = overlayRow && overlayRow.bagId === sharedDnd?.rowData?.bagId && typeof overlayRow.index === 'number'
+    ? overlayRow.index
+    : null;
 
   // dnd-kit 传感器（行拖拽；distance 5 避免与单元格输入冲突）
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-  const dndEnabled = Boolean(onRowReorder) && !readOnly;
+  // 共享 DndContext 模式下传感器由外层宿主提供，本表只需启用行 sortable
+  const dndEnabled = !readOnly && (Boolean(onRowReorder) || Boolean(sharedDnd));
 
   // sortKey 和 sortOrder 现在仅作为 UI 状态（控制三角图标）
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -233,12 +277,6 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     onChange(newData);
     setSortKey(key);
     setSortOrder(newOrder);
-  };
-
-  const onDragStart = (idx: number, e: React.DragEvent) => {
-    // 只要触发拖拽，就清除排序 UI 状态
-    if (sortKey) setSortKey(null);
-    propsDragStart?.(idx, e);
   };
 
   const updateData = useCallback((index: number, key: string, value: any) => {
@@ -334,14 +372,8 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     flushSync(() => onRowReorder(from, to));
   };
 
-  return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
+  // 外层容器：独立模式包 DndContext；共享模式（可选）包容器级 droppable
+  const content = (
     <div className="relative w-full">
     {/* fixedLayout 表格百分比列对剩余宽度解析、数学上精确适配容器——横向滚动是多余能力，
         且 border-collapse 半像素边框会计入 scrollWidth（经典滚动条下 1px 溢出也拉出滚动条），
@@ -442,12 +474,18 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
               </td>
             </tr>
           )}
-          <SortableContext items={currentIndices.map(idx => `row-${idx}`)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={currentIndices.map(idx => `${sharedDnd?.idPrefix ?? ''}row-${idx}`)} strategy={verticalListSortingStrategy}>
           {currentIndices.map((idx) => (
+            <React.Fragment key={`row-${idx}`}>
+            {/* 跨背包拖拽的插入指示线：insertPreviewIndex = 物品将插入到该行之前（与宿主 dragend 指针真值判定同源） */}
+            {insertPreviewIndex === idx && <InsertIndicatorRow colSpan={columns.length + 1 + (enableSQShow ? 1 : 0) + (hasColumnActions ? 1 : 0) + (fixedRows ? 0 : 1)} />}
             <DynamicTableRow
               key={`row-${idx}`}
               index={idx}
               sortableEnabled={dndEnabled}
+              rowSortableId={`${sharedDnd?.idPrefix ?? ''}row-${idx}`}
+              rowDndData={sharedDnd?.rowData}
+              disableDisplacement={Boolean(sharedDnd)}
               columns={columns}
               data={data}
               originalData={originalData}
@@ -456,9 +494,6 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
               readonlyColumns={readonlyColumns}
               rowDraggable={rowDraggable}
               rowActionMode={rowActionMode}
-              onRowDragStart={onDragStart}
-              onRowDragOver={onRowDragOver}
-              onRowDrop={propsDrop}
               updateData={updateData}
               removeRow={removeRow}
               fixedRows={fixedRows}
@@ -468,7 +503,9 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
               noFirstRowInsert={noFirstRowInsert}
               onInsertAbove={readOnly || fixedRows ? undefined : () => addRowAtIndex(idx)}
             />
+            </React.Fragment>
           ))}
+          {insertPreviewIndex !== null && insertPreviewIndex >= rowCount && <InsertIndicatorRow colSpan={columns.length + 1 + (enableSQShow ? 1 : 0) + (hasColumnActions ? 1 : 0) + (fixedRows ? 0 : 1)} />}
           </SortableContext>
         </tbody>
       </table>
@@ -489,6 +526,42 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
         </div>
       )}
     </div>
+  );
+
+  if (sharedDnd) {
+    // 共享 DndContext 模式：宿主（如 EquipmentSection）持有 DndContext，本表只挂 SortableContext。
+    // 容器级 droppable 仅在空表时渲染：非空表行 droppable 与整表容器 droppable 在 closestCenter
+    // 下会相互竞争（指针判定漂移），空表没有行可竞争，容器投放语义才唯一确定。
+    const isEmpty = currentIndices.length === 0;
+    const wrapped = sharedDnd.containerId && isEmpty ? (
+      <DroppableArea id={sharedDnd.containerId} data={sharedDnd.containerData} className="relative w-full">
+        {content}
+      </DroppableArea>
+    ) : content;
+    return (
+      <>
+        {wrapped}
+        {/* 本表行被拖拽时渲染浮动克隆（DragOverlay 需在宿主 DndContext 内） */}
+        <DragOverlay dropAnimation={null} modifiers={[restrictToVerticalAxis]}>
+          {overlayIndex !== null ? (
+            <div className="w-fit max-w-[280px] bg-white border border-stone-300 rounded shadow-lg px-2.5 py-1 text-sm text-ink whitespace-nowrap overflow-hidden text-ellipsis">
+              {String(data?.[columns[0]?.key]?.[overlayIndex] ?? '')}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </>
+    );
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      {content}
     </DndContext>
   );
 }

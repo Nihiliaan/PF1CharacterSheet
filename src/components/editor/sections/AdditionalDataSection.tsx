@@ -113,9 +113,7 @@ const AdditionalDataSection: React.FC = () => {
     handleDrop,
     removeAdditionalBlock,
     addAdditionalBlock,
-    handleTableItemDragStart,
-    handleTableItemDragOver,
-    handleTableItemDrop
+    reorderRows
   } = useCharacter();
 
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<string, boolean>>({});
@@ -241,9 +239,7 @@ const AdditionalDataSection: React.FC = () => {
                       rowDraggable={true}
                       rowActionMode={tableActionMode}
                       onRowActionModeToggle={toggleTableActionMode}
-                      onRowDragStart={(idx, e) => handleTableItemDragStart(`additionalData[${i}].tableData`, idx, e)}
-                      onRowDragOver={(idx, e) => handleTableItemDragOver(`additionalData[${i}].tableData`, idx, e)}
-                      onRowDrop={(idx, e) => handleTableItemDrop(`additionalData[${i}].tableData`, idx, e)}
+                      onRowReorder={(from, to) => reorderRows(`additionalData[${i}].tableData`, from, to)}
                       minWidth="100%"
                     />
                   )}

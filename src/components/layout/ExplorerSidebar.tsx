@@ -546,7 +546,7 @@ export default function ExplorerSidebar() {
         <div className="flex items-center gap-0.5">
           <button
             onClick={() => Promise.resolve(refreshCharacterList()).catch(console.error)}
-            title={pendingSyncCount > 0 ? `刷新档案库（${pendingSyncCount} 项更改待同步）` : '刷新档案库'}
+            title={pendingSyncCount > 0 ? `立即同步（${pendingSyncCount} 项更改待同步）` : '立即同步（档案库已实时更新）'}
             className="relative p-1 rounded text-stone-400 hover:bg-stone-200 hover:text-stone-700 transition-colors"
           >
             <RefreshCw size={13} className={isVaultSyncing ? 'animate-spin' : ''} />

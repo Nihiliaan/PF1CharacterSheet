@@ -131,9 +131,9 @@ const MagicBlockItem: React.FC<MagicBlockItemProps> = ({
                 onChange={v => update(`magicBlocks[${blockIndex}].concentration`, v)}
               />
             </div>
-            <div className="w-32">
+            <div className="w-44">
               <InlineInput
-                label="类型 TYPE"
+                label={t('editor.lists.type')}
                 path={`magicBlocks[${blockIndex}].type`}
                 value={block.type ?? 2}
                 originalValue={originalBlock?.type}

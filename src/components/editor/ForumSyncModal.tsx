@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCharacter } from '../../contexts/CharacterContext';
 import { useUI } from '../../contexts/UIContext';
+import { useVault } from '../../contexts/VaultContext';
 import { ForumBindingItem, ForumBinding } from '../../schema/types';
 import { getCharacterBBCode } from '../../utils/bbcodeExporter';
 import { triggerForumSync } from '../../utils/forumSyncHelper';
@@ -31,6 +32,13 @@ export const ForumSyncModal: React.FC<ForumSyncModalProps> = ({ isOpen, onClose 
   const { t } = useTranslation();
   const { data, update, computed } = useCharacter();
   const { setToast } = useUI();
+  const { myCharacters } = useVault();
+
+  // 档案库全部 BBCode 模板（按名称排序，展示名去掉 .bbc 扩展名）
+  const bbcodeTemplates = (myCharacters || [])
+    .filter((c: any) => c.isTemplate)
+    .map((c: any) => ({ id: c.id, name: (c.name || '').replace(/\.bbc$/i, '') }))
+    .sort((a: any, b: any) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
 
   // 本地独立草稿状态（纯本地维护，键盘打字与点击宏绝不触发人物卡全局重算，彻底消灭卡顿）
   const [localBindings, setLocalBindings] = useState<ForumBindingItem[]>([]);
@@ -404,6 +412,21 @@ export const ForumSyncModal: React.FC<ForumSyncModalProps> = ({ isOpen, onClose 
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-5 flex flex-col gap-3 max-h-[92vh] overflow-y-auto">
         {/* 头部标题与说明 */}
         <ModalHeader t={t} characterId={characterId} onClose={onClose} />
+
+        {/* 导出模板选择：绑定 id 随人物卡保存；模板被删时导出自动逐级回退（系统设置 → 内置默认） */}
+        <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-stone-50 border border-stone-200">
+          <span className="text-xs font-bold text-stone-600 shrink-0">导出模板</span>
+          <select
+            value={data.exportTemplateId || ''}
+            onChange={(e) => update('exportTemplateId', e.target.value)}
+            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-stone-200 bg-white text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 cursor-pointer"
+          >
+            <option value="">跟随系统设置</option>
+            {bbcodeTemplates.map(tpl => (
+              <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+            ))}
+          </select>
+        </div>
 
         {/* 未检测到油猴助手提示条 */}
         {showHelperTip && (

@@ -8,7 +8,10 @@ interface VaultContextType {
   folders: any[];
   currentFolderId: string | null;
   setCurrentFolderId: (id: string | null) => void;
+  /** 手动刷新：实时订阅已维护列表最新，此入口仅立即重试积压的待同步操作 */
   refreshCharacterList: () => Promise<void>;
+  /** 按 id 查询内存全量文档（人物卡/模板，含完整 data），打开文件零网络秒开用 */
+  getFullDoc: (id: string | null) => any;
 
   /** 后台同步中（flush 队列进行时为 true） */
   isVaultSyncing: boolean;
@@ -66,7 +69,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const {
     folders, myCharacters,
     isSyncing, pendingCount, flushPendingOps,
-    refreshCharacterList,
+    refreshCharacterList, getFullDoc,
     createFolder, createDocumentFromData,
     moveCharacter, moveFolder, renameItem, deleteCharacter, deleteFolder, copyCharacter, ensureLocalFolder,
   } = vault;
@@ -170,7 +173,7 @@ export const VaultProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const value: VaultContextType = {
-    myCharacters, folders, currentFolderId, setCurrentFolderId, refreshCharacterList,
+    myCharacters, folders, currentFolderId, setCurrentFolderId, refreshCharacterList, getFullDoc,
     isVaultSyncing: isSyncing,
     pendingSyncCount: pendingCount,
     retryVaultSync: () => flushPendingOps({ notify: true }),

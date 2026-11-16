@@ -1,17 +1,19 @@
 /**
- * 档案库目录结构本地优先同步（local-first）核心 hook。
+ * 档案库本地优先同步（local-first）核心 hook。
  *
- * 数据模型：显示状态 = 服务器列表 ⊕ pendingOps 重放（useMemo 派生）。
- *  - 登录后先从 localStorage 缓存水合（秒开），再后台静默拉取服务器列表替换；
+ * 数据源：三个集合的 onSnapshot 实时订阅（characters / folders / templates，全量文档含完整 data）。
+ *  - SDK 持久缓存（IndexedDB）随订阅自动维护全量本地副本：登录后首次拉取，之后服务器
+ *    变更后台静默增量推送，本地读写零网络等待；
+ *  - 登录后先从 localStorage 缓存水合列表元数据（秒开），快照首包到达后整体替换；
  *  - 所有目录结构操作（新建/移动/重命名/删除/复制/导入）先做本地同名查重，
  *    立即更新派生状态并入队（PendingOp），随后由 flush 队列按 FIFO 顺序同步到 Firestore；
- *  - flush 成功：移除 op 并把效果直接套到服务器列表（避免刷新前的闪烁），随后后台刷新对账；
+ *    写入经 SDK 延迟补偿立即反映到本地快照，服务器确认后再推送权威字段（updatedAt 等）；
  *  - flush 失败：op 保留在本地缓存中持续重试（登录/联网/60s 定时/手动刷新），
  *    仅首次失败 toast 具体故障原因，之后静默重试（持续状态由 pendingCount 呈现）；
  *  - 编辑器内容保存不经过本 hook（用户明确排除）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { doc, collection } from 'firebase/firestore';
+import { doc, collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../AuthContext';
 import { useUI } from '../UIContext';
@@ -22,6 +24,7 @@ import {
 import {
   getMyCharacters,
   getFolders,
+  formatCharacterDoc,
   createFolderWithId,
   createCharacterDoc,
   moveCharacter as moveCharacterService,
@@ -41,6 +44,7 @@ import {
   copyTemplate as copyTemplateService,
   TemplateDocument,
 } from '../../services/templateService';
+import { setTemplateCacheProvider } from '../../utils/templateResolver';
 
 const RETRY_INTERVAL_MS = 60_000;
 
@@ -90,15 +94,20 @@ export function useVaultSync() {
   const uidRef = useRef(uid);
   uidRef.current = uid;
 
-  // ===== 服务器投影状态（缓存水合 / 后台刷新写入）=====
+  // ===== 服务器投影状态（缓存水合 / 实时快照写入）=====
   const [serverFolders, setServerFolders] = useState<any[]>([]);
   const [serverChars, setServerChars] = useState<any[]>([]);
   const [serverTemplates, setServerTemplates] = useState<TemplateDocument[]>([]);
   // 待同步操作队列（持久化到 localStorage，跨重启保留）
   const [pendingOps, setPendingOps] = useState<PendingOp[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
+
+  // 最新服务器列表的实时引用（getFullDoc 等非渲染路径读取）
+  const serverCharsRef = useRef(serverChars);
+  serverCharsRef.current = serverChars;
+  const serverTemplatesRef = useRef(serverTemplates);
+  serverTemplatesRef.current = serverTemplates;
 
   const opsRef = useRef(pendingOps);
   opsRef.current = pendingOps;
@@ -124,6 +133,31 @@ export function useVaultSync() {
     const source = allChars.find(c => c.id === op.id);
     const displayName = op.name || source?.name || '未命名';
     const avatar = op.avatarUrl || source?.data?.basic?.avatars?.url?.[0] || '';
+    // create-document 携带全量人物卡内容：直接落地为完整文档条目，
+    // 使 flush 前后的内存列表都能支撑"打开零网络渲染"（缺 attributes 标记的条目
+    // 会被 getFullDoc 判为不完整并回退到缓存/服务器路径）
+    if (op.content) {
+      return {
+        id,
+        name: displayName,
+        folderId: op.folderId ?? null,
+        ownerId: uidRef.current || '',
+        isTemplate: false,
+        isLink: false,
+        targetId: '',
+        updatedAt: null,
+        createdAt: null,
+        data: {
+          ...op.content,
+          id,
+          ownerId: uidRef.current || '',
+          folderId: op.folderId ?? null,
+          targetId: '',
+          isLink: false,
+          isTemplate: false,
+        },
+      };
+    }
     return {
       id,
       name: displayName,
@@ -208,6 +242,16 @@ export function useVaultSync() {
     return out;
   }, [serverChars, serverTemplates, pendingOps, buildLocalCharEntry]);
 
+  // 注册导出模板解析缓存（id → content）：服务器模板列表为唯一权威源，
+  // 模板保存/更新后由实时快照推送新内容，此处随之重新注册
+  useEffect(() => {
+    setTemplateCacheProvider(() => {
+      const map = new Map<string, string>();
+      serverTemplates.forEach(tpl => map.set(tpl.id, tpl.content || ''));
+      return map;
+    });
+  }, [serverTemplates]);
+
   // ===== 本地同名查重（与服务器 checkUniqueName 语义一致：文件夹与文档同目录同名均冲突）=====
   const checkUniqueNameLocal = useCallback((name: string, folderId: string | null, excludeId?: string) => {
     const folderConflict = folders.some(f => f.id !== excludeId && (f.parentId ?? null) === folderId && f.name === name);
@@ -227,14 +271,20 @@ export function useVaultSync() {
   }, [checkUniqueNameLocal]);
 
   // ===== 缓存持久化（防抖）=====
+  // localStorage 只保存列表元数据（水合秒开用）；文档全量 data 已由 onSnapshot
+  // 订阅写入 SDK 的 IndexedDB 持久缓存，这里剔除大字段防止 localStorage 配额溢出。
+  // 剔除后的条目缺 attributes/content 标记，getFullDoc 会判定不完整并回退缓存/服务器路径。
   useEffect(() => {
     if (!uid) return;
     const t = setTimeout(() => {
       saveVaultCache({
         uid,
         folders: serverFolders,
-        characters: serverChars,
-        templates: serverTemplates,
+        characters: serverChars.map(({ data, ...meta }) => ({
+          ...meta,
+          data: data ? { id: data.id, basic: data.basic } : data,
+        })),
+        templates: serverTemplates.map(({ content, ...tpl }) => tpl),
         ops: pendingOps,
       });
     }, 300);
@@ -403,23 +453,19 @@ function withOpTimeout<T>(p: Promise<T>): Promise<T> {
   };
 
   const flushingRef = useRef(false);
-  // refreshCharacterList 定义在 flush 之后（且 refresh 会先调 flush），经 ref 解耦
-  const refreshRef = useRef<(() => Promise<void>) | null>(null);
   const flushPendingOps = useCallback(async (opts?: { notify?: boolean }) => {
     if (flushingRef.current || !uidRef.current) return;
     flushingRef.current = true;
     setIsSyncing(true);
-    let syncedAny = false;
     try {
       let ops = opsRef.current;
       while (ops.length) {
         const op = ops[0];
         try {
           await withOpTimeout(execOp(op));
-          // 成功：立即套用到服务器列表 + 移除队首 op（后台刷新随后对账）。
+          // 成功：立即套用到服务器列表 + 移除队首 op（快照随后自动推送权威字段）。
           // 队列可能在 await 期间被追加新 op（enqueueOp）：总是基于 opsRef 现值摘除队首
           applyOpToServer(op);
-          syncedAny = true;
           ops = opsRef.current.slice(1);
           opsRef.current = ops;
           setPendingOps(ops);
@@ -467,53 +513,84 @@ function withOpTimeout<T>(p: Promise<T>): Promise<T> {
       flushingRef.current = false;
       setIsSyncing(false);
     }
-    // 队列全部同步成功：后台拉取服务器列表对账（修正 updatedAt 等服务器字段）
-    if (syncedAny && opsRef.current.length === 0) {
-      void refreshRef.current?.();
-    }
+    // 写入经 SDK 延迟补偿已反映到本地快照；服务器确认后快照自动推送权威字段
+    // （updatedAt 等），无需再手动拉取对账。
   }, [execOp, applyOpToServer, setToast]);
 
-  // ===== 后台静默刷新（拉取服务器列表替换投影；失败时保留旧状态）=====
+  // ===== 手动刷新入口 =====
+  // 列表已由实时订阅维护为最新，此入口仅立即重试积压操作（侧栏刷新按钮 / 导入后收敛）。
   const refreshCharacterList = useCallback(async () => {
-    const currentUid = uidRef.current;
-    if (!currentUid) {
-      setServerFolders([]);
-      setServerChars([]);
-      setServerTemplates([]);
-      return;
-    }
-    // 先冲积压队列：保证拉取到的列表已包含本地更改
-    await flushPendingOps();
-    setIsRefreshing(true);
-    try {
-      // 三个数据源独立容错：模板列表失败降级为空列表，不拖垮角色/文件夹列表
-      const [listR, folderR, templateR] = await Promise.allSettled([
-        getMyCharacters(currentUid),
-        getFolders(currentUid),
-        listTemplates(currentUid),
-      ]);
+    await flushPendingOps({ notify: true });
+  }, [flushPendingOps]);
 
-      let hardFail = false;
-      if (listR.status === 'fulfilled') setServerChars(listR.value || []);
-      else { console.error('[vaultSync] 角色列表加载失败:', listR.reason); hardFail = true; }
-      if (folderR.status === 'fulfilled') setServerFolders(folderR.value || []);
-      else { console.error('[vaultSync] 文件夹列表加载失败:', folderR.reason); hardFail = true; }
-      if (templateR.status === 'fulfilled') setServerTemplates(templateR.value || []);
-      else console.warn('[vaultSync] 模板列表加载失败（若为 permission-denied，请部署最新的 firestore.rules）:', templateR.reason);
-
-      if (hardFail) {
-        // 有本地缓存可显示：静默保留旧状态；仅首次（无任何数据显示）才提示
-        if (!hasCacheRef.current) {
-          setToast({ message: '刷新数据失败，请检查连接', type: 'error' });
-        }
-      } else {
-        hasCacheRef.current = true;
+  // ===== 全量文档实时订阅（数据主源）=====
+  // characters / folders / templates 三集合挂 onSnapshot：SDK 自动把全量文档（含完整
+  // data）持久化进 IndexedDB 本地缓存，服务器变更后台静默增量推送，本地零网络感知。
+  // 订阅失败容错：保留现有状态（localStorage 水合结果），仅首次且无缓存时提示。
+  const subErrorToastedRef = useRef(false);
+  useEffect(() => {
+    if (!uid) return;
+    const handleSubError = (source: string) => (e: unknown) => {
+      console.error(`[vaultSync] ${source} 实时订阅失败:`, e);
+      if (!hasCacheRef.current && !subErrorToastedRef.current) {
+        subErrorToastedRef.current = true;
+        setToast({ message: '实时同步连接失败：' + describeFirestoreError(e), type: 'error' });
       }
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [flushPendingOps, setToast]);
-  refreshRef.current = refreshCharacterList;
+    };
+    const byUpdatedDesc = (a: any, b: any) => {
+      const ta = a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0;
+      const tb = b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0;
+      return tb - ta;
+    };
+    // 快照成功（含离线缓存首包）后重置错误提示闸门
+    const onSubHit = () => { subErrorToastedRef.current = false; hasCacheRef.current = true; };
+
+    const unsubChars = onSnapshot(
+      query(collection(db, 'characters'), where('ownerId', '==', uid)),
+      snap => {
+        setServerChars(snap.docs
+          .map(d => formatCharacterDoc(d))
+          .filter((c): c is NonNullable<ReturnType<typeof formatCharacterDoc>> => c !== null)
+          .sort(byUpdatedDesc));
+        onSubHit();
+      },
+      handleSubError('人物卡列表')
+    );
+    const unsubFolders = onSnapshot(
+      query(collection(db, 'folders'), where('ownerId', '==', uid), orderBy('name', 'asc')),
+      snap => {
+        setServerFolders(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        onSubHit();
+      },
+      handleSubError('文件夹列表')
+    );
+    const unsubTemplates = onSnapshot(
+      query(collection(db, 'templates'), where('ownerId', '==', uid)),
+      snap => {
+        setServerTemplates(snap.docs
+          .map(d => ({ id: d.id, ...d.data() }) as TemplateDocument)
+          .sort(byUpdatedDesc));
+        onSubHit();
+      },
+      handleSubError('模板列表（若为 permission-denied，请部署最新的 firestore.rules）')
+    );
+    return () => { unsubChars(); unsubFolders(); unsubTemplates(); };
+  }, [uid, setToast]);
+
+  /**
+   * 按 id 查询内存中的全量文档（人物卡或模板，含完整 data / content）。
+   * 打开文件的零网络秒开通道：只有快照/flush 落地的完整条目才返回
+   * （characters 以 data.attributes 为全量标记，templates 以 content 字符串为标记；
+   * localStorage 水合的瘦身条目与链接卡一律返回 null，由调用方走缓存/服务器回退）。
+   */
+  const getFullDoc = useCallback((id: string | null): any => {
+    if (!id) return null;
+    const c = serverCharsRef.current.find(x => x.id === id);
+    if (c && !c.targetId && c.data?.attributes) return c;
+    const t = serverTemplatesRef.current.find(x => x.id === id);
+    if (t && typeof t.content === 'string') return templateToCharacterDoc(t);
+    return null;
+  }, []);
 
   // ===== op 入队（本地校验 → 立即生效于派生状态 → 入队 → 触发 flush）=====
   const enqueueOp = useCallback((op: PendingOp) => {
@@ -524,10 +601,12 @@ function withOpTimeout<T>(p: Promise<T>): Promise<T> {
     void flushPendingOps();
   }, [flushPendingOps]);
 
-  // ===== 登录态变化：缓存水合（秒开）→ 后台刷新 =====
+  // ===== 登录态变化：localStorage 列表元数据水合（秒开）=====
+  // 文档全量数据由上方 onSnapshot 订阅负责（首包来自 SDK 持久缓存，近实时到达）
   useEffect(() => {
     if (!uid) {
       hasCacheRef.current = false;
+      subErrorToastedRef.current = false;
       setServerFolders([]);
       setServerChars([]);
       setServerTemplates([]);
@@ -548,7 +627,6 @@ function withOpTimeout<T>(p: Promise<T>): Promise<T> {
       setServerTemplates([]);
       setPendingOps([]);
     }
-    void refreshCharacterList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
 
@@ -742,12 +820,13 @@ function withOpTimeout<T>(p: Promise<T>): Promise<T> {
     templates: serverTemplates,
     // 同步状态
     isSyncing,
-    isRefreshing,
     pendingCount: pendingOps.length,
     lastSyncError,
     // 操作
     refreshCharacterList,
     flushPendingOps,
+    /** 按 id 查询内存全量文档（人物卡/模板），供打开文件零网络秒开 */
+    getFullDoc,
     createFolder,
     createDocumentFromData,
     moveCharacter,

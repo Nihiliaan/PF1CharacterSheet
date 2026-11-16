@@ -2,7 +2,6 @@ import i18n from '../i18n/config';
 import Handlebars from 'handlebars';
 import { get } from 'lodash-es';
 import { CharacterData, ATTRIBUTE_NAMES } from '../schema/types';
-import { DEFAULT_BBCODE_TEMPLATE } from '../constants/index';
 import { getExportValue } from './formatters';
 import { getHandlerByPath } from '../schema/fieldRegistry';
 import { getAttributeModifiers, calculateTotalCost, calculateTotalWeightNum, getComputedEncumbrance } from './calculations';
@@ -18,6 +17,7 @@ import { PfsGoalItem } from '../schema/types';
 import handlers from '../schema/handlers';
 import { injectPfsViewObject } from './pfsBbcodeHelper';
 import { getStoredSettings } from '../contexts/SettingsContext';
+import { resolveExportTemplate } from './templateResolver';
 
 // 创建隔离的 Handlebars 实例
 const hbs = Handlebars.create();
@@ -357,7 +357,7 @@ export function getCharacterBBCode(
   computed: any,
   t: any = ((k: string, d?: string) => d || k)
 ): string {
-  const template = localStorage.getItem('bbcode_template') || DEFAULT_BBCODE_TEMPLATE;
+  const template = resolveExportTemplate(data);
   return generateBBCode(data, template, t, { computed, data });
 }
 

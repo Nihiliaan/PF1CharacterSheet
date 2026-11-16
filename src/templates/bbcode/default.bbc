@@ -87,9 +87,8 @@ hp {{hp}} ({{hd}})
 {{/each}}{{/if}}
 [hr][b]特殊福利[/b]
 [hr][table]
-[tr][td]已用/上限[/td][td]Boon[/td][td]效果[/td][td]记录单号[/td][/tr]
 {{#each pfs.boons}}
-[tr][td]{{boxes}}[/td][td]{{name}}[/td][td]{{desc}}[/td][td]{{sheetNo}}[/td][/tr]
+[tr][td]{{boxes}}[/td][td]{{name}}[/td][td]{{desc}}[/td][td]#{{sheetNo}}[/td][/tr]
 {{/each}}
 [/table]
 [hr][b]记录单[/b]

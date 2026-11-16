@@ -136,7 +136,7 @@ export async function listTemplates(uid: string, folderId?: string | null): Prom
   const q = query(collection(db, TEMPLATE_COLLECTION), ...filters);
   const snapshot = await getDocs(q);
   const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as TemplateDocument[];
-  // 与 getCharacterList 保持一致的排序：最近更新在前
+  // 与 getMyCharacters 保持一致的排序：最近更新在前
   return items.sort((a, b) => {
     const timeA = a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0;
     const timeB = b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0;

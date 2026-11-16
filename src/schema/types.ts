@@ -37,14 +37,22 @@ export interface DynamicTableProps {
   onRowActionModeToggle?: () => void;
   /** dnd-kit 行排序：拖拽结束时按物理索引提交（from/to 均为原物理索引） */
   onRowReorder?: (from: number, to: number) => void;
-  onRowDragStart?: (index: number, e: any) => void;
-  onRowDragOver?: (index: number, e: any) => void;
-  onRowDrop?: (index: number, e: any) => void;
   readOnly?: boolean;
   path?: string;
   showAll?: boolean;
   minWidth?: string;
   enableSQShow?: boolean;
+}
+
+/**
+ * HTML5 原生行级拖拽三件套。
+ * 仅限未迁移 dnd-kit、自持 DOM 绑定的表格组件（当前唯一消费者：SkillsTable）使用；
+ * DynamicTable 已不再绑定这些行级事件，故不纳入其 props 类型（结构性杜绝死接线）。
+ */
+export interface Html5RowDragProps {
+  onRowDragStart?: (index: number, e: any) => void;
+  onRowDragOver?: (index: number, e: any) => void;
+  onRowDrop?: (index: number, e: any) => void;
 }
 
 export interface SingleRowTableProps {
@@ -249,6 +257,8 @@ export interface AdditionalBlock {
 
 export interface CharacterData {
   schemaVersion?: number;
+  /** 人物卡绑定的 BBCode 导出模板 id（templates 集合）；导出时查证失败逐级回退 */
+  exportTemplateId?: string;
   forumBindings?: ForumBinding[];
   forumTitleTemplate?: string;
   id?: string;

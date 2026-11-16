@@ -43,9 +43,10 @@ interface TabContextMenu {
 
 // ===== 分栏宽度模型（自底向上） =====
 // 叶子声明最小宽（InlineInput/MultilineInput 的 minWidth、表格列 min-w）→
-// min-content 沿布局树自然上传（水平求和、垂直取最大）→ 栏根 min-width:min-content 作下限 →
-// 外层按 flexGrow 权重比例分配（拖拽分隔条改权重、持久化）；
-// 总宽 < Σ(栏最小宽) 时 zoom = W/Σmin 整体缩放兜底（重置测量法，见 recomputeZoom）。
+// min-content 沿布局树自然上传（水平求和、垂直取最大）→ 栏根 min-width:min-content 作 CSS 兜底 →
+// 外层按持久化权重比例分配（拖拽分隔条改权重、持久化），请求宽度归一到可用宽，严格线性响应；
+// 各栏内容按「实际宽 / 自身最小宽」独立缩放（z_i 写在各栏根的 --pane-zoom，栏间互不影响），
+// 下限 MIN_ZOOM，触底后该栏回退横向滚动，不拖累其他栏的显示比例。
 const PANE_WEIGHTS_KEY = 'pf1_pane_weights';
 /** 整体缩放下限：更窄时宁可让溢出表格回退横向滚动，也不无限缩小文字 */
 const MIN_ZOOM = 0.5;
@@ -63,43 +64,17 @@ function PaneDivider({ index, onDragStart }: { index: number; onDragStart: (inde
   );
 }
 
-/** 分配求解：请求宽度 + 各栏最小宽地板 → zoom 与实际宽度。
- *  1) 总宽装不下全部最小宽时整体缩放（z ≤ W/Σmin），并保证每栏请求 ≥ 其虚拟最小宽（拖拽联动）；
- *  2) 触底的栏钳制在地板，亏空在未触底的栏间按请求比例回摊（Σactual = 可分配宽，守恒）。 */
-function solveAllocation(req: number[], mins: number[], rowClientW: number): { z: number; actual: number[] } {
+/** 分配求解：请求宽度按比例归一到可用宽（拖拽严格线性响应，无地板钳制）→
+ *  各栏内容按「实际宽 / 自身最小宽」独立缩放：z_i = clamp(actual_i/min_i, MIN_ZOOM, 1)。
+ *  旧版的全局地板钳制 + 全局 zoom 联动有两处硬伤：拖拽对中只要一栏触底，宽度输出就与
+ *  dx 无关（拖不动）；全局取 min_i 缩放比导致多栏显示比例同步取最小值。 */
+function solveAllocation(req: number[], mins: number[], rowClientW: number): { zooms: number[]; actual: number[] } {
   const n = req.length;
   const usable = Math.max(rowClientW - (n - 1), 1); // 减 (n-1) 个 1px 分隔条
-  const sumMin = mins.reduce((s, m) => s + m, 0);
-  let z = 1;
-  if (sumMin + (n - 1) > rowClientW) {
-    z = usable / Math.max(sumMin, 1);
-    for (let i = 0; i < n; i++) if (mins[i] > 1) z = Math.min(z, req[i] / mins[i]);
-    z = Math.max(MIN_ZOOM, Math.min(z, 1));
-  }
-  const floors = mins.map(m => m * z);
-  const actual = req.slice();
-  let pinnedSum = 0;
-  let freeReqSum = 0;
-  const pinned: boolean[] = req.map((r, i) => {
-    const hit = r < floors[i];
-    if (hit) { actual[i] = floors[i]; pinnedSum += floors[i]; } else { freeReqSum += r; }
-    return hit;
-  });
-  const rem = Math.max(usable - pinnedSum, 0);
-  const freeIdx: number[] = [];
-  pinned.forEach((p, i) => { if (!p) freeIdx.push(i); });
-  if (freeIdx.length > 0) {
-    if (freeReqSum > 0) {
-      freeIdx.forEach(i => { actual[i] = req[i] * (rem / freeReqSum); });
-    } else {
-      freeIdx.forEach(i => { actual[i] = rem / freeIdx.length; });
-    }
-  } else if (pinnedSum > 0) {
-    // 全部触底：剩余空间按地板比例摊回
-    const sf = floors.reduce((s, f) => s + f, 0) || 1;
-    for (let i = 0; i < n; i++) actual[i] = floors[i] + rem * (floors[i] / sf);
-  }
-  return { z, actual };
+  const reqSum = req.reduce((s, v) => s + v, 0);
+  const actual = reqSum > 0 ? req.map(v => (v * usable) / reqSum) : req.map(() => usable / n);
+  const zooms = actual.map((w, i) => Math.max(MIN_ZOOM, Math.min(1, w / Math.max(mins[i], 1))));
+  return { zooms, actual };
 }
 
 /** 只读影子作用域：用快照数据覆写 CharacterContext，供未聚焦分栏渲染文档只读视图 */
@@ -239,8 +214,8 @@ function EditorPaneView({ pane, paneIndex, focused }: {
     <div
       data-pane-index={paneIndex}
       onPointerDown={e => {
-        // 聚焦分栏；但按下标签芯片时不打断后续的拖拽手势
-        if (!focused && !(e.target as HTMLElement).closest('[data-tab-chip]')) focusPane(pane.id);
+        // 聚焦分栏；但按下标签芯片/dnd-kit 拖拽把手时不打断后续的拖拽手势（重渲染会掐断拖拽启动）
+        if (!focused && !(e.target as HTMLElement).closest('[data-tab-chip],[data-dnd-activator]')) focusPane(pane.id);
       }}
       className={`min-w-min flex flex-col overflow-hidden ${
         focused ? 'bg-white' : 'bg-stone-100/70'
@@ -261,7 +236,9 @@ function EditorPaneView({ pane, paneIndex, focused }: {
               const tab = tabs.find(tt => tt.key === key);
               if (!tab) return null;
               const active = focused && pane.activeTabKey === key;
-              const dirty = active ? liveDirty : tab.dirty;
+              // chooser/preview 无文档状态：liveDirty 属于 live 文档，不属于这类标签，永不显示脏标记
+              const docTab = tab.kind === 'character' || tab.kind === 'template';
+              const dirty = docTab ? (active ? liveDirty : tab.dirty) : false;
               const fallbackTitle = tab.kind === 'character' ? '人物卡' : tab.kind === 'preview' ? '预览' : '未命名模板';
               const title = active ? activeTabTitle : ((typeof tab.title === 'string' && tab.title.trim() && tab.title.trim() !== '{}' && tab.title.trim() !== '[object Object]') ? tab.title : fallbackTitle);
               return (
@@ -407,36 +384,37 @@ export default function EditorPanes() {
   const rowRef = useRef<HTMLDivElement>(null);
 
   // ===== JS 分配器（模型的直译）=====
-  // 请求比例（持久化权重）→ 最小宽地板钳制 → 亏空在未触底的栏间按请求比例回摊 → 显式 px 宽度。
+  // 请求比例（持久化权重）→ 归一到可用宽 → 显式 px 宽度；各栏内容独立缩放（z_i = actual_i/mins_i）。
   // 各栏最小宽由叶子层（输入框 minWidth / 表格列 min-w）经 min-content 沿布局树上传播导，此处实测缓存；
-  // 总宽不足时整体 zoom 兜底：z = min(W/Σmin, min_i(请求_i/最小宽_i))——后者即"拖拽↔缩放联动"：
-  // 把某栏拖到超出其最小宽的分配比例时，整体再缩一档腾出空间；W ≥ Σmin 时 z = 1（地板直接吸收冲突）。
+  // 某栏实际宽 < 其最小宽时仅缩放该栏自身内容（下限 MIN_ZOOM，触底回退横向滚动），不影响其他栏。
   const minsRef = useRef<number[]>([]);
 
   /** 重算布局：实测各栏虚拟最小宽（zoom 置 1 + width:min-content）→ 由持久化权重求请求分配 →
-   *  solveAllocation 解出 zoom 与实际宽度并命令式写入（React 不接管 style.width）。 */
+   *  solveAllocation 解出各栏独立 zoom 与实际宽度并命令式写入（React 不接管 style.width）。 */
   const layoutPanes = useCallback(() => {
     const row = rowRef.current;
     if (!row) return;
     const paneEls = Array.from(row.querySelectorAll<HTMLElement>('[data-pane-index]'));
     if (!paneEls.length) return;
     const n = paneEls.length;
-    row.style.setProperty('--pane-zoom', '1');
+    paneEls.forEach(el => { el.style.setProperty('--pane-zoom', '1'); });
     const prevWidths = paneEls.map(el => el.style.width);
     paneEls.forEach(el => { el.style.width = 'min-content'; });
     const mins = paneEls.map(el => el.getBoundingClientRect().width);
     minsRef.current = mins;
     paneEls.forEach((el, i) => { el.style.width = prevWidths[i]; });
-    // 请求分配 = 持久化权重的归一比例（缺省权重取现有均值，新栏公平入场）
+    // 请求分配 = 持久化权重的归一比例（缺省权重取现有均值）
     const ws = weightsRef.current;
     const defined = ws.filter(v => typeof v === 'number' && v > 0);
     const avg = defined.length ? defined.reduce((s, v) => s + v, 0) / defined.length : 1;
     const raw = paneEls.map((_, i) => (typeof ws[i] === 'number' && ws[i] > 0 ? ws[i] : avg));
     const rawSum = raw.reduce((s, v) => s + v, 0) || 1;
     const req = raw.map(v => (v / rawSum) * row.clientWidth);
-    const { z, actual } = solveAllocation(req, mins, row.clientWidth);
-    row.style.setProperty('--pane-zoom', String(z));
-    paneEls.forEach((el, i) => { el.style.width = `${actual[i]}px`; });
+    const { zooms, actual } = solveAllocation(req, mins, row.clientWidth);
+    paneEls.forEach((el, i) => {
+      el.style.setProperty('--pane-zoom', String(zooms[i]));
+      el.style.width = `${actual[i]}px`;
+    });
   }, []);
 
   const layoutRafRef = useRef(0);
@@ -454,6 +432,29 @@ export default function EditorPanes() {
     ro.observe(row);
     return () => ro.disconnect();
   }, [scheduleLayout]);
+
+  // 分屏默认宽（先于触发②执行，同一次提交内先修正权重再布局）：新栏追加在行尾，
+  // 把左邻栏现有权重对半分给新栏（VS Code 分屏语义：新分隔条恰好落在邻栏旧空间中点，
+  // 1→2 栏即各 1/2），避免旧持久化权重/均值回摊把新栏挤成 1/3。
+  const prevPaneCountRef = useRef(panes.length);
+  useLayoutEffect(() => {
+    const n = panes.length;
+    const grew = n > prevPaneCountRef.current;
+    prevPaneCountRef.current = n;
+    if (!grew || n < 2) return;
+    const ws = weightsRef.current;
+    const defined = ws.filter(v => typeof v === 'number' && v > 0);
+    const avg = defined.length ? defined.reduce((s, v) => s + v, 0) / defined.length : 1;
+    const base = Array.from({ length: n - 1 }, (_, i) => (typeof ws[i] === 'number' && ws[i] > 0 ? ws[i] : avg));
+    const half = base[n - 2] / 2;
+    base[n - 2] = half;
+    base.push(half);
+    weightsRef.current = base; // layoutPanes 读 ref，同步赋值后可立即按新权重布局
+    setWeights(base);
+    try { localStorage.setItem(PANE_WEIGHTS_KEY, JSON.stringify(base)); } catch { /* 忽略写入失败 */ }
+    layoutPanes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panes.length]);
 
   // 触发②：结构变化（栏数 / 活动标签类型——不同内容形态的最小宽不同）；useLayoutEffect 同步分配避免首帧闪动
   const structureKey = panes
@@ -473,7 +474,7 @@ export default function EditorPanes() {
     return () => window.removeEventListener('pf1:min-change', scheduleLayout);
   }, [scheduleLayout]);
 
-  // ===== 分隔条拖拽：请求宽度在相邻两栏间此消彼长，经分配器求解（含缩放联动）；
+  // ===== 分隔条拖拽：请求宽度在相邻两栏间此消彼长，归一分配（严格线性响应）；
   // 拖拽路径命令式写 DOM（不走 setState，避免 60Hz 重渲染重表格）=====
   const dragStateRef = useRef<{ index: number; startX: number; startWidths: number[]; paneEls: HTMLElement[]; row: HTMLElement } | null>(null);
 
@@ -500,9 +501,11 @@ export default function EditorPanes() {
       if (!st) return;
       const dx = e.clientX - st.startX;
       const req = st.startWidths.map((w, i) => (i === st.index ? w + dx : i === st.index + 1 ? w - dx : w));
-      const { z, actual } = solveAllocation(req, minsRef.current, st.row.clientWidth);
-      st.row.style.setProperty('--pane-zoom', String(z));
-      st.paneEls.forEach((el, i) => { el.style.width = `${actual[i]}px`; });
+      const { zooms, actual } = solveAllocation(req, minsRef.current, st.row.clientWidth);
+      st.paneEls.forEach((el, i) => {
+        el.style.setProperty('--pane-zoom', String(zooms[i]));
+        el.style.width = `${actual[i]}px`;
+      });
     };
     const onUp = () => {
       const st = dragStateRef.current;

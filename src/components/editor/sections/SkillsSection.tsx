@@ -59,6 +59,7 @@ const SkillsSection: React.FC = () => {
       </div>
 
       <div className="mt-4">
+        {/* SkillsTable 保持 HTML5 行拖拽（幽灵行/分类折叠未迁移 dnd-kit），经 handleTableItem* 提交 SoA 同步排序 */}
         <SkillsTable
           path="skills"
           data={data.skills}
@@ -67,6 +68,9 @@ const SkillsSection: React.FC = () => {
           rowDraggable={true}
           rowActionMode={tableActionMode}
           onRowActionModeToggle={toggleTableActionMode}
+          onRowDragStart={(idx, e) => handleTableItemDragStart('skills', idx, e)}
+          onRowDragOver={(idx, e) => handleTableItemDragOver('skills', idx, e)}
+          onRowDrop={(idx, e) => handleTableItemDrop('skills', idx, e)}
                               showAll={showAll}
         />
       </div>

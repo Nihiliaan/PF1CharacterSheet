@@ -3,7 +3,7 @@
  * 与聚焦/激活状态无关；需要文档处于 live 状态的操作会先激活标签再执行。
  * 标签条（EditorPanes）与「打开的编辑器」（ExplorerSidebar）共用同一份菜单。
  */
-import { Columns2, ClipboardCopy, Trash2, X } from 'lucide-react';
+import { Columns2, ClipboardCopy, Undo2, Trash2, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { EditorTab, CharacterContextType } from '../../contexts/CharacterContext';
 import { DEFAULT_BBCODE_TEMPLATE } from '../../constants';
@@ -77,6 +77,10 @@ export function buildTabMenuItems(args: {
         }),
       });
       items.push({ label: '复制模板文本', onClick: () => void activateFirst(() => navigator.clipboard.writeText(ctx.bbcodeTemplate)) });
+    }
+    // 有未保存修改：显式"放弃更改"（清本地草稿并重置为上次保存状态）；非活动标签先激活再执行
+    if (dirty && !readOnly) {
+      items.push({ label: '放弃更改', icon: Undo2, danger: true, onClick: () => void activateFirst(() => ctx.handleRevertChanges()) });
     }
     items.push({ label: '分享链接', onClick: () => void activateFirst(() => ctx.handleShare()) });
     items.push({ label: '导出文件', onClick: () => void activateFirst(() => ctx.handleExport()) });

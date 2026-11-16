@@ -141,7 +141,7 @@ export function useVaultExplorer(options: {
   // ===== 打开（统一入口：selectCharacter 内含缓存秒开 / 云端对齐 / templates 集合兜底）=====
 
   const openDoc = useCallback(async (id: string) => {
-    await selectCharacter(id, true, true);
+    await selectCharacter(id, true);
   }, [selectCharacter]);
 
   // ===== 删除（子树级联 + 联动关闭已打开标签）=====

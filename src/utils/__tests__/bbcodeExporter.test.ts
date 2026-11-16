@@ -5,6 +5,7 @@ import {
   buildViewObject,
   getCharacterBBCode,
 } from '../bbcodeExporter';
+import { setTemplateCacheProvider } from '../templateResolver';
 import { DEFAULT_DATA } from '../../constants';
 import i18n from '../../i18n/config';
 import type { CharacterData } from '../../schema/types';
@@ -141,8 +142,42 @@ describe('getCharacterBBCode - 完整导出管线', () => {
     expect(out).not.toContain('导出错误');
   });
 
-  it('localStorage 中的自定义模板优先生效', () => {
-    localStorage.setItem('bbcode_template', '姓名={{basic.name}}');
-    expect(getCharacterBBCode(data, {} as any)).toBe('姓名=测试角色甲');
+  it('回退链第 1 级：人物卡绑定的模板优先生效', () => {
+    setTemplateCacheProvider(() => new Map([['tpl-a', '绑定={{basic.name}}']]));
+    expect(getCharacterBBCode(asData({ ...data, exportTemplateId: 'tpl-a' }), {} as any)).toBe('绑定=测试角色甲');
+  });
+
+  it('回退链第 2 级：绑定 id 失效时退回系统设置指定的模板', () => {
+    setTemplateCacheProvider(() => new Map([['tpl-b', '设置={{basic.name}}']]));
+    localStorage.setItem('pf1_user_settings', JSON.stringify({
+      export: { defaultTemplateId: 'tpl-b' },
+    }));
+    expect(getCharacterBBCode(asData({ ...data, exportTemplateId: 'tpl-gone' }), {} as any)).toBe('设置=测试角色甲');
+  });
+
+  it('回退链第 3 级：绑定与系统设置均失效时退回内置默认模板', () => {
+    setTemplateCacheProvider(() => new Map([['tpl-a', '绑定={{basic.name}}']]));
+    expect(getCharacterBBCode(asData({ ...data, exportTemplateId: 'tpl-gone' }), {} as any)).toContain('测试角色甲');
+  });
+});
+
+describe('PFS 特殊福利 boxes（CheckGroup 打包整数解码）', () => {
+  // 打包规则 CheckGroupInput: (max << 8) | checked —— 低字节已勾选，高字节总格数
+  const data = asData({
+    pfs: {
+      playerNumber: '12345',
+      boons: {
+        uses: [(5 << 8) | 2, 0, (3 << 8) | 3],
+        name: ['五格福利', '无格福利', '用尽福利'],
+        desc: ['描述甲', '描述乙', '描述丙'],
+        sheetNo: [1, 2, 3],
+      },
+    },
+  });
+  const tpl = '{{#each pfs.boons}}[{{boxes}}/{{name}}]{{/each}}';
+
+  it('已用 ☒ 前置、剩余 ☐ 后置；无格显示 —；用尽全 ☒', () => {
+    const out = generateBBCode(data, tpl, t);
+    expect(out).toBe('[☒☒☐☐☐/五格福利][—/无格福利][☒☒☒/用尽福利]');
   });
 });
