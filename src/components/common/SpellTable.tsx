@@ -77,11 +77,10 @@ export default function SpellTable({
     return false;
   }, [rowCount, spellType]);
 
-  /** 在指定位置插入一行（at 缺省追加到末尾）；行间悬停间隙调用 */
-  const addRowAtIndex = (at?: number) => {
+  /** 顶部插入一行（2026-11-16 用户裁决：还原原版 UI——表头右上角 + 按钮，环位顺序添加） */
+  const addRowTop = () => {
     if (readOnly) return;
     if (!canAdd) return;
-    const insertAt = Math.max(0, Math.min(at ?? rowCount, rowCount));
 
     const newData = { ...data };
     columns.forEach(c => {
@@ -91,9 +90,7 @@ export default function SpellTable({
       const defaultValue = getHandlerByPath(cellPath)?.getDefaultValue?.() ?? '';
 
       if (!newData[c.key]) newData[c.key] = new Array(rowCount).fill(defaultValue);
-      const arr = [...newData[c.key]];
-      arr.splice(Math.min(insertAt, arr.length), 0, defaultValue);
-      newData[c.key] = arr;
+      newData[c.key] = [defaultValue, ...newData[c.key]];
     });
     onChange(newData);
   };
@@ -140,7 +137,18 @@ export default function SpellTable({
                 {t(c.label)}
               </th>
             ))}
-            <th className="w-5 p-0 align-middle border-stone-300" />
+            <th className="w-5 p-0 align-middle border-stone-300">
+              {canAdd && !readOnly && (
+                <button
+                  type="button"
+                  onClick={addRowTop}
+                  className="p-0.5 w-full flex items-center justify-center text-stone-400 hover:text-stone-900 transition-colors"
+                  title={t('common.add_row')}
+                >
+                  <Plus size={16} className="shrink-0" />
+                </button>
+              )}
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-300">
@@ -160,23 +168,6 @@ export default function SpellTable({
 
                   return (
                     <td key={c.key} className={`p-0 align-top border-stone-300 ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
-                      {ci === 0 && !readOnly && (
-                        // 法术表插入条保留原版逻辑/UI（2026-11-16 用户裁决）：悬停行内任意处显示
-                        // 虚线+气泡、点击插入该环位上方——环位有序插入需要显式的行级指示，与
-                        // DynamicTable 的边界精确模式语义不同，不做统一。此前"点不进编辑区"的真凶
-                        // 是法术列被单行封顶钳窄（已修），插入条系误判共犯
-                        <div
-                          onClick={() => addRowAtIndex(i)}
-                          title={t('common.add_row')}
-                          className="absolute inset-x-0 -top-[5px] h-[10px] z-20 cursor-pointer opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto flex items-center justify-center"
-                        >
-                          <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
-                            <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
-                              <Plus size={9} /> 添加行
-                            </span>
-                          </div>
-                        </div>
-                      )}
                       {c.key === 'level' ? (
                         <div className="w-full h-full flex items-center justify-center font-bold px-2 text-stone-700 bg-stone-100/50 min-h-[32px]">
                           {t('editor.spells.computed_level', { n: computedLevelNumber })}
