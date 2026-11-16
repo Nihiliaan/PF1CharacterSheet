@@ -6,7 +6,7 @@ import { AvatarsSoA } from '../../schema/types';
 
 const DEFAULT_AVATAR = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="%23a8a29e"><rect width="100" height="100" fill="%23f5f5f4"/><circle cx="50" cy="38" r="18"/><path d="M20 88 C20 66 34 60 50 60 C66 60 80 66 80 88 Z"/></svg>`;
 
-const AvatarGallery = ({ avatars, onUpdate }: { avatars: AvatarsSoA, onUpdate: (a: AvatarsSoA) => void }) => {
+const AvatarGallery = ({ avatars, onUpdate, maxHeight }: { avatars: AvatarsSoA, onUpdate: (a: AvatarsSoA) => void, maxHeight?: number }) => {
   const [index, setIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,9 +40,10 @@ const AvatarGallery = ({ avatars, onUpdate }: { avatars: AvatarsSoA, onUpdate: (
 
   return (
     <div className="w-full flex flex-col gap-2 shrink-0 relative">
-       <div 
+       <div
          ref={containerRef}
-         className="w-full aspect-square border-2 border-stone-300 rounded bg-stone-50 flex items-center justify-center overflow-hidden relative group cursor-ns-resize shadow-inner"
+         className="w-full border-2 border-stone-300 rounded bg-stone-50 flex items-center justify-center overflow-hidden relative group cursor-ns-resize shadow-inner"
+         style={maxHeight ? { maxHeight: `${maxHeight}px` } : undefined}
        >
           <AnimatePresence mode="wait">
             <motion.img
@@ -52,7 +53,7 @@ const AvatarGallery = ({ avatars, onUpdate }: { avatars: AvatarsSoA, onUpdate: (
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0.85, scale: 0.98 }}
               transition={{ duration: 0.15 }}
-              className="w-full h-full object-cover absolute inset-0"
+              className="block w-full h-auto relative"
               draggable={false}
               loading="eager"
               decoding="async"

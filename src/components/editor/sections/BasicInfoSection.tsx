@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import Section from '../../common/Section';
 import InlineInput from '../../common/InlineInput';
@@ -9,6 +9,17 @@ import { useCharacter } from '../../../contexts/CharacterContext';
 const BasicInfoSection: React.FC = () => {
   const { t } = useTranslation();
   const { data, lastSavedData, update } = useCharacter();
+  const formColumnRef = useRef<HTMLDivElement>(null);
+  const [formColumnHeight, setFormColumnHeight] = useState(0);
+
+  useEffect(() => {
+    const el = formColumnRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setFormColumnHeight(el.clientHeight));
+    ro.observe(el);
+    setFormColumnHeight(el.clientHeight);
+    return () => ro.disconnect();
+  }, []);
 
   return (
     <Section id="basic-info" title={t('editor.sections.basic')} className="max-w-[1200px] mx-auto">
@@ -19,7 +30,9 @@ const BasicInfoSection: React.FC = () => {
           紧凑化（2026-11-16 用户裁决）：InlineInput 改左右排版后字段高度减半，间距同步收紧，
           头像列 256→224px */}
       <div className="flex flex-wrap items-stretch gap-x-4 gap-y-2.5">
-        <div className="flex-[1_1_200px] flex flex-wrap gap-x-2.5 gap-y-2 content-start">
+        {/* self-start：表单列不被高头像经 flex stretch 拉伸，保证 clientHeight 测量
+            始终是内容驱动的 Section 高度基准（防测量→头像上限→再拉伸的死循环） */}
+        <div ref={formColumnRef} className="flex-[1_1_200px] self-start flex flex-wrap gap-x-2.5 gap-y-2 content-start">
           <InlineInput
             className="basis-[calc(50%-6px)] grow font-bold"
             label={t('editor.basic.name')}
@@ -163,6 +176,7 @@ const BasicInfoSection: React.FC = () => {
           <AvatarGallery
             avatars={data.basic.avatars}
             onUpdate={(newAvatars) => update('basic.avatars', newAvatars)}
+            maxHeight={formColumnHeight || undefined}
           />
         </div>
       </div>

@@ -161,16 +161,17 @@ export default function SpellTable({
                   return (
                     <td key={c.key} className={`p-0 align-top border-stone-300 ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
                       {ci === 0 && !readOnly && (
-                        // 边界精确化（2026-11-16 用户报告的严重 Bug）：旧实现 group-hover 悬停行内
-                        // 任意处即显示插入条且 pointer-events-auto（z-20）拦截行顶部点击——鼠标远离
-                        // 边界"添加行"也显示、编辑区点不进。对齐 DynamicTable 模式：悬停 4px 边界条才显示
+                        // 法术表插入条保留原版逻辑/UI（2026-11-16 用户裁决）：悬停行内任意处显示
+                        // 虚线+气泡、点击插入该环位上方——环位有序插入需要显式的行级指示，与
+                        // DynamicTable 的边界精确模式语义不同，不做统一。此前"点不进编辑区"的真凶
+                        // 是法术列被单行封顶钳窄（已修），插入条系误判共犯
                         <div
                           onClick={() => addRowAtIndex(i)}
                           title={t('common.add_row')}
-                          className="absolute inset-x-0 top-0 h-[4px] z-20 cursor-pointer opacity-0 hover:opacity-100"
+                          className="absolute inset-x-0 -top-[5px] h-[10px] z-20 cursor-pointer opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto flex items-center justify-center"
                         >
-                          <div className="absolute top-0 inset-x-2 border-t border-dashed border-primary/70 flex justify-center">
-                            <span className="absolute -top-[9px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
+                          <div className="w-11/12 border-t border-dashed border-primary/70 relative flex justify-center">
+                            <span className="absolute -top-[10px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
                               <Plus size={9} /> 添加行
                             </span>
                           </div>
