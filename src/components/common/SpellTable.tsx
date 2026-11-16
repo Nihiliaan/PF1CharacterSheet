@@ -191,7 +191,9 @@ export default function SpellTable({
                           type={cellHandler?.ui || (c.key === 'uses' ? 'dailyUses' : 'text')}
                           displayFormatter={c.displayFormatter}
                           align={c.key === 'spells' ? 'left' : 'center'}
-                          singleLine={c.key !== 'notes' && c.key !== 'desc'}
+                          // 法术列 = 顿号分隔的长列表，与备注/描述同语义（换行、编辑器撑满单元格）。
+                          // 此前误标 singleLine → 落进单行格 max-w-[24em] 封顶被裁剪（2026-11-16 用户截图）
+                          singleLine={!['notes', 'desc', 'spells'].includes(c.key)}
                           className={readOnly ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"}
                         />
                       )}
