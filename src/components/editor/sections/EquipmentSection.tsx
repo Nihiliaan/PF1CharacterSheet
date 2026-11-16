@@ -100,11 +100,12 @@ const EquipmentSection: React.FC = () => {
 
         {/* flex-wrap 替代 md:flex-row：负重条最小 240px，不足自动换行 */}
         <div className="flex flex-wrap gap-3 mt-4 items-stretch">
-          <div className="flex flex-col gap-0 border border-stone-200 bg-stone-50 rounded p-1.5 w-24 shrink-0 justify-center">
-            <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none">
+          {/* 左右排版（2026-11-16 用户裁决）：与 InlineInput 同款标签左/值右，不再两行 */}
+          <div className="flex items-center gap-2 border border-stone-200 bg-stone-50 rounded p-1.5 w-28 shrink-0">
+            <label className="text-[9px] font-bold text-stone-500 uppercase tracking-wider leading-none whitespace-nowrap shrink-0">
               {t('editor.items.total_assets')}
             </label>
-            <div className="text-sm font-medium text-ink px-0.5">
+            <div className="text-sm font-medium text-ink min-w-0 flex-1">
               {calculateTotalCost(data)}
               <span className="text-xs font-normal text-stone-500 ml-1">gp</span>
             </div>

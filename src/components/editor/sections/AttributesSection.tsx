@@ -38,10 +38,7 @@ const AttributesSection: React.FC = () => {
       {/* flex-wrap 替代 md:flex-row：并排阈值 = 两半各自 basis 之和（战技表 4 列×70 + 备注框 200），不足自动堆叠 */}
       <div className="flex flex-wrap gap-4 mt-4 items-stretch">
         <div className="flex-[1_1_280px] flex flex-col">
-          <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1.5 flex justify-between">
-            {t('editor.combat.stats')}
-            <span className="text-stone-400 font-normal">BAB / CMB / CMD</span>
-          </label>
+          {/* 组标签已删（2026-11-16 用户裁决）：与 SingleRowTable 表头完全重复 */}
           <div className="flex-1">
             <SingleRowTable
               path="combatManeuver"

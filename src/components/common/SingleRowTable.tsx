@@ -71,6 +71,8 @@ export default function SingleRowTable(props: SingleRowTableProps) {
                     optionIndices={cellHandler?.optionIndices || c.optionIndices}
                     displayFormatter={c.displayFormatter}
                     align={c.align || 'center'}
+                    // 高度压缩（2026-11-16 用户裁决）：组标签删除后输入单元格 32→26px
+                    minHeight="26px"
                     singleLine={!['desc', 'notes', 'special', 'content'].some(word => c.key.toLowerCase().includes(word))}
                     row={data}
                     className={`${(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}
