@@ -7,6 +7,7 @@ import { useUI } from '../../../contexts/UIContext';
 import { useCharacter } from '../../../contexts/CharacterContext';
 import EquipmentBatchImportModal from '../EquipmentBatchImportModal';
 import { ParsedEquipmentItem } from '../../../utils/equipmentBatchParser';
+import type { CellRect } from '../../../utils/tableOps';
 
 interface EquipmentBagItemProps {
   bag: any;
@@ -20,6 +21,12 @@ interface EquipmentBagItemProps {
   /** 折叠状态（纯界面记忆；背包拖拽期间宿主会强制全折叠） */
   collapsed: boolean;
   onToggleCollapse: () => void;
+  /** Excel 式剪切源标记（仅当剪切源属于本背包时非空；蚂蚁线视觉） */
+  cutRect?: CellRect | null;
+  /** 剪切上报（宿主统一持有剪切源） */
+  onCut?: (rect: CellRect) => void;
+  /** 粘贴时清除剪切源区（完成"移动"语义） */
+  onConsumeCut?: () => void;
 }
 
 const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
@@ -31,7 +38,10 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
   update,
   insertPreviewIndex,
   collapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  cutRect = null,
+  onCut,
+  onConsumeCut
 }) => {
   // 背包容器排序（dnd-kit）：把手为唯一激活器；不用原生位移（多容器落点由宿主指针真值判定，
   // 位移会让视觉位置偏离布局位置），拖拽预览 = DragOverlay 卡片 + 宿主的背包插入指示线
@@ -169,6 +179,10 @@ const EquipmentBagItem: React.FC<EquipmentBagItemProps> = ({
           containerId: `bag-container-${bag.id}`,
           containerData: { bagId: bag.id, bagIndex, isContainer: true }
         }}
+        excel={true}
+        cutRect={cutRect}
+        onCut={onCut}
+        onConsumeCut={onConsumeCut}
       />
 
       </>

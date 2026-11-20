@@ -11,6 +11,9 @@ import EncumbranceBar from './EncumbranceBar';
 import EquipmentBagItem from './EquipmentBagItem';
 import { useCharacter } from '../../../contexts/CharacterContext';
 import { calculateTotalCost } from '../../../utils/calculations';
+import { getHandlerByPath } from '../../../schema/fieldRegistry';
+import { clearCells, type CellRect } from '../../../utils/tableOps';
+import type { Column } from '../../../schema/types';
 
 /** 指针真值落点（中线模型）：背包拖拽 = 插入索引 0..N（N=末尾追加）；行拖拽 = 目标背包 + 行插入索引 0..行数 */
 interface BagDrop { kind: 'bag'; index: number }
@@ -46,6 +49,20 @@ const EquipmentSection: React.FC = () => {
   const [collapsedBagIds, setCollapsedBagIds] = useState<Set<string>>(new Set());
   /** 背包拖拽期间的折叠快照：进入拖拽全折叠、结束按快照恢复 */
   const [bagDragCollapseSnapshot, setBagDragCollapseSnapshot] = useState<Set<string> | null>(null);
+  /** Excel 式剪切源（跨背包移动语义）：剪切在宿主统一持有（bag A 剪切、bag B 粘贴要清源），
+      任意物品表粘贴时清除源区完成"移动"；矩形为该背包数据索引（闭区间） */
+  const [cutSource, setCutSource] = useState<{ bagId: string; rect: CellRect } | null>(null);
+
+  const handleConsumeCut = useCallback(() => {
+    if (!cutSource) return;
+    const bagIndex = data.equipment.container.findIndex(b => b.id === cutSource.bagId);
+    if (bagIndex !== -1) {
+      const bagPath = `equipment.container[${bagIndex}]`;
+      const cols: Column[] = getHandlerByPath(bagPath)?.columns || [];
+      update(bagPath, clearCells(data.equipment.container[bagIndex], cols, bagPath, cutSource.rect));
+    }
+    setCutSource(null);
+  }, [cutSource, data, update]);
 
   const toggleBagCollapse = useCallback((bagId: string) => {
     setCollapsedBagIds(prev => {
@@ -246,6 +263,9 @@ const EquipmentSection: React.FC = () => {
                   insertPreviewIndex={rowPreview?.bagId === bag.id ? rowPreview.index : null}
                   collapsed={collapsedBagIds.has(bag.id) || dragInfo?.kind === 'bag'}
                   onToggleCollapse={() => toggleBagCollapse(bag.id)}
+                  cutRect={cutSource?.bagId === bag.id ? cutSource.rect : null}
+                  onCut={(rect) => setCutSource({ bagId: bag.id, rect })}
+                  onConsumeCut={handleConsumeCut}
                 />
               </React.Fragment>
             ))}

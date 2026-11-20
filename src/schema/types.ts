@@ -231,6 +231,8 @@ export interface ForumBindingItem {
   msgId: number;
   titleTemplate?: string;
   subtitleTemplate?: string;
+  /** 最近一次定点同步成功的时间戳展示文本（仅作记录展示，同步过程状态为瞬时内存态） */
+  lastSyncedAt?: string;
 }
 
 export type ForumBinding = number | ForumBindingItem;

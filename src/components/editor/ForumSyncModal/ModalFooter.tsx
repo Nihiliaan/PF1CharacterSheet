@@ -3,12 +3,12 @@
  */
 import React from 'react';
 import { DownloadCloud, RefreshCw } from 'lucide-react';
-import { ForumBindingItem } from '../../../schema/types';
+import { LocalBinding } from './shared';
 
 interface ModalFooterProps {
   t: any;
   isSyncing: boolean;
-  localBindings: ForumBindingItem[];
+  localBindings: LocalBinding[];
   onClose: () => void;
   onTriggerSync: () => void;
 }
@@ -23,7 +23,7 @@ const ModalFooter: React.FC<ModalFooterProps> = ({ t, isSyncing, localBindings, 
         className="text-xs text-stone-500 hover:text-amber-800 flex items-center gap-1 cursor-pointer"
       >
         <DownloadCloud size={12} />
-        <span>安装/更新油猴助手脚本 (v1.4.0)</span>
+        <span>{t('editor.forum_sync.helper_install', '安装/更新油猴助手脚本')} (v1.4.0)</span>
       </a>
 
       <div className="flex items-center gap-2">
@@ -32,7 +32,7 @@ const ModalFooter: React.FC<ModalFooterProps> = ({ t, isSyncing, localBindings, 
           onClick={onClose}
           className="px-4 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-100 rounded transition-colors cursor-pointer"
         >
-          {t('common.cancel', '关闭')}
+          {t('editor.forum_sync.close', '关闭')}
         </button>
         <button
           type="button"
@@ -42,7 +42,7 @@ const ModalFooter: React.FC<ModalFooterProps> = ({ t, isSyncing, localBindings, 
         >
           <RefreshCw size={12} className={isSyncing ? "animate-spin" : ""} />
           <span>
-            {isSyncing ? '正在批量定点同步...' : t('editor.forum_sync.sync_now_btn', '一键定点同步')}
+            {isSyncing ? t('editor.forum_sync.syncing', '正在批量定点同步...') : t('editor.forum_sync.sync_now', '一键定点同步')}
           </span>
         </button>
       </div>

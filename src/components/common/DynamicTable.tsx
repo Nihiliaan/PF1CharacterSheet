@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, GripVertical, Triangle } from 'lucide-react';
 import { DynamicTableProps } from '../../schema/types';
 import { getHandlerByPath } from '../../schema/fieldRegistry';
+import { normalizeRect, buildTsv, parseTsvGrid, applyGrid, fillRows, clearCells, type CellRect } from '../../utils/tableOps';
 import { flushSync } from 'react-dom';
 import DynamicInput from './DynamicInput';
 
@@ -41,7 +42,8 @@ function InsertIndicatorRow({ colSpan }: { colSpan: number }) {
 }
 
 const DynamicTableRow = memo(({
-  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, sortableEnabled, rowSortableId, rowDndData, disableDisplacement, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions, onInsertAbove, noFirstRowInsert
+  index: i, columns, data, originalData, path, readOnly, readonlyColumns, rowDraggable, rowActionMode, sortableEnabled, rowSortableId, rowDndData, disableDisplacement, updateData, removeRow, fixedRows, isDescriptionCol, enableSQShow, hasColumnActions, onInsertAbove, noFirstRowInsert,
+  excelEnabled, excelView, editingCell, onCellMouseDown, onFillStart, fillTip
 }: any) => {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: rowSortableId ?? `row-${i}`, data: { index: i, ...(rowDndData || {}) }, disabled: !sortableEnabled });
   const getCellPath = (basePath: string, index: number, key: string) => {
@@ -85,15 +87,27 @@ const DynamicTableRow = memo(({
         const effUi = c.type || cellHandler?.ui || '';
         const isDesc = effUi !== 'name' && isDescriptionCol(c.key, { ui: effUi });
         const isNameType = effUi === 'name';
+        const isEditingThisCell = editingCell && editingCell.row === i && editingCell.col === ci;
+        const isFillHandleCell = excelEnabled && excelView && i === excelView.rect?.row1 && ci === excelView.rect?.col1;
         return (
-          <td key={c.key} style={{ width: c.width, minWidth: c.minWidth }} className={`p-0 align-top whitespace-nowrap overflow-visible border-stone-300 ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}>
+          <td
+            key={c.key}
+            data-xr={excelEnabled ? i : undefined}
+            data-xc={excelEnabled ? ci : undefined}
+            onMouseDown={(e) => onCellMouseDown?.(i, ci, e)}
+            style={{ width: c.width, minWidth: c.minWidth }}
+            className={`p-0 align-top whitespace-nowrap overflow-visible border-stone-300 ${excelEnabled && excelView ? excelView.cls(i, ci) : ''} ${c.hideRightBorder ? '' : 'border-r last:border-r-0'}`}
+          >
             {/* 行间悬停插入区：仅渲染在首列 td 内（ci === 0），以 tr（relative）为定位基准横跨整行；
-                pointer-events 跟随行悬停激活——否则透明条会常驻拦截单元格顶部的正常点击 */}
+                pointer-events 跟随行悬停激活——否则透明条会常驻拦截单元格顶部的正常点击。
+                mousedown stopPropagation：excel 模式下阻止冒泡进单元格选区逻辑；
+                hover 延迟 150ms：拖拽选区快速划过行间隙时不闪现"添加行"气泡 */}
             {ci === 0 && !noFirstRowInsert && onInsertAbove && (
               <div
                 onClick={onInsertAbove}
+                onMouseDown={(e) => e.stopPropagation()}
                 title="在此处添加行"
-                className="absolute inset-x-0 top-0 h-[4px] z-20 cursor-pointer opacity-0 hover:opacity-100"
+                className="absolute inset-x-0 top-0 h-[4px] z-20 cursor-pointer opacity-0 hover:opacity-100 transition-opacity duration-150 hover:delay-150"
               >
                 <div className="absolute top-0 inset-x-2 border-t border-dashed border-primary/70 flex justify-center">
                   <span className="absolute -top-[9px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">
@@ -102,21 +116,54 @@ const DynamicTableRow = memo(({
                 </div>
               </div>
             )}
-            <DynamicInput
-              value={row[c.key] ?? ''}
-              originalValue={originalData?.[c.key]?.[i]}
-              onChange={(val) => updateData(i, c.key, val)}
-              path={cellPath}
-              readOnly={readOnly || readonlyColumns?.includes(c.key)}
-              columnKey={c.key}
-              type={cellHandler?.ui || c.type}
-              optionIndices={cellHandler?.optionIndices || c.optionIndices}
-              displayFormatter={c.displayFormatter}
-              align={c.align || (isNameType || !isDesc ? 'center' : 'left')}
-              singleLine={c.singleLine ?? (isNameType || !isDesc)}
-              row={row}
-              className={`${(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}
-            />
+            {excelEnabled ? (
+              /* excel 模式包一层 relative：填充柄以单元格为定位基准（td 不能相对化——
+                 行间插入区以 tr 为基准横跨整行，td 相对化会劫持其定位） */
+              <div className="relative h-full">
+                <DynamicInput
+                  value={row[c.key] ?? ''}
+                  originalValue={originalData?.[c.key]?.[i]}
+                  onChange={(val) => updateData(i, c.key, val)}
+                  path={cellPath}
+                  readOnly={readOnly || readonlyColumns?.includes(c.key)}
+                  columnKey={c.key}
+                  type={cellHandler?.ui || c.type}
+                  optionIndices={cellHandler?.optionIndices || c.optionIndices}
+                  displayFormatter={c.displayFormatter}
+                  align={c.align || (isNameType || !isDesc ? 'center' : 'left')}
+                  singleLine={c.singleLine ?? (isNameType || !isDesc)}
+                  row={row}
+                  interactive={false}
+                  editRequest={isEditingThisCell ? editingCell.token : 0}
+                  editSeed={isEditingThisCell ? editingCell.seed : null}
+                  editCancelRequest={excelView?.cancelToken ?? 0}
+                  className={`${(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100"} ${c.className || ''}`}
+                />
+                {isFillHandleCell && (
+                  <div
+                    onMouseDown={onFillStart}
+                    title={fillTip}
+                    className="absolute bottom-0 right-0 w-2 h-2 bg-primary border border-white rounded-[1px] cursor-crosshair z-30"
+                  />
+                )}
+              </div>
+            ) : (
+              <DynamicInput
+                value={row[c.key] ?? ''}
+                originalValue={originalData?.[c.key]?.[i]}
+                onChange={(val) => updateData(i, c.key, val)}
+                path={cellPath}
+                readOnly={readOnly || readonlyColumns?.includes(c.key)}
+                columnKey={c.key}
+                type={cellHandler?.ui || c.type}
+                optionIndices={cellHandler?.optionIndices || c.optionIndices}
+                displayFormatter={c.displayFormatter}
+                align={c.align || (isNameType || !isDesc ? 'center' : 'left')}
+                singleLine={c.singleLine ?? (isNameType || !isDesc)}
+                row={row}
+                className={`${(readOnly || readonlyColumns?.includes(c.key)) ? "font-medium bg-stone-100/50 text-stone-700" : "hover:bg-stone-100 focus:bg-white"} ${c.className || ''}`}
+              />
+            )}
           </td>
         );
       })}
@@ -157,7 +204,7 @@ const DynamicTableRow = memo(({
   );
 });
 
-export default function DynamicTable(props: DynamicTableProps & { minWidth?: string; fixedLayout?: boolean; bordered?: boolean; noFirstRowInsert?: boolean; sharedDnd?: SharedDndConfig; insertPreviewIndex?: number | null }) {
+export default function DynamicTable(props: DynamicTableProps & { minWidth?: string; fixedLayout?: boolean; bordered?: boolean; noFirstRowInsert?: boolean; sharedDnd?: SharedDndConfig; insertPreviewIndex?: number | null; excel?: boolean; cutRect?: CellRect | null; onCut?: (rect: CellRect) => void; onConsumeCut?: () => void }) {
   const {
     path,
     columns: propsColumns,
@@ -179,7 +226,11 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     minWidth,
     enableSQShow = false,
     sharedDnd,
-    insertPreviewIndex = null
+    insertPreviewIndex = null,
+    excel = false,
+    cutRect = null,
+    onCut,
+    onConsumeCut
   } = props;
   const { t } = useTranslation();
   // 共享 DndContext 模式下监听本表行的拖拽，渲染浮动克隆（行不再 transform 跟随指针，滚动区不会被撑爆）
@@ -248,6 +299,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
 
   const handleSort = (key: string) => {
     if (!sortableColumns.includes(key)) return;
+    if (excelEnabled) clearSelection(); // 排序物理重排行索引，选区语义失效直接清空
 
     let newOrder: 'asc' | 'desc' = 'asc';
     if (sortKey === key) {
@@ -350,6 +402,310 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
     return (handler?.ui === 'text' || handler?.ui === 'markdown' || ['desc', 'notes', 'special', 'content', 'remarks', 'story', 'languages', 'trait'].some(word => key.toLowerCase().includes(word)));
   };
 
+  // ================= Excel 式表格操作（仅装备物品表启用，见 EquipmentBagItem） =================
+  // 单击=选中（拖拽矩形/Shift 扩展）、双击或 Enter/F2=编辑、打字=覆盖输入、Delete=清空选区、
+  // Ctrl+D=选区内首行向下填充、选区右下角填充柄下拉循环复制行；Ctrl+C/X/V 经 document 级
+  // 剪贴板事件与 Excel 互通（TSV）。写入统一走 onChange，与逐格编辑同管线（updateByPath→Immer）。
+  const excelEnabled = Boolean(excel) && !readOnly;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const editTokenRef = useRef(0);
+  const [selAnchor, setSelAnchor] = useState<{ row: number; col: number } | null>(null);
+  const [selFocus, setSelFocus] = useState<{ row: number; col: number } | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  // 焦点是否在容器内（含编辑态 input）：失焦时隐藏活动格 outline，选区高亮保留（Excel 行为）
+  const [tableFocused, setTableFocused] = useState(false);
+  const [editing, setEditing] = useState<{ row: number; col: number; key: string; token: number; seed: string | null; snapshot: any } | null>(null);
+  const [editCancel, setEditCancel] = useState(0);
+  const [isFillDrag, setIsFillDrag] = useState(false);
+  const [fillPreviewRows, setFillPreviewRows] = useState<number[]>([]);
+  const fillPreviewRef = useRef<number[]>([]);
+  const fillSourceRef = useRef<CellRect | null>(null);
+
+  const selection: CellRect | null = useMemo(
+    () => (selAnchor && selFocus ? normalizeRect(selAnchor, selFocus) : null),
+    [selAnchor, selFocus]
+  );
+  const activeCell = selFocus ?? selAnchor;
+
+  const setFillPreview = useCallback((rows: number[]) => {
+    fillPreviewRef.current = rows;
+    setFillPreviewRows(rows);
+  }, []);
+
+  const clearSelection = useCallback(() => { setSelAnchor(null); setSelFocus(null); }, []);
+
+  const exitEdit = useCallback((revert: boolean) => {
+    // revert 走 updateData 幂等写回（snapshot 为编辑前存储值），StrictMode 双调无害
+    setEditing(ed => {
+      if (ed && revert) updateData(ed.row, ed.key, ed.snapshot);
+      return null;
+    });
+    setEditCancel(c => c + 1);
+  }, [updateData]);
+
+  const requestEdit = useCallback((row: number, col: number, seed: string | null) => {
+    const colKey = columns[col]?.key;
+    if (!colKey) return;
+    editTokenRef.current += 1;
+    setEditing({ row, col, key: colKey, token: editTokenRef.current, seed, snapshot: data?.[colKey]?.[row] });
+  }, [columns, data]);
+
+  const handleCellMouseDown = useCallback((row: number, col: number, e: React.MouseEvent) => {
+    if (!excelEnabled) return;
+    if (e.button !== 0 && e.button !== 2) return;
+    // 编辑格内的左键交给原生行为（光标定位/文本选择）
+    if (e.button === 0 && editing && editing.row === row && editing.col === col) return;
+    e.preventDefault();
+    if (e.button === 0 && !e.shiftKey) {
+      // 左键=直接编辑（保留单击编辑习惯），同时把活动格收敛到本格（剪贴板/删除锚点随行）
+      if (editing) exitEdit(false);
+      requestEdit(row, col, null);
+      setSelAnchor({ row, col });
+      setSelFocus({ row, col });
+      return;
+    }
+    // Shift+左键=扩展选区；右键=建立/拖拽矩形选区（菜单由容器 onContextMenu 屏蔽）
+    if (editing) exitEdit(false);
+    containerRef.current?.focus();
+    if (e.shiftKey && selAnchor) {
+      setSelFocus({ row, col });
+    } else {
+      setSelAnchor({ row, col });
+      setSelFocus({ row, col });
+    }
+    setIsSelecting(true);
+  }, [excelEnabled, editing, selAnchor, exitEdit, requestEdit]);
+
+  const handleFillStart = useCallback((e: React.MouseEvent) => {
+    if (!excelEnabled || !selection) return;
+    e.preventDefault();
+    e.stopPropagation();
+    fillSourceRef.current = selection;
+    setIsFillDrag(true);
+  }, [excelEnabled, selection]);
+
+  // 指针真值命中：拖拽期间 tbody 整体 pointer-events: none（hover 反馈全灭，见 index.css
+  // 的 .excel-dragging），elementFromPoint 失效 → 改用 tr/td 布局矩形几何判定
+  // （与 EquipmentSection 跨背包拖拽的指针真值判定同款思路）。位移已关闭，矩形即布局位置。
+  const hitCell = useCallback((x: number, y: number): { row: number; col: number } | null => {
+    const tbody = containerRef.current?.querySelector('tbody');
+    if (!tbody) return null;
+    for (const tr of Array.from(tbody.querySelectorAll('tr'))) {
+      const firstTd = tr.querySelector('td[data-xr]');
+      if (!firstTd) continue;
+      const row = Number(firstTd.getAttribute('data-xr'));
+      const r = (tr as HTMLElement).getBoundingClientRect();
+      if (y < r.top || y > r.bottom) continue;
+      for (const td of tr.querySelectorAll('td[data-xr]')) {
+        const c = (td as HTMLElement).getBoundingClientRect();
+        if (x >= c.left && x <= c.right) {
+          return { row, col: Number(td.getAttribute('data-xc')) };
+        }
+      }
+      return { row, col: columns.length - 1 }; // 横向落在把手列等非数据区 → 收在最后一列
+    }
+    return null;
+  }, [columns]);
+
+  // 选区拖拽与填充拖拽统一走 window pointermove + hitCell 几何命中（快速拖动不跳格）。
+  // 不用 td onMouseEnter：快速划过时中间格会被跳过，命中测试逐 move 事件全量判定。
+  useEffect(() => {
+    if (!excelEnabled || !isSelecting) return;
+    const onMove = (e: PointerEvent) => {
+      const hit = hitCell(e.clientX, e.clientY);
+      if (!hit) return;
+      setSelFocus({ row: hit.row, col: hit.col });
+    };
+    const onUp = () => setIsSelecting(false);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [excelEnabled, isSelecting, hitCell]);
+
+  useEffect(() => {
+    if (!excelEnabled || !isFillDrag) return;
+    const onMove = (e: PointerEvent) => {
+      const src = fillSourceRef.current;
+      if (!src) return;
+      const hit = hitCell(e.clientX, e.clientY);
+      const rows: number[] = [];
+      if (hit) {
+        const hitRow = hit.row;
+        // 双向填充：向下补 src.row1+1..hitRow，向上补 hitRow..src.row0-1（值取模循环复制）
+        if (hitRow > src.row1) for (let r = src.row1 + 1; r <= hitRow; r++) rows.push(r);
+        else if (hitRow < src.row0) for (let r = hitRow; r < src.row0; r++) rows.push(r);
+      }
+      const prev = fillPreviewRef.current;
+      if (prev.length !== rows.length || (rows.length > 0 && prev[0] !== rows[0])) setFillPreview(rows);
+    };
+    const onUp = () => {
+      const src = fillSourceRef.current;
+      const rows = fillPreviewRef.current;
+      if (src && rows.length > 0) {
+        onChange(fillRows(data, columns, path || '', src, rows));
+        // 填充后选区覆盖源+目标区（Excel 行为）
+        const top = Math.min(src.row0, rows[0]);
+        const bottom = Math.max(src.row1, rows[rows.length - 1]);
+        setSelAnchor({ row: top, col: src.col0 });
+        setSelFocus({ row: bottom, col: src.col1 });
+      }
+      fillSourceRef.current = null;
+      setFillPreview([]);
+      setIsFillDrag(false);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [excelEnabled, isFillDrag, data, columns, path, onChange, setFillPreview, hitCell]);
+
+  // 剪贴板走 document 级事件：仅当焦点在表格容器内且非编辑态时接管（编辑态由输入框原生行为接管）；
+  // document 级而非容器级，规避"点击容器外后焦点在 body，容器 onPaste 收不到"的问题
+  useEffect(() => {
+    if (!excelEnabled) return;
+    const tableHasFocus = () => Boolean(containerRef.current?.contains(document.activeElement));
+    const onCopy = (e: ClipboardEvent) => {
+      if (editing || !selection || !tableHasFocus()) return;
+      e.preventDefault();
+      e.clipboardData?.setData('text/plain', buildTsv(data, columns, selection));
+    };
+    const onCutEvt = (e: ClipboardEvent) => {
+      if (editing || !selection || !tableHasFocus()) return;
+      e.preventDefault();
+      e.clipboardData?.setData('text/plain', buildTsv(data, columns, selection));
+      onCut?.(selection);
+    };
+    const onPaste = (e: ClipboardEvent) => {
+      if (editing || fixedRows || !selection || !tableHasFocus()) return;
+      // 锚点取选区矩形左上角（Excel 语义），而非活动格 selFocus（鼠标抬起位置）
+      const anchor = { row: selection.row0, col: selection.col0 };
+      const text = e.clipboardData?.getData('text/plain');
+      if (!text) return;
+      e.preventDefault();
+      const grid = parseTsvGrid(text);
+      if (grid.length === 0) return;
+      const result = applyGrid(data, columns, path || '', anchor.row, anchor.col, grid);
+      onChange(result.data);
+      // 粘贴后选区覆盖目标区（Excel 行为）
+      setSelAnchor({ row: result.rect.row0, col: result.rect.col0 });
+      setSelFocus({ row: result.rect.row1, col: result.rect.col1 });
+      // 任意粘贴都执行"移动"的最后一步：清除活动剪切源（Excel 语义）
+      onConsumeCut?.();
+    };
+    document.addEventListener('copy', onCopy);
+    document.addEventListener('cut', onCutEvt);
+    document.addEventListener('paste', onPaste);
+    return () => {
+      document.removeEventListener('copy', onCopy);
+      document.removeEventListener('cut', onCutEvt);
+      document.removeEventListener('paste', onPaste);
+    };
+  }, [excelEnabled, editing, selection, data, columns, path, fixedRows, onCut, onConsumeCut, onChange]);
+
+  const scrollCellIntoView = useCallback((row: number, col: number) => {
+    containerRef.current?.querySelector(`td[data-xr="${row}"][data-xc="${col}"]`)?.scrollIntoView({ block: 'nearest' });
+  }, []);
+
+  useEffect(() => {
+    if (excelEnabled && activeCell) scrollCellIntoView(activeCell.row, activeCell.col);
+  }, [excelEnabled, activeCell, scrollCellIntoView]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!excelEnabled) return;
+    // 编辑态只接管 Escape（回退到编辑前值并退出，焦点回容器以便继续键盘导航），其余按键归单元格输入框
+    if (editing) {
+      if (e.key === 'Escape') {
+        e.preventDefault(); e.stopPropagation();
+        exitEdit(true);
+        containerRef.current?.focus();
+      }
+      return;
+    }
+    if (!selAnchor || !selFocus) return;
+    const clampRow = (r: number) => Math.max(0, Math.min(rowCount - 1, r));
+    const clampCol = (c: number) => Math.max(0, Math.min(columns.length - 1, c));
+    const move = (dr: number, dc: number, extend: boolean) => {
+      const from = extend ? selFocus : selAnchor;
+      const r = clampRow(from.row + dr);
+      const c = clampCol(from.col + dc);
+      if (!extend) setSelAnchor({ row: r, col: c });
+      setSelFocus({ row: r, col: c });
+    };
+    switch (e.key) {
+      case 'ArrowUp': e.preventDefault(); move(-1, 0, e.shiftKey); return;
+      case 'ArrowDown': e.preventDefault(); move(1, 0, e.shiftKey); return;
+      case 'ArrowLeft': e.preventDefault(); move(0, -1, e.shiftKey); return;
+      case 'ArrowRight': e.preventDefault(); move(0, 1, e.shiftKey); return;
+      case 'Tab': e.preventDefault(); move(0, e.shiftKey ? -1 : 1, false); return;
+      case 'Enter': case 'F2': e.preventDefault(); requestEdit(selFocus.row, selFocus.col, null); return;
+      case 'Delete': case 'Backspace':
+        e.preventDefault();
+        if (selection) onChange(clearCells(data, columns, path || '', selection));
+        return;
+      case 'Escape': e.preventDefault(); clearSelection(); return;
+      case 'd': case 'D':
+        if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+        e.preventDefault();
+        if (selection && selection.row1 > selection.row0) {
+          const target: number[] = [];
+          for (let r = selection.row0 + 1; r <= selection.row1; r++) target.push(r);
+          onChange(fillRows(data, columns, path || '', selection, target));
+        }
+        return;
+      default:
+        // Excel 打字覆盖语义：可打印字符直接以该字符为种子进入编辑态
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          requestEdit(selFocus.row, selFocus.col, e.key);
+        }
+    }
+  }, [excelEnabled, editing, selAnchor, selFocus, selection, rowCount, columns, data, path, exitEdit, requestEdit, clearSelection, onChange]);
+
+  // 焦点整块离开表格：提交并退出编辑，隐藏活动格 outline（选区保留——与 Excel 一致）
+  const handleContainerBlur = useCallback((e: React.FocusEvent) => {
+    if (!excelEnabled) return;
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      setIsSelecting(false);
+      setTableFocused(false);
+      if (editing) exitEdit(false);
+    }
+  }, [excelEnabled, editing, exitEdit]);
+
+  // 焦点从容器外进入容器（onFocus 即 focusin，容器内元素间转移由 relatedTarget 判断滤除）
+  const handleContainerFocus = useCallback((e: React.FocusEvent) => {
+    if (!excelEnabled) return;
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setTableFocused(true);
+  }, [excelEnabled]);
+
+  const getCellClass = useCallback((row: number, col: number): string => {
+    let cls = '';
+    if (selection && row >= selection.row0 && row <= selection.row1 && col >= selection.col0 && col <= selection.col1) {
+      cls += ' bg-primary/10';
+    }
+    if (tableFocused && activeCell && activeCell.row === row && activeCell.col === col) {
+      cls += ' outline outline-1 -outline-offset-1 outline-primary';
+    }
+    if (cutRect && row >= cutRect.row0 && row <= cutRect.row1 && col >= cutRect.col0 && col <= cutRect.col1) {
+      cls += ' bg-rose-50/70 outline-dashed outline-1 -outline-offset-1 outline-rose-400';
+    }
+    if (fillPreviewRows.length > 0 && fillPreviewRows.includes(row) && selection && col >= selection.col0 && col <= selection.col1) {
+      cls += ' bg-primary/20';
+    }
+    return cls;
+  }, [selection, activeCell, tableFocused, cutRect, fillPreviewRows]);
+
+  // 传给行的 excel 视图状态打包（单对象引用 = 行 memo 依赖最小化：仅选区/剪切/填充预览/编辑取消变化时重渲染）
+  const excelView = useMemo(() => (excelEnabled ? {
+    rect: selection,
+    cls: getCellClass,
+    cancelToken: editCancel
+  } : null), [excelEnabled, selection, getCellClass, editCancel]);
+
   const isTableDirty = useMemo(() => {
     if (!originalData) return false;
     const normData = (data && typeof data === 'object' && !Array.isArray(data)) ? data : {};
@@ -374,7 +730,15 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
 
   // 外层容器：独立模式包 DndContext；共享模式（可选）包容器级 droppable
   const content = (
-    <div className="relative w-full">
+    <div
+      className={`relative w-full outline-none ${(isSelecting || isFillDrag) ? 'excel-dragging' : ''} ${isFillDrag ? 'cursor-crosshair' : isSelecting ? 'cursor-default' : ''}`}
+      ref={excelEnabled ? containerRef : undefined}
+      tabIndex={excelEnabled ? 0 : undefined}
+      onKeyDown={excelEnabled ? handleKeyDown : undefined}
+      onFocus={excelEnabled ? handleContainerFocus : undefined}
+      onBlur={excelEnabled ? handleContainerBlur : undefined}
+      onContextMenu={excelEnabled ? (e) => e.preventDefault() : undefined}
+    >
     {/* fixedLayout 表格百分比列对剩余宽度解析、数学上精确适配容器——横向滚动是多余能力，
         且 border-collapse 半像素边框会计入 scrollWidth（经典滚动条下 1px 溢出也拉出滚动条），
         clip 让亚像素噪声永远无法成为滚动条；auto 布局表仍需 overflow-x-auto 承载 min-content 超宽 */}
@@ -502,6 +866,12 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
               hasColumnActions={hasColumnActions}
               noFirstRowInsert={noFirstRowInsert}
               onInsertAbove={readOnly || fixedRows ? undefined : () => addRowAtIndex(idx)}
+              excelEnabled={excelEnabled}
+              excelView={excelView}
+              editingCell={editing}
+              onCellMouseDown={handleCellMouseDown}
+              onFillStart={handleFillStart}
+              fillTip={t('editor.items.fill_down')}
             />
             </React.Fragment>
           ))}
@@ -516,7 +886,7 @@ export default function DynamicTable(props: DynamicTableProps & { minWidth?: str
         <div
           onClick={() => addRowAtIndex(rowCount)}
           title="在此处添加行"
-          className="absolute inset-x-0 bottom-0 h-[4px] z-20 cursor-pointer opacity-0 hover:opacity-100"
+          className="row-insert-zone absolute inset-x-0 bottom-0 h-[4px] z-20 cursor-pointer opacity-0 hover:opacity-100 transition-opacity duration-150 hover:delay-150"
         >
           <div className="absolute bottom-0 inset-x-2 border-b border-dashed border-primary/70 flex justify-center">
             <span className="absolute -top-[9px] bg-white text-primary border border-primary/50 rounded-full px-1.5 leading-[16px] flex items-center gap-0.5 text-[10px] font-medium shadow-sm">

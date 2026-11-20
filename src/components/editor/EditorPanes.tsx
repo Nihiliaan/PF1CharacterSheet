@@ -3,8 +3,9 @@
  *  - 栏顶小标签条：本栏的文档标签（dnd-kit 可跨栏拖拽排序、右键文件操作）
  *    + 右侧 [+] 新建 / [▦] 向右分栏 / [👁] 预览分栏（仅聚焦栏显示后两者）
  *  - 路径行：本栏活动文档的路径（含脏标记 / 只读标记）
- *  - 内容区：聚焦栏渲染 live 状态（可编辑）；未聚焦栏经影子作用域渲染只读视图，
- *    点击分栏任意位置即聚焦（live 状态切换到该栏文档）
+ *  - 内容区：聚焦栏渲染 live 状态（可编辑）；未聚焦栏经影子上下文渲染只读视图。
+ *    两态共用恒定型 PaneScope 包裹（Provider 换值不换型），聚焦翻转复用整棵文档子树
+ *    DOM——滚动位置保留，可停留在特定位置对照；点击分栏任意位置即聚焦（live 状态切换到该栏文档）
  * chooser 标签渲染"新建标签页"大页面；preview 标签经 PreviewPane 渲染（人物卡 + 模板
  * 两个来源下拉，仅列打开的标签与最近文件；点击预览窗格时自动同步刚失去焦点的文档）。
  */
@@ -77,13 +78,17 @@ function solveAllocation(req: number[], mins: number[], rowClientW: number): { z
   return { zooms, actual };
 }
 
-/** 只读影子作用域：用快照数据覆写 CharacterContext，供未聚焦分栏渲染文档只读视图 */
-function ShadowScope({ snapshot, children }: { snapshot: TabSnapshot; children: React.ReactNode }) {
+/** 分栏文档作用域（恒定型）：始终渲染 CharacterContext.Provider——聚焦翻转只换 Provider value、
+ *  不换组件类型，React 复用整棵文档子树 DOM（滚动位置/输入态保留，避免整树重挂载）。
+ *  聚焦栏透传 live 上下文（value = 当前 ctx，与无内层 Provider 时行为一致）；
+ *  未聚焦栏用快照数据覆写为只读影子上下文。 */
+function PaneScope({ snapshot, children }: { snapshot?: TabSnapshot | null; children: React.ReactNode }) {
   const ctx = useCharacter();
   // 用 ref 取最新 ctx，memo 仅依赖 snapshot：聚焦栏的每次击键不会引发影子分栏重渲染
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
-  const shadowValue = useMemo<CharacterContextType>(() => {
+  const shadowValue = useMemo<CharacterContextType | null>(() => {
+    if (!snapshot) return null;
     const base = ctxRef.current;
     return {
       ...base,
@@ -107,7 +112,7 @@ function ShadowScope({ snapshot, children }: { snapshot: TabSnapshot; children: 
       saveCharacter: async () => undefined,
     };
   }, [snapshot]);
-  return <CharacterContext.Provider value={shadowValue}>{children}</CharacterContext.Provider>;
+  return <CharacterContext.Provider value={shadowValue ?? ctx}>{children}</CharacterContext.Provider>;
 }
 
 /** 可排序的单个标签芯片（dnd-kit 指针拖拽，点击仍触发切换） */
@@ -311,31 +316,14 @@ function EditorPaneView({ pane, paneIndex, focused }: {
         ) : activeTab.kind === 'preview' ? (
           // 预览窗格：可选择预览来源（人物卡 + 模板两个下拉）；focused 用于"点击同步来源"
           <PreviewPane tabKey={pane.activeTabKey!} focused={focused} />
-        ) : activeTab.kind === 'template' ? (
-          focused ? <BBCodeTemplateEditor /> : (
-            (() => {
-              const snap = getTabSnapshot(pane.activeTabKey ?? null);
-              if (!snap) {
-                return (
-                  <div className="h-full flex items-center justify-center text-xs text-stone-400 italic">
-                    点击聚焦此栏以加载内容
-                  </div>
-                );
-              }
-              // 未聚焦栏保持编辑器形态（只读文本域），不切换为渲染预览
-              return (
-                <ShadowScope snapshot={snap}>
-                  <BBCodeTemplateEditor />
-                </ShadowScope>
-              );
-            })()
-          )
-        ) : focused ? (
-          <CharacterEditor user={user} />
         ) : (
+          // 文档标签（character/template）：统一经 PaneScope 包裹，聚焦翻转只换 Provider value
+          // 不换组件类型——两侧文档子树 DOM 复用、滚动位置保留（裸三元换型会整树重挂载）；
+          // 未聚焦栏保持编辑器形态（只读），不切换为渲染预览
           (() => {
-            const snap = getTabSnapshot(pane.activeTabKey ?? null);
-            if (!snap) {
+            const snap = focused ? undefined : getTabSnapshot(pane.activeTabKey ?? null);
+            // 占位仅在"未聚焦且无快照"时可达：快照仅存内存，应用重载后恢复的多栏会话属此场景
+            if (!focused && !snap) {
               return (
                 <div className="h-full flex items-center justify-center text-xs text-stone-400 italic">
                   点击聚焦此栏以加载内容
@@ -343,9 +331,9 @@ function EditorPaneView({ pane, paneIndex, focused }: {
               );
             }
             return (
-              <ShadowScope snapshot={snap}>
-                <CharacterEditor user={user} />
-              </ShadowScope>
+              <PaneScope snapshot={snap}>
+                {activeTab.kind === 'template' ? <BBCodeTemplateEditor /> : <CharacterEditor user={user} />}
+              </PaneScope>
             );
           })()
         )}

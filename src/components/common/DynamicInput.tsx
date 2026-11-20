@@ -38,6 +38,14 @@ export interface DynamicInputProps {
   height?: string;
   minHeight?: string;
   row?: any;
+  /** false = 关闭"单击即编辑"（Excel 式选区模式下由宿主经 editRequest 控制编辑时机） */
+  interactive?: boolean;
+  /** 编辑请求令牌：值递增时进入编辑态（配合 interactive=false 使用） */
+  editRequest?: number;
+  /** 进入编辑态时的种子文本（Excel"打字覆盖"语义：直接替换原值；null = 保留原值） */
+  editSeed?: string | null;
+  /** 编辑取消令牌：值递增时强制退出编辑态（宿主驱动的确定性退出，不依赖 blur 时序） */
+  editCancelRequest?: number;
 }
 
 const MarkdownLinkRenderer = ({ text }: { text: string }) => {
@@ -75,7 +83,7 @@ export const DynamicInput = React.memo(({
   value, originalValue, onChange, path, className = '', wrapperClassName = '',
   readOnly = false, columnKey, type = 'text', optionIndices, displayFormatter,
   placeholder = '', singleLine = false, transactionFilter, hideIndicator = false,
-  align, height, minHeight, row
+  align, height, minHeight, row, interactive = true, editRequest = 0, editSeed = null, editCancelRequest = 0
 }: DynamicInputProps) => {
   const { t } = useTranslation();
   const characterContext = useCharacter();
@@ -154,11 +162,36 @@ export const DynamicInput = React.memo(({
   }, [readOnly, originalValue, value, handler, context]);
 
   const handleManualFocus = useCallback((e: React.MouseEvent) => {
-    if (readOnly) return;
+    if (readOnly || !interactive) return;
     lastClickCoords.current = { x: e.clientX, y: e.clientY };
     if (!isFocused) e.preventDefault(); // 仅针对需要手动控制焦点的组件（MD/Text）阻止默认行为
     setIsFocused(true);
-  }, [readOnly, isFocused]);
+  }, [readOnly, isFocused, interactive]);
+
+  // Excel 式选区模式的外部编辑入口：令牌递增 = 宿主请求本格进入编辑态。
+  // 文本/Markdown 分支由 MarkdownInlineEditor 在 isFocused 置真时挂载 CodeMirror 并自动 focus；
+  // number/link/date 分支渲染于 isFocused 且内部 input autoFocus——令牌机制对全部 ui 类型生效。
+  const lastEditRequest = useRef(0);
+  useEffect(() => {
+    if (editRequest && editRequest !== lastEditRequest.current) {
+      lastEditRequest.current = editRequest;
+      if (!readOnly) {
+        if (editSeed !== null && editSeed !== undefined) setTempValue(editSeed);
+        setIsFocused(true);
+      }
+    }
+  }, [editRequest, editSeed, readOnly]);
+
+  const lastCancelRequest = useRef(0);
+  useEffect(() => {
+    if (editCancelRequest && editCancelRequest !== lastCancelRequest.current) {
+      lastCancelRequest.current = editCancelRequest;
+      // 同一提交内若有新的编辑请求（换格编辑：宿主先 exitEdit 再 requestEdit），
+      // cancel effect 声明序在 request 之后，此处必须让位——否则新编辑态立即被掐灭，
+      // 表现为"单元格看似聚焦却不显示光标/编辑器"
+      if (editRequest !== lastEditRequest.current) setIsFocused(false);
+    }
+  }, [editCancelRequest, editRequest]);
 
   const handleAutoBlur = useCallback((e: React.FocusEvent) => {
     if (type === 'link' || handler?.ui === 'link') return;

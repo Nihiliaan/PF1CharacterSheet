@@ -176,3 +176,11 @@ body {
 .smf-content .bbc_left { text-align: left; }
 .smf-content .bbc_right { text-align: right; }
 
+
+/* Excel 式表格拖拽期间（DynamicTable 容器挂 .excel-dragging）：
+   tbody 整体禁用指针事件——行/单元格 hover 底色、行间插入区、拖拽把手光标一次全灭，
+   指针形状与选区底色不再随拖拽闪烁；单元格命中判定改由 tr/td 布局矩形几何判定承担 */
+.excel-dragging tbody,
+.excel-dragging .row-insert-zone {
+  pointer-events: none;
+}
